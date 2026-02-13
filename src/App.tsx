@@ -19,9 +19,9 @@ interface User {
 }
 
 const getTier = (userNumber: number): Tier => {
-  if (userNumber <= 10) return { name: 'Founding Ember', icon: '👑', inscription: 'In at the beginning', css: 'tier-founding' }
-  if (userNumber <= 30) return { name: 'Sacred Circle', icon: '⚜', inscription: 'Among the first flames', css: 'tier-sacred' }
-  if (userNumber <= 80) return { name: 'Ember Keeper', icon: '🔥', inscription: 'Kept the fire alive', css: 'tier-keeper' }
+  if (userNumber <= 13) return { name: 'Founding Ember', icon: '👑', inscription: 'In at the beginning', css: 'tier-founding' }
+  if (userNumber <= 36) return { name: 'Sacred Circle', icon: '⚜', inscription: 'Among the first flames', css: 'tier-sacred' }
+  if (userNumber <= 86) return { name: 'Ember Keeper', icon: '🔥', inscription: 'Kept the fire alive', css: 'tier-keeper' }
   return { name: 'Member', icon: '◈', inscription: 'Welcome to the sanctuary', css: 'tier-member' }
 }
 
@@ -161,6 +161,198 @@ function EmberParticles() {
   }, [])
 
   return <div ref={containerRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1 }} />
+}
+
+// Dashboard Component
+function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+  const users = getStoredUsers();
+  const totalMembers = users.length;
+  const totalVotes = 6; // from the scroll results
+
+  const pastVoteResults = [
+    { feature: 'Sacred Sign-In', percentage: 50, votes: 3 },
+    { feature: 'The Pool', percentage: 16.7, votes: 1 },
+    { feature: 'Teachings & Dialogues', percentage: 33.3, votes: 2 },
+    { feature: 'Hymnal Music', percentage: 0, votes: 0 },
+    { feature: 'The Library', percentage: 0, votes: 0 },
+    { feature: 'TBT Chat', percentage: 0, votes: 0 },
+    { feature: 'The Community', percentage: 0, votes: 0 },
+    { feature: 'Creative Works', percentage: 0, votes: 0 },
+    { feature: 'Action & Outreach', percentage: 0, votes: 0 },
+    { feature: 'The Archive', percentage: 0, votes: 0 }
+  ];
+
+  const upcomingFeatures = [
+    { name: 'Music Page', description: 'Tracks, instrumentals, spoken word' },
+    { name: 'Chat Page', description: 'Real-time community discussion' },
+    { name: 'Content Page', description: 'Videos, short films, creative works' },
+    { name: 'Library', description: 'Curated writings and references' },
+    { name: 'Teachings', description: 'Long-form dialogues on truth' },
+    { name: 'Archive', description: 'Chronological record of moments' }
+  ];
+
+  const isAdmin = user.email === 'info@truthbtoldhub.com';
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div className="scroll-title">
+          <h1>Welcome, {user.name}</h1>
+          <p>Sanctuary Dashboard</p>
+        </div>
+        <div className="ornament">― ✦ ―</div>
+        <div className="user-number">#{user.userNumber}</div>
+        <div style={{ textAlign: 'center' }}>
+          <span className={`tier-badge ${user.tier.css}`}>
+            {user.tier.icon} {user.tier.name}
+          </span>
+        </div>
+        <p className="tier-inscription">"{user.tier.inscription}"</p>
+        {user.userNumber === 1 && (
+          <p className="founder-note">🔥 You are the First Flame. The sanctuary begins with you.</p>
+        )}
+      </div>
+
+      <div className="dashboard-grid">
+        {/* Past Vote Results */}
+        <div className="dashboard-card">
+          <h3>🗳️ Past Vote Results</h3>
+          <p className="card-subtitle">The Sacred Scroll has spoken</p>
+          <div className="vote-results">
+            {pastVoteResults.map((item, idx) => (
+              <div key={idx} className="vote-item">
+                <div className="vote-feature">{item.feature}</div>
+                <div className="vote-bar">
+                  <div className="vote-fill" style={{ width: `${item.percentage}%` }} />
+                </div>
+                <div className="vote-percentage">{item.percentage}% ({item.votes} marks)</div>
+              </div>
+            ))}
+          </div>
+          <p className="note">Sacred Sign-In won with 50% — now being forged</p>
+        </div>
+
+        {/* Next Feature Being Built */}
+        <div className="dashboard-card">
+          <h3>🔨 Next Feature Being Built</h3>
+          <p className="card-subtitle">The Pool — Community Fund</p>
+          <div className="progress-section">
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: '16.7%' }} />
+            </div>
+            <div className="progress-label">16.7% complete</div>
+          </div>
+          <p className="progress-description">
+            Transparent fund for disbursements, community activities, and voted initiatives.
+          </p>
+          <button className="btn-secondary">Follow Progress</button>
+        </div>
+
+        {/* Next Community Vote */}
+        <div className="dashboard-card">
+          <h3>🗳️ Next Community Vote</h3>
+          <p className="card-subtitle">Help decide what we build next</p>
+          <div className="vote-options">
+            <p>Choose from 7 new suggestions:</p>
+            <ul style={{ marginLeft: '20px', color: '#4a3020', fontSize: '0.9rem' }}>
+              <li>Music Player with uploads</li>
+              <li>Live community chat</li>
+              <li>Video content hub</li>
+              <li>Member spotlight features</li>
+              <li>Mutual aid coordination</li>
+              <li>Timeline of truth archive</li>
+              <li>Community event calendar</li>
+            </ul>
+          </div>
+          <button className="btn-secondary" onClick={() => alert('Vote will open soon!')}>View Suggestions</button>
+          {isAdmin && (
+            <button className="btn-admin" style={{ marginTop: '10px' }} onClick={() => alert('Admin: Launch vote')}>Launch Vote</button>
+          )}
+        </div>
+
+        {/* User Stats */}
+        <div className="dashboard-card">
+          <h3>📜 Your Stats</h3>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="stat-label">Tier</div>
+              <div className="stat-value">{user.tier.name}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Member #</div>
+              <div className="stat-value">#{user.userNumber}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Joined</div>
+              <div className="stat-value">{new Date(user.joined).toLocaleDateString()}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Status</div>
+              <div className="stat-value">Active</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Community Stats */}
+        <div className="dashboard-card">
+          <h3>👥 Community Stats</h3>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="stat-label">Total Members</div>
+              <div className="stat-value">{totalMembers}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Votes Cast</div>
+              <div className="stat-value">{totalVotes}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Founding Embers</div>
+              <div className="stat-value">{users.filter(u => u.userNumber <= 13).length}</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-label">Active Now</div>
+              <div className="stat-value">{Math.floor(totalMembers * 0.3)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming Features */}
+        <div className="dashboard-card wide">
+          <h3>🚀 Upcoming Features</h3>
+          <div className="features-grid">
+            {upcomingFeatures.map((feat, idx) => (
+              <div key={idx} className="feature-preview">
+                <div className="feature-icon">{['🎵', '💬', '🎬', '📚', '🎓', '📜'][idx]}</div>
+                <div className="feature-details">
+                  <h4>{feat.name}</h4>
+                  <p>{feat.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Admin Controls */}
+        {isAdmin && (
+          <div className="dashboard-card admin">
+            <h3>🔮 Admin Controls</h3>
+            <p>Welcome, Founder. You hold the flame.</p>
+            <div className="admin-actions">
+              <button className="btn-admin">Manage Users</button>
+              <button className="btn-admin">View Analytics</button>
+              <button className="btn-admin">Launch Next Vote</button>
+              <button className="btn-admin">Adjust Tiers</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-footer">
+        <button className="btn-primary" onClick={onSignOut}>Depart from Sanctuary</button>
+        <p className="footer-note">© 2026 Truth B Told — Unlearn Everything</p>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -315,21 +507,7 @@ export default function App() {
 
             {/* DASHBOARD */}
             {view === 'dashboard' && user && (
-              <div className="form-enter">
-                <div className="scroll-title">
-                  <h1>{user.name}</h1>
-                  <p>Welcome to the Sanctuary</p>
-                </div>
-                <div className="ornament">― ✦ ―</div>
-                <div className="user-number">#{user.userNumber}</div>
-                <div style={{ textAlign: 'center' }}>
-                  <span className={`tier-badge ${user.tier.css}`}>
-                    {user.tier.icon} {user.tier.name}
-                  </span>
-                </div>
-                <p className="tier-inscription">"{user.tier.inscription}"</p>
-                <button type="button" className="btn-primary" onClick={handleSignOut}>Depart from Sanctuary</button>
-              </div>
+              <Dashboard user={user} onSignOut={handleSignOut} />
             )}
 
             <div className="scroll-footer">© 2026 Truth B Told — Unlearn Everything</div>
