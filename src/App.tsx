@@ -30,26 +30,68 @@ interface Suggestion {
   timestamp: string
 }
 
-const ADMIN_EMAIL = 'info@truthbtoldhub.com'
+const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
 
 const VOTE_OPTIONS = [
+  'The Stage',
+  'The Circle', 
   'The Pool',
-  'Hymnal Music', 
-  'TBT Chat',
+  'The Gallery',
   'The Library',
-  'Creative Works',
-  'Teachings & Dialogues',
-  'Action & Outreach'
+  'The Temple',
+  'The Council',
+  'The Archive'
 ]
 
-const LOCKED_FEATURES = [
-  { name: 'The Pool', icon: '⚱', desc: 'Community fund for disbursements' },
-  { name: 'Hymnal Music', icon: '🎵', desc: 'Tracks, instrumentals & spoken word' },
-  { name: 'TBT Chat', icon: '💬', desc: 'Real-time discussion' },
-  { name: 'The Library', icon: '📚', desc: 'Writings, videos & references' },
-  { name: 'Creative Works', icon: '🎬', desc: 'Art, film & experimental projects' },
-  { name: 'Teachings', icon: '🎓', desc: 'Faith, society & dialogue' },
-  { name: 'Action', icon: '🤝', desc: 'Mutual aid & community events' },
+const FEATURES = [
+  { 
+    name: 'The Stage', 
+    icon: '🎵', 
+    desc: 'Original music, podcasts, spoken word, and audio creations from the community.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Circle', 
+    icon: '💬', 
+    desc: 'Real-time discussion, debates, and connections without algorithmic noise.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Pool', 
+    icon: '⚱', 
+    desc: 'Community fund for mutual aid, projects, emergencies, and voted initiatives.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Gallery', 
+    icon: '🎬', 
+    desc: 'Videos, short films, visual art, and experimental creative projects.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Library', 
+    icon: '📚', 
+    desc: 'Curated writings, documents, videos, and references for study and discovery.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Temple', 
+    icon: '🎓', 
+    desc: 'Long-form teachings and guided dialogues on faith, society, power, and truth.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Council', 
+    icon: '🏛', 
+    desc: 'Member spotlights, collaborations, local projects, and community events.',
+    coming: 'Coming Soon'
+  },
+  { 
+    name: 'The Archive', 
+    icon: '📜', 
+    desc: 'A chronological record of moments the community preserves for posterity.',
+    coming: 'Coming Soon'
+  },
 ]
 
 function App() {
@@ -62,18 +104,15 @@ function App() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Form states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   
-  // Profile edit
   const [editName, setEditName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   
-  // Vote & Suggestion
   const [hasVoted, setHasVoted] = useState(false)
   const [suggestionText, setSuggestionText] = useState('')
 
@@ -92,10 +131,6 @@ function App() {
       const user = JSON.parse(storedUser)
       setCurrentUser(user)
       setView('dashboard')
-      
-      // Check if user already voted
-      const userVoted = votes.find(v => v.userId === user.id)
-      if (userVoted) setHasVoted(true)
     }
   }, [])
 
@@ -264,7 +299,6 @@ function App() {
 
   const getVoteCount = (option: string) => votes.filter(v => v.option === option).length
 
-  // Render sign in
   if (view === 'signin') {
     return (
       <div className="app">
@@ -289,7 +323,6 @@ function App() {
     )
   }
 
-  // Render sign up
   if (view === 'signup') {
     return (
       <div className="app">
@@ -315,7 +348,6 @@ function App() {
     )
   }
 
-  // Render dashboard
   return (
     <div className="app">
       <div className="container">
@@ -324,7 +356,6 @@ function App() {
           <h1>TRUTH BE TOLD</h1>
         </header>
 
-        {/* User Info Banner */}
         <div className="user-banner">
           <div className="user-info">
             <span className="user-name">{currentUser?.name}</span>
@@ -333,7 +364,6 @@ function App() {
           <span className="user-num">№{currentUser?.userNumber}</span>
         </div>
 
-        {/* Tabs */}
         <div className="tabs">
           <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Home</button>
           <button className={tab === 'members' ? 'active' : ''} onClick={() => setTab('members')}>Members</button>
@@ -345,10 +375,8 @@ function App() {
         {error && <div className="error">{error}</div>}
         {success && <div className="success">{success}</div>}
 
-        {/* HOME TAB */}
         {tab === 'home' && (
           <div className="content">
-            {/* Vote Section */}
             <div className="card">
               <h3>📜 Current Vote</h3>
               <p className="desc">Vote for the next sanctuary feature</p>
@@ -381,15 +409,18 @@ function App() {
               )}
             </div>
 
-            {/* Locked Features */}
             <div className="card">
-              <h3>🔮 Sanctuary</h3>
-              <div className="features-grid">
-                {LOCKED_FEATURES.map(f => (
-                  <div key={f.name} className="feature locked">
-                    <span className="icon">{f.icon}</span>
-                    <span className="name">{f.name}</span>
-                    <span className="lock">🔒</span>
+              <h3>🏛 The Sanctuary</h3>
+              <div className="features-list">
+                {FEATURES.map(f => (
+                  <div key={f.name} className="feature-item">
+                    <div className="feature-header">
+                      <span className="feature-icon">{f.icon}</span>
+                      <span className="feature-name">{f.name}</span>
+                      <span className="feature-lock">🔒</span>
+                    </div>
+                    <p className="feature-desc">{f.desc}</p>
+                    <span className="feature-coming">{f.coming}</span>
                   </div>
                 ))}
               </div>
@@ -399,7 +430,6 @@ function App() {
           </div>
         )}
 
-        {/* MEMBERS TAB */}
         {tab === 'members' && (
           <div className="content">
             <div className="card">
@@ -424,7 +454,6 @@ function App() {
           </div>
         )}
 
-        {/* ACTIVITY TAB */}
         {tab === 'activity' && (
           <div className="content">
             <div className="card">
@@ -449,7 +478,6 @@ function App() {
           </div>
         )}
 
-        {/* PROFILE TAB */}
         {tab === 'profile' && (
           <div className="content">
             <div className="card">
@@ -473,7 +501,6 @@ function App() {
           </div>
         )}
 
-        {/* SUGGESTIONS TAB */}
         {tab === 'suggestions' && (
           <div className="content">
             <div className="card">
