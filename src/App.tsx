@@ -33,65 +33,19 @@ interface Suggestion {
 const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
 
 const VOTE_OPTIONS = [
-  'The Stage',
-  'The Circle', 
-  'The Pool',
-  'The Gallery',
-  'The Library',
-  'The Temple',
-  'The Council',
-  'The Archive'
+  'The Stage', 'The Circle', 'The Pool', 'The Gallery',
+  'The Library', 'The Temple', 'The Council', 'The Archive'
 ]
 
 const FEATURES = [
-  { 
-    name: 'The Stage', 
-    icon: '🎵', 
-    desc: 'Original music, podcasts, spoken word, and audio creations from the community.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Circle', 
-    icon: '💬', 
-    desc: 'Real-time discussion, debates, and connections without algorithmic noise.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Pool', 
-    icon: '⚱', 
-    desc: 'Community fund for mutual aid, projects, emergencies, and voted initiatives.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Gallery', 
-    icon: '🎬', 
-    desc: 'Videos, short films, visual art, and experimental creative projects.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Library', 
-    icon: '📚', 
-    desc: 'Curated writings, documents, videos, and references for study and discovery.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Temple', 
-    icon: '🎓', 
-    desc: 'Long-form teachings and guided dialogues on faith, society, power, and truth.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Council', 
-    icon: '🏛', 
-    desc: 'Member spotlights, collaborations, local projects, and community events.',
-    coming: 'Coming Soon'
-  },
-  { 
-    name: 'The Archive', 
-    icon: '📜', 
-    desc: 'A chronological record of moments the community preserves for posterity.',
-    coming: 'Coming Soon'
-  },
+  { name: 'The Stage', icon: '🎵', desc: 'Original music, podcasts, spoken word, and audio creations from the community.', coming: 'Coming Soon' },
+  { name: 'The Circle', icon: '💬', desc: 'Real-time discussion, debates, and connections without algorithmic noise.', coming: 'Coming Soon' },
+  { name: 'The Pool', icon: '⚱', desc: 'Community fund for mutual aid, projects, emergencies, and voted initiatives.', coming: 'Coming Soon' },
+  { name: 'The Gallery', icon: '🎬', desc: 'Videos, short films, visual art, and experimental creative projects.', coming: 'Coming Soon' },
+  { name: 'The Library', icon: '📚', desc: 'Curated writings, documents, videos, and references for study and discovery.', coming: 'Coming Soon' },
+  { name: 'The Temple', icon: '🎓', desc: 'Long-form teachings and guided dialogues on faith, society, power, and truth.', coming: 'Coming Soon' },
+  { name: 'The Council', icon: '🏛', desc: 'Member spotlights, collaborations, local projects, and community events.', coming: 'Coming Soon' },
+  { name: 'The Archive', icon: '📜', desc: 'A chronological record of moments the community preserves for posterity.', coming: 'Coming Soon' },
 ]
 
 function App() {
@@ -103,48 +57,53 @@ function App() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [hasVoted, setHasVoted] = useState(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  
   const [editName, setEditName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
-  
-  const [hasVoted, setHasVoted] = useState(false)
   const [suggestionText, setSuggestionText] = useState('')
 
+  // Load data on mount
   useEffect(() => {
+    console.log('Loading data...')
     const storedUsers = localStorage.getItem('tbt_users')
-    if (storedUsers) setUsers(JSON.parse(storedUsers))
-    
     const storedVotes = localStorage.getItem('tbt_votes')
-    if (storedVotes) setVotes(JSON.parse(storedVotes))
-    
     const storedSuggestions = localStorage.getItem('tbt_suggestions')
-    if (storedSuggestions) setSuggestions(JSON.parse(storedSuggestions))
-    
     const storedUser = localStorage.getItem('tbt_currentUser')
+    
+    if (storedUsers) {
+      const parsed = JSON.parse(storedUsers)
+      console.log('Users loaded:', parsed.length)
+      setUsers(parsed)
+    }
+    
+    if (storedVotes) {
+      setVotes(JSON.parse(storedVotes))
+    }
+    
+    if (storedSuggestions) {
+      setSuggestions(JSON.parse(storedSuggestions))
+    }
+    
     if (storedUser) {
       const user = JSON.parse(storedUser)
+      console.log('User logged in:', user.name)
       setCurrentUser(user)
       setView('dashboard')
+      
+      // Check if user voted
+      if (storedVotes) {
+        const allVotes = JSON.parse(storedVotes)
+        const userVoted = allVotes.find((v: Vote) => v.userId === user.id)
+        if (userVoted) setHasVoted(true)
+      }
     }
   }, [])
-
-  useEffect(() => {
-    localStorage.setItem('tbt_users', JSON.stringify(users))
-  }, [users])
-
-  useEffect(() => {
-    localStorage.setItem('tbt_votes', JSON.stringify(votes))
-  }, [votes])
-
-  useEffect(() => {
-    localStorage.setItem('tbt_suggestions', JSON.stringify(suggestions))
-  }, [suggestions])
 
   const getTier = (userNumber: number) => {
     if (userNumber <= 13) return { name: 'Founding Ember', title: 'In at the beginning', class: 'tier-gold' }
@@ -168,33 +127,46 @@ function App() {
       return
     }
 
-    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase())
+    // Get current users
+    const storedUsers = localStorage.getItem('tbt_users')
+    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
+    
+    const existingUser = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase())
     if (existingUser) {
       setError('Email already inscribed')
       return
     }
 
-    const userNumber = users.length + 1
+    const userNumber = currentUsers.length + 1
     const tier = getTier(userNumber)
 
     const newUser: User = {
       id: Date.now().toString(),
       name,
-      email: email.toLowerCase(),
+      email: email.toLower,
+      userNumberCase(),
       password,
-      userNumber,
       tierName: tier.name,
       tierTitle: tier.title,
       tierClass: tier.class,
       joined: new Date().toISOString(),
     }
 
-    setUsers([...users, newUser])
+    const updatedUsers = [...currentUsers, newUser]
+    
+    // Save to localStorage
+    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
     localStorage.setItem('tbt_currentUser', JSON.stringify(newUser))
+    
+    // Update state
+    setUsers(updatedUsers)
     setCurrentUser(newUser)
     setView('dashboard')
     setSuccess('Welcome to the Sanctuary!')
     
+    console.log('User saved:', newUser.name, 'Total users:', updatedUsers.length)
+    
+    // Clear form
     setName('')
     setEmail('')
     setPassword('')
@@ -208,7 +180,10 @@ function App() {
       return
     }
 
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
+    const storedUsers = localStorage.getItem('tbt_users')
+    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
+    
+    const user = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
     if (!user) {
       setError('Invalid credentials')
       return
@@ -232,6 +207,9 @@ function App() {
   const handleVote = (option: string) => {
     if (!currentUser || hasVoted) return
     
+    const storedVotes = localStorage.getItem('tbt_votes')
+    const currentVotes: Vote[] = storedVotes ? JSON.parse(storedVotes) : []
+    
     const newVote: Vote = {
       id: Date.now().toString(),
       userId: currentUser.id,
@@ -240,12 +218,17 @@ function App() {
       timestamp: new Date().toISOString()
     }
     
-    setVotes([...votes, newVote])
+    const updatedVotes = [...currentVotes, newVote]
+    localStorage.setItem('tbt_votes', JSON.stringify(updatedVotes))
+    setVotes(updatedVotes)
     setHasVoted(true)
   }
 
   const handleSuggestion = () => {
     if (!currentUser || !suggestionText.trim()) return
+    
+    const storedSuggestions = localStorage.getItem('tbt_suggestions')
+    const currentSuggestions: Suggestion[] = storedSuggestions ? JSON.parse(storedSuggestions) : []
     
     const newSuggestion: Suggestion = {
       id: Date.now().toString(),
@@ -256,7 +239,9 @@ function App() {
       timestamp: new Date().toISOString()
     }
     
-    setSuggestions([...suggestions, newSuggestion])
+    const updatedSuggestions = [...currentSuggestions, newSuggestion]
+    localStorage.setItem('tbt_suggestions', JSON.stringify(updatedSuggestions))
+    setSuggestions(updatedSuggestions)
     setSuggestionText('')
     setSuccess('Suggestion submitted!')
   }
@@ -269,7 +254,10 @@ function App() {
       return
     }
 
-    const updatedUsers = users.map(u => {
+    const storedUsers = localStorage.getItem('tbt_users')
+    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
+    
+    const updatedUsers = currentUsers.map(u => {
       if (u.id === currentUser.id) {
         return {
           ...u,
@@ -280,7 +268,9 @@ function App() {
       return u
     })
     
+    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
     setUsers(updatedUsers)
+    
     const updatedUser = { ...currentUser, name: editName || currentUser.name, password: newPassword || currentUser.password }
     localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
     setCurrentUser(updatedUser)
@@ -292,12 +282,18 @@ function App() {
   }
 
   const resetVotes = () => {
+    localStorage.setItem('tbt_votes', JSON.stringify([]))
     setVotes([])
     setHasVoted(false)
-    localStorage.setItem('tbt_votes', JSON.stringify([]))
   }
 
   const getVoteCount = (option: string) => votes.filter(v => v.option === option).length
+
+  // Get current users from localStorage for display
+  const displayUsers = () => {
+    const stored = localStorage.getItem('tbt_users')
+    return stored ? JSON.parse(stored) : []
+  }
 
   if (view === 'signin') {
     return (
@@ -347,6 +343,8 @@ function App() {
       </div>
     )
   }
+
+  const allUsers = displayUsers()
 
   return (
     <div className="app">
@@ -433,9 +431,9 @@ function App() {
         {tab === 'members' && (
           <div className="content">
             <div className="card">
-              <h3>👥 Members ({users.length})</h3>
+              <h3>👥 Members ({allUsers.length})</h3>
               <div className="members-list">
-                {[...users].reverse().map(u => (
+                {[...allUsers].reverse().map(u => (
                   <div key={u.id} className="member-row">
                     <span className="num">№{u.userNumber}</span>
                     <span className="name">{u.name}</span>
@@ -466,7 +464,7 @@ function App() {
                     <span className="target">{v.option}</span>
                   </div>
                 ))}
-                {[...users].reverse().slice(0, 5).map(u => (
+                {[...allUsers].reverse().slice(0, 5).map(u => (
                   <div key={u.id} className="activity-row">
                     <span className="user">{u.name}</span>
                     <span className="action">joined as</span>
