@@ -13,46 +13,103 @@ interface User {
   joined: string
 }
 
+interface Vote {
+  id: string
+  userId: string
+  userName: string
+  option: string
+  timestamp: string
+}
+
+interface Suggestion {
+  id: string
+  userId: string
+  userName: string
+  text: string
+  votes: number
+  timestamp: string
+}
+
 const ADMIN_EMAIL = 'info@truthbtoldhub.com'
 
-const PAST_VOTES = [
-  { name: 'Sacred Sign-In', votes: 3, percentage: 50 },
-  { name: 'Teachings & Dialogues', votes: 2, percentage: 33.3 },
-  { name: 'The Pool', votes: 1, percentage: 16.7 },
+const VOTE_OPTIONS = [
+  'The Pool',
+  'Hymnal Music', 
+  'TBT Chat',
+  'The Library',
+  'Creative Works',
+  'Teachings & Dialogues',
+  'Action & Outreach'
 ]
 
-const FEATURES = [
-  { name: 'Community Ballot', icon: '📜', desc: 'Vote on next features' },
-  { name: 'The Pool', icon: '⚱', desc: 'Community fund' },
-  { name: 'Hymnal Music', icon: '🎵', desc: 'Tracks & instrumentals' },
+const LOCKED_FEATURES = [
+  { name: 'The Pool', icon: '⚱', desc: 'Community fund for disbursements' },
+  { name: 'Hymnal Music', icon: '🎵', desc: 'Tracks, instrumentals & spoken word' },
   { name: 'TBT Chat', icon: '💬', desc: 'Real-time discussion' },
-  { name: 'The Library', icon: '📚', desc: 'Writings & references' },
-  { name: 'Creative Works', icon: '🎬', desc: 'Art, film, projects' },
+  { name: 'The Library', icon: '📚', desc: 'Writings, videos & references' },
+  { name: 'Creative Works', icon: '🎬', desc: 'Art, film & experimental projects' },
+  { name: 'Teachings', icon: '🎓', desc: 'Faith, society & dialogue' },
+  { name: 'Action', icon: '🤝', desc: 'Mutual aid & community events' },
 ]
 
 function App() {
   const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
+  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions'>('home')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
+  const [votes, setVotes] = useState<Vote[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
+  // Form states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  
+  // Profile edit
+  const [editName, setEditName] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  
+  // Vote & Suggestion
+  const [hasVoted, setHasVoted] = useState(false)
+  const [suggestionText, setSuggestionText] = useState('')
 
   useEffect(() => {
     const storedUsers = localStorage.getItem('tbt_users')
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers))
-    }
+    if (storedUsers) setUsers(JSON.parse(storedUsers))
+    
+    const storedVotes = localStorage.getItem('tbt_votes')
+    if (storedVotes) setVotes(JSON.parse(storedVotes))
+    
+    const storedSuggestions = localStorage.getItem('tbt_suggestions')
+    if (storedSuggestions) setSuggestions(JSON.parse(storedSuggestions))
     
     const storedUser = localStorage.getItem('tbt_currentUser')
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
+      const user = JSON.parse(storedUser)
+      setCurrentUser(user)
       setView('dashboard')
+      
+      // Check if user already voted
+      const userVoted = votes.find(v => v.userId === user.id)
+      if (userVoted) setHasVoted(true)
     }
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('tbt_users', JSON.stringify(users))
+  }, [users])
+
+  useEffect(() => {
+    localStorage.setItem('tbt_votes', JSON.stringify(votes))
+  }, [votes])
+
+  useEffect(() => {
+    localStorage.setItem('tbt_suggestions', JSON.stringify(suggestions))
+  }, [suggestions])
 
   const getTier = (userNumber: number) => {
     if (userNumber <= 13) return { name: 'Founding Ember', title: 'In at the beginning', class: 'tier-gold' }
@@ -97,12 +154,11 @@ function App() {
       joined: new Date().toISOString(),
     }
 
-    const updatedUsers = [...users, newUser]
-    setUsers(updatedUsers)
-    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
+    setUsers([...users, newUser])
     localStorage.setItem('tbt_currentUser', JSON.stringify(newUser))
     setCurrentUser(newUser)
     setView('dashboard')
+    setSuccess('Welcome to the Sanctuary!')
     
     setName('')
     setEmail('')
@@ -135,29 +191,115 @@ function App() {
     setCurrentUser(null)
     setView('signin')
     setError('')
+    setSuccess('')
   }
 
-  return (
-    <div className="app">
-      <div className="container">
-        <header className="header">
-          <div className="logo">🔥</div>
-          <h1>TRUTH BE TOLD</h1>
-          <p className="tagline">Revelations of Knowledge</p>
-        </header>
+  const handleVote = (option: string) => {
+    if (!currentUser || hasVoted) return
+    
+    const newVote: Vote = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      option,
+      timestamp: new Date().toISOString()
+    }
+    
+    setVotes([...votes, newVote])
+    setHasVoted(true)
+  }
 
-        {view === 'signin' && (
+  const handleSuggestion = () => {
+    if (!currentUser || !suggestionText.trim()) return
+    
+    const newSuggestion: Suggestion = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      text: suggestionText.trim(),
+      votes: 0,
+      timestamp: new Date().toISOString()
+    }
+    
+    setSuggestions([...suggestions, newSuggestion])
+    setSuggestionText('')
+    setSuccess('Suggestion submitted!')
+  }
+
+  const updateProfile = () => {
+    if (!currentUser) return
+    
+    if (newPassword && newPassword !== confirmNewPassword) {
+      setError('Passwords dont match')
+      return
+    }
+
+    const updatedUsers = users.map(u => {
+      if (u.id === currentUser.id) {
+        return {
+          ...u,
+          name: editName || currentUser.name,
+          password: newPassword || currentUser.password
+        }
+      }
+      return u
+    })
+    
+    setUsers(updatedUsers)
+    const updatedUser = { ...currentUser, name: editName || currentUser.name, password: newPassword || currentUser.password }
+    localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
+    setCurrentUser(updatedUser)
+    
+    setEditName('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setSuccess('Profile updated!')
+  }
+
+  const resetVotes = () => {
+    setVotes([])
+    setHasVoted(false)
+    localStorage.setItem('tbt_votes', JSON.stringify([]))
+  }
+
+  const getVoteCount = (option: string) => votes.filter(v => v.option === option).length
+
+  // Render sign in
+  if (view === 'signin') {
+    return (
+      <div className="app">
+        <div className="container">
+          <header className="header">
+            <div className="logo">🔥</div>
+            <h1>TRUTH BE TOLD</h1>
+            <p className="tagline">Revelations of Knowledge</p>
+          </header>
+          
           <div className="card">
             <h2>Enter the Sanctuary</h2>
             {error && <div className="error">{error}</div>}
+            {success && <div className="success">{success}</div>}
             <input type="email" placeholder="Sacred Mark (Email)" value={email} onChange={e => setEmail(e.target.value)} />
             <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
             <button onClick={handleSignIn}>Enter</button>
-            <p className="switch">No mark? <button onClick={() => { setError(''); setView('signup') }}>Begin inscription</button></p>
+            <p className="switch">No mark? <button onClick={() => { setError(''); setSuccess(''); setView('signup') }}>Begin inscription</button></p>
           </div>
-        )}
+        </div>
+      </div>
+    )
+  }
 
-        {view === 'signup' && (
+  // Render sign up
+  if (view === 'signup') {
+    return (
+      <div className="app">
+        <div className="container">
+          <header className="header">
+            <div className="logo">🔥</div>
+            <h1>TRUTH BE TOLD</h1>
+            <p className="tagline">Revelations of Knowledge</p>
+          </header>
+          
           <div className="card">
             <h2>Forge Your Mark</h2>
             {error && <div className="error">{error}</div>}
@@ -166,46 +308,191 @@ function App() {
             <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
             <input type="password" placeholder="Confirm Secret Word" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
             <button onClick={handleSignUp}>Inscribe</button>
-            <p className="switch">Already inscribed? <button onClick={() => { setError(''); setView('signin') }}>Sign in</button></p>
+            <p className="switch">Already inscribed? <button onClick={() => { setError(''); setSuccess(''); setView('signin') }}>Sign in</button></p>
           </div>
-        )}
+        </div>
+      </div>
+    )
+  }
 
-        {view === 'dashboard' && currentUser && (
-          <div className="dashboard">
-            <div className="card welcome">
-              <h2>Welcome, {currentUser.name}</h2>
-              <div className="user-num">№ {currentUser.userNumber}</div>
-              <div className={`tier ${currentUser.tierClass}`}>{currentUser.tierName}</div>
-              <p className="tier-title">{currentUser.tierTitle}</p>
-              {currentUser.email === ADMIN_EMAIL && <div className="admin">👁 Admin</div>}
-              <button className="signout" onClick={handleSignOut}>Depart</button>
-            </div>
+  // Render dashboard
+  return (
+    <div className="app">
+      <div className="container">
+        <header className="header">
+          <div className="logo">🔥</div>
+          <h1>TRUTH BE TOLD</h1>
+        </header>
 
+        {/* User Info Banner */}
+        <div className="user-banner">
+          <div className="user-info">
+            <span className="user-name">{currentUser?.name}</span>
+            <span className={`user-tier ${currentUser?.tierClass}`}>{currentUser?.tierName}</span>
+          </div>
+          <span className="user-num">№{currentUser?.userNumber}</span>
+        </div>
+
+        {/* Tabs */}
+        <div className="tabs">
+          <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Home</button>
+          <button className={tab === 'members' ? 'active' : ''} onClick={() => setTab('members')}>Members</button>
+          <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Activity</button>
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
+          <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>Ideas</button>
+        </div>
+
+        {error && <div className="error">{error}</div>}
+        {success && <div className="success">{success}</div>}
+
+        {/* HOME TAB */}
+        {tab === 'home' && (
+          <div className="content">
+            {/* Vote Section */}
             <div className="card">
-              <h3>📜 Past Votes</h3>
-              {PAST_VOTES.map((v, i) => (
-                <div key={i} className="vote-row">
-                  <span>{v.name}</span>
-                  <span>{v.percentage}%</span>
+              <h3>📜 Current Vote</h3>
+              <p className="desc">Vote for the next sanctuary feature</p>
+              
+              {!hasVoted ? (
+                <div className="vote-options">
+                  {VOTE_OPTIONS.map(opt => (
+                    <button key={opt} className="vote-btn" onClick={() => handleVote(opt)}>
+                      {opt} <span className="count">({getVoteCount(opt)})</span>
+                    </button>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="voted">
+                  <p>Your vote has been cast</p>
+                  <div className="vote-results">
+                    {VOTE_OPTIONS.map(opt => {
+                      const count = getVoteCount(opt)
+                      const total = votes.length || 1
+                      const pct = Math.round((count / total) * 100)
+                      return (
+                        <div key={opt} className="vote-row">
+                          <span>{opt}</span>
+                          <span>{pct}% ({count})</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Locked Features */}
             <div className="card">
-              <h3>🔥 Sanctuary</h3>
-              <div className="features">
-                {FEATURES.map((f, i) => (
-                  <div key={i} className="feature">
-                    <span>{f.icon}</span>
-                    <span>{f.name}</span>
+              <h3>🔮 Sanctuary</h3>
+              <div className="features-grid">
+                {LOCKED_FEATURES.map(f => (
+                  <div key={f.name} className="feature locked">
+                    <span className="icon">{f.icon}</span>
+                    <span className="name">{f.name}</span>
+                    <span className="lock">🔒</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="stats">
-              <div><span>{users.length}</span>Members</div>
-              <div><span>{PAST_VOTES.reduce((a,b) => a + b.votes, 0)}</span>Votes</div>
+            <button className="signout" onClick={handleSignOut}>Depart from Sanctuary</button>
+          </div>
+        )}
+
+        {/* MEMBERS TAB */}
+        {tab === 'members' && (
+          <div className="content">
+            <div className="card">
+              <h3>👥 Members ({users.length})</h3>
+              <div className="members-list">
+                {[...users].reverse().map(u => (
+                  <div key={u.id} className="member-row">
+                    <span className="num">№{u.userNumber}</span>
+                    <span className="name">{u.name}</span>
+                    <span className={`tier ${u.tierClass}`}>{u.tierName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {currentUser?.email === ADMIN_EMAIL && (
+              <div className="card admin">
+                <h3>👁 Admin Controls</h3>
+                <button onClick={resetVotes}>Reset All Votes</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ACTIVITY TAB */}
+        {tab === 'activity' && (
+          <div className="content">
+            <div className="card">
+              <h3>📜 Recent Activity</h3>
+              <div className="activity-list">
+                {[...votes].reverse().map(v => (
+                  <div key={v.id} className="activity-row">
+                    <span className="user">{v.userName}</span>
+                    <span className="action">voted for</span>
+                    <span className="target">{v.option}</span>
+                  </div>
+                ))}
+                {[...users].reverse().slice(0, 5).map(u => (
+                  <div key={u.id} className="activity-row">
+                    <span className="user">{u.name}</span>
+                    <span className="action">joined as</span>
+                    <span className="target">{u.tierName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PROFILE TAB */}
+        {tab === 'profile' && (
+          <div className="content">
+            <div className="card">
+              <h3>✏️ Edit Profile</h3>
+              <input type="text" placeholder="New Name" value={editName} onChange={e => setEditName(e.target.value)} />
+              <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              <input type="password" placeholder="Confirm Password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} />
+              <button onClick={updateProfile}>Save Changes</button>
+            </div>
+            
+            <div className="card">
+              <h3>ℹ️ Your Info</h3>
+              <p><strong>Name:</strong> {currentUser?.name}</p>
+              <p><strong>Email:</strong> {currentUser?.email}</p>
+              <p><strong>Tier:</strong> {currentUser?.tierName}</p>
+              <p><strong>Member #:</strong> {currentUser?.userNumber}</p>
+              <p><strong>Joined:</strong> {new Date(currentUser?.joined || '').toLocaleDateString()}</p>
+            </div>
+            
+            <button className="signout" onClick={handleSignOut}>Depart</button>
+          </div>
+        )}
+
+        {/* SUGGESTIONS TAB */}
+        {tab === 'suggestions' && (
+          <div className="content">
+            <div className="card">
+              <h3>💡 Suggest a Feature</h3>
+              <textarea placeholder="What should the community build next?" value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
+              <button onClick={handleSuggestion}>Submit Idea</button>
+            </div>
+            
+            <div className="card">
+              <h3>🌟 Community Ideas ({suggestions.length})</h3>
+              <div className="suggestions-list">
+                {suggestions.map(s => (
+                  <div key={s.id} className="suggestion-row">
+                    <p>{s.text}</p>
+                    <span className="by">— {s.userName}</span>
+                  </div>
+                ))}
+                {suggestions.length === 0 && <p className="empty">No suggestions yet. Be the first!</p>}
+              </div>
             </div>
           </div>
         )}
