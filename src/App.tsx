@@ -1,529 +1,343 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import './index.css'
 
-// Tier system
-interface Tier {
-  name: string;
-  icon: string;
-  inscription: string;
-  css: string;
-}
-
+// Types
 interface User {
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-  userNumber: number;
-  tier: Tier;
-  joined: string;
+  id: string
+  name: string
+  email: string
+  password: string
+  userNumber: number
+  tierName: string
+  tierTitle: string
+  tierClass: string
+  joined: string
 }
 
-const getTier = (userNumber: number): Tier => {
-  if (userNumber <= 13) return { name: 'Founding Ember', icon: '👑', inscription: 'In at the beginning', css: 'tier-founding' }
-  if (userNumber <= 36) return { name: 'Sacred Circle', icon: '⚜', inscription: 'Among the first flames', css: 'tier-sacred' }
-  if (userNumber <= 86) return { name: 'Ember Keeper', icon: '🔥', inscription: 'Kept the fire alive', css: 'tier-keeper' }
-  return { name: 'Member', icon: '◈', inscription: 'Welcome to the sanctuary', css: 'tier-member' }
+interface VoteOption {
+  name: string
+  votes: number
+  percentage: number
 }
 
-const getStoredUsers = (): User[] => {
-  try {
-    const users = localStorage.getItem('tbt_users')
-    return users ? JSON.parse(users) : []
-  } catch { return [] }
-}
+// Constants
+const ADMIN_EMAIL = 'info@truthbtoldhub.com'
 
-const saveUsers = (users: User[]) => {
-  localStorage.setItem('tbt_users', JSON.stringify(users))
-}
+const PAST_VOTES: VoteOption[] = [
+  { name: 'Sacred Sign-In', votes: 3, percentage: 50 },
+  { name: 'Teachings & Dialogues', votes: 2, percentage: 33.3 },
+  { name: 'The Pool', votes: 1, percentage: 16.7 },
+]
 
-// Flame Canvas Component
-function FlameBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+const FEATURES = [
+  { name: 'Community Ballot', icon: '🗳️', desc: 'Vote on next features', locked: false },
+  { name: 'The Pool', icon: '💰', desc: 'Community fund', locked: false },
+  { name: 'Hymnal Music', icon: '🎵', desc: 'Tracks & instrumentals', locked: true },
+  { name: 'TBT Chat', icon: '💬', desc: 'Real-time discussion', locked: true },
+  { name: 'The Library', icon: '📚', desc: 'Writings & references', locked: true },
+  { name: 'Creative Works', icon: '🎬', desc: 'Art, film, projects', locked: true },
+  { name: 'Teachings', icon: '🎓', desc: 'Faith & dialogue', locked: true },
+  { name: 'Action & Outreach', icon: '🤝', desc: 'Mutual aid & events', locked: true },
+]
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let W = canvas.width = window.innerWidth
-    let H = canvas.height = window.innerHeight
-    let animId: number
-
-    const handleResize = () => {
-      W = canvas.width = window.innerWidth
-      H = canvas.height = window.innerHeight
-    }
-    window.addEventListener('resize', handleResize)
-
-    class FlameParticle {
-      x: number; y: number; vx: number; vy: number;
-      radius: number; life: number; decay: number; hue: number;
-      constructor() {
-        this.x = Math.random() * W
-        this.y = H + Math.random() * 100
-        this.vx = (Math.random() - 0.5) * 1.5
-        this.vy = -(Math.random() * 3 + 2)
-        this.radius = Math.random() * 40 + 20
-        this.life = 1
-        this.decay = Math.random() * 0.008 + 0.005
-        this.hue = Math.random() * 40 + 10
-      }
-      reset() {
-        this.x = Math.random() * W
-        this.y = H + Math.random() * 100
-        this.vx = (Math.random() - 0.5) * 1.5
-        this.vy = -(Math.random() * 3 + 2)
-        this.radius = Math.random() * 40 + 20
-        this.life = 1
-        this.decay = Math.random() * 0.008 + 0.005
-        this.hue = Math.random() * 40 + 10
-      }
-      update() {
-        this.x += this.vx + Math.sin(this.y * 0.01) * 0.5
-        this.y += this.vy
-        this.life -= this.decay
-        this.radius *= 0.997
-        if (this.life <= 0 || this.y < -50) this.reset()
-      }
-      draw(c: CanvasRenderingContext2D) {
-        const a = this.life * 0.4
-        const g = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius)
-        g.addColorStop(0, `hsla(${this.hue + 20}, 100%, 80%, ${a})`)
-        g.addColorStop(0.3, `hsla(${this.hue}, 100%, 55%, ${a * 0.8})`)
-        g.addColorStop(0.7, `hsla(${this.hue - 10}, 100%, 30%, ${a * 0.4})`)
-        g.addColorStop(1, 'hsla(0, 100%, 10%, 0)')
-        c.fillStyle = g
-        c.fillRect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2)
-      }
-    }
-
-    const flames: FlameParticle[] = []
-    for (let i = 0; i < 120; i++) {
-      const f = new FlameParticle()
-      f.y = Math.random() * H
-      f.life = Math.random()
-      flames.push(f)
-    }
-
-    const animate = () => {
-      ctx.globalCompositeOperation = 'source-over'
-      ctx.fillStyle = 'rgba(10, 5, 3, 0.15)'
-      ctx.fillRect(0, 0, W, H)
-      ctx.globalCompositeOperation = 'lighter'
-
-      // Base glow
-      const glow = ctx.createLinearGradient(0, H, 0, H * 0.4)
-      glow.addColorStop(0, 'rgba(180, 60, 10, 0.6)')
-      glow.addColorStop(0.3, 'rgba(120, 30, 5, 0.3)')
-      glow.addColorStop(0.6, 'rgba(60, 15, 2, 0.15)')
-      glow.addColorStop(1, 'rgba(10, 5, 3, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(0, 0, W, H)
-
-      flames.forEach(f => { f.update(); f.draw(ctx) })
-      animId = requestAnimationFrame(animate)
-    }
-    animate()
-
-    return () => {
-      cancelAnimationFrame(animId)
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [])
-
-  return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }} />
-}
-
-// Ember Particles
-function EmberParticles() {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    const sizes = ['ember-small', 'ember-medium', 'ember-large']
-
-    const createEmber = () => {
-      const ember = document.createElement('div')
-      ember.className = `ember ${sizes[Math.floor(Math.random() * sizes.length)]}`
-      ember.style.left = `${Math.random() * 100}%`
-      ember.style.bottom = '-10px'
-      ember.style.animationDelay = `${Math.random() * 2}s`
-      ember.style.animationDuration = `${Math.random() * 3 + 4}s`
-      container.appendChild(ember)
-      setTimeout(() => ember.remove(), 8000)
-    }
-
-    for (let i = 0; i < 25; i++) setTimeout(createEmber, i * 200)
-    const interval = setInterval(createEmber, 400)
-    return () => clearInterval(interval)
-  }, [])
-
-  return <div ref={containerRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1 }} />
-}
-
-// Dashboard Component
-function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
-  const users = getStoredUsers();
-  const totalMembers = users.length;
-  const totalVotes = 6; // from the scroll results
-
-  const pastVoteResults = [
-    { feature: 'Sacred Sign-In', percentage: 50, votes: 3 },
-    { feature: 'The Pool', percentage: 16.7, votes: 1 },
-    { feature: 'Teachings & Dialogues', percentage: 33.3, votes: 2 },
-    { feature: 'Hymnal Music', percentage: 0, votes: 0 },
-    { feature: 'The Library', percentage: 0, votes: 0 },
-    { feature: 'TBT Chat', percentage: 0, votes: 0 },
-    { feature: 'The Community', percentage: 0, votes: 0 },
-    { feature: 'Creative Works', percentage: 0, votes: 0 },
-    { feature: 'Action & Outreach', percentage: 0, votes: 0 },
-    { feature: 'The Archive', percentage: 0, votes: 0 }
-  ];
-
-  const upcomingFeatures = [
-    { name: 'Music Page', description: 'Tracks, instrumentals, spoken word' },
-    { name: 'Chat Page', description: 'Real-time community discussion' },
-    { name: 'Content Page', description: 'Videos, short films, creative works' },
-    { name: 'Library', description: 'Curated writings and references' },
-    { name: 'Teachings', description: 'Long-form dialogues on truth' },
-    { name: 'Archive', description: 'Chronological record of moments' }
-  ];
-
-  const isAdmin = user.email === 'info@truthbtoldhub.com';
-
-  return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <div className="scroll-title">
-          <h1>Welcome, {user.name}</h1>
-          <p>Sanctuary Dashboard</p>
-        </div>
-        <div className="ornament">― ✦ ―</div>
-        <div className="user-number">#{user.userNumber}</div>
-        <div style={{ textAlign: 'center' }}>
-          <span className={`tier-badge ${user.tier.css}`}>
-            {user.tier.icon} {user.tier.name}
-          </span>
-        </div>
-        <p className="tier-inscription">"{user.tier.inscription}"</p>
-        {user.userNumber === 1 && (
-          <p className="founder-note">🔥 You are the First Flame. The sanctuary begins with you.</p>
-        )}
-      </div>
-
-      <div className="dashboard-grid">
-        {/* Past Vote Results */}
-        <div className="dashboard-card">
-          <h3>🗳️ Past Vote Results</h3>
-          <p className="card-subtitle">The Sacred Scroll has spoken</p>
-          <div className="vote-results">
-            {pastVoteResults.map((item, idx) => (
-              <div key={idx} className="vote-item">
-                <div className="vote-feature">{item.feature}</div>
-                <div className="vote-bar">
-                  <div className="vote-fill" style={{ width: `${item.percentage}%` }} />
-                </div>
-                <div className="vote-percentage">{item.percentage}% ({item.votes} marks)</div>
-              </div>
-            ))}
-          </div>
-          <p className="note">Sacred Sign-In won with 50% — now being forged</p>
-        </div>
-
-        {/* Next Feature Being Built */}
-        <div className="dashboard-card">
-          <h3>🔨 Next Feature Being Built</h3>
-          <p className="card-subtitle">The Pool — Community Fund</p>
-          <div className="progress-section">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: '16.7%' }} />
-            </div>
-            <div className="progress-label">16.7% complete</div>
-          </div>
-          <p className="progress-description">
-            Transparent fund for disbursements, community activities, and voted initiatives.
-          </p>
-          <button className="btn-secondary">Follow Progress</button>
-        </div>
-
-        {/* Next Community Vote */}
-        <div className="dashboard-card">
-          <h3>🗳️ Next Community Vote</h3>
-          <p className="card-subtitle">Help decide what we build next</p>
-          <div className="vote-options">
-            <p>Choose from 7 new suggestions:</p>
-            <ul style={{ marginLeft: '20px', color: '#4a3020', fontSize: '0.9rem' }}>
-              <li>Music Player with uploads</li>
-              <li>Live community chat</li>
-              <li>Video content hub</li>
-              <li>Member spotlight features</li>
-              <li>Mutual aid coordination</li>
-              <li>Timeline of truth archive</li>
-              <li>Community event calendar</li>
-            </ul>
-          </div>
-          <button className="btn-secondary" onClick={() => alert('Vote will open soon!')}>View Suggestions</button>
-          {isAdmin && (
-            <button className="btn-admin" style={{ marginTop: '10px' }} onClick={() => alert('Admin: Launch vote')}>Launch Vote</button>
-          )}
-        </div>
-
-        {/* User Stats */}
-        <div className="dashboard-card">
-          <h3>📜 Your Stats</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="stat-label">Tier</div>
-              <div className="stat-value">{user.tier.name}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Member #</div>
-              <div className="stat-value">#{user.userNumber}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Joined</div>
-              <div className="stat-value">{new Date(user.joined).toLocaleDateString()}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Status</div>
-              <div className="stat-value">Active</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Community Stats */}
-        <div className="dashboard-card">
-          <h3>👥 Community Stats</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="stat-label">Total Members</div>
-              <div className="stat-value">{totalMembers}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Votes Cast</div>
-              <div className="stat-value">{totalVotes}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Founding Embers</div>
-              <div className="stat-value">{users.filter(u => u.userNumber <= 13).length}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">Active Now</div>
-              <div className="stat-value">{Math.floor(totalMembers * 0.3)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Features */}
-        <div className="dashboard-card wide">
-          <h3>🚀 Upcoming Features</h3>
-          <div className="features-grid">
-            {upcomingFeatures.map((feat, idx) => (
-              <div key={idx} className="feature-preview">
-                <div className="feature-icon">{['🎵', '💬', '🎬', '📚', '🎓', '📜'][idx]}</div>
-                <div className="feature-details">
-                  <h4>{feat.name}</h4>
-                  <p>{feat.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Admin Controls */}
-        {isAdmin && (
-          <div className="dashboard-card admin">
-            <h3>🔮 Admin Controls</h3>
-            <p>Welcome, Founder. You hold the flame.</p>
-            <div className="admin-actions">
-              <button className="btn-admin">Manage Users</button>
-              <button className="btn-admin">View Analytics</button>
-              <button className="btn-admin">Launch Next Vote</button>
-              <button className="btn-admin">Adjust Tiers</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="dashboard-footer">
-        <button className="btn-primary" onClick={onSignOut}>Depart from Sanctuary</button>
-        <p className="footer-note">© 2026 Truth B Told — Unlearn Everything</p>
-      </div>
-    </div>
-  );
-}
-
-export default function App() {
+function App() {
   const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
-  const [user, setUser] = useState<User | null>(null)
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [error, setError] = useState('')
 
+  // Form states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newEmail, setNewEmail] = useState('')
-  const [newPassword, setNewPassword] = useState('')
+  const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
-    const currentUser = localStorage.getItem('tbt_currentUser')
-    if (currentUser) {
-      try {
-        const u = JSON.parse(currentUser)
-        setUser(u)
-        setView('dashboard')
-      } catch { /* ignore */ }
+    const storedUsers = localStorage.getItem('tbt_users')
+    if (storedUsers) {
+      setUsers(JSON.parse(storedUsers))
+    }
+    
+    const storedUser = localStorage.getItem('tbt_currentUser')
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser))
+      setView('dashboard')
     }
   }, [])
 
-  const showMsg = (text: string, type: 'error' | 'success') => {
-    setMessage({ text, type })
-    setTimeout(() => setMessage(null), 5000)
+  const getTier = (userNumber: number): { name: string; title: string; class: string } => {
+    if (userNumber <= 13) return { name: 'Founding Ember', title: '👑 In at the beginning', class: 'tier-founding' }
+    if (userNumber <= 33) return { name: 'Sacred Circle', title: '⚜ Among the first flames', class: 'tier-sacred' }
+    if (userNumber <= 83) return { name: 'Ember Keeper', title: '🔥 Kept the fire alive', class: 'tier-keeper' }
+    return { name: 'Member', title: '◈ Welcome', class: 'tier-member' }
   }
 
   const handleSignUp = () => {
-    if (!newName || !newEmail || !newPassword || !confirmPassword) {
-      showMsg('All fields are required', 'error'); return
+    setError('')
+    
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields')
+      return
     }
-    if (newPassword !== confirmPassword) {
-      showMsg('Passwords do not match', 'error'); return
+    
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
     }
-    if (newPassword.length < 6) {
-      showMsg('Password must be at least 6 characters', 'error'); return
+    
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
     }
 
-    const users = getStoredUsers()
-    if (users.find(u => u.email === newEmail.toLowerCase())) {
-      showMsg('This email is already inscribed', 'error'); return
+    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase())
+    if (existingUser) {
+      setError('This email is already inscribed')
+      return
     }
 
     const userNumber = users.length + 1
     const tier = getTier(userNumber)
+
     const newUser: User = {
-      id: Date.now(), name: newName, email: newEmail.toLowerCase(),
-      password: newPassword, userNumber, tier, joined: new Date().toISOString()
+      id: Date.now().toString(),
+      name,
+      email: email.toLowerCase(),
+      password,
+      userNumber,
+      tierName: tier.name,
+      tierTitle: tier.title,
+      tierClass: tier.class,
+      joined: new Date().toISOString(),
     }
 
-    users.push(newUser)
-    saveUsers(users)
+    const updatedUsers = [...users, newUser]
+    setUsers(updatedUsers)
+    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
+    
     localStorage.setItem('tbt_currentUser', JSON.stringify(newUser))
-    setUser(newUser)
+    setCurrentUser(newUser)
     setView('dashboard')
+    
+    // Clear form
+    setName('')
+    setEmail('')
+    setPassword('')
+    setConfirmPassword('')
   }
 
   const handleSignIn = () => {
+    setError('')
+    
     if (!email || !password) {
-      showMsg('Enter thy Sacred Mark and Secret Word', 'error'); return
+      setError('Please enter your email and password')
+      return
     }
-    const users = getStoredUsers()
-    const found = users.find(u => u.email === email.toLowerCase() && u.password === password)
-    if (!found) {
-      showMsg('Invalid Sacred Mark or Secret Word', 'error'); return
+
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
+    
+    if (!user) {
+      setError('Invalid Sacred Mark or Secret Word')
+      return
     }
-    localStorage.setItem('tbt_currentUser', JSON.stringify(found))
-    setUser(found)
+
+    localStorage.setItem('tbt_currentUser', JSON.stringify(user))
+    setCurrentUser(user)
     setView('dashboard')
+    
+    setEmail('')
+    setPassword('')
   }
 
   const handleSignOut = () => {
     localStorage.removeItem('tbt_currentUser')
-    setUser(null)
-    setEmail(''); setPassword('')
-    setNewName(''); setNewEmail(''); setNewPassword(''); setConfirmPassword('')
+    setCurrentUser(null)
     setView('signin')
+    setError('')
   }
 
   return (
-    <>
-      <FlameBackground />
-      <EmberParticles />
-      <div className="heat-shimmer" />
+    <div className="app">
+      <canvas id="flameCanvas" className="flame-canvas" />
+      
+      <div className="container">
+        {/* Header */}
+        <header className="header">
+          <h1 className="logo">TRUTH BE TOLD HUB</h1>
+          <p className="tagline">The Sacred Scroll</p>
+          <div className="ornament">❧</div>
+        </header>
 
-      <div className="scroll-page">
-        <div className="scroll-wrapper">
-          <div className="scroll-roll-top" />
-
-          <div className="scroll-body">
-            <div className="burnt-edge-top" />
-            <div className="burnt-edge-bottom" />
-
-            <div className="scroll-title">
-              <h1>TRUTH BE TOLD HUB</h1>
-              <p>The Sacred Scroll</p>
+        {/* Sign In Form */}
+        {view === 'signin' && (
+          <div className="scroll-card">
+            <h2>Enter the Sanctuary</h2>
+            
+            {error && <div className="message error">{error}</div>}
+            
+            <div className="form-group">
+              <label>Sacred Mark (Email)</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+              />
             </div>
-            <div className="ornament">― ✦ ―</div>
-
-            {message && (
-              <div className={`message ${message.type}`}>{message.text}</div>
-            )}
-
-            {/* SIGN IN */}
-            {view === 'signin' && (
-              <div className="form-enter">
-                <div className="form-group">
-                  <label>Sacred Mark</label>
-                  <input type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Secret Word</label>
-                  <input type="password" placeholder="Enter thy password" value={password} onChange={e => setPassword(e.target.value)} />
-                </div>
-                <button type="button" className="btn-primary" onClick={handleSignIn}>Enter the Sanctuary</button>
-                <div className="switch-section">
-                  <p>No mark yet?</p>
-                  <button type="button" className="switch-btn" onClick={() => { setMessage(null); setView('signup') }}>Begin Your Inscription</button>
-                </div>
-              </div>
-            )}
-
-            {/* SIGN UP */}
-            {view === 'signup' && (
-              <div className="form-enter">
-                <div className="form-group">
-                  <label>Sacred Name</label>
-                  <input type="text" placeholder="Thy chosen name" value={newName} onChange={e => setNewName(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Sacred Mark</label>
-                  <input type="email" placeholder="your@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Secret Word</label>
-                  <input type="password" placeholder="Forge thy password (6+ chars)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Confirm Secret Word</label>
-                  <input type="password" placeholder="Confirm thy password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                </div>
-                <button type="button" className="btn-primary" onClick={handleSignUp}>Forge Your Mark</button>
-                <div className="switch-section">
-                  <p>Already inscribed?</p>
-                  <button type="button" className="switch-btn" onClick={() => { setMessage(null); setView('signin') }}>Return to Sign In</button>
-                </div>
-              </div>
-            )}
-
-            {/* DASHBOARD */}
-            {view === 'dashboard' && user && (
-              <Dashboard user={user} onSignOut={handleSignOut} />
-            )}
-
-            <div className="scroll-footer">© 2026 Truth B Told — Unlearn Everything</div>
+            
+            <div className="form-group">
+              <label>Secret Word (Password)</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            
+            <button className="btn-primary" onClick={handleSignIn}>
+              Enter the Fire
+            </button>
+            
+            <p className="switch-text">
+              No mark yet?{' '}
+              <button className="switch-btn" onClick={() => { setError(''); setView('signup') }}>
+                Begin your inscription
+              </button>
+            </p>
           </div>
+        )}
 
-          <div className="scroll-roll-bottom">
-            <div className="wax-seal">
-              <div className="wax-seal-outer">
-                <div className="wax-seal-inner">
-                  <span className="wax-seal-text">TBT</span>
-                </div>
+        {/* Sign Up Form */}
+        {view === 'signup' && (
+          <div className="scroll-card">
+            <h2>Forge Your Mark</h2>
+            
+            {error && <div className="message error">{error}</div>}
+            
+            <div className="form-group">
+              <label>Sacred Name</label>
+              <input 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your chosen name"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Sacred Mark (Email)</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Secret Word (Password)</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="6+ characters"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Confirm Secret Word</label>
+              <input 
+                type="password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+              />
+            </div>
+            
+            <button className="btn-primary" onClick={handleSignUp}>
+              Inscribe Your Mark
+            </button>
+            
+            <p className="switch-text">
+              Already inscribed?{' '}
+              <button className="switch-btn" onClick={() => { setError(''); setView('signin') }}>
+                Return to sign in
+              </button>
+            </p>
+          </div>
+        )}
+
+        {/* Dashboard */}
+        {view === 'dashboard' && currentUser && (
+          <div className="dashboard">
+            <div className="dashboard-card">
+              <h2>Welcome, {currentUser.name}</h2>
+              
+              <div className="user-number">#{currentUser.userNumber}</div>
+              
+              <div className={`tier-badge ${currentUser.tierClass}`}>
+                {currentUser.tierName}
+              </div>
+              
+              <p className="tier-inscription">{currentUser.tierTitle}</p>
+              
+              {currentUser.email === ADMIN_EMAIL && (
+                <div className="admin-badge">🔮 Admin</div>
+              )}
+              
+              <button className="btn-signout" onClick={handleSignOut}>
+                Depart from Sanctuary
+              </button>
+            </div>
+
+            {/* Past Votes */}
+            <div className="dashboard-card">
+              <h3>📜 Past Votes</h3>
+              <div className="vote-results">
+                {PAST_VOTES.map((v, i) => (
+                  <div key={i} className="vote-item">
+                    <span className="vote-name">{v.name}</span>
+                    <div className="vote-bar">
+                      <div className="vote-fill" style={{ width: `${v.percentage}%` }}></div>
+                    </div>
+                    <span className="vote-pct">{v.percentage}% ({v.votes})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="dashboard-card">
+              <h3>🔥 Sanctuary Features</h3>
+              <div className="features-grid">
+                {FEATURES.map((f, i) => (
+                  <div key={i} className={`feature-tile ${f.locked ? 'locked' : ''}`}>
+                    <span className="feature-icon">{f.icon}</span>
+                    <span className="feature-name">{f.name}</span>
+                    <span className="feature-desc">{f.desc}</span>
+                    {f.locked && <span className="lock">🔒</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="dashboard-card stats">
+              <div className="stat">
+                <span className="stat-num">{users.length}</span>
+                <span className="stat-label">Members</span>
+              </div>
+              <div className="stat">
+                <span className="stat-num">{PAST_VOTES.reduce((a, b) => a + b.votes, 0)}</span>
+                <span className="stat-label">Votes Cast</span>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
+
+export default App
