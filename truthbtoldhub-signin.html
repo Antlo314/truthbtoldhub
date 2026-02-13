@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Truth B Told Hub - Sacred Sign-In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #1a1512;
+      --bg-scroll: #2d221c;
+      --bg-scroll-light: #3a2a22;
+      --text-amber: #e8b96a;
+      --text-amber-dim: #a68a5b;
+      --accent-gold: #d4a84b;
+      --accent-orange: #c97a3a;
+      --border-scroll: #4a382d;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Crimson Text', Georgia, serif;
+      background: linear-gradient(180deg, #1a1512 0%, #0f0b09 100%);
+      min-height: 100vh;
+      color: var(--text-amber);
+      overflow-x: hidden;
+    }
+
+    /* Floating embers - lighter amber/orange */
+    .embers-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .ember {
+      position: absolute;
+      bottom: -20px;
+      border-radius: 50%;
+      animation: float-up linear infinite;
+    }
+
+    .ember.small {
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 180, 80, 0.7);
+    }
+
+    .ember.medium {
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 160, 60, 0.5);
+      box-shadow: 0 0 10px rgba(255, 150, 50, 0.4);
+    }
+
+    .ember.large {
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, rgba(255, 180, 100, 0.3) 0%, transparent 70%);
+    }
+
+    @keyframes float-up {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 0.8;
+      }
+      100% {
+        transform: translateY(-100vh) scale(0.3);
+        opacity: 0;
+      }
+    }
+
+    /* Glow effects - lighter colors */
+    .glow-amber {
+      position: fixed;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .glow-top {
+      top: -100px;
+      left: 20%;
+      background: radial-gradient(circle, #c97a3a 0%, transparent 70%);
+    }
+
+    .glow-bottom {
+      bottom: -100px;
+      right: 20%;
+      background: radial-gradient(circle, #d4a84b 0%, transparent 70%);
+    }
+
+    /* Main container */
+    .container {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Scroll design */
+    .scroll-wrapper {
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .scroll-roll {
+      height: 20px;
+      background: linear-gradient(180deg, #4a382d 0%, #3a2a22 50%, #4a382d 100%);
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    .scroll-roll.top {
+      margin-bottom: -10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .scroll-roll.bottom {
+      margin-top: -10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .scroll-body {
+      background: linear-gradient(180deg, var(--bg-scroll) 0%, var(--bg-scroll-light) 50%, var(--bg-scroll) 100%);
+      border-left: 2px solid var(--border-scroll);
+      border-right: 2px solid var(--border-scroll);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .scroll-body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(212, 168, 75, 0.1);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* Flourishes */
+    .flourish {
+      text-align: center;
+      color: var(--text-amber-dim);
+      font-size: 24px;
+      opacity: 0.5;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 30px 30px 20px;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.15);
+    }
+
+    .logo-circle {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 15px;
+      background: linear-gradient(135deg, #c97a3a 0%, #8b4513 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(201, 122, 58, 0.3), inset 0 2px 10px rgba(255,255,255,0.1);
+      border: 2px solid rgba(212, 168, 75, 0.3);
+    }
+
+    .logo-circle svg {
+      width: 32px;
+      height: 32px;
+      color: #f5e6d3;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-amber);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--text-amber-dim);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    /* Forms */
+    .form-container {
+      padding: 25px 30px 30px;
+    }
+
+    .error-message {
+      background: rgba(180, 60, 60, 0.2);
+      border: 1px solid rgba(200, 80, 80, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #e88a8a;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-amber-dim);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(15, 10, 8, 0.8);
+      border: 1px solid rgba(74, 56, 45, 0.5);
+      border-radius: 6px;
+      color: var(--text-amber);
+      font-family: inherit;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input::placeholder {
+      color: rgba(166, 138, 91, 0.4);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: rgba(212, 168, 75, 0.5);
+      box-shadow: 0 0 15px rgba(212, 168, 75, 0.1);
+    }
+
+    /* Checkbox row */
+    .checkbox-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-amber-dim);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-orange);
+      cursor: pointer;
+    }
+
+    .checkbox-row a {
+      color: var(--text-amber-dim);
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .checkbox-row a:hover {
+      color: var(--text-amber);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #c97a3a 0%, #8b4513 100%);
+      border: 1px solid rgba(212, 168, 75, 0.3);
+      border-radius: 6px;
+      color: #f5e6d3;
+      font-family: 'Cinzel', serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      border-color: rgba(212, 168, 75, 0.6);
+      box-shadow: 0 4px 20px rgba(201, 122, 58, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .btn-primary .btn-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary .arrow {
+      transition: transform 0.3s;
+    }
+
+    .btn-primary:hover .arrow {
+      transform: translateX(4px);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: rgba(74, 56, 45, 0.3);
+      border: 1px solid rgba(74, 56, 45, 0.5);
+      border-radius: 6px;
+      color: var(--text-amber);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(74, 56, 45, 0.5);
+      border-color: rgba(212, 168, 75, 0.4);
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 25px 0;
+      color: rgba(166, 138, 91, 0.3);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(166, 138, 91, 0.3), transparent);
+    }
+
+    /* Switch mode text */
+    .switch-mode {
+      text-align: center;
+      color: var(--text-amber-dim);
+      font-size: 14px;
+    }
+
+    .switch-mode button {
+      background: none;
+      border: none;
+      color: var(--text-amber);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.3s;
+    }
+
+    .switch-mode button:hover {
+      color: #f5e6d3;
+    }
+
+    /* Dashboard */
+    .dashboard {
+      text-align: center;
+      padding: 20px 30px;
+    }
+
+    .user-avatar {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 15px;
+      background: linear-gradient(135deg, #c97a3a 0%, #8b4513 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 32px;
+      color: #f5e6d3;
+      border: 3px solid rgba(212, 168, 75, 0.3);
+      box-shadow: 0 4px 20px rgba(201, 122, 58, 0.3);
+    }
+
+    .user-name {
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      color: var(--text-amber);
+      margin-bottom: 4px;
+    }
+
+    .user-email {
+      color: var(--text-amber-dim);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .user-joined {
+      color: rgba(166, 138, 91, 0.6);
+      font-size: 12px;
+      margin-bottom: 15px;
+    }
+
+    /* Badge tiers - lighter colors */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .badge.founding {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(218, 165, 32, 0.2) 100%);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      color: #ffd700;
+    }
+
+    .badge.sacred {
+      background: linear-gradient(135deg, rgba(192, 192, 192, 0.2) 0%, rgba(169, 169, 169, 0.2) 100%);
+      border: 1px solid rgba(192, 192, 192, 0.5);
+      color: #c0c0c0;
+    }
+
+    .badge.keeper {
+      background: linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(184, 115, 51, 0.2) 100%);
+      border: 1px solid rgba(205, 127, 50, 0.5);
+      color: #cd7f32;
+    }
+
+    .badge.member {
+      background: rgba(74, 56, 45, 0.3);
+      border: 1px solid rgba(166, 138, 91, 0.3);
+      color: var(--text-amber-dim);
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 10px;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-amber);
+      font-family: 'Cinzel', serif;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-amber-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Coming soon section */
+    .coming-soon {
+      text-align: left;
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0,0,0,0.15);
+      border-radius: 8px;
+    }
+
+    .coming-soon h3 {
+      font-size: 12px;
+      color: var(--text-amber-dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .coming-soon-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 14px;
+      color: rgba(166, 138, 91, 0.6);
+    }
+
+    .coming-soon-item::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent-orange);
+      border-radius: 50%;
+      opacity: 0.5;
+    }
+
+    .btn-signout {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid rgba(166, 138, 91, 0.3);
+      border-radius: 6px;
+      color: var(--text-amber-dim);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+
+    .btn-signout:hover {
+      border-color: rgba(200, 80, 80, 0.5);
+      color: #e88a8a;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      border-top: 1px solid rgba(212, 168, 75, 0.1);
+    }
+
+    .footer p {
+      font-size: 11px;
+      color: rgba(166, 138, 91, 0.4);
+      margin-bottom: 4px;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(245, 230, 211, 0.3);
+      border-top-color: #f5e6d3;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Admin panel */
+    .admin-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #8b0000 0%, #5c0000 100%);
+      border: 1px solid rgba(255, 100, 100, 0.4);
+      color: #ff9999;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 500px) {
+      .scroll-wrapper {
+        width: 100%;
+      }
+
+      .header {
+        padding: 25px 20px 15px;
+      }
+
+      .form-container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      .logo-circle {
+        width: 60px;
+        height: 60px;
+      }
+
+      .logo-circle svg {
+        width: 28px;
+        height: 28px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .stat-number {
+        font-size: 20px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+      }
+    }
+
+    /* Hidden class */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 11, 9, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .loading-content {
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(212, 168, 75, 0.2);
+      border-top-color: var(--accent-gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Ember particles -->
+  <div class="embers-container" id="embers"></div>
+  
+  <!-- Glow effects -->
+  <div class="glow-amber glow-top"></div>
+  <div class="glow-amber glow-bottom"></div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p style="color: var(--text-amber-dim);">Entering sanctuary...</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="scroll-wrapper">
+      <!-- Top scroll roll -->
+      <div class="scroll-roll top"></div>
+      
+      <!-- Main scroll body -->
+      <div class="scroll-body">
+        <!-- Flourish -->
+        <div class="flourish">❧</div>
+        
+        <!-- Header -->
+        <div class="header">
+          <div class="logo-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+          </div>
+          <h1 id="pageTitle">Sacred Sign-In</h1>
+          <p class="subtitle" id="pageSubtitle">Enter the sanctuary • Unlock member features</p>
+        </div>
+
+        <!-- Sign In Form -->
+        <div class="form-container" id="signInForm">
+          <div class="error-message hidden" id="signInError"></div>
+          
+          <form onsubmit="handleSignIn(event)">
+            <div class="form-group">
+              <label for="signInEmail">Sacred Mark (Email)</label>
+              <input type="email" id="signInEmail" placeholder="your.mark@email.com" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="signInPassword">Secret Word (Password)</label>
+              <input type="password" id="signInPassword" placeholder="••••••••" required minlength="6">
+            </div>
+            
+            <div class="checkbox-row">
+              <label>
+                <input type="checkbox" id="rememberMe">
+                Remember my mark
+              </label>
+              <a href="mailto:info@truthbtoldhub.com">Forgotten word?</a>
+            </div>
+            
+            <button type="submit" class="btn-primary" id="signInBtn">
+              <span class="btn-content">
+                <span>Enter the Fire</span>
+                <span class="arrow">→</span>
+              </span>
+            </button>
+          </form>
+          
+          <div class="divider">Or</div>
+          
+          <p class="switch-mode">
+            Not yet marked by the fire?<br>
+            <button onclick="showSignUp()">Begin your inscription →</button>
+          </p>
+        </div>
+
+        <!-- Sign Up Form -->
+        <div class="form-container hidden" id="signUpForm">
+          <div class="error-message hidden" id="signUpError"></div>
+          
+          <form onsubmit="handleSignUp(event)">
+            <div class="form-group">
+              <label for="signUpName">Sacred Name</label>
+              <input type="text" id="signUpName" placeholder="Your chosen name" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="signUpEmail">Sacred Mark (Email)</label>
+              <input type="email" id="signUpEmail" placeholder="your.mark@email.com" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="signUpPassword">Secret Word (Password)</label>
+              <input type="password" id="signUpPassword" placeholder="At least 6 marks" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+              <label for="signUpConfirm">Confirm Secret Word</label>
+              <input type="password" id="signUpConfirm" placeholder="Confirm your password" required minlength="6">
+            </div>
+            
+            <button type="submit" class="btn-primary" id="signUpBtn">
+              <span class="btn-content">
+                <span>Seal My Mark</span>
+                <span class="arrow">→</span>
+              </span>
+            </button>
+          </form>
+          
+          <div class="divider">Or</div>
+          
+          <p class="switch-mode">
+            Already marked by the fire?<br>
+            <button onclick="showSignIn()">Enter the sanctuary</button>
+          </p>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard hidden" id="dashboard">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <h2 class="user-name" id="userName">Seeker Name</h2>
+          <p class="user-email" id="userEmail">email@example.com</p>
+          <p class="user-joined" id="userJoined">Joined: January 1, 2026</p>
+          
+          <div class="badge" id="userBadge">
+            <span>🔥</span>
+            <span id="badgeText">Member</span>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-number" id="statVotes">0</div>
+              <div class="stat-label">Votes Cast</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number" id="statContrib">0</div>
+              <div class="stat-label">Contribs</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number" id="statTier">-</div>
+              <div class="stat-label">Tier</div>
+            </div>
+          </div>
+          
+          <div class="coming-soon">
+            <h3>Coming Soon</h3>
+            <div class="coming-soon-item">Sacred Sign-In (you are here)</div>
+            <div class="coming-soon-item">Hymnal Music</div>
+            <div class="coming-soon-item">The Library</div>
+            <div class="coming-soon-item">TBT Chat</div>
+            <div class="coming-soon-item">The Community</div>
+          </div>
+          
+          <button class="btn-signout" onclick="handleSignOut()">
+            Depart from Sanctuary
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <p>© 2026 Truth B Told — Unlearn Everything</p>
+          <p>Member access to save progress, vote once per round</p>
+        </div>
+      </div>
+      
+      <!-- Bottom scroll roll -->
+      <div class="scroll-roll bottom"></div>
+    </div>
+  </div>
+
+  <script>
+    // ============ CONFIGURATION ============
+    const ADMIN_EMAIL = 'info@truthbtoldhub.com'; // Change this to your admin email
+    
+    // Tier thresholds
+    const TIERS = {
+      FOUNDING: { max: 10, name: 'Founding Ember', class: 'founding', icon: '👑' },
+      SACRED: { max: 30, name: 'Sacred Circle', class: 'sacred', icon: '⚜' },
+      KEEPER: { max: 80, name: 'Ember Keeper', class: 'keeper', icon: '🔥' },
+      MEMBER: { max: Infinity, name: 'Member', class: 'member', icon: '◈' }
+    };
+    
+    // ============ UTILITY FUNCTIONS ============
+    function getUsers() {
+      const stored = localStorage.getItem('tbt_users');
+      return stored ? JSON.parse(stored) : [];
+    }
+    
+    function saveUsers(users) {
+      localStorage.setItem('tbt_users', JSON.stringify(users));
+    }
+    
+    function findUser(email) {
+      const users = getUsers();
+      return users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    }
+    
+    function getUserTier(userNumber) {
+      if (userNumber <= TIERS.FOUNDING.max) return TIERS.FOUNDING;
+      if (userNumber <= TIERS.SACRED.max) return TIERS.SACRED;
+      if (userNumber <= TIERS.KEEPER.max) return TIERS.KEEPER;
+      return TIERS.MEMBER;
+    }
+    
+    function getUserNumber(email) {
+      const users = getUsers();
+      const index = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+      return index + 1;
+    }
+    
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+    
+    // ============ EMBER PARTICLES ============
+    function createEmbers() {
+      const container = document.getElementById('embers');
+      const emberCount = 25;
+      
+      for (let i = 0; i < emberCount; i++) {
+        const ember = document.createElement('div');
+        const size = Math.random();
+        let sizeClass = 'small';
+        if (size > 0.7) sizeClass = 'large';
+        else if (size > 0.4) sizeClass = 'medium';
+        
+        ember.className = `ember ${sizeClass}`;
+        ember.style.left = Math.random() * 100 + '%';
+        ember.style.animationDuration = (Math.random() * 8 + 6) + 's';
+        ember.style.animationDelay = (Math.random() * 10) + 's';
+        
+        container.appendChild(ember);
+      }
+    }
+    
+    // ============ FORM HANDLERS ============
+    function showSignIn() {
+      document.getElementById('signInForm').classList.remove('hidden');
+      document.getElementById('signUpForm').classList.add('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('pageTitle').textContent = 'Sacred Sign-In';
+      document.getElementById('pageSubtitle').textContent = 'Enter the sanctuary • Unlock member features';
+      clearErrors();
+    }
+    
+    function showSignUp() {
+      document.getElementById('signInForm').classList.add('hidden');
+      document.getElementById('signUpForm').classList.remove('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('pageTitle').textContent = 'Inscribe Yourself';
+      document.getElementById('pageSubtitle').textContent = 'Join the community of truth-seekers';
+      clearErrors();
+    }
+    
+    function showDashboard(user) {
+      document.getElementById('signInForm').classList.add('hidden');
+      document.getElementById('signUpForm').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('pageTitle').textContent = 'Welcome, Seeker';
+      document.getElementById('pageSubtitle').textContent = 'You have entered the sanctuary';
+      
+      // Set user info
+      document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+      document.getElementById('userName').innerHTML = user.name + (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? '<span class="admin-badge">Admin</span>' : '');
+      document.getElementById('userEmail').textContent = user.email;
+      document.getElementById('userJoined').textContent = 'Joined: ' + formatDate(user.createdAt);
+      
+      // Set tier
+      const userNum = getUserNumber(user.email);
+      const tier = getUserTier(userNum);
+      
+      document.getElementById('badgeText').textContent = tier.name;
+      document.getElementById('statTier').textContent = userNum;
+      
+      const badge = document.getElementById('userBadge');
+      badge.className = 'badge ' + tier.class;
+      badge.innerHTML = `<span>${tier.icon}</span><span>${tier.name}</span>`;
+      
+      // Stats (placeholder for now)
+      document.getElementById('statVotes').textContent = '0';
+      document.getElementById('statContrib').textContent = '0';
+    }
+    
+    function showError(elementId, message) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+    
+    function clearErrors() {
+      document.getElementById('signInError').classList.add('hidden');
+      document.getElementById('signUpError').classList.add('hidden');
+    }
+    
+    // ============ AUTH ACTIONS ============
+    function handleSignIn(e) {
+      e.preventDefault();
+      clearErrors();
+      
+      const email = document.getElementById('signInEmail').value.trim();
+      const password = document.getElementById('signInPassword').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+      
+      const btn = document.getElementById('signInBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-content"><div class="spinner"></div><span>Entering...</span></span>';
+      
+      setTimeout(() => {
+        const user = findUser(email);
+        
+        if (!user) {
+          showError('signInError', 'No sacred mark found. Begin your inscription first.');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="btn-content"><span>Enter the Fire</span><span class="arrow">→</span></span>';
+          return;
+        }
+        
+        if (user.password !== password) {
+          showError('signInError', 'The secret word does not match our records.');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="btn-content"><span>Enter the Fire</span><span class="arrow">→</span></span>';
+          return;
+        }
+        
+        // Success - save session
+        const sessionUser = { email: user.email, name: user.name, createdAt: user.createdAt };
+        
+        if (rememberMe) {
+          localStorage.setItem('tbt_currentUser', JSON.stringify(sessionUser));
+        }
+        sessionStorage.setItem('tbt_currentUser', JSON.stringify(sessionUser));
+        
+        showDashboard(sessionUser);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-content"><span>Enter the Fire</span><span class="arrow">→</span></span>';
+        
+      }, 1500);
+    }
+    
+    function handleSignUp(e) {
+      e.preventDefault();
+      clearErrors();
+      
+      const name = document.getElementById('signUpName').value.trim();
+      const email = document.getElementById('signUpEmail').value.trim();
+      const password = document.getElementById('signUpPassword').value;
+      const confirmPassword = document.getElementById('signUpConfirm').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+      
+      // Validation
+      if (password !== confirmPassword) {
+        showError('signUpError', 'The secret words do not align. Try again.');
+        return;
+      }
+      
+      if (password.length < 6) {
+        showError('signUpError', 'The secret word must be at least 6 marks.');
+        return;
+      }
+      
+      if (!name) {
+        showError('signUpError', 'We need your sacred name.');
+        return;
+      }
+      
+      const btn = document.getElementById('signUpBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-content"><div class="spinner"></div><span>Inscribing...</span></span>';
+      
+      setTimeout(() => {
+        // Check if user exists
+        if (findUser(email)) {
+          showError('signUpError', 'This sacred mark is already inscribed.');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="btn-content"><span>Seal My Mark</span><span class="arrow">→</span></span>';
+          return;
+        }
+        
+        // Create new user
+        const users = getUsers();
+        const newUser = {
+          email: email.toLowerCase(),
+          name: name,
+          password: password,
+          createdAt: new Date().toISOString()
+        };
+        
+        users.push(newUser);
+        saveUsers(users);
+        
+        // Show welcome message with tier
+        const userNum = users.length;
+        const tier = getUserTier(userNum);
+        
+        alert(`🎉 Welcome to Truth B Told Hub!\n\nYou are user #${userNum} to join!\nYour tier: ${tier.icon} ${tier.name}\n\n${tier.name === 'Founding Ember' ? '🏆 You are among the FIRST 10 members! You are a FOUNDING EMBER!' : tier.name === 'Sacred Circle' ? '⚜ You are among the first 30! Welcome to the Sacred Circle!' : ''}`);
+        
+        // Auto sign in
+        const sessionUser = { email: newUser.email, name: newUser.name, createdAt: newUser.createdAt };
+        
+        if (rememberMe) {
+          localStorage.setItem('tbt_currentUser', JSON.stringify(sessionUser));
+        }
+        sessionStorage.setItem('tbt_currentUser', JSON.stringify(sessionUser));
+        
+        showDashboard(sessionUser);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-content"><span>Seal My Mark</span><span class="arrow">→</span></span>';
+        
+      }, 1500);
+    }
+    
+    function handleSignOut() {
+      localStorage.removeItem('tbt_currentUser');
+      sessionStorage.removeItem('tbt_currentUser');
+      
+      // Clear form fields
+      document.getElementById('signInEmail').value = '';
+      document.getElementById('signInPassword').value = '';
+      document.getElementById('signUpName').value = '';
+      document.getElementById('signUpEmail').value = '';
+      document.getElementById('signUpPassword').value = '';
+      document.getElementById('signUpConfirm').value = '';
+      
+      showSignIn();
+    }
+    
+    // ============ INITIALIZATION ============
+    function init() {
+      createEmbers();
+      
+      // Check for existing session
+      const savedUser = localStorage.getItem('tbt_currentUser');
+      const sessionUser = sessionStorage.getItem('tbt_currentUser');
+      
+      const user = savedUser ? JSON.parse(savedUser) : (sessionUser ? JSON.parse(sessionUser) : null);
+      
+      if (user) {
+        showDashboard(user);
+      }
+    }
+    
+    // Run on load
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
