@@ -69,8 +69,8 @@ function App() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [suggestionText, setSuggestionText] = useState('')
 
-  // Load data from Supabase on mount
   useEffect(() => {
+    console.log('Loading data from Supabase...')
     loadUsers()
     loadVotes()
     loadSuggestions()
@@ -78,8 +78,14 @@ function App() {
   }, [])
 
   const loadUsers = async () => {
-    const { data } = await supabase.from('users').select('*').order('user_number', { ascending: true })
-    if (data) setUsers(data)
+    console.log('Fetching users...')
+    const { data, error } = await supabase.from('users').select('*').order('user_number', { ascending: true })
+    if (error) {
+      console.error('Error loading users:', error)
+    } else {
+      console.log('Users loaded:', data?.length || 0)
+      setUsers(data || [])
+    }
   }
 
   const loadVotes = async () => {
@@ -96,6 +102,7 @@ function App() {
     const stored = localStorage.getItem('tbt_currentUser')
     if (stored) {
       const user = JSON.parse(stored)
+      console.log('User logged in:', user.name)
       setCurrentUser(user)
       setView('dashboard')
       
@@ -126,50 +133,63 @@ function App() {
       return
     }
 
-    // Check if email exists
-    const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
+    console.log('Checking for existing email...')
+    const { data: existing, error: checkError } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
+    
+    if (checkError) {
+      console.error('Error checking email:', checkError)
+      setError('Database error: ' + checkError.message)
+      return
+    }
+    
     if (existing && existing.length > 0) {
       setError('Email already inscribed')
       return
     }
 
-    // Get user count
+    console.log('Getting user count...')
     const { data: allUsers } = await supabase.from('users').select('user_number')
     const userNumber = (allUsers?.length || 0) + 1
+    console.log('New user number:', userNumber)
+    
     const tier = getTier(userNumber)
 
-    const newUser: User = {
+    const newUser = {
       id: Date.now().toString(),
-      name,
       email: email.toLowerCase(),
+      name,
       password,
-      userNumber,
-      tierName: tier.name,
-      tierTitle: tier.title,
-      tierClass: tier.class,
-      joined: new Date().toISOString(),
+      user_number: userNumber,
+      tier_name: tier.name,
+      tier_title: tier.title,
+      tier_class: tier.class,
+      joined: new Date().toISOString()
     }
 
-    // Save to Supabase
-    await supabase.from('users').insert([{
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      password: newUser.password,
-      user_number: newUser.userNumber,
-      tier_name: newUser.tierName,
-      tier_title: newUser.tierTitle,
-      tier_class: newUser.tierClass,
-      joined: newUser.joined
-    }])
+    console.log('Saving user to Supabase:', newUser)
+    const { data, error } = await supabase.from('users').insert([newUser]).select()
 
-    // Save locally
-    localStorage.setItem('tbt_currentUser', JSON.stringify(newUser))
-    setCurrentUser(newUser)
+    if (error) {
+      console.error('Error saving user:', error)
+      setError('Error saving: ' + error.message)
+      return
+    }
+
+    console.log('User saved successfully:', data)
+    
+    const fullUser: User = {
+      ...newUser,
+      userNumber: newUser.user_number,
+      tierName: newUser.tier_name,
+      tierTitle: newUser.tier_title,
+      tierClass: newUser.tier_class
+    }
+    
+    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+    setCurrentUser(fullUser)
     setView('dashboard')
     setSuccess('Welcome to the Sanctuary!')
     
-    // Refresh users list
     loadUsers()
     
     setName('')
@@ -185,11 +205,18 @@ function App() {
       return
     }
 
-    const { data } = await supabase.from('users')
+    console.log('Signing in...')
+    const { data, error } = await supabase.from('users')
       .select('*')
       .eq('email', email.toLowerCase())
       .eq('password', password)
       .limit(1)
+
+    if (error) {
+      console.error('Sign in error:', error)
+      setError('Error: ' + error.message)
+      return
+    }
 
     if (!data || data.length === 0) {
       setError('Invalid credentials')
@@ -197,8 +224,20 @@ function App() {
     }
 
     const user = data[0]
-    localStorage.setItem('tbt_currentUser', JSON.stringify(user))
-    setCurrentUser(user)
+    const fullUser: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      userNumber: user.user_number,
+      tierName: user.tier_name,
+      tierTitle: user.tier_title,
+      tierClass: user.tier_class,
+      joined: user.joined
+    }
+    
+    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+    setCurrentUser(fullUser)
     setView('dashboard')
     setEmail('')
     setPassword('')
