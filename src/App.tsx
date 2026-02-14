@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+// src/App.tsx
+import { useState, useEffect, useRef } from 'react'
 import './index.css'
 import { supabase } from './supabase'
 
@@ -12,6 +13,7 @@ interface User {
   tierTitle: string
   tierClass: string
   joined: string
+  avatarUrl?: string
 }
 
 interface Vote {
@@ -40,14 +42,14 @@ interface VoteSettings {
 const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
 
 const DEFAULT_OPTIONS = [
-  { name: 'The Stage', icon: '🎤', desc: 'Original music, podcasts & spoken word' },
-  { name: 'The Circle', icon: '💬', desc: 'Real-time discussions & debates' },
-  { name: 'The Pool', icon: '⚱', desc: 'Community fund & mutual aid' },
-  { name: 'The Gallery', icon: '🎨', desc: 'Videos, films & visual art' },
-  { name: 'The Library', icon: '📚', desc: 'Writings & references' },
-  { name: 'The Temple', icon: '🏛', desc: 'Teachings & dialogues' },
-  { name: 'The Council', icon: '🤝', desc: 'Community & events' },
-  { name: 'The Archive', icon: '📜', desc: 'Timeline of truth' }
+  { name: 'The Stage', icon: '🎤' },
+  { name: 'The Circle', icon: '💬' },
+  { name: 'The Pool', icon: '⚱' },
+  { name: 'The Gallery', icon: '🎨' },
+  { name: 'The Library', icon: '📚' },
+  { name: 'The Temple', icon: '🏛' },
+  { name: 'The Council', icon: '🤝' },
+  { name: 'The Archive', icon: '📜' }
 ]
 
 const FEATURES = [
@@ -63,7 +65,7 @@ const FEATURES = [
 
 function App() {
   const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
-  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions' | 'admin'>('home')
+  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions' | 'admin' | 'avatar'>('home')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [votes, setVotes] = useState<Vote[]>([])
@@ -76,13 +78,8 @@ function App() {
   const [timeLeft, setTimeLeft] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
   const [toast, setToast] = useState('')
-
-  // Admin
-  const [newVoteHours, setNewVoteHours] = useState(24)
-  const [upgradeEmail, setUpgradeEmail] = useState('')
-  const [upgradeTier, setUpgradeTier] = useState('Founding Ember')
-  const [deleteEmail, setDeleteEmail] = useState('')
-
+  
+  // Form states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -91,13 +88,26 @@ function App() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [suggestionText, setSuggestionText] = useState('')
-
+  
+  // Admin states
+  const [upgradeEmail, setUpgradeEmail] = useState('')
+  const [upgradeTier, setUpgradeTier] = useState('Founding Ember')
+  const [deleteEmail, setDeleteEmail] = useState('')
+  const [newVoteHours, setNewVoteHours] = useState(24)
+  const [customHours, setCustomHours] = useState('')
+  
+  // Avatar states
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const isAdmin = currentUser?.email === ADMIN_EMAIL
 
   // Timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!voteSettings || !voteSettings.endTime) {
+    const timer = setInterval(async () => {
+      if (!voteSettings) {
         setTimeLeft('No active vote')
         return
       }
@@ -110,7 +120,7 @@ function App() {
         const hours = Math.floor(remaining / 3600000)
         const mins = Math.floor((remaining % 3600000) / 60000)
         const secs = Math.floor((remaining % 60000) / 1000)
-        setTimeLeft(`${hours}h ${mins}m ${secs}s`)
+        setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`)
       }
     }, 1000)
     return () => clearInterval(timer)
@@ -124,9 +134,9 @@ function App() {
     setLoading(true)
     
     // Load vote settings
-    const settingsRes = await supabase.from('vote_settings').select('*').limit(1)
-    if (settingsRes.data && settingsRes.data.length > 0) {
-      setVoteSettings(settingsRes.data[0])
+    const { data: settingsData } = await supabase.from('vote_settings').select('*').limit(1)
+    if (settingsData && settingsData.length > 0) {
+      setVoteSettings(settingsData[0])
     }
     
     const [usersRes, votesRes, suggsRes] = await Promise.all([
@@ -175,7 +185,7 @@ function App() {
     setVoteSettings({ id: '1', endTime, options })
     setHasVoted(false)
     loadData()
-    showToast('✅ New vote started!')
+    showToast('✅ Vote started!')
   }
 
   const endVoteNow = async () => {
@@ -219,6 +229,60 @@ function App() {
     loadData()
     setDeleteEmail('')
     showToast('✅ Member deleted')
+  }
+
+  // Avatar Functions
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadAvatar = async () => {
+    if (!avatarFile || !currentUser) return
+    
+    setIsUploading(true)
+    
+    try {
+      const fileExt = avatarFile.name.split('.').pop()
+      const fileName = `${currentUser.id}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, avatarFile, {
+          upsert: true
+        })
+      
+      if (uploadError) throw uploadError
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName)
+      
+      await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', currentUser.id)
+      
+      setCurrentUser({ ...currentUser, avatarUrl: publicUrl })
+      localStorage.setItem('tbt_currentUser', JSON.stringify({ ...currentUser, avatarUrl: publicUrl }))
+      
+      showToast('✅ Avatar uploaded!')
+      setAvatarPreview(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      showToast('❌ Upload failed')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const generateAI = async () => {
+    showToast('🤖 AI avatar coming soon!')
   }
 
   const handleSignUp = async () => {
@@ -317,7 +381,8 @@ function App() {
       tierName: user.tier_name,
       tierTitle: user.tier_title,
       tierClass: user.tier_class,
-      joined: user.joined
+      joined: user.joined,
+      avatarUrl: user.avatar_url
     }
     
     localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
@@ -511,7 +576,13 @@ function App() {
         </header>
 
         <div className="user-banner">
-          <div className="avatar">{getInitials(currentUser?.name || '')}</div>
+          <div className="avatar-container">
+            {currentUser?.avatarUrl ? (
+              <img src={currentUser.avatarUrl} alt="Avatar" className="avatar-img" />
+            ) : (
+              <div className="avatar">{getInitials(currentUser?.name || '')}</div>
+            )}
+          </div>
           <div className="user-info">
             <span className="user-name">{currentUser?.name}</span>
             <span className={`user-tier ${currentUser?.tierClass}`}>{currentUser?.tierName}</span>
@@ -525,46 +596,111 @@ function App() {
           <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Activity</button>
           <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
           <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>Ideas</button>
+          <button className={tab === 'avatar' ? 'active' : ''} onClick={() => setTab('avatar')}>📷</button>
           {isAdmin && <button className={tab === 'admin' ? 'active admin-tab' : 'admin-tab'} onClick={() => setTab('admin')}>⚙️</button>}
         </div>
 
         {error && <div className="error">{error}</div>}
 
+        {tab === 'avatar' && (
+          <div className="content">
+            <div className="card">
+              <h3>🖼️ Avatar</h3>
+              <div className="avatar-upload">
+                <div className="avatar-preview">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Preview" className="preview-img" />
+                  ) : currentUser?.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt="Current" className="preview-img" />
+                  ) : (
+                    <div className="avatar-placeholder">👤</div>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAvatarChange}
+                  ref={fileInputRef}
+                  className="file-input"
+                />
+                <div className="avatar-actions">
+                  <button onClick={uploadAvatar} disabled={isUploading || !avatarFile}>
+                    {isUploading ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                  <button onClick={generateAI} className="secondary">
+                    🤖 Generate AI
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === 'admin' && isAdmin && (
           <div className="content">
             <div className="card admin-panel">
-              <h3>👁 Admin Controls</h3>
+              <h3>👁 Admin Dashboard</h3>
               
-              <div className="admin-section">
-                <h4>🗳️ Start Vote</h4>
-                <div className="vote-hours">
-                  {[12, 24, 48, 72].map(h => (
-                    <button key={h} onClick={() => startNewVote(h)}>{h}h</button>
-                  ))}
+              <div className="admin-stats">
+                <div className="stat-card">
+                  <span className="stat-value">{users.length}</span>
+                  <span className="stat-label">Members</span>
                 </div>
-                <button className="danger" onClick={endVoteNow}>End Vote</button>
+                <div className="stat-card">
+                  <span className="stat-value">{votes.length}</span>
+                  <span className="stat-label">Votes</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-value">{suggestions.length}</span>
+                  <span className="stat-label">Ideas</span>
+                </div>
               </div>
 
               <div className="admin-section">
-                <h4>⬆️ Upgrade</h4>
-                <input type="email" placeholder="Email" value={upgradeEmail} onChange={e => setUpgradeEmail(e.target.value)} />
-                <select value={upgradeTier} onChange={e => setUpgradeTier(e.target.value)}>
-                  <option value="Founding Ember">Founding Ember</option>
-                  <option value="Sacred Circle">Sacred Circle</option>
-                  <option value="Ember Keeper">Ember Keeper</option>
-                  <option value="Member">Member</option>
-                </select>
-                <button onClick={upgradeMemberTier}>Upgrade</button>
+                <h4>🗳️ Vote Control</h4>
+                <div className="vote-controls">
+                  <div className="vote-hours">
+                    {[12, 24, 48, 72].map(h => (
+                      <button key={h} onClick={() => startNewVote(h)}>{h}h</button>
+                    ))}
+                  </div>
+                  <div className="custom-vote">
+                    <input 
+                      type="number" 
+                      placeholder="Hours" 
+                      value={customHours}
+                      onChange={e => setCustomHours(e.target.value)}
+                      min="1"
+                      max="168"
+                    />
+                    <button onClick={() => {
+                      const hours = parseInt(customHours)
+                      if (hours && hours > 0) startNewVote(hours)
+                    }}>Start Custom</button>
+                  </div>
+                  <button className="danger" onClick={endVoteNow}>End Vote Now</button>
+                </div>
               </div>
 
               <div className="admin-section">
-                <h4>🗑️ Delete</h4>
-                <input type="email" placeholder="Email" value={deleteEmail} onChange={e => setDeleteEmail(e.target.value)} />
-                <button className="danger" onClick={deleteMemberByEmail}>Delete</button>
-              </div>
-
-              <div className="admin-section">
-                <button className="danger" onClick={resetVotes}>Reset Votes</button>
+                <h4>⬆️ Member Management</h4>
+                <div className="admin-form">
+                  <input type="email" placeholder="Member email" value={upgradeEmail} onChange={e => setUpgradeEmail(e.target.value)} />
+                  <select value={upgradeTier} onChange={e => setUpgradeTier(e.target.value)}>
+                    <option value="Founding Ember">Founding Ember</option>
+                    <option value="Sacred Circle">Sacred Circle</option>
+                    <option value="Ember Keeper">Ember Keeper</option>
+                    <option value="Member">Member</option>
+                  </select>
+                  <button onClick={upgradeMemberTier}>Upgrade</button>
+                </div>
+                
+                <div className="admin-form">
+                  <input type="email" placeholder="Member email" value={deleteEmail} onChange={e => setDeleteEmail(e.target.value)} />
+                  <button className="danger" onClick={deleteMemberByEmail}>Delete</button>
+                </div>
+                
+                <button className="danger" onClick={resetVotes}>Reset All Votes</button>
               </div>
             </div>
           </div>
@@ -645,7 +781,13 @@ function App() {
               <div className="members-list">
                 {[...users].reverse().map(u => (
                   <div key={u.id} className="member-row">
-                    <div className="avatar-sm">{getInitials(u.name)}</div>
+                    <div className="avatar-container-sm">
+                      {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt="Avatar" className="avatar-img-sm" />
+                      ) : (
+                        <div className="avatar-sm">{getInitials(u.name)}</div>
+                      )}
+                    </div>
                     <span className="num">#{u.user_number}</span>
                     <span className="name">{u.name}</span>
                     <span className={`tier ${u.tier_class}`}>{u.tier_name}</span>
@@ -699,6 +841,7 @@ function App() {
               <p><strong>Email:</strong> {currentUser?.email}</p>
               <p><strong>Tier:</strong> {currentUser?.tierName}</p>
               <p><strong>#:</strong> {currentUser?.userNumber}</p>
+              <p><strong>Joined:</strong> {new Date(currentUser?.joined || '').toLocaleDateString()}</p>
             </div>
             
             <button className="signout" onClick={handleSignOut}>Depart</button>
