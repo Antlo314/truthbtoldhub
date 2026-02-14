@@ -7,6 +7,7 @@
   --gold-dim: #5a4a30;
   --gold-light: #dbb82e;
   --crimson: #8b0000;
+  --crimson-light: #aa0000;
   --black: #08080c;
   --black-light: #12121a;
   --black-card: #1a1a24;
@@ -31,27 +32,27 @@ body {
 .header h1 { font-family: 'Cinzel', serif; font-size: 1.4rem; color: var(--gold); letter-spacing: 4px; font-weight: 700; }
 .tagline { color: var(--gold-dim); font-style: italic; font-size: 0.85rem; margin-top: 3px; }
 
-.card { background: var(--black-card); border: 1px solid var(--gold-dim); border-radius: 4px; padding: 20px; margin-bottom: 12px; }
+.card { background: var(--black-card); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 20px; margin-bottom: 12px; }
 .card h2, .card h3 { font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 12px; text-align: center; }
 .card h2 { font-size: 1.1rem; }
 .card h3 { font-size: 0.95rem; }
 .desc { text-align: center; color: var(--cream-dim); margin-bottom: 15px; font-size: 0.85rem; }
 
-input, textarea { width: 100%; padding: 11px 13px; margin-bottom: 10px; background: var(--black); border: 1px solid var(--gold-dim); border-radius: 3px; color: var(--cream); font-family: 'Crimson Text', serif; font-size: 0.95rem; }
-input:focus, textarea:focus { outline: none; border-color: var(--gold); }
+input, textarea { width: 100%; padding: 11px 13px; margin-bottom: 10px; background: var(--black); border: 1px solid var(--gold-dim); border-radius: 4px; color: var(--cream); font-family: 'Crimson Text', serif; font-size: 0.95rem; }
+input:focus, textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 8px rgba(201, 162, 39, 0.2); }
 input::placeholder, textarea::placeholder { color: var(--cream-dim); }
 textarea { min-height: 70px; resize: vertical; }
 
-button { width: 100%; padding: 11px; background: var(--gold); border: none; border-radius: 3px; color: var(--black); font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
-button:hover { background: var(--gold-light); }
+button { width: 100%; padding: 11px; background: var(--gold); border: none; border-radius: 4px; color: var(--black); font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+button:hover { background: var(--gold-light); transform: translateY(-1px); }
 
 .switch { text-align: center; margin-top: 12px; color: var(--cream-dim); font-size: 0.9rem; }
 .switch button { width: auto; background: none; color: var(--gold); text-decoration: underline; padding: 0; font-size: 0.9rem; }
 
-.error { background: rgba(139,0,0,0.35); border: 1px solid var(--crimson); color: #ff6b6b; padding: 10px; border-radius: 3px; margin-bottom: 12px; text-align: center; font-size: 0.85rem; }
-.success { background: rgba(0,80,0,0.35); border: 1px solid #005000; color: #6bff6b; padding: 10px; border-radius: 3px; margin-bottom: 12px; text-align: center; font-size: 0.85rem; }
+.error { background: rgba(139,0,0,0.4); border: 1px solid var(--crimson); color: #ff6b6b; padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center; font-size: 0.85rem; }
+.success { background: rgba(0,80,0,0.4); border: 1px solid #005000; color: #6bff6b; padding: 10px; border-radius: 4px; margin-bottom: 12px; text-align: center; font-size: 0.85rem; }
 
-.user-banner { display: flex; justify-content: space-between; align-items: center; background: var(--black-card); border: 1px solid var(--gold-dim); border-radius: 4px; padding: 14px; margin-bottom: 12px; }
+.user-banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--black-card) 0%, #252535 100%); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
 .user-info { display: flex; flex-direction: column; gap: 4px; }
 .user-name { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold); font-weight: 700; }
 .user-tier { font-size: 0.7rem; padding: 2px 8px; border-radius: 8px; display: inline-block; width: fit-content; }
@@ -63,25 +64,25 @@ button:hover { background: var(--gold-light); }
 .tier-basic { background: var(--gold-dim); color: var(--cream); }
 
 .tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
-.tabs button { flex: 1; min-width: 65px; padding: 9px 4px; background: var(--black-card); border: 1px solid var(--gold-dim); color: var(--cream-dim); font-size: 0.75rem; font-family: 'Cinzel', serif; }
-.tabs button.active { background: var(--gold); color: var(--black); }
+.tabs button { flex: 1; min-width: 65px; padding: 9px 4px; background: var(--black-card); border: 1px solid var(--gold-dim); color: var(--cream-dim); font-size: 0.75rem; font-family: 'Cinzel', serif; border-radius: 4px; }
+.tabs button.active { background: var(--gold); color: var(--black); border-color: var(--gold); }
 .tabs button:hover:not(.active) { border-color: var(--gold); }
 
 .content { display: flex; flex-direction: column; gap: 12px; }
 
 .vote-options { display: flex; flex-direction: column; gap: 6px; }
-.vote-btn { display: flex; justify-content: space-between; background: var(--black); border: 1px solid var(--gold-dim); color: var(--cream); font-size: 0.85rem; }
-.vote-btn:hover { background: var(--gold-dim); }
+.vote-btn { display: flex; justify-content: space-between; background: var(--black); border: 1px solid var(--gold-dim); color: var(--cream); font-size: 0.85rem; border-radius: 4px; }
+.vote-btn:hover { background: var(--gold-dim); color: var(--black); }
 .vote-btn .count { color: var(--gold); }
 
 .voted { text-align: center; }
 .voted p { color: var(--gold); margin-bottom: 12px; }
 
 .vote-results { text-align: left; }
-.vote-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--gold-dim); font-size: 0.85rem; }
+.vote-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(201, 162, 39, 0.2); font-size: 0.85rem; }
 
 .features-list { display: flex; flex-direction: column; gap: 10px; }
-.feature-item { background: var(--black); border: 1px solid var(--gold-dim); border-radius: 3px; padding: 12px; }
+.feature-item { background: var(--black); border: 1px solid rgba(201, 162, 39, 0.3); border-radius: 6px; padding: 12px; }
 .feature-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .feature-icon { font-size: 1.2rem; }
 .feature-name { font-family: 'Cinzel', serif; font-size: 0.9rem; color: var(--gold); font-weight: 700; flex: 1; }
@@ -90,14 +91,16 @@ button:hover { background: var(--gold-light); }
 .feature-coming { font-size: 0.7rem; color: var(--gold-dim); font-style: italic; }
 
 .members-list { max-height: 280px; overflow-y: auto; }
-.member-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--gold-dim); }
+.member-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(201, 162, 39, 0.2); }
 .member-row:last-child { border-bottom: none; }
 .member-row .num { font-family: 'Cinzel', serif; color: var(--gold); min-width: 35px; font-size: 0.85rem; }
 .member-row .name { flex: 1; font-size: 0.9rem; }
 .member-row .tier { font-size: 0.65rem; padding: 2px 6px; border-radius: 8px; }
+.delete-btn { width: 24px; height: 24px; padding: 0; background: var(--crimson); color: white; font-size: 0.8rem; border-radius: 4px; }
+.delete-btn:hover { background: var(--crimson-light); }
 
 .activity-list { max-height: 280px; overflow-y: auto; }
-.activity-row { padding: 8px 0; border-bottom: 1px solid var(--gold-dim); font-size: 0.85rem; }
+.activity-row { padding: 8px 0; border-bottom: 1px solid rgba(201, 162, 39, 0.2); font-size: 0.85rem; }
 .activity-row:last-child { border-bottom: none; }
 .activity-row .user { color: var(--gold); font-weight: 700; }
 .activity-row .action { color: var(--cream-dim); margin: 0 4px; }
@@ -107,11 +110,11 @@ button:hover { background: var(--gold-light); }
 .admin h3 { color: #ff4444; }
 
 .suggestions-list { max-height: 220px; overflow-y: auto; }
-.suggestion-row { padding: 10px 0; border-bottom: 1px solid var(--gold-dim); }
+.suggestion-row { padding: 10px 0; border-bottom: 1px solid rgba(201, 162, 39, 0.2); }
 .suggestion-row:last-child { border-bottom: none; }
 .suggestion-row p { margin-bottom: 4px; font-size: 0.9rem; }
 .suggestion-row .by { font-size: 0.75rem; color: var(--gold-dim); font-style: italic; }
 .empty { text-align: center; color: var(--cream-dim); font-style: italic; font-size: 0.9rem; }
 
 .signout { background: var(--crimson); color: var(--cream); margin-top: 5px; }
-.signout:hover { background: #aa0000; }
+.signout:hover { background: var(--crimson-light); }

@@ -70,7 +70,6 @@ function App() {
   const [suggestionText, setSuggestionText] = useState('')
 
   useEffect(() => {
-    console.log('Loading data from Supabase...')
     loadUsers()
     loadVotes()
     loadSuggestions()
@@ -78,14 +77,8 @@ function App() {
   }, [])
 
   const loadUsers = async () => {
-    console.log('Fetching users...')
-    const { data, error } = await supabase.from('users').select('*').order('user_number', { ascending: true })
-    if (error) {
-      console.error('Error loading users:', error)
-    } else {
-      console.log('Users loaded:', data?.length || 0)
-      setUsers(data || [])
-    }
+    const { data } = await supabase.from('users').select('*').order('user_number', { ascending: true })
+    if (data) setUsers(data)
   }
 
   const loadVotes = async () => {
@@ -102,7 +95,6 @@ function App() {
     const stored = localStorage.getItem('tbt_currentUser')
     if (stored) {
       const user = JSON.parse(stored)
-      console.log('User logged in:', user.name)
       setCurrentUser(user)
       setView('dashboard')
       
@@ -133,25 +125,14 @@ function App() {
       return
     }
 
-    console.log('Checking for existing email...')
-    const { data: existing, error: checkError } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
-    
-    if (checkError) {
-      console.error('Error checking email:', checkError)
-      setError('Database error: ' + checkError.message)
-      return
-    }
-    
+    const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
     if (existing && existing.length > 0) {
       setError('Email already inscribed')
       return
     }
 
-    console.log('Getting user count...')
     const { data: allUsers } = await supabase.from('users').select('user_number')
     const userNumber = (allUsers?.length || 0) + 1
-    console.log('New user number:', userNumber)
-    
     const tier = getTier(userNumber)
 
     const newUser = {
@@ -166,17 +147,12 @@ function App() {
       joined: new Date().toISOString()
     }
 
-    console.log('Saving user to Supabase:', newUser)
-    const { data, error } = await supabase.from('users').insert([newUser]).select()
-
+    const { error } = await supabase.from('users').insert([newUser])
     if (error) {
-      console.error('Error saving user:', error)
-      setError('Error saving: ' + error.message)
+      setError('Error: ' + error.message)
       return
     }
 
-    console.log('User saved successfully:', data)
-    
     const fullUser: User = {
       ...newUser,
       userNumber: newUser.user_number,
@@ -189,7 +165,6 @@ function App() {
     setCurrentUser(fullUser)
     setView('dashboard')
     setSuccess('Welcome to the Sanctuary!')
-    
     loadUsers()
     
     setName('')
@@ -205,7 +180,6 @@ function App() {
       return
     }
 
-    console.log('Signing in...')
     const { data, error } = await supabase.from('users')
       .select('*')
       .eq('email', email.toLowerCase())
@@ -213,7 +187,6 @@ function App() {
       .limit(1)
 
     if (error) {
-      console.error('Sign in error:', error)
       setError('Error: ' + error.message)
       return
     }
@@ -309,6 +282,18 @@ function App() {
     setNewPassword('')
     setConfirmNewPassword('')
     setSuccess('Profile updated!')
+  }
+
+  const deleteMember = async (userId: string) => {
+    if (!confirm('Are you sure you want to remove this member?')) return
+    
+    await supabase.from('users').delete().eq('id', userId)
+    await supabase.from('votes').delete().eq('user_id', userId)
+    await supabase.from('suggestions').delete().eq('user_id', userId)
+    loadUsers()
+    loadVotes()
+    loadSuggestions()
+    setSuccess('Member removed')
   }
 
   const resetVotes = async () => {
@@ -460,6 +445,9 @@ function App() {
                     <span className="num">№{u.user_number}</span>
                     <span className="name">{u.name}</span>
                     <span className={`tier ${u.tier_class}`}>{u.tier_name}</span>
+                    {currentUser?.email === ADMIN_EMAIL && u.email !== ADMIN_EMAIL && (
+                      <button className="delete-btn" onClick={() => deleteMember(u.id)}>✕</button>
+                    )}
                   </div>
                 ))}
               </div>
