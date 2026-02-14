@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './index.css'
+import { supabase } from './supabase'
 
 interface User {
   id: string
@@ -68,42 +69,40 @@ function App() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [suggestionText, setSuggestionText] = useState('')
 
-  // Load data on mount
+  // Load data from Supabase on mount
   useEffect(() => {
-    console.log('Loading data...')
-    const storedUsers = localStorage.getItem('tbt_users')
-    const storedVotes = localStorage.getItem('tbt_votes')
-    const storedSuggestions = localStorage.getItem('tbt_suggestions')
-    const storedUser = localStorage.getItem('tbt_currentUser')
-    
-    if (storedUsers) {
-      const parsed = JSON.parse(storedUsers)
-      console.log('Users loaded:', parsed.length)
-      setUsers(parsed)
-    }
-    
-    if (storedVotes) {
-      setVotes(JSON.parse(storedVotes))
-    }
-    
-    if (storedSuggestions) {
-      setSuggestions(JSON.parse(storedSuggestions))
-    }
-    
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      console.log('User logged in:', user.name)
+    loadUsers()
+    loadVotes()
+    loadSuggestions()
+    checkCurrentUser()
+  }, [])
+
+  const loadUsers = async () => {
+    const { data } = await supabase.from('users').select('*').order('user_number', { ascending: true })
+    if (data) setUsers(data)
+  }
+
+  const loadVotes = async () => {
+    const { data } = await supabase.from('votes').select('*').order('timestamp', { ascending: false })
+    if (data) setVotes(data)
+  }
+
+  const loadSuggestions = async () => {
+    const { data } = await supabase.from('suggestions').select('*').order('timestamp', { ascending: false })
+    if (data) setSuggestions(data)
+  }
+
+  const checkCurrentUser = async () => {
+    const stored = localStorage.getItem('tbt_currentUser')
+    if (stored) {
+      const user = JSON.parse(stored)
       setCurrentUser(user)
       setView('dashboard')
       
-      // Check if user voted
-      if (storedVotes) {
-        const allVotes = JSON.parse(storedVotes)
-        const userVoted = allVotes.find((v: Vote) => v.userId === user.id)
-        if (userVoted) setHasVoted(true)
-      }
+      const { data } = await supabase.from('votes').select('id').eq('user_id', user.id).limit(1)
+      if (data && data.length > 0) setHasVoted(true)
     }
-  }, [])
+  }
 
   const getTier = (userNumber: number) => {
     if (userNumber <= 13) return { name: 'Founding Ember', title: 'In at the beginning', class: 'tier-gold' }
@@ -112,7 +111,7 @@ function App() {
     return { name: 'Member', title: 'Welcome', class: 'tier-basic' }
   }
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     setError('')
     if (!name || !email || !password || !confirmPassword) {
       setError('Fill all fields')
@@ -127,68 +126,77 @@ function App() {
       return
     }
 
-    // Get current users
-    const storedUsers = localStorage.getItem('tbt_users')
-    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
-    
-    const existingUser = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase())
-    if (existingUser) {
+    // Check if email exists
+    const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
+    if (existing && existing.length > 0) {
       setError('Email already inscribed')
       return
     }
 
-    const userNumber = currentUsers.length + 1
+    // Get user count
+    const { data: allUsers } = await supabase.from('users').select('user_number')
+    const userNumber = (allUsers?.length || 0) + 1
     const tier = getTier(userNumber)
 
     const newUser: User = {
       id: Date.now().toString(),
       name,
-      email: email.toLower,
-      userNumberCase(),
+      email: email.toLowerCase(),
       password,
+      userNumber,
       tierName: tier.name,
       tierTitle: tier.title,
       tierClass: tier.class,
       joined: new Date().toISOString(),
     }
 
-    const updatedUsers = [...currentUsers, newUser]
-    
-    // Save to localStorage
-    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
+    // Save to Supabase
+    await supabase.from('users').insert([{
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      password: newUser.password,
+      user_number: newUser.userNumber,
+      tier_name: newUser.tierName,
+      tier_title: newUser.tierTitle,
+      tier_class: newUser.tierClass,
+      joined: newUser.joined
+    }])
+
+    // Save locally
     localStorage.setItem('tbt_currentUser', JSON.stringify(newUser))
-    
-    // Update state
-    setUsers(updatedUsers)
     setCurrentUser(newUser)
     setView('dashboard')
     setSuccess('Welcome to the Sanctuary!')
     
-    console.log('User saved:', newUser.name, 'Total users:', updatedUsers.length)
+    // Refresh users list
+    loadUsers()
     
-    // Clear form
     setName('')
     setEmail('')
     setPassword('')
     setConfirmPassword('')
   }
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     setError('')
     if (!email || !password) {
       setError('Enter email and password')
       return
     }
 
-    const storedUsers = localStorage.getItem('tbt_users')
-    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
-    
-    const user = currentUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
-    if (!user) {
+    const { data } = await supabase.from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('password', password)
+      .limit(1)
+
+    if (!data || data.length === 0) {
       setError('Invalid credentials')
       return
     }
 
+    const user = data[0]
     localStorage.setItem('tbt_currentUser', JSON.stringify(user))
     setCurrentUser(user)
     setView('dashboard')
@@ -204,49 +212,41 @@ function App() {
     setSuccess('')
   }
 
-  const handleVote = (option: string) => {
+  const handleVote = async (option: string) => {
     if (!currentUser || hasVoted) return
     
-    const storedVotes = localStorage.getItem('tbt_votes')
-    const currentVotes: Vote[] = storedVotes ? JSON.parse(storedVotes) : []
-    
-    const newVote: Vote = {
+    const newVote = {
       id: Date.now().toString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      option,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      option_name: option,
       timestamp: new Date().toISOString()
     }
     
-    const updatedVotes = [...currentVotes, newVote]
-    localStorage.setItem('tbt_votes', JSON.stringify(updatedVotes))
-    setVotes(updatedVotes)
+    await supabase.from('votes').insert([newVote])
+    loadVotes()
     setHasVoted(true)
   }
 
-  const handleSuggestion = () => {
+  const handleSuggestion = async () => {
     if (!currentUser || !suggestionText.trim()) return
     
-    const storedSuggestions = localStorage.getItem('tbt_suggestions')
-    const currentSuggestions: Suggestion[] = storedSuggestions ? JSON.parse(storedSuggestions) : []
-    
-    const newSuggestion: Suggestion = {
+    const newSuggestion = {
       id: Date.now().toString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
       text: suggestionText.trim(),
       votes: 0,
       timestamp: new Date().toISOString()
     }
     
-    const updatedSuggestions = [...currentSuggestions, newSuggestion]
-    localStorage.setItem('tbt_suggestions', JSON.stringify(updatedSuggestions))
-    setSuggestions(updatedSuggestions)
+    await supabase.from('suggestions').insert([newSuggestion])
+    loadSuggestions()
     setSuggestionText('')
     setSuccess('Suggestion submitted!')
   }
 
-  const updateProfile = () => {
+  const updateProfile = async () => {
     if (!currentUser) return
     
     if (newPassword && newPassword !== confirmNewPassword) {
@@ -254,24 +254,15 @@ function App() {
       return
     }
 
-    const storedUsers = localStorage.getItem('tbt_users')
-    const currentUsers: User[] = storedUsers ? JSON.parse(storedUsers) : []
+    const updates = {
+      name: editName || currentUser.name,
+      password: newPassword || currentUser.password
+    }
+
+    await supabase.from('users').update(updates).eq('id', currentUser.id)
+    loadUsers()
     
-    const updatedUsers = currentUsers.map(u => {
-      if (u.id === currentUser.id) {
-        return {
-          ...u,
-          name: editName || currentUser.name,
-          password: newPassword || currentUser.password
-        }
-      }
-      return u
-    })
-    
-    localStorage.setItem('tbt_users', JSON.stringify(updatedUsers))
-    setUsers(updatedUsers)
-    
-    const updatedUser = { ...currentUser, name: editName || currentUser.name, password: newPassword || currentUser.password }
+    const updatedUser = { ...currentUser, ...updates }
     localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
     setCurrentUser(updatedUser)
     
@@ -281,19 +272,13 @@ function App() {
     setSuccess('Profile updated!')
   }
 
-  const resetVotes = () => {
-    localStorage.setItem('tbt_votes', JSON.stringify([]))
+  const resetVotes = async () => {
+    await supabase.from('votes').delete().neq('id', '')
     setVotes([])
     setHasVoted(false)
   }
 
-  const getVoteCount = (option: string) => votes.filter(v => v.option === option).length
-
-  // Get current users from localStorage for display
-  const displayUsers = () => {
-    const stored = localStorage.getItem('tbt_users')
-    return stored ? JSON.parse(stored) : []
-  }
+  const getVoteCount = (option: string) => votes.filter(v => v.option_name === option).length
 
   if (view === 'signin') {
     return (
@@ -343,8 +328,6 @@ function App() {
       </div>
     )
   }
-
-  const allUsers = displayUsers()
 
   return (
     <div className="app">
@@ -431,13 +414,13 @@ function App() {
         {tab === 'members' && (
           <div className="content">
             <div className="card">
-              <h3>👥 Members ({allUsers.length})</h3>
+              <h3>👥 Members ({users.length})</h3>
               <div className="members-list">
-                {[...allUsers].reverse().map(u => (
+                {[...users].reverse().map(u => (
                   <div key={u.id} className="member-row">
-                    <span className="num">№{u.userNumber}</span>
+                    <span className="num">№{u.user_number}</span>
                     <span className="name">{u.name}</span>
-                    <span className={`tier ${u.tierClass}`}>{u.tierName}</span>
+                    <span className={`tier ${u.tier_class}`}>{u.tier_name}</span>
                   </div>
                 ))}
               </div>
@@ -457,18 +440,18 @@ function App() {
             <div className="card">
               <h3>📜 Recent Activity</h3>
               <div className="activity-list">
-                {[...votes].reverse().map(v => (
+                {votes.slice(0, 10).map(v => (
                   <div key={v.id} className="activity-row">
-                    <span className="user">{v.userName}</span>
+                    <span className="user">{v.user_name}</span>
                     <span className="action">voted for</span>
-                    <span className="target">{v.option}</span>
+                    <span className="target">{v.option_name}</span>
                   </div>
                 ))}
-                {[...allUsers].reverse().slice(0, 5).map(u => (
+                {users.slice(0, 5).map(u => (
                   <div key={u.id} className="activity-row">
                     <span className="user">{u.name}</span>
                     <span className="action">joined as</span>
-                    <span className="target">{u.tierName}</span>
+                    <span className="target">{u.tier_name}</span>
                   </div>
                 ))}
               </div>
@@ -513,7 +496,7 @@ function App() {
                 {suggestions.map(s => (
                   <div key={s.id} className="suggestion-row">
                     <p>{s.text}</p>
-                    <span className="by">— {s.userName}</span>
+                    <span className="by">— {s.user_name}</span>
                   </div>
                 ))}
                 {suggestions.length === 0 && <p className="empty">No suggestions yet. Be the first!</p>}
