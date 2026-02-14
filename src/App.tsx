@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useState, useEffect, useRef } from 'react'
 import './index.css'
 import { supabase } from './supabase'
@@ -104,14 +103,41 @@ function App() {
   
   const isAdmin = currentUser?.email === ADMIN_EMAIL
 
-  // Timer
+  // FIXED TIMER - Persist across page reloads
   useEffect(() => {
-    const timer = setInterval(async () => {
-      if (!voteSettings) {
-        setTimeLeft('No active vote')
-        return
+    let intervalId: NodeJS.Timeout
+    
+    const updateTimer = async () => {
+      try {
+        const { data } = await supabase.from('vote_settings').select('*').limit(1)
+        if (data && data.length > 0) {
+          setVoteSettings(data[0])
+        }
+      } catch (error) {
+        console.error('Timer update error:', error)
       }
-      
+    }
+    
+    const startTimer = async () => {
+      await updateTimer()
+      intervalId = setInterval(updateTimer, 1000)
+    }
+    
+    startTimer()
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [])
+
+  // Process timer display
+  useEffect(() => {
+    if (!voteSettings) {
+      setTimeLeft('No active vote')
+      return
+    }
+    
+    const calculateTime = () => {
       const remaining = voteSettings.endTime - Date.now()
       
       if (remaining <= 0) {
@@ -122,8 +148,12 @@ function App() {
         const secs = Math.floor((remaining % 60000) / 1000)
         setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`)
       }
-    }, 1000)
-    return () => clearInterval(timer)
+    }
+    
+    calculateTime()
+    const timerId = setInterval(calculateTime, 1000)
+    
+    return () => clearInterval(timerId)
   }, [voteSettings])
 
   useEffect(() => {
@@ -133,32 +163,40 @@ function App() {
   const loadData = async () => {
     setLoading(true)
     
-    // Load vote settings
-    const { data: settingsData } = await supabase.from('vote_settings').select('*').limit(1)
-    if (settingsData && settingsData.length > 0) {
-      setVoteSettings(settingsData[0])
-    }
-    
-    const [usersRes, votesRes, suggsRes] = await Promise.all([
-      supabase.from('users').select('*').order('user_number', { ascending: true }),
-      supabase.from('votes').select('*').order('timestamp', { ascending: false }),
-      supabase.from('suggestions').select('*').order('timestamp', { ascending: false })
-    ])
-    
-    if (usersRes.data) setUsers(usersRes.data)
-    if (votesRes.data) setVotes(votesRes.data)
-    if (suggsRes.data) setSuggestions(suggsRes.data)
-    
-    const stored = localStorage.getItem('tbt_currentUser')
-    if (stored) {
-      const user = JSON.parse(stored)
-      setCurrentUser(user)
-      setView('dashboard')
+    try {
+      // Load vote settings FIRST
+      const { data: settingsData, error: settingsError } = await supabase.from('vote_settings').select('*').limit(1)
+      if (settingsError) throw settingsError
+      if (settingsData && settingsData.length > 0) {
+        setVoteSettings(settingsData[0])
+      }
       
-      const userVoted = votesRes.data?.find(v => v.user_id === user.id)
-      if (userVoted) setHasVoted(true)
+      // Load all data in parallel
+      const [usersRes, votesRes, suggsRes] = await Promise.all([
+        supabase.from('users').select('*').order('user_number', { ascending: true }),
+        supabase.from('votes').select('*').order('timestamp', { ascending: false }),
+        supabase.from('suggestions').select('*').order('timestamp', { ascending: false })
+      ])
+      
+      if (usersRes.data) setUsers(usersRes.data)
+      if (votesRes.data) setVotes(votesRes.data)
+      if (suggsRes.data) setSuggestions(suggsRes.data)
+      
+      const stored = localStorage.getItem('tbt_currentUser')
+      if (stored) {
+        const user = JSON.parse(stored)
+        setCurrentUser(user)
+        setView('dashboard')
+        
+        const userVoted = votesRes.data?.find(v => v.user_id === user.id)
+        if (userVoted) setHasVoted(true)
+      }
+    } catch (error) {
+      console.error('Load data error:', error)
+      showToast('⚠️ Load error')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const getTier = (userNumber: number) => {
@@ -175,23 +213,42 @@ function App() {
 
   // Admin Functions
   const startNewVote = async (hours: number) => {
-    const endTime = Date.now() + (hours * 3600000)
-    const options = DEFAULT_OPTIONS.map(o => o.name)
-    
-    await supabase.from('vote_settings').delete().neq('id', '')
-    await supabase.from('vote_settings').insert([{ id: '1', endTime, options }])
-    await supabase.from('votes').delete().neq('id', '')
-    
-    setVoteSettings({ id: '1', endTime, options })
-    setHasVoted(false)
-    loadData()
-    showToast('✅ Vote started!')
+    try {
+      const endTime = Date.now() + (hours * 3600000)
+      const options = DEFAULT_OPTIONS.map(o => o.name)
+      
+      // Clear existing
+      await supabase.from('vote_settings').delete().neq('id', '')
+      await supabase.from('votes').delete().neq('id', '')
+      
+      // Insert new
+      const { error } = await supabase.from('vote_settings').insert([{
+        id: '1',
+        endTime: endTime,
+        options: options
+      }])
+      
+      if (error) throw error
+      
+      setVoteSettings({ id: '1', endTime, options })
+      setHasVoted(false)
+      loadData()
+      showToast('✅ Vote initiated successfully')
+    } catch (error) {
+      console.error('Start vote error:', error)
+      showToast('❌ Failed to start vote')
+    }
   }
 
   const endVoteNow = async () => {
-    await supabase.from('vote_settings').delete().neq('id', '')
-    setVoteSettings(null)
-    showToast('✅ Vote ended')
+    try {
+      await supabase.from('vote_settings').delete().neq('id', '')
+      setVoteSettings(null)
+      showToast('✅ Voting concluded')
+    } catch (error) {
+      console.error('End vote error:', error)
+      showToast('❌ Failed to end vote')
+    }
   }
 
   const upgradeMemberTier = async () => {
@@ -204,31 +261,41 @@ function App() {
     
     const tier = getTier(tierNum)
     
-    await supabase.from('users').update({ 
-      tier_name: tier.name, 
-      tier_title: tier.title, 
-      tier_class: tier.class 
-    }).eq('email', upgradeEmail.toLowerCase())
-    
-    loadData()
-    setUpgradeEmail('')
-    showToast('✅ Member upgraded!')
+    try {
+      await supabase.from('users').update({ 
+        tier_name: tier.name, 
+        tier_title: tier.title, 
+        tier_class: tier.class 
+      }).eq('email', upgradeEmail.toLowerCase())
+      
+      loadData()
+      setUpgradeEmail('')
+      showToast('✅ Member upgraded successfully')
+    } catch (error) {
+      console.error('Upgrade error:', error)
+      showToast('❌ Failed to upgrade member')
+    }
   }
 
   const deleteMemberByEmail = async () => {
     if (!deleteEmail) return
-    if (!confirm(`Delete ${deleteEmail}?`)) return
+    if (!confirm(`Permanently remove ${deleteEmail}?`)) return
     
-    const userToDelete = users.find(u => u.email === deleteEmail.toLowerCase())
-    if (userToDelete) {
-      await supabase.from('users').delete().eq('id', userToDelete.id)
-      await supabase.from('votes').delete().eq('user_id', userToDelete.id)
-      await supabase.from('suggestions').delete().eq('user_id', userToDelete.id)
+    try {
+      const userToDelete = users.find(u => u.email === deleteEmail.toLowerCase())
+      if (userToDelete) {
+        await supabase.from('users').delete().eq('id', userToDelete.id)
+        await supabase.from('votes').delete().eq('user_id', userToDelete.id)
+        await supabase.from('suggestions').delete().eq('user_id', userToDelete.id)
+      }
+      
+      loadData()
+      setDeleteEmail('')
+      showToast('✅ Member removed')
+    } catch (error) {
+      console.error('Delete error:', error)
+      showToast('❌ Failed to remove member')
     }
-    
-    loadData()
-    setDeleteEmail('')
-    showToast('✅ Member deleted')
   }
 
   // Avatar Functions
@@ -270,11 +337,11 @@ function App() {
       setCurrentUser({ ...currentUser, avatarUrl: publicUrl })
       localStorage.setItem('tbt_currentUser', JSON.stringify({ ...currentUser, avatarUrl: publicUrl }))
       
-      showToast('✅ Avatar uploaded!')
+      showToast('✅ Avatar uploaded successfully')
       setAvatarPreview(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (error) {
-      console.error('Error uploading avatar:', error)
+      console.error('Avatar upload error:', error)
       showToast('❌ Upload failed')
     } finally {
       setIsUploading(false)
@@ -282,114 +349,118 @@ function App() {
   }
 
   const generateAI = async () => {
-    showToast('🤖 AI avatar coming soon!')
+    showToast('🤖 AI avatar generation coming soon!')
   }
 
   const handleSignUp = async () => {
     setError('')
     if (!name || !email || !password || !confirmPassword) {
-      setError('Fill all fields')
+      setError('Please complete all fields')
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords dont match')
+      setError('Passwords do not match')
       return
     }
     if (password.length < 6) {
-      setError('Password must be 6+ characters')
+      setError('Password must be at least 6 characters')
       return
     }
 
-    const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
-    if (existing && existing.length > 0) {
-      setError('Email already inscribed')
-      return
-    }
+    try {
+      const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
+      if (existing && existing.length > 0) {
+        setError('This email is already registered')
+        return
+      }
 
-    const { data: allUsers } = await supabase.from('users').select('user_number')
-    const userNumber = (allUsers?.length || 0) + 1
-    const tier = getTier(userNumber)
+      const { data: allUsers } = await supabase.from('users').select('user_number')
+      const userNumber = (allUsers?.length || 0) + 1
+      const tier = getTier(userNumber)
 
-    const newUser = {
-      id: Date.now().toString(),
-      email: email.toLowerCase(),
-      name,
-      password,
-      user_number: userNumber,
-      tier_name: tier.name,
-      tier_title: tier.title,
-      tier_class: tier.class,
-      joined: new Date().toISOString()
-    }
+      const newUser = {
+        id: Date.now().toString(),
+        email: email.toLowerCase(),
+        name,
+        password,
+        user_number: userNumber,
+        tier_name: tier.name,
+        tier_title: tier.title,
+        tier_class: tier.class,
+        joined: new Date().toISOString()
+      }
 
-    const { error } = await supabase.from('users').insert([newUser])
-    if (error) {
-      setError('Error: ' + error.message)
-      return
-    }
+      const { error } = await supabase.from('users').insert([newUser])
+      if (error) throw error
 
-    const fullUser: User = {
-      ...newUser,
-      userNumber: newUser.user_number,
-      tierName: newUser.tier_name,
-      tierTitle: newUser.tier_title,
-      tierClass: newUser.tier_class
+      const fullUser: User = {
+        ...newUser,
+        userNumber: newUser.user_number,
+        tierName: newUser.tier_name,
+        tierTitle: newUser.tier_title,
+        tierClass: newUser.tier_class
+      }
+      
+      localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+      setCurrentUser(fullUser)
+      setView('dashboard')
+      setShowWelcome(true)
+      loadData()
+      
+      setName('')
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
+    } catch (error) {
+      console.error('Signup error:', error)
+      setError('Registration failed')
     }
-    
-    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
-    setCurrentUser(fullUser)
-    setView('dashboard')
-    setShowWelcome(true)
-    loadData()
-    
-    setName('')
-    setEmail('')
-    setPassword('')
-    setConfirmPassword('')
   }
 
   const handleSignIn = async () => {
     setError('')
     if (!email || !password) {
-      setError('Enter email and password')
+      setError('Please enter email and password')
       return
     }
 
-    const { data, error } = await supabase.from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .eq('password', password)
-      .limit(1)
+    try {
+      const { data, error } = await supabase.from('users')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .eq('password', password)
+        .limit(1)
 
-    if (error) {
-      setError('Error: ' + error.message)
-      return
-    }
+      if (error) throw error
 
-    if (!data || data.length === 0) {
-      setError('Invalid credentials')
-      return
-    }
+      if (!data || data.length === 0) {
+        setError('Invalid credentials')
+        return
+      }
 
-    const user = data[0]
-    const fullUser: User = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      password: user.password,
-      userNumber: user.user_number,
-      tierName: user.tier_name,
-      tierTitle: user.tier_title,
-      tierClass: user.tier_class,
-      joined: user.joined,
-      avatarUrl: user.avatar_url
+      const user = data[0]
+      const fullUser: User = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        userNumber: user.user_number,
+        tierName: user.tier_name,
+        tierTitle: user.tier_title,
+        tierClass: user.tier_class,
+        joined: user.joined,
+        avatarUrl: user.avatar_url
+      }
+      
+      localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+      setCurrentUser(fullUser)
+      setView('dashboard')
+      setEmail('')
+      setPassword('')
+    } catch (error) {
+      console.error('Signin error:', error)
+      setError('Login failed')
     }
-    
-    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
-    setCurrentUser(fullUser)
-    setView('dashboard')
-    setEmail('')
-    setPassword('')
   }
 
   const handleSignOut = () => {
@@ -403,79 +474,104 @@ function App() {
   const handleVote = async (option: string) => {
     if (!currentUser || hasVoted || !voteSettings || voteSettings.endTime < Date.now()) return
     
-    const newVote = {
-      id: Date.now().toString(),
-      user_id: currentUser.id,
-      user_name: currentUser.name,
-      option_name: option,
-      timestamp: new Date().toISOString()
+    try {
+      const newVote = {
+        id: Date.now().toString(),
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        option_name: option,
+        timestamp: new Date().toISOString()
+      }
+      
+      await supabase.from('votes').insert([newVote])
+      setHasVoted(true)
+      loadData()
+      showToast('✅ Your vote has been recorded')
+    } catch (error) {
+      console.error('Vote error:', error)
+      showToast('❌ Failed to record vote')
     }
-    
-    await supabase.from('votes').insert([newVote])
-    setHasVoted(true)
-    loadData()
-    showToast('✅ Vote cast!')
   }
 
   const handleSuggestion = async () => {
     if (!currentUser || !suggestionText.trim()) return
     
-    const newSuggestion = {
-      id: Date.now().toString(),
-      user_id: currentUser.id,
-      user_name: currentUser.name,
-      text: suggestionText.trim(),
-      votes: 0,
-      timestamp: new Date().toISOString()
+    try {
+      const newSuggestion = {
+        id: Date.now().toString(),
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        text: suggestionText.trim(),
+        votes: 0,
+        timestamp: new Date().toISOString()
+      }
+      
+      await supabase.from('suggestions').insert([newSuggestion])
+      loadData()
+      setSuggestionText('')
+      showToast('💡 Suggestion submitted')
+    } catch (error) {
+      console.error('Suggestion error:', error)
+      showToast('❌ Failed to submit suggestion')
     }
-    
-    await supabase.from('suggestions').insert([newSuggestion])
-    loadData()
-    setSuggestionText('')
-    showToast('💡 Suggestion submitted!')
   }
 
   const updateProfile = async () => {
     if (!currentUser) return
     
     if (newPassword && newPassword !== confirmNewPassword) {
-      setError('Passwords dont match')
+      setError('Passwords do not match')
       return
     }
 
-    const updates = {
-      name: editName || currentUser.name,
-      password: newPassword || currentUser.password
-    }
+    try {
+      const updates = {
+        name: editName || currentUser.name,
+        password: newPassword || currentUser.password
+      }
 
-    await supabase.from('users').update(updates).eq('id', currentUser.id)
-    loadData()
-    
-    const updatedUser = { ...currentUser, ...updates }
-    localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
-    setCurrentUser(updatedUser)
-    
-    setEditName('')
-    setNewPassword('')
-    setConfirmNewPassword('')
-    showToast('✅ Profile updated!')
+      await supabase.from('users').update(updates).eq('id', currentUser.id)
+      loadData()
+      
+      const updatedUser = { ...currentUser, ...updates }
+      localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
+      setCurrentUser(updatedUser)
+      
+      setEditName('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+      showToast('✅ Profile updated successfully')
+    } catch (error) {
+      console.error('Profile update error:', error)
+      showToast('❌ Failed to update profile')
+    }
   }
 
   const deleteMember = async (userId: string) => {
-    if (!confirm('Remove this member?')) return
+    if (!confirm('Permanently remove this member?')) return
     
-    await supabase.from('users').delete().eq('id', userId)
-    await supabase.from('votes').delete().eq('user_id', userId)
-    await supabase.from('suggestions').delete().eq('user_id', userId)
-    loadData()
-    showToast('✅ Member removed')
+    try {
+      await supabase.from('users').delete().eq('id', userId)
+      await supabase.from('votes').delete().eq('user_id', userId)
+      await supabase.from('suggestions').delete().eq('user_id', userId)
+      loadData()
+      showToast('✅ Member removed')
+    } catch (error) {
+      console.error('Delete member error:', error)
+      showToast('❌ Failed to remove member')
+    }
   }
 
   const resetVotes = async () => {
-    await supabase.from('votes').delete().neq('id', '')
-    setHasVoted(false)
-    loadData()
-    showToast('✅ Votes reset')
+    try {
+      await supabase.from('votes').delete().neq('id', '')
+      setHasVoted(false)
+      loadData()
+      showToast('✅ All votes have been reset')
+    } catch (error) {
+      console.error('Reset votes error:', error)
+      showToast('❌ Failed to reset votes')
+    }
   }
 
   const getVoteCount = (option: string) => votes.filter(v => v.option_name === option).length
@@ -715,7 +811,7 @@ function App() {
               </div>
               {winner && voteSettings && voteSettings.endTime > Date.now() && (
                 <div className="winning-badge">
-                  🏆 {winner.name} ({getVoteCount(winner.name)} votes)
+                  🏆 Leading: {winner.name} ({getVoteCount(winner.name)} votes)
                   <div className="progress-bar">
                     <div className="progress-fill" style={{width: `${(getVoteCount(winner.name) / (votes.length || 1)) * 100}%`}}></div>
                   </div>
@@ -724,7 +820,8 @@ function App() {
             </div>
 
             <div className="card">
-              <h3>📜 Current Vote</h3>
+              <h3>📜 Community Vote</h3>
+              <p className="desc">Shape our next feature together</p>
               
               {!hasVoted && voteSettings && voteSettings.endTime > Date.now() ? (
                 <div className="vote-options">
@@ -737,7 +834,10 @@ function App() {
                 </div>
               ) : (
                 <div className="voted">
-                  <p>{!voteSettings || voteSettings.endTime < Date.now() ? '⛔ No active vote' : '✅ Voted'}</p>
+                  <p>{!voteSettings || voteSettings.endTime < Date.now() ? 
+                    '⛔ Voting period has ended' : 
+                    '✅ Your voice has been heard'}
+                  </p>
                   <div className="vote-results">
                     {DEFAULT_OPTIONS.map(opt => {
                       const count = getVoteCount(opt.name)
@@ -840,7 +940,7 @@ function App() {
               <p><strong>Name:</strong> {currentUser?.name}</p>
               <p><strong>Email:</strong> {currentUser?.email}</p>
               <p><strong>Tier:</strong> {currentUser?.tierName}</p>
-              <p><strong>#:</strong> {currentUser?.userNumber}</p>
+              <p><strong>Member #:</strong> {currentUser?.userNumber}</p>
               <p><strong>Joined:</strong> {new Date(currentUser?.joined || '').toLocaleDateString()}</p>
             </div>
             
@@ -852,7 +952,7 @@ function App() {
           <div className="content">
             <div className="card">
               <h3>💡 Suggest</h3>
-              <textarea placeholder="Your idea..." value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
+              <textarea placeholder="Share your idea..." value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
               <button onClick={handleSuggestion}>Submit</button>
             </div>
             
