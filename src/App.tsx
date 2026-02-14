@@ -31,11 +31,15 @@ interface Suggestion {
   timestamp: string
 }
 
-const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
-const VOTE_DURATION_HOURS = 24
-const VOTE_START_TIME = new Date().getTime()
+interface VoteSettings {
+  id: string
+  endTime: number
+  options: string[]
+}
 
-const VOTE_OPTIONS = [
+const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
+
+const DEFAULT_OPTIONS = [
   { name: 'The Stage', icon: '🎤', desc: 'Original music, podcasts & spoken word' },
   { name: 'The Circle', icon: '💬', desc: 'Real-time discussions & debates' },
   { name: 'The Pool', icon: '⚱', desc: 'Community fund & mutual aid' },
@@ -59,11 +63,12 @@ const FEATURES = [
 
 function App() {
   const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
-  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions'>('home')
+  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions' | 'admin'>('home')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [votes, setVotes] = useState<Vote[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [voteSettings, setVoteSettings] = useState<VoteSettings | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [hasVoted, setHasVoted] = useState(false)
@@ -71,6 +76,13 @@ function App() {
   const [timeLeft, setTimeLeft] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
   const [toast, setToast] = useState('')
+
+  // Admin
+  const [newVoteHours, setNewVoteHours] = useState(24)
+  const [showStartVote, setShowStartVote] = useState(false)
+  const [upgradeEmail, setUpgradeEmail] = useState('')
+  const [upgradeTier, setUpgradeTier] = useState('Founding Ember')
+  const [deleteEmail, setDeleteEmail] = useState('')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -84,20 +96,24 @@ function App() {
   // Timer
   useEffect(() => {
     const timer = setInterval(() => {
-      const elapsed = (new Date().getTime() - VOTE_START_TIME) / 1000
-      const remaining = (VOTE_DURATION_HOURS * 3600) - elapsed
+      if (!voteSettings || !voteSettings.endTime) {
+        setTimeLeft('No active vote')
+        return
+      }
+      
+      const remaining = voteSettings.endTime - Date.now()
       
       if (remaining <= 0) {
         setTimeLeft('Voting Closed')
       } else {
-        const hours = Math.floor(remaining / 3600)
-        const mins = Math.floor((remaining % 3600) / 60)
-        const secs = Math.floor(remaining % 60)
+        const hours = Math.floor(remaining / 3600000)
+        const mins = Math.floor((remaining % 3600000) / 60000)
+        const secs = Math.floor((remaining % 60000) / 1000)
         setTimeLeft(`${hours}h ${mins}m ${secs}s`)
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [voteSettings])
 
   useEffect(() => {
     loadData()
@@ -105,6 +121,13 @@ function App() {
 
   const loadData = async () => {
     setLoading(true)
+    
+    // Load vote settings
+    const settingsRes = await supabase.from('vote_settings').select('*').limit(1)
+    if (settingsRes.data && settingsRes.data.length > 0) {
+      setVoteSettings(settingsRes.data[0])
+    }
+    
     const [usersRes, votesRes, suggsRes] = await Promise.all([
       supabase.from('users').select('*').order('user_number', { ascending: true }),
       supabase.from('votes').select('*').order('timestamp', { ascending: false }),
@@ -137,6 +160,60 @@ function App() {
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
+  }
+
+  // Admin Functions
+  const startNewVote = async (hours: number) => {
+    const endTime = Date.now() + (hours * 3600000)
+    const options = DEFAULT_OPTIONS.map(o => o.name)
+    
+    await supabase.from('vote_settings').delete().neq('id', '')
+    await supabase.from('vote_settings').insert([{ endTime, options }])
+    await supabase.from('votes').delete().neq('id', '')
+    
+    setVoteSettings({ id: '1', endTime, options })
+    setShowStartVote(false)
+    setHasVoted(false)
+    showToast('✅ New vote started!')
+  }
+
+  const endVoteNow = async () => {
+    await supabase.from('vote_settings').delete().neq('id', '')
+    setVoteSettings(null)
+    showToast('✅ Vote ended')
+  }
+
+  const upgradeMemberTier = async () => {
+    if (!upgradeEmail) return
+    
+    const tier = getTier(upgradeTier === 'Founding Ember' ? 1 : upgradeTier === 'Sacred Circle' ? 14 : upgradeTier === 'Ember Keeper' ? 34 : 84)
+    
+    await supabase.from('users').update({ 
+      tier_name: tier.name, 
+      tier_title: tier.title, 
+      tier_class: tier.class 
+    }).eq('email', upgradeEmail.toLowerCase())
+    
+    loadData()
+    setUpgradeEmail('')
+    showToast('✅ Member upgraded!')
+  }
+
+  const deleteMemberByEmail = async () => {
+    if (!deleteEmail) return
+    if (!confirm(`Delete ${deleteEmail}? This cannot be undone.`)) return
+    
+    await supabase.from('users').delete().eq('email', deleteEmail.toLowerCase())
+    await supabase.from('votes').delete().eq('user_id', 
+      users.find(u => u.email === deleteEmail.toLowerCase())?.id || ''
+    )
+    await supabase.from('suggestions').delete().eq('user_id', 
+      users.find(u => u.email === deleteEmail.toLowerCase())?.id || ''
+    )
+    
+    loadData()
+    setDeleteEmail('')
+    showToast('✅ Member deleted')
   }
 
   const handleSignUp = async () => {
@@ -254,7 +331,7 @@ function App() {
   }
 
   const handleVote = async (option: string) => {
-    if (!currentUser || hasVoted || timeLeft === 'Voting Closed') return
+    if (!currentUser || hasVoted || !voteSettings || voteSettings.endTime < Date.now()) return
     
     const newVote = {
       id: Date.now().toString(),
@@ -336,7 +413,7 @@ function App() {
 
   const winningFeature = () => {
     if (votes.length === 0) return null
-    const counts = VOTE_OPTIONS.map(o => ({ ...o, count: getVoteCount(o.name) }))
+    const counts = DEFAULT_OPTIONS.map(o => ({ ...o, count: getVoteCount(o.name) }))
     return counts.sort((a, b) => b.count - a.count)[0]
   }
 
@@ -351,7 +428,6 @@ function App() {
     )
   }
 
-  // Welcome Modal
   if (showWelcome) {
     return (
       <div className="app">
@@ -384,11 +460,10 @@ function App() {
           <div className="card">
             <h2>Enter the Sanctuary</h2>
             {error && <div className="error">{error}</div>}
-            {success && <div className="success">{success}</div>}
             <input type="email" placeholder="Sacred Mark (Email)" value={email} onChange={e => setEmail(e.target.value)} />
             <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
             <button onClick={handleSignIn}>Enter</button>
-            <p className="switch">No mark? <button onClick={() => { setError(''); setSuccess(''); setView('signup') }}>Begin inscription</button></p>
+            <p className="switch">No mark? <button onClick={() => { setError(''); setView('signup') }}>Begin inscription</button></p>
           </div>
         </div>
       </div>
@@ -414,12 +489,14 @@ function App() {
             <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
             <input type="password" placeholder="Confirm Secret Word" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
             <button onClick={handleSignUp}>Inscribe</button>
-            <p className="switch">Already inscribed? <button onClick={() => { setError(''); setSuccess(''); setView('signin') }}>Sign in</button></p>
+            <p className="switch">Already inscribed? <button onClick={() => { setError(''); setView('signin') }}>Sign in</button></p>
           </div>
         </div>
       </div>
     )
   }
+
+  const isAdmin = currentUser?.email === ADMIN_EMAIL
 
   return (
     <div className="app">
@@ -445,10 +522,52 @@ function App() {
           <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Activity</button>
           <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
           <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>Ideas</button>
+          {isAdmin && <button className={tab === 'admin' ? 'active admin-tab' : 'admin-tab'} onClick={() => setTab('admin')}>⚙️ Admin</button>}
         </div>
 
         {error && <div className="error">{error}</div>}
         {success && <div className="success">{success}</div>}
+
+        {tab === 'admin' && isAdmin && (
+          <div className="content">
+            <div className="card admin-panel">
+              <h3>👁 Admin Controls</h3>
+              
+              <div className="admin-section">
+                <h4>🗳️ Start New Vote</h4>
+                <div className="vote-hours">
+                  {[12, 24, 48, 72].map(h => (
+                    <button key={h} onClick={() => startNewVote(h)}>{h}h</button>
+                  ))}
+                </div>
+                <button className="danger" onClick={endVoteNow}>End Vote Now</button>
+              </div>
+
+              <div className="admin-section">
+                <h4>⬆️ Upgrade Member</h4>
+                <input type="email" placeholder="Member email" value={upgradeEmail} onChange={e => setUpgradeEmail(e.target.value)} />
+                <select value={upgradeTier} onChange={e => setUpgradeTier(e.target.value)}>
+                  <option value="Founding Ember">Founding Ember</option>
+                  <option value="Sacred Circle">Sacred Circle</option>
+                  <option value="Ember Keeper">Ember Keeper</option>
+                  <option value="Member">Member</option>
+                </select>
+                <button onClick={upgradeMemberTier}>Upgrade</button>
+              </div>
+
+              <div className="admin-section">
+                <h4>🗑️ Delete Member</h4>
+                <input type="email" placeholder="Member email" value={deleteEmail} onChange={e => setDeleteEmail(e.target.value)} />
+                <button className="danger" onClick={deleteMemberByEmail}>Delete</button>
+              </div>
+
+              <div className="admin-section">
+                <h4>🔄 Reset Votes</h4>
+                <button className="danger" onClick={resetVotes}>Reset All Votes</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === 'home' && (
           <div className="content">
@@ -457,7 +576,7 @@ function App() {
                 <span className="timer-label">⏱️ Time Remaining</span>
                 <span className="timer-value">{timeLeft}</span>
               </div>
-              {winner && (
+              {winner && voteSettings && voteSettings.endTime > Date.now() && (
                 <div className="winning-badge">
                   🏆 Leading: {winner.name} ({getVoteCount(winner.name)} votes)
                   <div className="progress-bar">
@@ -469,11 +588,10 @@ function App() {
 
             <div className="card">
               <h3>📜 Current Vote</h3>
-              <p className="desc">Vote for the next sanctuary feature</p>
               
-              {!hasVoted && timeLeft !== 'Voting Closed' ? (
+              {!hasVoted && voteSettings && voteSettings.endTime > Date.now() ? (
                 <div className="vote-options">
-                  {VOTE_OPTIONS.map(opt => (
+                  {DEFAULT_OPTIONS.map(opt => (
                     <button key={opt.name} className="vote-btn" onClick={() => handleVote(opt.name)}>
                       <span>{opt.icon} {opt.name}</span>
                       <span className="count">({getVoteCount(opt.name)})</span>
@@ -482,9 +600,9 @@ function App() {
                 </div>
               ) : (
                 <div className="voted">
-                  <p>{timeLeft === 'Voting Closed' ? '⛔ Voting Closed' : '✅ Your vote has been cast'}</p>
+                  <p>{!voteSettings || voteSettings.endTime < Date.now() ? '⛔ No active vote' : '✅ Your vote has been cast'}</p>
                   <div className="vote-results">
-                    {VOTE_OPTIONS.map(opt => {
+                    {DEFAULT_OPTIONS.map(opt => {
                       const count = getVoteCount(opt.name)
                       const total = votes.length || 1
                       const pct = Math.round((count / total) * 100)
@@ -530,20 +648,13 @@ function App() {
                     <span className="num">#{u.user_number}</span>
                     <span className="name">{u.name}</span>
                     <span className={`tier ${u.tier_class}`}>{u.tier_name}</span>
-                    {currentUser?.email === ADMIN_EMAIL && u.email !== ADMIN_EMAIL && (
+                    {isAdmin && u.email !== ADMIN_EMAIL && (
                       <button className="delete-btn" onClick={() => deleteMember(u.id)}>✕</button>
                     )}
                   </div>
                 ))}
               </div>
             </div>
-            
-            {currentUser?.email === ADMIN_EMAIL && (
-              <div className="card admin">
-                <h3>👁 Admin Controls</h3>
-                <button onClick={resetVotes}>Reset All Votes</button>
-              </div>
-            )}
           </div>
         )}
 
