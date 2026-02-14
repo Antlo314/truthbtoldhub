@@ -79,7 +79,6 @@ function App() {
 
   // Admin
   const [newVoteHours, setNewVoteHours] = useState(24)
-  const [showStartVote, setShowStartVote] = useState(false)
   const [upgradeEmail, setUpgradeEmail] = useState('')
   const [upgradeTier, setUpgradeTier] = useState('Founding Ember')
   const [deleteEmail, setDeleteEmail] = useState('')
@@ -92,6 +91,8 @@ function App() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [suggestionText, setSuggestionText] = useState('')
+
+  const isAdmin = currentUser?.email === ADMIN_EMAIL
 
   // Timer
   useEffect(() => {
@@ -168,12 +169,12 @@ function App() {
     const options = DEFAULT_OPTIONS.map(o => o.name)
     
     await supabase.from('vote_settings').delete().neq('id', '')
-    await supabase.from('vote_settings').insert([{ endTime, options }])
+    await supabase.from('vote_settings').insert([{ id: '1', endTime, options }])
     await supabase.from('votes').delete().neq('id', '')
     
     setVoteSettings({ id: '1', endTime, options })
-    setShowStartVote(false)
     setHasVoted(false)
+    loadData()
     showToast('✅ New vote started!')
   }
 
@@ -186,7 +187,12 @@ function App() {
   const upgradeMemberTier = async () => {
     if (!upgradeEmail) return
     
-    const tier = getTier(upgradeTier === 'Founding Ember' ? 1 : upgradeTier === 'Sacred Circle' ? 14 : upgradeTier === 'Ember Keeper' ? 34 : 84)
+    let tierNum = 1
+    if (upgradeTier === 'Sacred Circle') tierNum = 14
+    else if (upgradeTier === 'Ember Keeper') tierNum = 34
+    else tierNum = 84
+    
+    const tier = getTier(tierNum)
     
     await supabase.from('users').update({ 
       tier_name: tier.name, 
@@ -201,15 +207,14 @@ function App() {
 
   const deleteMemberByEmail = async () => {
     if (!deleteEmail) return
-    if (!confirm(`Delete ${deleteEmail}? This cannot be undone.`)) return
+    if (!confirm(`Delete ${deleteEmail}?`)) return
     
-    await supabase.from('users').delete().eq('email', deleteEmail.toLowerCase())
-    await supabase.from('votes').delete().eq('user_id', 
-      users.find(u => u.email === deleteEmail.toLowerCase())?.id || ''
-    )
-    await supabase.from('suggestions').delete().eq('user_id', 
-      users.find(u => u.email === deleteEmail.toLowerCase())?.id || ''
-    )
+    const userToDelete = users.find(u => u.email === deleteEmail.toLowerCase())
+    if (userToDelete) {
+      await supabase.from('users').delete().eq('id', userToDelete.id)
+      await supabase.from('votes').delete().eq('user_id', userToDelete.id)
+      await supabase.from('suggestions').delete().eq('user_id', userToDelete.id)
+    }
     
     loadData()
     setDeleteEmail('')
@@ -392,7 +397,7 @@ function App() {
   }
 
   const deleteMember = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return
+    if (!confirm('Remove this member?')) return
     
     await supabase.from('users').delete().eq('id', userId)
     await supabase.from('votes').delete().eq('user_id', userId)
@@ -496,8 +501,6 @@ function App() {
     )
   }
 
-  const isAdmin = currentUser?.email === ADMIN_EMAIL
-
   return (
     <div className="app">
       {toast && <div className="toast">{toast}</div>}
@@ -522,11 +525,10 @@ function App() {
           <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Activity</button>
           <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
           <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>Ideas</button>
-          {isAdmin && <button className={tab === 'admin' ? 'active admin-tab' : 'admin-tab'} onClick={() => setTab('admin')}>⚙️ Admin</button>}
+          {isAdmin && <button className={tab === 'admin' ? 'active admin-tab' : 'admin-tab'} onClick={() => setTab('admin')}>⚙️</button>}
         </div>
 
         {error && <div className="error">{error}</div>}
-        {success && <div className="success">{success}</div>}
 
         {tab === 'admin' && isAdmin && (
           <div className="content">
@@ -534,18 +536,18 @@ function App() {
               <h3>👁 Admin Controls</h3>
               
               <div className="admin-section">
-                <h4>🗳️ Start New Vote</h4>
+                <h4>🗳️ Start Vote</h4>
                 <div className="vote-hours">
                   {[12, 24, 48, 72].map(h => (
                     <button key={h} onClick={() => startNewVote(h)}>{h}h</button>
                   ))}
                 </div>
-                <button className="danger" onClick={endVoteNow}>End Vote Now</button>
+                <button className="danger" onClick={endVoteNow}>End Vote</button>
               </div>
 
               <div className="admin-section">
-                <h4>⬆️ Upgrade Member</h4>
-                <input type="email" placeholder="Member email" value={upgradeEmail} onChange={e => setUpgradeEmail(e.target.value)} />
+                <h4>⬆️ Upgrade</h4>
+                <input type="email" placeholder="Email" value={upgradeEmail} onChange={e => setUpgradeEmail(e.target.value)} />
                 <select value={upgradeTier} onChange={e => setUpgradeTier(e.target.value)}>
                   <option value="Founding Ember">Founding Ember</option>
                   <option value="Sacred Circle">Sacred Circle</option>
@@ -556,14 +558,13 @@ function App() {
               </div>
 
               <div className="admin-section">
-                <h4>🗑️ Delete Member</h4>
-                <input type="email" placeholder="Member email" value={deleteEmail} onChange={e => setDeleteEmail(e.target.value)} />
+                <h4>🗑️ Delete</h4>
+                <input type="email" placeholder="Email" value={deleteEmail} onChange={e => setDeleteEmail(e.target.value)} />
                 <button className="danger" onClick={deleteMemberByEmail}>Delete</button>
               </div>
 
               <div className="admin-section">
-                <h4>🔄 Reset Votes</h4>
-                <button className="danger" onClick={resetVotes}>Reset All Votes</button>
+                <button className="danger" onClick={resetVotes}>Reset Votes</button>
               </div>
             </div>
           </div>
@@ -578,7 +579,7 @@ function App() {
               </div>
               {winner && voteSettings && voteSettings.endTime > Date.now() && (
                 <div className="winning-badge">
-                  🏆 Leading: {winner.name} ({getVoteCount(winner.name)} votes)
+                  🏆 {winner.name} ({getVoteCount(winner.name)} votes)
                   <div className="progress-bar">
                     <div className="progress-fill" style={{width: `${(getVoteCount(winner.name) / (votes.length || 1)) * 100}%`}}></div>
                   </div>
@@ -600,7 +601,7 @@ function App() {
                 </div>
               ) : (
                 <div className="voted">
-                  <p>{!voteSettings || voteSettings.endTime < Date.now() ? '⛔ No active vote' : '✅ Your vote has been cast'}</p>
+                  <p>{!voteSettings || voteSettings.endTime < Date.now() ? '⛔ No active vote' : '✅ Voted'}</p>
                   <div className="vote-results">
                     {DEFAULT_OPTIONS.map(opt => {
                       const count = getVoteCount(opt.name)
@@ -633,7 +634,7 @@ function App() {
               </div>
             </div>
 
-            <button className="signout" onClick={handleSignOut}>Depart from Sanctuary</button>
+            <button className="signout" onClick={handleSignOut}>Depart</button>
           </div>
         )}
 
@@ -673,7 +674,7 @@ function App() {
                 {users.slice(0, 5).map(u => (
                   <div key={u.id} className="activity-row">
                     <span className="user">{u.name}</span>
-                    <span className="action">joined as</span>
+                    <span className="action">joined</span>
                     <span className="target">{u.tier_name}</span>
                   </div>
                 ))}
@@ -688,8 +689,8 @@ function App() {
               <h3>✏️ Edit Profile</h3>
               <input type="text" placeholder="New Name" value={editName} onChange={e => setEditName(e.target.value)} />
               <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-              <input type="password" placeholder="Confirm Password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} />
-              <button onClick={updateProfile}>Save Changes</button>
+              <input type="password" placeholder="Confirm" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} />
+              <button onClick={updateProfile}>Save</button>
             </div>
             
             <div className="card">
@@ -697,8 +698,7 @@ function App() {
               <p><strong>Name:</strong> {currentUser?.name}</p>
               <p><strong>Email:</strong> {currentUser?.email}</p>
               <p><strong>Tier:</strong> {currentUser?.tierName}</p>
-              <p><strong>Member #:</strong> {currentUser?.userNumber}</p>
-              <p><strong>Joined:</strong> {new Date(currentUser?.joined || '').toLocaleDateString()}</p>
+              <p><strong>#:</strong> {currentUser?.userNumber}</p>
             </div>
             
             <button className="signout" onClick={handleSignOut}>Depart</button>
@@ -708,13 +708,13 @@ function App() {
         {tab === 'suggestions' && (
           <div className="content">
             <div className="card">
-              <h3>💡 Suggest a Feature</h3>
-              <textarea placeholder="What should the community build next?" value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
-              <button onClick={handleSuggestion}>Submit Idea</button>
+              <h3>💡 Suggest</h3>
+              <textarea placeholder="Your idea..." value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
+              <button onClick={handleSuggestion}>Submit</button>
             </div>
             
             <div className="card">
-              <h3>🌟 Community Ideas ({suggestions.length})</h3>
+              <h3>🌟 Ideas ({suggestions.length})</h3>
               <div className="suggestions-list">
                 {suggestions.map(s => (
                   <div key={s.id} className="suggestion-row">
@@ -722,7 +722,6 @@ function App() {
                     <span className="by">— {s.user_name}</span>
                   </div>
                 ))}
-                {suggestions.length === 0 && <p className="empty">No suggestions yet. Be the first!</p>}
               </div>
             </div>
           </div>
