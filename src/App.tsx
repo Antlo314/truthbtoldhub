@@ -1,722 +1,624 @@
-import { useState, useEffect } from 'react';
-import { signUpUser, signInUser, signOutUser, getCurrentUser, getVoteOptions, castVote, getCommunityStats, getAllUsers } from './firebase';
+import { useState, useEffect } from 'react'
+import './index.css'
+import { supabase } from './supabase'
 
-// ============ STYLES ============
-const styles = {
-  container: {
-    minHeight: '100vh',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  flameCanvas: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 0,
-  },
-  content: {
-    position: 'relative',
-    zIndex: 1,
-    padding: '20px',
-    maxWidth: '600px',
-    margin: '0 auto',
-  },
-  scrollContainer: {
-    width: '100%',
-    position: 'relative',
-  },
-  scrollTop: {
-    height: '25px',
-    background: 'linear-gradient(180deg, #4a2c17 0%, #6b3d1f 50%, #4a2c17 100%)',
-    borderRadius: '15px 15px 0 0',
-    boxShadow: 'inset 0 -3px 8px rgba(0,0,0,0.4), 0 3px 10px rgba(0,0,0,0.4)',
-  },
-  scrollPaper: {
-    background: 'linear-gradient(180deg, #d4c4a8 0%, #c9b896 15%, #bea882 85%, #b8956a 100%)',
-    padding: '35px 25px',
-    position: 'relative',
-    boxShadow: 'inset 0 0 40px rgba(139, 69, 19, 0.15)',
-  },
-  scrollBottom: {
-    height: '25px',
-    background: 'linear-gradient(180deg, #4a2c17 0%, #6b3d1f 50%, #4a2c17 100%)',
-    borderRadius: '0 0 15px 15px',
-    boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.4), 0 -3px 10px rgba(0,0,0,0.4)',
-  },
-  title: {
-    textAlign: 'center',
-    marginBottom: '25px',
-  },
-  titleH1: {
-    fontFamily: '"Cinzel Decorative", serif',
-    fontSize: '1.6rem',
-    color: '#2d1810',
-    textShadow: '1px 1px 0 #8b7355',
-    marginBottom: '5px',
-  },
-  titleP: {
-    fontFamily: '"IM Fell English", serif',
-    color: '#5c4433',
-    fontSize: '0.9rem',
-    fontStyle: 'italic',
-  },
-  formGroup: {
-    marginBottom: '18px',
-  },
-  label: {
-    display: 'block',
-    fontFamily: '"Cinzel", serif',
-    color: '#3d2817',
-    fontWeight: 'bold',
-    marginBottom: '6px',
-    fontSize: '0.85rem',
-  },
-  input: {
-    width: '100%',
-    padding: '12px 14px',
-    background: 'rgba(255, 248, 235, 0.7)',
-    border: '2px solid #8b7355',
-    borderRadius: '5px',
-    color: '#2d1810',
-    fontSize: '1rem',
-    fontFamily: '"IM Fell English", serif',
-    transition: 'all 0.3s',
-  },
-  button: {
-    width: '100%',
-    padding: '14px',
-    background: 'linear-gradient(180deg, #5c3d24 0%, #3d2817 100%)',
-    border: '2px solid #2d1810',
-    borderRadius: '5px',
-    color: '#d4c4a8',
-    fontSize: '1rem',
-    fontFamily: '"Cinzel", serif',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'all 0.3s',
-    marginBottom: '12px',
-  },
-  divider: {
-    textAlign: 'center',
-    color: '#8b7355',
-    margin: '18px 0',
-    position: 'relative',
-  },
-  signupLink: {
-    textAlign: 'center',
-    color: '#5c4433',
-  },
-  message: {
-    padding: '10px',
-    borderRadius: '5px',
-    marginBottom: '15px',
-    textAlign: 'center',
-    fontSize: '0.85rem',
-  },
-  hidden: {
-    display: 'none',
-  },
-  // Dashboard styles
-  dashboard: {
-    padding: '10px 0',
-  },
-  welcomeBanner: {
-    background: 'linear-gradient(135deg, #3d2817 0%, #5c3d24 100%)',
-    borderRadius: '10px',
-    padding: '20px',
-    marginBottom: '20px',
-    textAlign: 'center',
-    border: '2px solid #d4af37',
-  },
-  userName: {
-    fontFamily: '"Cinzel Decorative", serif',
-    fontSize: '1.4rem',
-    color: '#d4c4a8',
-    marginBottom: '5px',
-  },
-  tierBadge: {
-    display: 'inline-block',
-    padding: '5px 15px',
-    borderRadius: '20px',
-    fontSize: '0.85rem',
-    fontWeight: 'bold',
-    marginTop: '8px',
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '10px',
-    marginBottom: '20px',
-  },
-  statCard: {
-    background: 'rgba(45, 24, 16, 0.1)',
-    border: '1px solid #8b7355',
-    borderRadius: '8px',
-    padding: '12px',
-    textAlign: 'center',
-  },
-  statValue: {
-    fontFamily: '"Cinzel Decorative", serif',
-    fontSize: '1.3rem',
-    color: '#3d2817',
-  },
-  statLabel: {
-    fontSize: '0.75rem',
-    color: '#5c4433',
-  },
-  sectionTitle: {
-    fontFamily: '"Cinzel", serif',
-    fontSize: '1.1rem',
-    color: '#3d2817',
-    marginBottom: '12px',
-    borderBottom: '1px solid #8b7355',
-    paddingBottom: '8px',
-  },
-  voteCard: {
-    background: 'rgba(255, 248, 235, 0.5)',
-    border: '1px solid #8b7355',
-    borderRadius: '8px',
-    padding: '12px',
-    marginBottom: '10px',
-    cursor: 'pointer',
-    transition: 'all 0.3s',
-  },
-  voteCardSelected: {
-    background: 'rgba(212, 175, 55, 0.3)',
-    border: '2px solid #5c3d24',
-  },
-  voteProgress: {
-    height: '8px',
-    background: '#d4c4a8',
-    borderRadius: '4px',
-    marginTop: '8px',
-    overflow: 'hidden',
-  },
-  voteProgressFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, #8b4513, #d4af37)',
-    borderRadius: '4px',
-    transition: 'width 0.5s',
-  },
-  waxSeal: {
-    width: '80px',
-    height: '80px',
-    background: 'radial-gradient(circle at 30% 30%, #c41e3a, #8b0000, #5c0000)',
-    borderRadius: '50%',
-    margin: '20px auto',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.4), inset 0 -3px 10px rgba(0,0,0,0.3)',
-    fontFamily: '"Cinzel Decorative", serif',
-    color: '#d4c4a8',
-    fontSize: '1.2rem',
-    fontWeight: 'bold',
-    border: '3px solid #5c0000',
-  },
-  adminPanel: {
-    background: 'rgba(139, 69, 19, 0.2)',
-    border: '2px solid #5c3d24',
-    borderRadius: '10px',
-    padding: '15px',
-    marginTop: '20px',
-  },
-  adminTitle: {
-    fontFamily: '"Cinzel", serif',
-    color: '#3d2817',
-    marginBottom: '10px',
-  },
-};
-
-// ============ FLAME BACKGROUND COMPONENT ============
-function FlameBackground() {
-  useEffect(() => {
-    const canvas = document.getElementById('flameCanvas');
-    const ctx = canvas.getContext('2d');
-    let animationId;
-    let flames = [];
-    let embers = [];
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
-    class Flame {
-      constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = canvas.height + Math.random() * 50;
-        this.size = Math.random() * 30 + 20;
-        this.speedY = Math.random() * 2 + 1;
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.opacity = Math.random() * 0.5 + 0.3;
-        this.hue = Math.random() * 40 + 10;
-      }
-      update() {
-        this.y -= this.speedY;
-        this.x += this.speedX;
-        this.size *= 0.99;
-        this.opacity *= 0.995;
-        if (this.y < canvas.height * 0.3 || this.opacity < 0.05) {
-          this.reset();
-        }
-      }
-      draw() {
-        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-        gradient.addColorStop(0, `hsla(${this.hue + 20}, 100%, 70%, ${this.opacity})`);
-        gradient.addColorStop(0.4, `hsla(${this.hue}, 100%, 50%, ${this.opacity * 0.6})`);
-        gradient.addColorStop(1, `hsla(${this.hue - 10}, 100%, 30%, 0)`);
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    class Ember {
-      constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = canvas.height;
-        this.size = Math.random() * 3 + 1;
-        this.speedY = Math.random() * 3 + 1;
-        this.speedX = (Math.random() - 0.5) * 2;
-        this.opacity = Math.random() * 0.8 + 0.2;
-        this.hue = Math.random() * 30 + 20;
-      }
-      update() {
-        this.y -= this.speedY;
-        this.x += this.speedX + Math.sin(this.y * 0.01) * 0.5;
-        this.opacity -= 0.003;
-        if (this.opacity <= 0) {
-          this.reset();
-        }
-      }
-      draw() {
-        ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.opacity})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    for (let i = 0; i < 80; i++) {
-      flames.push(new Flame());
-    }
-    for (let i = 0; i < 30; i++) {
-      embers.push(new Ember());
-    }
-
-    function animate() {
-      ctx.fillStyle = 'rgba(26, 15, 15, 0.15)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      flames.forEach(f => { f.update(); f.draw(); });
-      embers.forEach(e => { e.update(); e.draw(); });
-      
-      animationId = requestAnimationFrame(animate);
-    }
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, []);
-
-  return <canvas id="flameCanvas" style={styles.flameCanvas} />;
+interface User {
+  id: string
+  name: string
+  email: string
+  password: string
+  userNumber: number
+  tierName: string
+  tierTitle: string
+  tierClass: string
+  joined: string
 }
 
-// ============ MAIN APP ============
-export default function App() {
-  const [view, setView] = useState('signin');
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [voteOptions, setVoteOptions] = useState([]);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [selectedVote, setSelectedVote] = useState(null);
-  const [stats, setStats] = useState({ totalMembers: 0, totalVotes: 0 });
-  const [allUsers, setAllUsers] = useState([]);
-  const [showSignUp, setShowSignUp] = useState(false);
+interface Vote {
+  id: string
+  userId: string
+  userName: string
+  option: string
+  timestamp: string
+}
 
-  // Initialize
+interface Suggestion {
+  id: string
+  userId: string
+  userName: string
+  text: string
+  votes: number
+  timestamp: string
+}
+
+const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
+const VOTE_DURATION_HOURS = 24
+const VOTE_START_TIME = new Date().getTime()
+
+const VOTE_OPTIONS = [
+  { name: 'The Stage', icon: '🎤', desc: 'Original music, podcasts & spoken word' },
+  { name: 'The Circle', icon: '💬', desc: 'Real-time discussions & debates' },
+  { name: 'The Pool', icon: '⚱', desc: 'Community fund & mutual aid' },
+  { name: 'The Gallery', icon: '🎨', desc: 'Videos, films & visual art' },
+  { name: 'The Library', icon: '📚', desc: 'Writings & references' },
+  { name: 'The Temple', icon: '🏛', desc: 'Teachings & dialogues' },
+  { name: 'The Council', icon: '🤝', desc: 'Community & events' },
+  { name: 'The Archive', icon: '📜', desc: 'Timeline of truth' }
+]
+
+const FEATURES = [
+  { name: 'The Stage', icon: '🎤', desc: 'Original music, podcasts, spoken word, and audio creations from the community.', coming: 'Coming Soon' },
+  { name: 'The Circle', icon: '💬', desc: 'Real-time discussion, debates, and connections without algorithmic noise.', coming: 'Coming Soon' },
+  { name: 'The Pool', icon: '⚱', desc: 'Community fund for mutual aid, projects, emergencies, and voted initiatives.', coming: 'Coming Soon' },
+  { name: 'The Gallery', icon: '🎨', desc: 'Videos, short films, visual art, and experimental creative projects.', coming: 'Coming Soon' },
+  { name: 'The Library', icon: '📚', desc: 'Curated writings, documents, videos, and references for study and discovery.', coming: 'Coming Soon' },
+  { name: 'The Temple', icon: '🏛', desc: 'Long-form teachings and guided dialogues on faith, society, power, and truth.', coming: 'Coming Soon' },
+  { name: 'The Council', icon: '🤝', desc: 'Member spotlights, collaborations, local projects, and community events.', coming: 'Coming Soon' },
+  { name: 'The Archive', icon: '📜', desc: 'A chronological record of moments the community preserves for posterity.', coming: 'Coming Soon' },
+]
+
+function App() {
+  const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
+  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions'>('home')
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [votes, setVotes] = useState<Vote[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [hasVoted, setHasVoted] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [timeLeft, setTimeLeft] = useState('')
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [toast, setToast] = useState('')
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [editName, setEditName] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [suggestionText, setSuggestionText] = useState('')
+
+  // Timer
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // Check authentication
-  const checkAuth = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        setView('dashboard');
-        loadDashboardData();
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load dashboard data
-  const loadDashboardData = async () => {
-    try {
-      const options = await getVoteOptions();
-      setVoteOptions(options);
+    const timer = setInterval(() => {
+      const elapsed = (new Date().getTime() - VOTE_START_TIME) / 1000
+      const remaining = (VOTE_DURATION_HOURS * 3600) - elapsed
       
-      const communityStats = await getCommunityStats();
-      setStats(communityStats);
-      
-      if (user?.email === 'info@truthbtoldhub.com') {
-        const users = await getAllUsers();
-        setAllUsers(users);
+      if (remaining <= 0) {
+        setTimeLeft('Voting Closed')
+      } else {
+        const hours = Math.floor(remaining / 3600)
+        const mins = Math.floor((remaining % 3600) / 60)
+        const secs = Math.floor(remaining % 60)
+        setTimeLeft(`${hours}h ${mins}m ${secs}s`)
       }
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    setLoading(true)
+    const [usersRes, votesRes, suggsRes] = await Promise.all([
+      supabase.from('users').select('*').order('user_number', { ascending: true }),
+      supabase.from('votes').select('*').order('timestamp', { ascending: false }),
+      supabase.from('suggestions').select('*').order('timestamp', { ascending: false })
+    ])
+    
+    if (usersRes.data) setUsers(usersRes.data)
+    if (votesRes.data) setVotes(votesRes.data)
+    if (suggsRes.data) setSuggestions(suggsRes.data)
+    
+    const stored = localStorage.getItem('tbt_currentUser')
+    if (stored) {
+      const user = JSON.parse(stored)
+      setCurrentUser(user)
+      setView('dashboard')
+      
+      const userVoted = votesRes.data?.find(v => v.user_id === user.id)
+      if (userVoted) setHasVoted(true)
     }
-  };
+    setLoading(false)
+  }
 
-  // Show message
-  const showMessage = (text, type = 'error') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 5000);
-  };
+  const getTier = (userNumber: number) => {
+    if (userNumber <= 13) return { name: 'Founding Ember', title: 'In at the beginning', class: 'tier-gold' }
+    if (userNumber <= 33) return { name: 'Sacred Circle', title: 'Among the first flames', class: 'tier-silver' }
+    if (userNumber <= 83) return { name: 'Ember Keeper', title: 'Kept the fire alive', class: 'tier-bronze' }
+    return { name: 'Member', title: 'Welcome', class: 'tier-basic' }
+  }
 
-  // Handle sign up
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('newName').value.trim();
-    const email = document.getElementById('newEmail').value.trim().toLowerCase();
-    const password = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
+  const handleSignUp = async () => {
+    setError('')
     if (!name || !email || !password || !confirmPassword) {
-      showMessage('Please fill in all fields');
-      return;
+      setError('Fill all fields')
+      return
     }
-
     if (password !== confirmPassword) {
-      showMessage('Passwords do not match');
-      return;
+      setError('Passwords dont match')
+      return
     }
-
     if (password.length < 6) {
-      showMessage('Password must be at least 6 characters');
-      return;
+      setError('Password must be 6+ characters')
+      return
     }
 
-    const result = await signUpUser(name, email, password);
-    if (result.success) {
-      setUser(result.user);
-      setView('dashboard');
-      loadDashboardData();
-      showMessage('Welcome to the sanctuary!', 'success');
-    } else {
-      showMessage(result.error);
+    const { data: existing } = await supabase.from('users').select('email').eq('email', email.toLowerCase()).limit(1)
+    if (existing && existing.length > 0) {
+      setError('Email already inscribed')
+      return
     }
-  };
 
-  // Handle sign in
-  const handleSignIn = async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
+    const { data: allUsers } = await supabase.from('users').select('user_number')
+    const userNumber = (allUsers?.length || 0) + 1
+    const tier = getTier(userNumber)
 
+    const newUser = {
+      id: Date.now().toString(),
+      email: email.toLowerCase(),
+      name,
+      password,
+      user_number: userNumber,
+      tier_name: tier.name,
+      tier_title: tier.title,
+      tier_class: tier.class,
+      joined: new Date().toISOString()
+    }
+
+    const { error } = await supabase.from('users').insert([newUser])
+    if (error) {
+      setError('Error: ' + error.message)
+      return
+    }
+
+    const fullUser: User = {
+      ...newUser,
+      userNumber: newUser.user_number,
+      tierName: newUser.tier_name,
+      tierTitle: newUser.tier_title,
+      tierClass: newUser.tier_class
+    }
+    
+    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+    setCurrentUser(fullUser)
+    setView('dashboard')
+    setShowWelcome(true)
+    loadData()
+    
+    setName('')
+    setEmail('')
+    setPassword('')
+    setConfirmPassword('')
+  }
+
+  const handleSignIn = async () => {
+    setError('')
     if (!email || !password) {
-      showMessage('Please enter your email and password');
-      return;
+      setError('Enter email and password')
+      return
     }
 
-    const result = await signInUser(email, password);
-    if (result.success) {
-      setUser(result.user);
-      setView('dashboard');
-      loadDashboardData();
-    } else {
-      showMessage(result.error);
-    }
-  };
+    const { data, error } = await supabase.from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('password', password)
+      .limit(1)
 
-  // Handle sign out
-  const handleSignOut = async () => {
-    await signOutUser();
-    setUser(null);
-    setView('signin');
-    setHasVoted(false);
-    setSelectedVote(null);
-  };
-
-  // Handle vote
-  const handleVote = async (optionId) => {
-    if (!user) {
-      showMessage('Please sign in to vote');
-      return;
-    }
-    if (hasVoted) {
-      showMessage('You have already voted this round');
-      return;
+    if (error) {
+      setError('Error: ' + error.message)
+      return
     }
 
-    const result = await castVote(user.uid, optionId);
-    if (result.success) {
-      setHasVoted(true);
-      setSelectedVote(optionId);
-      loadDashboardData();
-      showMessage('Your vote has been cast!', 'success');
-    } else {
-      showMessage(result.error);
+    if (!data || data.length === 0) {
+      setError('Invalid credentials')
+      return
     }
-  };
 
-  // Get tier badge style
-  const getTierStyle = (tierName) => {
-    switch (tierName) {
-      case 'Founding Ember':
-        return { background: 'linear-gradient(135deg, #ffd700, #ffed4e)', color: '#2d1810' };
-      case 'Sacred Circle':
-        return { background: 'linear-gradient(135deg, #c0c0c0, #e8e8e8)', color: '#2d1810' };
-      case 'Ember Keeper':
-        return { background: 'linear-gradient(135deg, #cd7f32, #daa520)', color: '#2d1810' };
-      default:
-        return { background: 'linear-gradient(135deg, #8b7355, #a09080)', color: '#f4e4c1' };
+    const user = data[0]
+    const fullUser: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      userNumber: user.user_number,
+      tierName: user.tier_name,
+      tierTitle: user.tier_title,
+      tierClass: user.tier_class,
+      joined: user.joined
     }
-  };
+    
+    localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
+    setCurrentUser(fullUser)
+    setView('dashboard')
+    setEmail('')
+    setPassword('')
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem('tbt_currentUser')
+    setCurrentUser(null)
+    setView('signin')
+    setError('')
+    setSuccess('')
+  }
+
+  const handleVote = async (option: string) => {
+    if (!currentUser || hasVoted || timeLeft === 'Voting Closed') return
+    
+    const newVote = {
+      id: Date.now().toString(),
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      option_name: option,
+      timestamp: new Date().toISOString()
+    }
+    
+    await supabase.from('votes').insert([newVote])
+    setHasVoted(true)
+    loadData()
+    showToast('✅ Vote cast!')
+  }
+
+  const handleSuggestion = async () => {
+    if (!currentUser || !suggestionText.trim()) return
+    
+    const newSuggestion = {
+      id: Date.now().toString(),
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      text: suggestionText.trim(),
+      votes: 0,
+      timestamp: new Date().toISOString()
+    }
+    
+    await supabase.from('suggestions').insert([newSuggestion])
+    loadData()
+    setSuggestionText('')
+    showToast('💡 Suggestion submitted!')
+  }
+
+  const updateProfile = async () => {
+    if (!currentUser) return
+    
+    if (newPassword && newPassword !== confirmNewPassword) {
+      setError('Passwords dont match')
+      return
+    }
+
+    const updates = {
+      name: editName || currentUser.name,
+      password: newPassword || currentUser.password
+    }
+
+    await supabase.from('users').update(updates).eq('id', currentUser.id)
+    loadData()
+    
+    const updatedUser = { ...currentUser, ...updates }
+    localStorage.setItem('tbt_currentUser', JSON.stringify(updatedUser))
+    setCurrentUser(updatedUser)
+    
+    setEditName('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+    showToast('✅ Profile updated!')
+  }
+
+  const deleteMember = async (userId: string) => {
+    if (!confirm('Are you sure you want to remove this member?')) return
+    
+    await supabase.from('users').delete().eq('id', userId)
+    await supabase.from('votes').delete().eq('user_id', userId)
+    await supabase.from('suggestions').delete().eq('user_id', userId)
+    loadData()
+    showToast('✅ Member removed')
+  }
+
+  const resetVotes = async () => {
+    await supabase.from('votes').delete().neq('id', '')
+    setHasVoted(false)
+    loadData()
+    showToast('✅ Votes reset')
+  }
+
+  const getVoteCount = (option: string) => votes.filter(v => v.option_name === option).length
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+  const winningFeature = () => {
+    if (votes.length === 0) return null
+    const counts = VOTE_OPTIONS.map(o => ({ ...o, count: getVoteCount(o.name) }))
+    return counts.sort((a, b) => b.count - a.count)[0]
+  }
+
+  const winner = winningFeature()
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <FlameBackground />
-        <div style={{...styles.content, textAlign: 'center', paddingTop: '100px'}}>
-          <div style={styles.waxSeal}>Loading...</div>
+      <div className="app loading">
+        <div className="loader">🔥</div>
+        <p>Loading Sanctuary...</p>
+      </div>
+    )
+  }
+
+  // Welcome Modal
+  if (showWelcome) {
+    return (
+      <div className="app">
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-icon">🎉</div>
+            <h2>Welcome, {currentUser?.name}!</h2>
+            <p className="tier-badge-lg" data-tier={currentUser?.tierClass}>
+              {currentUser?.tierName} #{currentUser?.userNumber}
+            </p>
+            <p className="modal-desc">{currentUser?.tierTitle}</p>
+            <button onClick={() => setShowWelcome(false)}>Enter the Sanctuary</button>
+          </div>
         </div>
       </div>
-    );
+    )
+  }
+
+  if (view === 'signin') {
+    return (
+      <div className="app">
+        {toast && <div className="toast">{toast}</div>}
+        <div className="container">
+          <header className="header">
+            <div className="logo">🔥</div>
+            <h1>TRUTH BE TOLD</h1>
+            <p className="tagline">Revelations of Knowledge</p>
+          </header>
+          
+          <div className="card">
+            <h2>Enter the Sanctuary</h2>
+            {error && <div className="error">{error}</div>}
+            {success && <div className="success">{success}</div>}
+            <input type="email" placeholder="Sacred Mark (Email)" value={email} onChange={e => setEmail(e.target.value)} />
+            <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
+            <button onClick={handleSignIn}>Enter</button>
+            <p className="switch">No mark? <button onClick={() => { setError(''); setSuccess(''); setView('signup') }}>Begin inscription</button></p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (view === 'signup') {
+    return (
+      <div className="app">
+        {toast && <div className="toast">{toast}</div>}
+        <div className="container">
+          <header className="header">
+            <div className="logo">🔥</div>
+            <h1>TRUTH BE TOLD</h1>
+            <p className="tagline">Revelations of Knowledge</p>
+          </header>
+          
+          <div className="card">
+            <h2>Forge Your Mark</h2>
+            {error && <div className="error">{error}</div>}
+            <input type="text" placeholder="Sacred Name" value={name} onChange={e => setName(e.target.value)} />
+            <input type="email" placeholder="Sacred Mark (Email)" value={email} onChange={e => setEmail(e.target.value)} />
+            <input type="password" placeholder="Secret Word" value={password} onChange={e => setPassword(e.target.value)} />
+            <input type="password" placeholder="Confirm Secret Word" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+            <button onClick={handleSignUp}>Inscribe</button>
+            <p className="switch">Already inscribed? <button onClick={() => { setError(''); setSuccess(''); setView('signin') }}>Sign in</button></p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div style={styles.container}>
-      <FlameBackground />
-      
-      <div style={styles.content}>
-        <div style={styles.scrollContainer}>
-          <div style={styles.scrollTop}></div>
-          
-          <div style={styles.scrollPaper}>
-            {/* Sign In Form */}
-            {view === 'signin' && !showSignUp && (
-              <>
-                <div style={styles.title}>
-                  <h1 style={styles.titleH1}>TRUTH BE TOLD HUB</h1>
-                  <p style={styles.titleP}>The Sacred Scroll</p>
-                </div>
+    <div className="app">
+      {toast && <div className="toast">{toast}</div>}
+      <div className="container">
+        <header className="header">
+          <div className="logo">🔥</div>
+          <h1>TRUTH BE TOLD</h1>
+        </header>
 
-                {message.text && (
-                  <div style={{...styles.message, background: message.type === 'success' ? 'rgba(34,85,34,0.2)' : 'rgba(139,0,0,0.2)', color: message.type === 'success' ? '#225522' : '#8b0000', border: `1px solid ${message.type === 'success' ? '#225522' : '#8b0000'}`}}>
-                    {message.text}
-                  </div>
-                )}
+        <div className="user-banner">
+          <div className="avatar">{getInitials(currentUser?.name || '')}</div>
+          <div className="user-info">
+            <span className="user-name">{currentUser?.name}</span>
+            <span className={`user-tier ${currentUser?.tierClass}`}>{currentUser?.tierName}</span>
+          </div>
+          <span className="user-num">#{currentUser?.userNumber}</span>
+        </div>
 
-                <form onSubmit={handleSignIn}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Sacred Mark (Email)</label>
-                    <input type="email" id="email" placeholder="your@email.com" style={styles.input} />
-                  </div>
-                  
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Secret Word (Password)</label>
-                    <input type="password" id="password" placeholder="Enter your password" style={styles.input} />
-                  </div>
-                  
-                  <button type="submit" style={styles.button}>Enter the Sanctuary</button>
-                </form>
-                
-                <div style={styles.divider}>❧</div>
-                
-                <div style={styles.signupLink}>
-                  <p>No mark yet?</p>
-                  <button onClick={() => setShowSignUp(true)} style={{background: 'none', border: 'none', color: '#5c3d24', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', fontSize: '1rem'}}>
-                    Begin your inscription
-                  </button>
-                </div>
-              </>
-            )}
+        <div className="tabs">
+          <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>Home</button>
+          <button className={tab === 'members' ? 'active' : ''} onClick={() => setTab('members')}>Members</button>
+          <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Activity</button>
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
+          <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>Ideas</button>
+        </div>
 
-            {/* Sign Up Form */}
-            {view === 'signin' && showSignUp && (
-              <>
-                <div style={styles.title}>
-                  <h1 style={styles.titleH1}>FORGE YOUR MARK</h1>
-                  <p style={styles.titleP}>Join the Sacred Circle</p>
-                </div>
+        {error && <div className="error">{error}</div>}
+        {success && <div className="success">{success}</div>}
 
-                {message.text && (
-                  <div style={{...styles.message, background: message.type === 'success' ? 'rgba(34,85,34,0.2)' : 'rgba(139,0,0,0.2)', color: message.type === 'success' ? '#225522' : '#8b0000', border: `1px solid ${message.type === 'success' ? '#225522' : '#8b0000'}`}}>
-                    {message.text}
-                  </div>
-                )}
-
-                <form onSubmit={handleSignUp}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Sacred Name</label>
-                    <input type="text" id="newName" placeholder="Your chosen name" style={styles.input} />
-                  </div>
-                  
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Sacred Mark (Email)</label>
-                    <input type="email" id="newEmail" placeholder="your@email.com" style={styles.input} />
-                  </div>
-                  
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Secret Word (Password)</label>
-                    <input type="password" id="newPassword" placeholder="Create a password" style={styles.input} />
-                  </div>
-                  
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Confirm Secret Word</label>
-                    <input type="password" id="confirmPassword" placeholder="Confirm your password" style={styles.input} />
-                  </div>
-                  
-                  <button type="submit" style={styles.button}>Forge Your Mark</button>
-                </form>
-                
-                <div style={styles.divider}>❧</div>
-                
-                <div style={styles.signupLink}>
-                  <p>Already inscribed?</p>
-                  <button onClick={() => setShowSignUp(false)} style={{background: 'none', border: 'none', color: '#5c3d24', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', fontSize: '1rem'}}>
-                    Return to sign in
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Dashboard */}
-            {view === 'dashboard' && user && (
-              <div style={styles.dashboard}>
-                {/* Welcome Banner */}
-                <div style={styles.welcomeBanner}>
-                  <div style={styles.userName}>Welcome, {user.name}</div>
-                  <div style={{...styles.tierBadge, ...getTierStyle(user.tier?.name)}}>
-                    {user.tier?.name} #{user.userNumber}
-                  </div>
-                  <div style={{color: '#c9b896', fontSize: '0.85rem', marginTop: '5px'}}>
-                    {user.tier?.title}
+        {tab === 'home' && (
+          <div className="content">
+            <div className="card timer-card">
+              <div className="timer">
+                <span className="timer-label">⏱️ Time Remaining</span>
+                <span className="timer-value">{timeLeft}</span>
+              </div>
+              {winner && (
+                <div className="winning-badge">
+                  🏆 Leading: {winner.name} ({getVoteCount(winner.name)} votes)
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{width: `${(getVoteCount(winner.name) / (votes.length || 1)) * 100}%`}}></div>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Stats Grid */}
-                <div style={styles.statsGrid}>
-                  <div style={styles.statCard}>
-                    <div style={styles.statValue}>{stats.totalMembers}</div>
-                    <div style={styles.statLabel}>Total Members</div>
-                  </div>
-                  <div style={styles.statCard}>
-                    <div style={styles.statValue}>{stats.totalVotes}</div>
-                    <div style={styles.statLabel}>Votes Cast</div>
+            <div className="card">
+              <h3>📜 Current Vote</h3>
+              <p className="desc">Vote for the next sanctuary feature</p>
+              
+              {!hasVoted && timeLeft !== 'Voting Closed' ? (
+                <div className="vote-options">
+                  {VOTE_OPTIONS.map(opt => (
+                    <button key={opt.name} className="vote-btn" onClick={() => handleVote(opt.name)}>
+                      <span>{opt.icon} {opt.name}</span>
+                      <span className="count">({getVoteCount(opt.name)})</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="voted">
+                  <p>{timeLeft === 'Voting Closed' ? '⛔ Voting Closed' : '✅ Your vote has been cast'}</p>
+                  <div className="vote-results">
+                    {VOTE_OPTIONS.map(opt => {
+                      const count = getVoteCount(opt.name)
+                      const total = votes.length || 1
+                      const pct = Math.round((count / total) * 100)
+                      return (
+                        <div key={opt.name} className="vote-row">
+                          <span>{opt.icon} {opt.name}</span>
+                          <span>{pct}% ({count})</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Past Vote Results */}
-                <div style={styles.sectionTitle}>Past Vote Results</div>
-                {voteOptions.slice(0, 1).map((option) => (
-                  <div key={option.id} style={{...styles.voteCard, opacity: 1, cursor: 'default'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                      <span style={{fontWeight: 'bold', color: '#3d2817'}}>Sacred Sign-In</span>
-                      <span style={{color: '#5c4433'}}>50% (3 marks)</span>
+            <div className="card">
+              <h3>🏛 The Sanctuary</h3>
+              <div className="features-list">
+                {FEATURES.map(f => (
+                  <div key={f.name} className="feature-item">
+                    <div className="feature-header">
+                      <span className="feature-icon">{f.icon}</span>
+                      <span className="feature-name">{f.name}</span>
                     </div>
-                    <div style={styles.voteProgress}>
-                      <div style={{...styles.voteProgressFill, width: '50%'}}></div>
-                    </div>
+                    <p className="feature-desc">{f.desc}</p>
                   </div>
                 ))}
+              </div>
+            </div>
 
-                {/* Next Feature Being Built */}
-                <div style={styles.sectionTitle}>Next Feature Being Built</div>
-                <div style={{...styles.voteCard, opacity: 1, cursor: 'default', background: 'rgba(212, 175, 55, 0.2)'}}>
-                  <div style={{fontWeight: 'bold', color: '#3d2817'}}>The Pool</div>
-                  <div style={{fontSize: '0.8rem', color: '#5c4433', marginBottom: '8px'}}>Community fund for disbursements</div>
-                  <div style={styles.voteProgress}>
-                    <div style={{...styles.voteProgressFill, width: '16.7%'}}></div>
+            <button className="signout" onClick={handleSignOut}>Depart from Sanctuary</button>
+          </div>
+        )}
+
+        {tab === 'members' && (
+          <div className="content">
+            <div className="card">
+              <h3>👥 Members ({users.length})</h3>
+              <div className="members-list">
+                {[...users].reverse().map(u => (
+                  <div key={u.id} className="member-row">
+                    <div className="avatar-sm">{getInitials(u.name)}</div>
+                    <span className="num">#{u.user_number}</span>
+                    <span className="name">{u.name}</span>
+                    <span className={`tier ${u.tier_class}`}>{u.tier_name}</span>
+                    {currentUser?.email === ADMIN_EMAIL && u.email !== ADMIN_EMAIL && (
+                      <button className="delete-btn" onClick={() => deleteMember(u.id)}>✕</button>
+                    )}
                   </div>
-                  <div style={{fontSize: '0.75rem', color: '#5c4433', marginTop: '5px'}}>16.7% (1 mark) - In Progress</div>
-                </div>
-
-                {/* Current Vote */}
-                <div style={styles.sectionTitle}>Cast Your Vote</div>
-                {voteOptions.map((option) => {
-                  const totalVotes = voteOptions.reduce((sum, o) => sum + (o.votes || 0), 0);
-                  const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
-                  const isSelected = selectedVote === option.id || (option.name === 'The Pool' && !hasVoted && !selectedVote);
-                  
-                  return (
-                    <div 
-                      key={option.id}
-                      onClick={() => handleVote(option.id)}
-                      style={{
-                        ...styles.voteCard,
-                        ...(isSelected ? styles.voteCardSelected : {}),
-                        ...(hasVoted ? { cursor: 'default', opacity: 0.7 } : {})
-                      }}
-                    >
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                        <span style={{fontWeight: 'bold', color: '#3d2817'}}>{option.name}</span>
-                        <span style={{color: '#5c4433'}}>{percentage}% ({option.votes} marks)</span>
-                      </div>
-                      <div style={{fontSize: '0.75rem', color: '#5c4433', marginBottom: '5px'}}>{option.description}</div>
-                      <div style={styles.voteProgress}>
-                        <div style={{...styles.voteProgressFill, width: `${percentage}%`}}></div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {hasVoted && (
-                  <div style={{textAlign: 'center', color: '#5c4433', fontSize: '0.85rem', marginTop: '10px'}}>
-                    ✓ You have cast your mark this round
-                  </div>
-                )}
-
-                {/* Admin Panel */}
-                {user.email === 'info@truthbtoldhub.com' && (
-                  <div style={styles.adminPanel}>
-                    <div style={styles.adminTitle}>🔮 Admin Controls</div>
-                    <div style={{fontSize: '0.85rem', color: '#5c4433', marginBottom: '10px'}}>
-                      Total Members: {stats.totalMembers}
-                    </div>
-                    <div style={{maxHeight: '150px', overflowY: 'auto'}}>
-                      {allUsers.map((u, i) => (
-                        <div key={i} style={{padding: '5px 0', borderBottom: '1px solid #8b7355', fontSize: '0.8rem'}}>
-                          {u.name} - {u.tier?.name} #{u.userNumber}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sign Out */}
-                <button onClick={handleSignOut} style={{...styles.button, marginTop: '20px', background: 'linear-gradient(180deg, #5c0000 0%, #3d0000 100%)'}}>
-                  Depart from Sanctuary
-                </button>
-
-                <div style={styles.waxSeal}>TBT</div>
+                ))}
+              </div>
+            </div>
+            
+            {currentUser?.email === ADMIN_EMAIL && (
+              <div className="card admin">
+                <h3>👁 Admin Controls</h3>
+                <button onClick={resetVotes}>Reset All Votes</button>
               </div>
             )}
           </div>
-          
-          <div style={styles.scrollBottom}></div>
-        </div>
+        )}
+
+        {tab === 'activity' && (
+          <div className="content">
+            <div className="card">
+              <h3>📜 Recent Activity</h3>
+              <div className="activity-list">
+                {votes.slice(0, 10).map(v => (
+                  <div key={v.id} className="activity-row">
+                    <span className="user">{v.user_name}</span>
+                    <span className="action">voted</span>
+                    <span className="target">{v.option_name}</span>
+                  </div>
+                ))}
+                {users.slice(0, 5).map(u => (
+                  <div key={u.id} className="activity-row">
+                    <span className="user">{u.name}</span>
+                    <span className="action">joined as</span>
+                    <span className="target">{u.tier_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'profile' && (
+          <div className="content">
+            <div className="card">
+              <h3>✏️ Edit Profile</h3>
+              <input type="text" placeholder="New Name" value={editName} onChange={e => setEditName(e.target.value)} />
+              <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              <input type="password" placeholder="Confirm Password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} />
+              <button onClick={updateProfile}>Save Changes</button>
+            </div>
+            
+            <div className="card">
+              <h3>ℹ️ Your Info</h3>
+              <p><strong>Name:</strong> {currentUser?.name}</p>
+              <p><strong>Email:</strong> {currentUser?.email}</p>
+              <p><strong>Tier:</strong> {currentUser?.tierName}</p>
+              <p><strong>Member #:</strong> {currentUser?.userNumber}</p>
+              <p><strong>Joined:</strong> {new Date(currentUser?.joined || '').toLocaleDateString()}</p>
+            </div>
+            
+            <button className="signout" onClick={handleSignOut}>Depart</button>
+          </div>
+        )}
+
+        {tab === 'suggestions' && (
+          <div className="content">
+            <div className="card">
+              <h3>💡 Suggest a Feature</h3>
+              <textarea placeholder="What should the community build next?" value={suggestionText} onChange={e => setSuggestionText(e.target.value)} />
+              <button onClick={handleSuggestion}>Submit Idea</button>
+            </div>
+            
+            <div className="card">
+              <h3>🌟 Community Ideas ({suggestions.length})</h3>
+              <div className="suggestions-list">
+                {suggestions.map(s => (
+                  <div key={s.id} className="suggestion-row">
+                    <p>{s.text}</p>
+                    <span className="by">— {s.user_name}</span>
+                  </div>
+                ))}
+                {suggestions.length === 0 && <p className="empty">No suggestions yet. Be the first!</p>}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
+  )
 }
+
+export default App
