@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import './index.css'
 import { supabase } from './supabase'
 
@@ -13,7 +13,6 @@ interface User {
   tierTitle: string
   tierClass: string
   joined: string
-  avatarUrl?: string
 }
 
 interface Vote {
@@ -21,15 +20,6 @@ interface Vote {
   userId: string
   userName: string
   option: string
-  timestamp: string
-}
-
-interface Suggestion {
-  id: string
-  userId: string
-  userName: string
-  text: string
-  votes: number
   timestamp: string
 }
 
@@ -41,96 +31,119 @@ interface VoteSettings {
 
 const ADMIN_EMAIL = 'admin@truthbtoldhub.com'
 
-const DEFAULT_OPTIONS = [
-  { name: 'The Stage', icon: '🎤' },
-  { name: 'The Circle', icon: '💬' },
-  { name: 'The Pool', icon: '⚱' },
-  { name: 'The Gallery', icon: '🎨' },
-  { name: 'The Library', icon: '📚' },
-  { name: 'The Temple', icon: '🏛' },
-  { name: 'The Council', icon: '🤝' },
-  { name: 'The Archive', icon: '📜' }
+const VOTE_OPTIONS = [
+  { name: 'The Stage', icon: '🎤', desc: 'Music, podcasts, and audio creations' },
+  { name: 'The Circle', icon: '💬', desc: 'Live chat and discussions' },
+  { name: 'The Pool', icon: '⚱', desc: 'Community fund and mutual aid' },
+  { name: 'The Gallery', icon: '🎨', desc: 'Videos, films, and visual art' },
+  { name: 'The Library', icon: '📚', desc: 'Writings and reference materials' },
+  { name: 'The Temple', icon: '🏛', desc: 'Teachings and guided dialogues' },
+  { name: 'The Council', icon: '🤝', desc: 'Community events and projects' },
+  { name: 'The Archive', icon: '📜', desc: 'Historical community records' }
 ]
 
 function App() {
   const [view, setView] = useState<'signin' | 'signup' | 'dashboard'>('signin')
-  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'suggestions' | 'admin' | 'avatar'>('home')
+  const [tab, setTab] = useState<'home' | 'members' | 'activity' | 'profile' | 'admin'>('home')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [votes, setVotes] = useState<Vote[]>([])
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [voteSettings, setVoteSettings] = useState<VoteSettings | null>(null)
   const [error, setError] = useState('')
   const [hasVoted, setHasVoted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [timeLeft, setTimeLeft] = useState('')
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [toast, setToast] = useState('')
+  const [customHours, setCustomHours] = useState('')
   
   // Form states
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [editName, setEditName] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmNewPassword, setConfirmNewPassword] = useState('')
-  const [suggestionText, setSuggestionText] = useState('')
-  
-  // Admin states
-  const [upgradeEmail, setUpgradeEmail] = useState('')
-  const [upgradeTier, setUpgradeTier] = useState('Founding Ember')
-  const [deleteEmail, setDeleteEmail] = useState('')
-  const [customHours, setCustomHours] = useState('')
-  
-  const isAdmin = currentUser?.email === ADMIN_EMAIL
 
-  // FIXED TIMER - Works across page reloads
+  // DEBUG: Timer that shows exactly what's happening
   useEffect(() => {
-    const updateTimer = async () => {
+    console.log('=== TIMER EFFECT START ===')
+    
+    const debugTimer = async () => {
       try {
-        const { data } = await supabase.from('vote_settings').select('*').limit(1)
-        if (data && data.length > 0) {
-          setVoteSettings(data[0])
+        console.log('Fetching vote settings...')
+        const { data, error } = await supabase.from('vote_settings').select('*').limit(1)
+        console.log('Supabase response:', { data, error })
+        
+        if (error) {
+          console.error('Supabase error:', error)
+          return
         }
-      } catch (error) {
-        console.error('Timer error:', error)
+        
+        if (data && data.length > 0) {
+          console.log('Setting vote settings:', data[0])
+          setVoteSettings(data[0])
+        } else {
+          console.log('No vote settings found')
+          setVoteSettings(null)
+        }
+      } catch (err) {
+        console.error('Timer error:', err)
       }
     }
     
-    // Update immediately
-    updateTimer()
+    // Run immediately
+    debugTimer()
     
-    // Update every 5 seconds
-    const interval = setInterval(updateTimer, 5000)
+    // Run every 3 seconds
+    const interval = setInterval(debugTimer, 3000)
     
-    return () => clearInterval(interval)
+    return () => {
+      console.log('=== CLEANING UP TIMER ===')
+      clearInterval(interval)
+    }
   }, [])
 
-  // Display timer
+  // DEBUG: Display timer with detailed logging
   useEffect(() => {
+    console.log('=== DISPLAY TIMER EFFECT ===')
+    console.log('voteSettings changed:', voteSettings)
+    
     if (!voteSettings) {
+      console.log('No vote settings, showing default')
       setTimeLeft('No active vote')
       return
     }
     
     const updateDisplay = () => {
-      const remaining = voteSettings.endTime - Date.now()
+      const now = Date.now()
+      const remaining = voteSettings.endTime - now
+      
+      console.log('Timer calculation:', {
+        now: new Date(now),
+        endTime: new Date(voteSettings.endTime),
+        remainingMs: remaining
+      })
       
       if (remaining <= 0) {
-        setTimeLeft('ENDED')
+        setTimeLeft('Voting Closed')
+        console.log('Vote ended')
       } else {
         const hours = Math.floor(remaining / 3600000)
         const mins = Math.floor((remaining % 3600000) / 60000)
         const secs = Math.floor((remaining % 60000) / 1000)
-        setTimeLeft(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`)
+        const timeString = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        setTimeLeft(timeString)
+        console.log('Time left:', timeString)
       }
     }
     
+    // Run immediately
     updateDisplay()
+    
+    // Update every second
     const timer = setInterval(updateDisplay, 1000)
     
-    return () => clearInterval(timer)
+    return () => {
+      console.log('=== CLEANING UP DISPLAY TIMER ===')
+      clearInterval(timer)
+    }
   }, [voteSettings])
 
   useEffect(() => {
@@ -139,17 +152,19 @@ function App() {
 
   const loadData = async () => {
     setLoading(true)
+    console.log('=== LOADING DATA ===')
     
     try {
-      const [usersRes, votesRes, suggsRes] = await Promise.all([
+      const [usersRes, votesRes] = await Promise.all([
         supabase.from('users').select('*').order('user_number', { ascending: true }),
-        supabase.from('votes').select('*').order('timestamp', { ascending: false }),
-        supabase.from('suggestions').select('*').order('timestamp', { ascending: false })
+        supabase.from('votes').select('*').order('timestamp', { ascending: false })
       ])
+      
+      console.log('Users response:', usersRes)
+      console.log('Votes response:', votesRes)
       
       if (usersRes.data) setUsers(usersRes.data)
       if (votesRes.data) setVotes(votesRes.data)
-      if (suggsRes.data) setSuggestions(suggsRes.data)
       
       const stored = localStorage.getItem('tbt_currentUser')
       if (stored) {
@@ -174,42 +189,47 @@ function App() {
     return { name: 'Member', title: 'Community', class: 'tier-basic' }
   }
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
-  }
-
   // Admin Functions
   const startNewVote = async (hours: number) => {
     try {
+      console.log('=== STARTING NEW VOTE ===')
       const endTime = Date.now() + (hours * 3600000)
-      const options = DEFAULT_OPTIONS.map(o => o.name)
+      const options = VOTE_OPTIONS.map(o => o.name)
       
-      await supabase.from('vote_settings').delete().neq('id', '')
+      console.log('Creating vote with:', { endTime, options })
+      
+      // Clear existing votes
       await supabase.from('votes').delete().neq('id', '')
       
-      await supabase.from('vote_settings').insert([{
+      // Clear and set new vote settings
+      await supabase.from('vote_settings').delete().neq('id', '')
+      const { error } = await supabase.from('vote_settings').insert([{
         id: '1',
         endTime: endTime,
         options: options
       }])
       
+      if (error) throw error
+      
       setVoteSettings({ id: '1', endTime, options })
       setHasVoted(false)
       loadData()
-      showToast('Vote initiated')
+      alert(`Vote started for ${hours} hours`)
     } catch (error) {
-      showToast('Failed to start')
+      console.error('Start vote error:', error)
+      alert('Failed to start vote')
     }
   }
 
   const endVoteNow = async () => {
     try {
+      console.log('=== ENDING VOTE ===')
       await supabase.from('vote_settings').delete().neq('id', '')
       setVoteSettings(null)
-      showToast('Voting ended')
+      alert('Vote ended')
     } catch (error) {
-      showToast('Failed to end')
+      console.error('End vote error:', error)
+      alert('Failed to end vote')
     }
   }
 
@@ -264,7 +284,6 @@ function App() {
       localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
       setCurrentUser(fullUser)
       setView('dashboard')
-      setShowWelcome(true)
       loadData()
       
       setName('')
@@ -307,8 +326,7 @@ function App() {
         tierName: user.tier_name,
         tierTitle: user.tier_title,
         tierClass: user.tier_class,
-        joined: user.joined,
-        avatarUrl: user.avatar_url
+        joined: user.joined
       }
       
       localStorage.setItem('tbt_currentUser', JSON.stringify(fullUser))
@@ -343,65 +361,157 @@ function App() {
       await supabase.from('votes').insert([newVote])
       setHasVoted(true)
       loadData()
-      showToast('Vote recorded')
+      alert('Vote recorded!')
     } catch (error) {
-      showToast('Vote failed')
+      alert('Vote failed')
     }
   }
 
   const getVoteCount = (option: string) => votes.filter(v => v.option_name === option).length
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
-  if (loading) {
+  // DEBUG VIEW - Shows raw data
+  if (view === 'debug') {
     return (
-      <div className="app">
-        <div className="loading-screen">
-          <div className="flame-loader"></div>
-          <p>Entering Sanctuary...</p>
+      <div style={{ padding: '20px', background: '#000', color: '#fff' }}>
+        <h1>DEBUG MODE</h1>
+        <button onClick={() => setView('signin')}>Back to App</button>
+        <div style={{ marginTop: '20px' }}>
+          <h2>Vote Settings:</h2>
+          <pre>{JSON.stringify(voteSettings, null, 2)}</pre>
+          <h2>Current Time:</h2>
+          <p>{new Date().toString()}</p>
+          <h2>Users:</h2>
+          <pre>{JSON.stringify(users, null, 2)}</pre>
+          <h2>Votes:</h2>
+          <pre>{JSON.stringify(votes, null, 2)}</pre>
         </div>
       </div>
     )
   }
 
-  if (showWelcome) {
+  if (loading) {
     return (
-      <div className="app">
-        <div className="welcome-modal">
-          <div className="welcome-content">
-            <div className="welcome-flame">🔥</div>
-            <h2>Welcome, {currentUser?.name}</h2>
-            <div className={`welcome-tier ${currentUser?.tierClass}`}>
-              {currentUser?.tierName} #{currentUser?.userNumber}
-            </div>
-            <p className="welcome-subtitle">{currentUser?.tierTitle}</p>
-            <button onClick={() => setShowWelcome(false)}>Enter</button>
-          </div>
-        </div>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh',
+        background: '#000',
+        color: '#fff'
+      }}>
+        <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🔥</div>
+        <p>Loading...</p>
       </div>
     )
   }
 
   if (view === 'signin') {
     return (
-      <div className="app">
-        {toast && <div className="toast">{toast}</div>}
-        <div className="auth-container">
-          <div className="auth-header">
-            <div className="auth-logo">🔥</div>
-            <h1>TRUTH BE TOLD</h1>
-            <p className="auth-subtitle">Sanctuary Access</p>
-          </div>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+        color: '#f1faee',
+        padding: '20px'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '15px' }}>🔥</div>
+          <h1 style={{ fontSize: '2rem', color: '#ffd700', marginBottom: '10px' }}>TRUTH BE TOLD</h1>
+          <p style={{ color: '#a8dadc' }}>Sanctuary Access</p>
+        </div>
+        
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,215,0,0.3)',
+          borderRadius: '16px',
+          padding: '30px',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ textAlign: 'center', color: '#ffd700', marginBottom: '25px' }}>Sign In</h2>
           
-          <div className="auth-card">
-            <h2>Sign In</h2>
-            {error && <div className="error-msg">{error}</div>}
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-            <button className="primary-btn" onClick={handleSignIn}>Enter Sanctuary</button>
-            <p className="auth-switch">
-              No account? <button onClick={() => { setError(''); setView('signup') }}>Sign Up</button>
-            </p>
-          </div>
+          {error && (
+            <div style={{
+              background: 'rgba(230,57,70,0.2)',
+              border: '1px solid #e63946',
+              color: '#ff6b6b',
+              padding: '12px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
+          
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={e => setPassword(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '20px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <button 
+            onClick={handleSignIn}
+            style={{
+              width: '100%',
+              padding: '15px',
+              background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#000',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginBottom: '20px'
+            }}
+          >
+            Enter Sanctuary
+          </button>
+          
+          <p style={{ textAlign: 'center', color: '#a8dadc', fontSize: '0.9rem' }}>
+            No account? <button 
+              onClick={() => { setError(''); setView('signup') }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ffd700',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              Sign Up
+            </button>
+          </p>
         </div>
       </div>
     )
@@ -409,162 +519,513 @@ function App() {
 
   if (view === 'signup') {
     return (
-      <div className="app">
-        {toast && <div className="toast">{toast}</div>}
-        <div className="auth-container">
-          <div className="auth-header">
-            <div className="auth-logo">🔥</div>
-            <h1>TRUTH BE TOLD</h1>
-            <p className="auth-subtitle">Join the Community</p>
-          </div>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+        color: '#f1faee',
+        padding: '20px'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '15px' }}>🔥</div>
+          <h1 style={{ fontSize: '2rem', color: '#ffd700', marginBottom: '10px' }}>TRUTH BE TOLD</h1>
+          <p style={{ color: '#a8dadc' }}>Join the Community</p>
+        </div>
+        
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,215,0,0.3)',
+          borderRadius: '16px',
+          padding: '30px',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ textAlign: 'center', color: '#ffd700', marginBottom: '25px' }}>Create Account</h2>
           
-          <div className="auth-card">
-            <h2>Create Account</h2>
-            {error && <div className="error-msg">{error}</div>}
-            <input type="text" placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-            <button className="primary-btn" onClick={handleSignUp}>Forge Identity</button>
-            <p className="auth-switch">
-              Have an account? <button onClick={() => { setError(''); setView('signin') }}>Sign In</button>
-            </p>
-          </div>
+          {error && (
+            <div style={{
+              background: 'rgba(230,57,70,0.2)',
+              border: '1px solid #e63946',
+              color: '#ff6b6b',
+              padding: '12px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
+          
+          <input 
+            type="text" 
+            placeholder="Name" 
+            value={name} 
+            onChange={e => setName(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={e => setPassword(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <input 
+            type="password" 
+            placeholder="Confirm Password" 
+            value={confirmPassword} 
+            onChange={e => setConfirmPassword(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '15px',
+              marginBottom: '20px',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '12px',
+              color: '#f1faee'
+            }}
+          />
+          
+          <button 
+            onClick={handleSignUp}
+            style={{
+              width: '100%',
+              padding: '15px',
+              background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#000',
+              fontWeight: '600',
+              cursor: 'pointer',
+              marginBottom: '20px'
+            }}
+          >
+            Forge Identity
+          </button>
+          
+          <p style={{ textAlign: 'center', color: '#a8dadc', fontSize: '0.9rem' }}>
+            Have an account? <button 
+              onClick={() => { setError(''); setView('signin') }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ffd700',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              Sign In
+            </button>
+          </p>
         </div>
       </div>
     )
   }
 
+  // Main Dashboard
+  const isAdmin = currentUser?.email === ADMIN_EMAIL
+  
   return (
-    <div className="app">
-      {toast && <div className="toast">{toast}</div>}
-      
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+      color: '#f1faee'
+    }}>
       {/* Header */}
-      <div className="app-header">
-        <div className="user-profile">
-          <div className="avatar-small">
-            {currentUser?.avatarUrl ? (
-              <img src={currentUser.avatarUrl} alt="Avatar" />
-            ) : (
-              <span>{getInitials(currentUser?.name || '')}</span>
-            )}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '20px',
+        borderBottom: '1px solid rgba(255,215,0,0.3)',
+        background: 'rgba(0,0,0,0.2)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: '700',
+            color: '#000'
+          }}>
+            {getInitials(currentUser?.name || '')}
           </div>
-          <div className="user-info">
-            <span className="user-name">{currentUser?.name}</span>
-            <span className={`user-tier-badge ${currentUser?.tierClass}`}>
+          <div>
+            <div style={{ fontWeight: '600' }}>{currentUser?.name}</div>
+            <div style={{ fontSize: '0.8rem', color: '#a8dadc' }}>
               {currentUser?.tierName} #{currentUser?.userNumber}
-            </span>
+            </div>
           </div>
         </div>
         
-        <div className="header-controls">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           {voteSettings && voteSettings.endTime > Date.now() && (
-            <div className="vote-timer">
-              <span className="timer-label">⏰</span>
-              <span className="timer-value">{timeLeft}</span>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'rgba(255,215,0,0.1)',
+              padding: '8px 15px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,215,0,0.3)'
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>⏰</span>
+              <span style={{ fontWeight: '600', color: '#ffd700' }}>{timeLeft}</span>
             </div>
           )}
-          <button className="signout-btn" onClick={handleSignOut}>Exit</button>
+          <button 
+            onClick={() => setView('debug')}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: '#a8dadc',
+              padding: '8px 15px',
+              borderRadius: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            Debug
+          </button>
+          <button 
+            onClick={handleSignOut}
+            style={{
+              background: 'rgba(230,57,70,0.2)',
+              border: '1px solid #e63946',
+              color: '#ff6b6b',
+              padding: '8px 15px',
+              borderRadius: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            Exit
+          </button>
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="nav-tabs">
-        <button className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>🏠</button>
-        <button className={tab === 'members' ? 'active' : ''} onClick={() => setTab('members')}>👥</button>
-        <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>📜</button>
-        <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>👤</button>
-        <button className={tab === 'suggestions' ? 'active' : ''} onClick={() => setTab('suggestions')}>💡</button>
-        {isAdmin && <button className={tab === 'admin' ? 'active admin-tab' : 'admin-tab'} onClick={() => setTab('admin')}>⚙️</button>}
+      <div style={{
+        display: 'flex',
+        borderBottom: '1px solid rgba(255,215,0,0.3)',
+        background: 'rgba(0,0,0,0.2)'
+      }}>
+        <button 
+          onClick={() => setTab('home')}
+          style={{
+            flex: 1,
+            padding: '15px',
+            background: 'none',
+            border: 'none',
+            color: tab === 'home' ? '#ffd700' : '#a8dadc',
+            fontSize: '1.2rem',
+            cursor: 'pointer',
+            position: 'relative'
+          }}
+        >
+          🏠
+          {tab === 'home' && (
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              left: '0',
+              right: '0',
+              height: '3px',
+              background: '#ffd700'
+            }}></div>
+          )}
+        </button>
+        <button 
+          onClick={() => setTab('members')}
+          style={{
+            flex: 1,
+            padding: '15px',
+            background: 'none',
+            border: 'none',
+            color: tab === 'members' ? '#ffd700' : '#a8dadc',
+            fontSize: '1.2rem',
+            cursor: 'pointer',
+            position: 'relative'
+          }}
+        >
+          👥
+          {tab === 'members' && (
+            <div style={{
+              position: 'absolute',
+              bottom: '0',
+              left: '0',
+              right: '0',
+              height: '3px',
+              background: '#ffd700'
+            }}></div>
+          )}
+        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => setTab('admin')}
+            style={{
+              flex: 1,
+              padding: '15px',
+              background: 'none',
+              border: 'none',
+              color: tab === 'admin' ? '#ff6b6b' : '#a8dadc',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              position: 'relative'
+            }}
+          >
+            ⚙️
+            {tab === 'admin' && (
+              <div style={{
+                position: 'absolute',
+                bottom: '0',
+                left: '0',
+                right: '0',
+                height: '3px',
+                background: '#ff6b6b'
+              }}></div>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Content */}
-      <div className="content-area">
+      <div style={{ padding: '20px' }}>
         {tab === 'home' && (
-          <div className="home-content">
+          <div style={{ maxWidth: '500px', margin: '0 auto' }}>
             {voteSettings && voteSettings.endTime > Date.now() ? (
-              <div className="vote-section">
-                <h2>Community Vote</h2>
-                <p className="vote-subtitle">Shape our next feature</p>
+              <div style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,215,0,0.3)',
+                borderRadius: '16px',
+                padding: '25px',
+                marginBottom: '20px'
+              }}>
+                <h2 style={{ textAlign: 'center', color: '#ffd700', marginBottom: '5px' }}>Community Vote</h2>
+                <p style={{ textAlign: 'center', color: '#a8dadc', marginBottom: '25px' }}>
+                  Shape our next feature
+                </p>
                 
                 {!hasVoted ? (
-                  <div className="vote-options">
-                    {DEFAULT_OPTIONS.map(opt => (
-                      <button 
-                        key={opt.name} 
-                        className="vote-option"
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {VOTE_OPTIONS.map(opt => (
+                      <button
+                        key={opt.name}
                         onClick={() => handleVote(opt.name)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '15px',
+                          padding: '15px',
+                          background: 'rgba(0,0,0,0.3)',
+                          border: '1px solid rgba(255,215,0,0.3)',
+                          borderRadius: '12px',
+                          color: '#f1faee',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseOver={e => e.currentTarget.style.background = 'rgba(255,215,0,0.1)'}
+                        onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'}
                       >
-                        <span className="vote-icon">{opt.icon}</span>
-                        <span className="vote-name">{opt.name}</span>
-                        <span className="vote-count">({getVoteCount(opt.name)})</span>
+                        <span style={{ fontSize: '1.5rem' }}>{opt.icon}</span>
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                          <div style={{ fontWeight: '500' }}>{opt.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#a8dadc' }}>{opt.desc}</div>
+                        </div>
+                        <span style={{ color: '#ffd700', fontWeight: '600' }}>
+                          ({getVoteCount(opt.name)})
+                        </span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="vote-completed">
-                    <div className="check-mark">✅</div>
-                    <p>Your voice has been heard</p>
+                  <div style={{ textAlign: 'center', padding: '30px' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '15px' }}>✅</div>
+                    <p style={{ color: '#ffd700', fontWeight: '600' }}>
+                      Your voice has been heard
+                    </p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="no-vote">
-                <div className="vote-icon-large">🗳️</div>
-                <p>No active vote</p>
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255,215,0,0.3)'
+              }}>
+                <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🗳️</div>
+                <p style={{ fontSize: '1.2rem', color: '#a8dadc' }}>
+                  No active vote
+                </p>
               </div>
             )}
           </div>
         )}
 
         {tab === 'admin' && isAdmin && (
-          <div className="admin-content">
-            <h2>Admin Panel</h2>
-            
-            <div className="admin-controls">
-              <div className="control-group">
-                <h3>Start Vote</h3>
-                <div className="time-buttons">
+          <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,215,0,0.3)',
+              borderRadius: '16px',
+              padding: '25px'
+            }}>
+              <h2 style={{ textAlign: 'center', color: '#ffd700', marginBottom: '25px' }}>Admin Panel</h2>
+              
+              <div style={{ marginBottom: '25px' }}>
+                <h3 style={{ color: '#ffd700', marginBottom: '15px' }}>Start Vote</h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
                   {[12, 24, 48].map(h => (
-                    <button key={h} onClick={() => startNewVote(h)}>{h}h</button>
+                    <button
+                      key={h}
+                      onClick={() => startNewVote(h)}
+                      style={{
+                        padding: '12px',
+                        background: 'rgba(255,215,0,0.1)',
+                        border: '1px solid rgba(255,215,0,0.3)',
+                        borderRadius: '12px',
+                        color: '#ffd700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {h}h
+                    </button>
                   ))}
                 </div>
-                <div className="custom-time">
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
                   <input 
                     type="number" 
                     placeholder="Hours" 
                     value={customHours}
                     onChange={e => setCustomHours(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(255,215,0,0.3)',
+                      borderRadius: '12px',
+                      color: '#f1faee'
+                    }}
                   />
-                  <button onClick={() => {
-                    const hours = parseInt(customHours)
-                    if (hours && hours > 0) startNewVote(hours)
-                  }}>Start</button>
+                  <button
+                    onClick={() => {
+                      const hours = parseInt(customHours)
+                      if (hours && hours > 0) startNewVote(hours)
+                    }}
+                    style={{
+                      padding: '12px',
+                      background: 'rgba(255,215,0,0.1)',
+                      border: '1px solid rgba(255,215,0,0.3)',
+                      borderRadius: '12px',
+                      color: '#ffd700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Start
+                  </button>
                 </div>
-                <button className="danger-btn" onClick={endVoteNow}>End Vote</button>
+                <button
+                  onClick={endVoteNow}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(230,57,70,0.2)',
+                    border: '1px solid #e63946',
+                    borderRadius: '12px',
+                    color: '#ff6b6b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  End Vote Now
+                </button>
               </div>
             </div>
           </div>
         )}
 
         {tab === 'members' && (
-          <div className="members-content">
-            <h2>Community ({users.length})</h2>
-            <div className="members-list">
+          <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <h2 style={{ textAlign: 'center', color: '#ffd700', marginBottom: '25px' }}>
+              Community ({users.length})
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {[...users].reverse().map(u => (
-                <div key={u.id} className="member-item">
-                  <div className="member-avatar">
-                    {u.avatarUrl ? (
-                      <img src={u.avatarUrl} alt="Avatar" />
-                    ) : (
-                      <span>{getInitials(u.name)}</span>
-                    )}
+                <div 
+                  key={u.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '15px',
+                    padding: '15px',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,215,0,0.3)'
+                  }}
+                >
+                  <div style={{
+                    width: '45px',
+                    height: '45px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    color: '#000'
+                  }}>
+                    {getInitials(u.name)}
                   </div>
-                  <div className="member-info">
-                    <span className="member-name">{u.name}</span>
-                    <span className={`member-tier ${u.tier_class}`}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '500' }}>{u.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#a8dadc' }}>
                       {u.tier_name} #{u.user_number}
-                    </span>
+                    </div>
                   </div>
                 </div>
               ))}
