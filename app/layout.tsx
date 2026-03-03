@@ -1,13 +1,13 @@
+import type { Metadata } from 'next';
+import { Cinzel, Inter } from 'next/font/google';
 import './globals.css';
-import { Inter, Cinzel, Fira_Code } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel' });
-const firaCode = Fira_Code({ subsets: ['latin'], variable: '--font-fira-code' });
+const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel', weight: ['400', '700', '900'] });
 
-export const metadata = {
-    title: 'The Sanctum',
-    description: 'Project Sovereign Protocol',
+export const metadata: Metadata = {
+    title: 'Sacred Sanctum',
+    description: 'The Obsidian Void Theme - Sacred Sanctum',
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={`${inter.variable} ${cinzel.variable} ${firaCode.variable} font-sans`}>
+            <body className={`${inter.variable} ${cinzel.variable} font-sans bg-[#050505] text-white min-h-screen antialiased`}>
                 {children}
             </body>
         </html>

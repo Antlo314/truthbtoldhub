@@ -3,6 +3,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ShieldAlert, Zap, Terminal, ArrowLeft } from 'lucide-react';
 import gsap from 'gsap';
+import { Cinzel, Inter, Fira_Code } from 'next/font/google';
+
+const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const firaCode = Fira_Code({ subsets: ['latin'], variable: '--font-fira-code' });
 
 export default function DEFSovereignEngine() {
     const [logIndex, setLogIndex] = useState(0);
@@ -43,12 +48,24 @@ export default function DEFSovereignEngine() {
     }, [logs]);
 
     useEffect(() => {
-        gsap.from("#lit-count", {
-            textContent: 0,
-            duration: 2.5,
-            ease: "power2.out",
-            snap: { textContent: 1 }
-        });
+        // Heavy Mechanical Animation for Litigations
+        gsap.fromTo("#lit-count",
+            { textContent: 0 },
+            {
+                textContent: 422,
+                duration: 4,
+                ease: "steps(60)", // Mechanical steps feel
+                snap: { textContent: 1 },
+                onUpdate: function () {
+                    const el = document.getElementById('lit-count');
+                    if (el) el.style.opacity = (Math.random() * 0.3 + 0.7).toString(); // Slight flicker
+                },
+                onComplete: function () {
+                    const el = document.getElementById('lit-count');
+                    if (el) el.style.opacity = "1";
+                }
+            }
+        );
 
         gsap.from("#audit-rate", {
             textContent: 0,
@@ -59,8 +76,12 @@ export default function DEFSovereignEngine() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#002349] text-white font-sans overflow-hidden relative flex flex-col items-center justify-center p-8">
-            <div className="absolute inset-0 pointer-events-none bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/cinema_bg.png')] opacity-10 bg-cover bg-center"></div>
+        <div className={`${inter.variable} ${cinzel.variable} ${firaCode.variable} font-sans min-h-screen bg-[#002349] text-white overflow-hidden relative flex items-center justify-center p-8`}>
+            {/* Supabase Cinema BG @ 10% */}
+            <div
+                className="absolute inset-0 pointer-events-none opacity-10 bg-cover bg-center"
+                style={{ backgroundImage: "url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/cinema_bg.png')" }}
+            ></div>
 
             {/* Scanline Effect */}
             <div className="absolute inset-0 pointer-events-none z-50 bg-[linear-gradient(to_bottom,transparent_50%,rgba(0,0,0,0.1)_51%)] bg-[length:100%_4px]"></div>
@@ -70,101 +91,124 @@ export default function DEFSovereignEngine() {
                 <ArrowLeft className="w-5 h-5" />
             </a>
 
-            <div className="relative w-full max-w-6xl h-full flex flex-col gap-6 z-10">
+            {/* OMEGA GLASS CONTAINER */}
+            <div className="relative w-full max-w-6xl aspect-[16/9] glass-container backdrop-blur-2xl bg-white/[0.02] border border-white/10 rounded-3xl p-8 flex flex-col gap-8 z-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+
                 {/* Header */}
-                <header className="flex justify-between items-center border-b border-amber-500/20 pb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 border-2 border-amber-500 flex items-center justify-center">
-                            <span className="font-serif text-2xl text-amber-500">DEF</span>
+                <header className="flex justify-between items-center border-b border-amber-500/20 pb-6">
+                    <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 border-2 border-amber-500 flex items-center justify-center bg-amber-500/5 rotate-45 group hover:rotate-0 transition-transform duration-700">
+                            <span className="font-serif text-3xl text-amber-500 -rotate-45 group-hover:rotate-0 transition-transform duration-700">DEF</span>
                         </div>
                         <div>
-                            <h1 className="font-serif text-2xl tracking-[0.3em] text-white uppercase">DEF SOVEREIGN ENGINE</h1>
-                            <p className="text-[10px] text-amber-500/60 font-mono tracking-widest">PROPRIETARY WORKERS' COMP AUDIT PROTOCOL</p>
+                            <h1 className="font-serif text-3xl tracking-[0.4em] text-white uppercase amber-glow">DEF SOVEREIGN ENGINE</h1>
+                            <p className="text-[11px] text-amber-500/60 font-mono tracking-[0.3em] uppercase">Proprietary workers' comp audit protocol // Architect-Grade</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <span className="text-[10px] text-gray-400 font-mono block">TERMINAL ACCESS: GRANTED</span>
-                        <span className="text-[10px] text-amber-500 font-bold font-mono uppercase tracking-widest">LINK ESTABLISHED: JULIE Y. JOHN / JOSEPH C. CHANCEY</span>
+                        <span className="text-[10px] text-gray-400 font-mono block uppercase tracking-widest">Access Protocol: OMEGA</span>
+                        <span className="text-[12px] text-amber-500 font-bold font-mono uppercase tracking-widest flex items-center gap-2 justify-end">
+                            LINK ESTABLISHED <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(255,191,0,0.8)]"></span>
+                        </span>
+                        <span className="text-[10px] text-white/40 font-mono block uppercase">JULIE Y. JOHN / JOSEPH C. CHANCEY</span>
                     </div>
                 </header>
 
-                <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
-                    {/* Metrics */}
+                <div className="flex-1 grid grid-cols-12 gap-8 overflow-hidden">
+                    {/* Left Panel: Metrics */}
                     <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-                        <div className="bg-[#002349]/60 backdrop-blur-xl border border-amber-500/20 p-6 rounded-xl flex flex-col justify-between h-40">
+                        <div className="bg-white/[0.03] backdrop-blur-md border border-white/10 p-6 rounded-2xl flex flex-col justify-between h-44 hover:border-amber-500/30 transition-all duration-500">
                             <div className="flex justify-between items-start">
-                                <span className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Active Litigations</span>
-                                <ShieldAlert className="w-4 h-4 text-amber-500/40" />
+                                <span className="text-[11px] text-amber-500 font-bold uppercase tracking-widest">Active Litigations</span>
+                                <ShieldAlert className="w-5 h-5 text-amber-500/30" />
                             </div>
-                            <div className="flex items-baseline gap-2">
-                                <span id="lit-count" className="text-5xl font-serif text-white">422</span>
-                                <span className="text-xs text-green-400 font-mono">(-4% ADV)</span>
+                            <div className="flex items-baseline gap-3">
+                                <span id="lit-count" className="text-6xl font-serif text-white amber-glow leading-none">422</span>
+                                <span className="text-[10px] text-green-400 font-mono border border-green-400/20 px-2 py-0.5 rounded uppercase">-4% VELOCITY</span>
                             </div>
-                            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-amber-500 w-[65%] shadow-[0_0_10px_rgba(255,191,0,0.5)]"></div>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mt-4">
+                                <div className="h-full bg-gradient-to-r from-amber-600 to-amber-400 w-[65%] shadow-[0_0_15px_rgba(255,191,0,0.6)]"></div>
                             </div>
                         </div>
 
-                        <div className="bg-[#002349]/60 backdrop-blur-xl border border-amber-500/20 p-6 rounded-xl flex flex-col justify-between h-40">
+                        <div className="bg-white/[0.03] backdrop-blur-md border border-white/10 p-6 rounded-2xl flex flex-col justify-between h-44 hover:border-amber-500/30 transition-all duration-500">
                             <div className="flex justify-between items-start">
-                                <span className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Audit Efficiency</span>
-                                <Zap className="w-4 h-4 text-amber-500/40" />
+                                <span className="text-[11px] text-amber-500 font-bold uppercase tracking-widest">Audit Efficiency</span>
+                                <Zap className="w-5 h-5 text-amber-500/30" />
                             </div>
                             <div className="flex items-baseline gap-2">
-                                <span id="audit-rate" className="text-5xl font-serif text-white">99.1</span>
-                                <span className="text-xs text-amber-500 font-mono">%</span>
+                                <span id="audit-rate" className="text-6xl font-serif text-white amber-glow leading-none">99.1</span>
+                                <span className="text-sm text-amber-500 font-mono">%</span>
                             </div>
-                            <div className="flex gap-1">
-                                <div className="h-8 flex-1 bg-amber-500/20"></div>
-                                <div className="h-8 flex-1 bg-amber-500/40"></div>
-                                <div className="h-8 flex-1 bg-amber-500/60"></div>
-                                <div className="h-8 flex-1 bg-amber-500 animate-pulse shadow-[0_0_15px_rgba(255,191,0,0.5)]"></div>
+                            <div className="flex gap-2 mt-4">
+                                {[...Array(12)].map((_, i) => (
+                                    <div key={i} className={`h-6 w-1 rounded-sm ${i < 11 ? 'bg-amber-500/40' : 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(255,191,0,0.8)]'}`}></div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="bg-[#002349]/60 backdrop-blur-xl border border-amber-500/20 p-6 rounded-xl flex-1 flex flex-col group hover:border-amber-500/40 transition-all">
-                            <span className="text-[10px] text-gray-500 uppercase tracking-widest mb-4">Sentinel Status</span>
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(255,191,0,0.5)] animate-pulse"></div>
-                                <span className="text-xs font-bold text-white uppercase tracking-wider">Passive Overwatch Active</span>
+                        <div className="bg-white/[0.03] backdrop-blur-md border border-white/10 p-6 rounded-2xl flex-1 flex flex-col group hover:border-amber-500/50 transition-all duration-700">
+                            <span className="text-[11px] text-gray-500 font-mono uppercase tracking-[0.2em] mb-4">Sentinel Overwatch</span>
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="relative">
+                                    <div className="w-3 h-3 rounded-full bg-amber-500 animate-ping absolute inset-0 opacity-50"></div>
+                                    <div className="w-3 h-3 rounded-full bg-amber-500 relative"></div>
+                                </div>
+                                <span className="text-[12px] font-bold text-white uppercase tracking-widest">Passive Mode // Locked</span>
                             </div>
-                            <p className="text-[10px] text-gray-400 leading-relaxed font-mono">Monitoring DEF Central... Scanning for high-volume litigation discrepancies... Georgia WC Board linked.</p>
-                            <div className="mt-auto pt-4 border-t border-white/5">
-                                <button className="w-full py-2 bg-amber-600/10 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-all">Emergency Lockdown</button>
+                            <p className="text-[11px] text-gray-400 leading-relaxed font-mono italic">"Algorithmically intercepting high-volume medical audit discrepancies. Link to Georgia Workers' Compensation Board confirmed."</p>
+                            <div className="mt-auto pt-6 border-t border-white/5">
+                                <button className="w-full py-3 bg-amber-600/5 border border-amber-500/20 text-amber-500 text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-amber-600 hover:text-white hover:border-amber-600 transition-all duration-500">Initialize Lockdown</button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Terminal */}
+                    {/* Right Panel: Terminal */}
                     <div className="col-span-12 lg:col-span-8 flex flex-col">
-                        <div className="bg-[#002349]/60 backdrop-blur-xl border border-amber-500/10 rounded-xl p-6 relative overflow-hidden flex flex-col">
-                            <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <Terminal className="w-4 h-4 text-amber-500" />
-                                    <span className="text-[10px] text-amber-500 font-bold uppercase tracking-[0.2em]">Forensic Medical Audit Feed</span>
+                        <div className="bg-black/40 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-8 relative overflow-hidden flex flex-col h-full shadow-[inset_0_0_30px_rgba(255,191,0,0.1)]">
+                            {/* Glowing Amber Pulse on Border */}
+                            <div className="absolute inset-0 border-2 border-amber-500/10 pointer-events-none animate-pulse"></div>
+
+                            <div className="flex items-center justify-between mb-6 border-b border-amber-500/20 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <Terminal className="w-5 h-5 text-amber-500 animate-pulse" />
+                                    <span className="text-[12px] text-amber-500 font-bold uppercase tracking-[0.3em] font-mono">Forensic Medical Audit Feed // Agent_Loki</span>
                                 </div>
-                                <span className="text-[9px] text-gray-600 font-mono uppercase">Agent_Loki_Active</span>
+                                <div className="flex gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-red-500/30"></div>
+                                    <div className="w-2 h-2 rounded-full bg-amber-500/30"></div>
+                                    <div className="w-2 h-2 rounded-full bg-green-500/30"></div>
+                                </div>
                             </div>
 
-                            <div ref={terminalRef} className="flex-1 font-mono text-[11px] text-white/80 space-y-1.5 overflow-y-auto pr-2">
-                                {logs.map((log, i) => (
-                                    <div key={i} className="animate-in slide-in-from-left-2 duration-500">
-                                        <span className="text-amber-500">[{log.split(']')[0].replace('[', '')}]</span> {log.split(']')[1]}
-                                    </div>
-                                ))}
+                            <div ref={terminalRef} className="flex-1 font-mono text-[11px] text-white/90 space-y-2 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-amber-500/20 scrollbar-track-transparent">
+                                {logs.map((log, i) => {
+                                    const timestamp = log.split(']')[0].replace('[', '');
+                                    const content = log.split(']')[1];
+                                    return (
+                                        <div key={i} className="animate-in fade-in slide-in-from-left-4 duration-700 flex gap-3 group">
+                                            <span className="text-amber-500/60 shrink-0">[{timestamp}]</span>
+                                            <span className={`${content.includes('Authorized') || content.includes('active') ? 'text-amber-400 font-bold' : ''}`}>
+                                                {content}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-amber-500/20 flex items-center gap-2">
-                                <span className="text-amber-500 text-xs shadow-amber-500/50 shadow-sm">&gt;</span>
-                                <div className="w-2 h-4 bg-amber-500 animate-pulse"></div>
+                            <div className="mt-6 pt-6 border-t border-amber-500/20 flex items-center gap-4">
+                                <span className="text-amber-500 text-sm font-bold animate-pulse">&gt;_</span>
+                                <div className="w-[100px] h-0.5 bg-amber-500/20 relative overflow-hidden">
+                                    <div className="absolute inset-y-0 w-1/2 bg-amber-500 animate-[loading_1.5s_infinite]"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <footer className="flex justify-between items-center text-[8px] text-gray-600 uppercase tracking-widest font-mono">
-                    <span>© 2026 Drew Eckl & Farnham · DEF Sovereign Engine v1.0</span>
-                    <span>Authored by Truth B Told Hub</span>
+                <footer className="flex justify-between items-center text-[10px] text-gray-500 uppercase tracking-[0.4em] font-mono mt-2 opacity-50">
+                    <span>© 2026 Drew Eckl & Farnham // Sovereign Protocol</span>
+                    <span>System Authored by Truth B Told Hub</span>
                 </footer>
             </div>
         </div>

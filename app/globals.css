@@ -1,16 +1,1360 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
+/* THE OBSIDIAN VOID THEME */
 :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 35, 73;
-    --background-end-rgb: 0, 20, 45;
+    --void: #050505;
+    --void-light: #0a0a0a;
+    --ember: #FF6B35;
+    --ember-dim: #993b1e;
+    --gold: #F7931E;
+    --ash: #505050;
+    --text-main: #ffffff;
+    --text-mute: #a3a3a3;
+
+    /* Gradients */
+    --grad-ember: linear-gradient(135deg, var(--ember), var(--gold));
+    --grad-void: linear-gradient(to bottom, var(--void), #000000);
+    --glow-ember: 0 0 20px rgba(255, 107, 53, 0.3);
 }
 
+@keyframes flameBreath {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 5px var(--ember));
+        transform: scale(1);
+    }
+
+    50% {
+        filter: drop-shadow(0 0 15px var(--gold));
+        transform: scale(1.05);
+    }
+}
+
+.flame-glow {
+    animation: flameBreath 3s infinite ease-in-out;
+}
+
+/* Base Setup */
 body {
-    color: rgb(var(--foreground-rgb));
+    background-color: var(--void);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+.font-ritual {
+    font-family: 'Cinzel', serif;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel {
+    background: rgba(10, 10, 10, 0.75);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 107, 53, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease;
+    transform-style: preserve-3d;
+}
+
+.glass-panel:hover {
+    border-color: rgba(255, 107, 53, 0.4);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 0 0 15px rgba(255, 107, 53, 0.1);
+}
+
+.card-tilt-content {
+    transform: translateZ(20px);
+}
+
+/* Buttons */
+.btn-ember {
+    background: var(--grad-ember);
+    color: white;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-ember:hover {
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-mute);
+    transition: all 0.3s ease;
+}
+
+.btn-ghost:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+    background: rgba(255, 107, 53, 0.05);
+}
+
+/* --- AWAKENING TOUR FOCUS --- */
+.tour-focus {
+    position: relative;
+    z-index: 101 !important;
+    pointer-events: none !important;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tour-focus::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border: 2px solid var(--ember);
+    border-radius: inherit;
+    box-shadow: 0 0 30px var(--ember), inset 0 0 20px var(--ember);
+    animation: tour-pulse 2s infinite;
+    pointer-events: none;
+    z-index: 102;
+    opacity: 0.8;
+}
+
+@keyframes tour-pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.02);
+        opacity: 0.4;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+}
+
+.tour-dim {
+    transition: opacity 0.8s ease;
+}
+
+.tour-dim-active {
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+.perspective-1000 {
+    perspective: 1000px;
+}
+
+.auth-card-inner {
+    position: relative;
+    width: 100%;
+    height: 580px;
+    /* Fixed height required for absolute children in 3D flip */
+    text-align: center;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+.auth-card-inner.is-flipped {
+    transform: rotateY(180deg);
+}
+
+.auth-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    /* Safari */
+    backface-visibility: hidden;
+    top: 0;
+    left: 0;
+}
+
+.auth-face-front {
+    transform: rotateY(0deg);
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+    background: #0a0a0a !important;
+}
+
+.is-flipped .auth-face-front {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden;
+}
+
+.auth-face-back {
+    transform: rotateY(180deg);
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+    background: #0a0a0a !important;
+}
+
+.is-flipped .auth-face-back {
+    opacity: 1 !important;
+    visibility: visible;
+    pointer-events: auto !important;
+    z-index: 10;
+}
+
+/* Ensure container has height */
+#auth-container-wrapper {
+    min-height: 520px;
+}
+
+/* Animations */
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+@keyframes pulse-ember {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 20px rgba(255, 107, 53, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
+    }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-ember {
+    animation: pulse-ember 2s infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--void);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 53, 0.3);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ember);
+}
+
+/* Specific Scroll Areas */
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 53, 0.2);
+}
+
+/* Mobile Nav (Bottom Bar) */
+.mobile-nav {
+    background: rgba(5, 5, 5, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-item.active {
+    color: var(--ember);
+}
+
+.nav-item.active svg {
+    filter: drop-shadow(0 0 8px var(--ember));
+}
+
+/* Particle Canvas */
+#ember-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Tier Badges */
+.tier-primordial {
+    background: linear-gradient(135deg, #FFD700, #B8860B);
+    color: black;
+}
+
+.tier-ascended {
+    background: linear-gradient(135deg, #E0E0E0, #A9A9A9);
+    color: black;
+}
+
+.tier-keeper {
+    background: linear-gradient(135deg, #CD7F32, #8B4513);
+    color: white;
+}
+
+.tier-initiate {
+    background: #333;
+    color: #aaa;
+    border: 1px solid #444;
+}
+
+/* Loader */
+#loader-overlay {
+    transition: opacity 0.8s ease, visibility 0.8s;
+}
+
+.hidden-fade {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Soul Guidance Pulse */
+@keyframes soulBounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.animate-bounce {
+    animation: soulBounce 2s infinite ease-in-out;
+}
+
+/* --- PREMIUM UI EXTENSIONS --- */
+
+/* 1. Auth Card Transitions */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 2. Holofoil Effect */
+.holofoil {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+}
+
+.holofoil::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(115deg,
+            transparent 20%,
+            rgba(255, 255, 255, 0.1) 25%,
+            rgba(255, 255, 255, 0.4) 30%,
+            rgba(255, 255, 255, 0.1) 35%,
+            transparent 40%);
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: holo-shimmer 6s infinite linear;
+}
+
+@keyframes holo-shimmer {
+    0% {
+        transform: translate(-100%, -100%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(50%, 50%) rotate(0deg);
+    }
+}
+
+/* 3. Aura Particles */
+.aura-ember {
+    background: var(--ember);
+    box-shadow: 0 0 10px var(--ember);
+}
+
+.aura-silver {
+    background: #E0E0E0;
+    box-shadow: 0 0 15px #ffffff;
+}
+
+.aura-gold {
+    background: #FFD700;
+    box-shadow: 0 0 20px #FFD700;
+}
+
+.aura-opal {
+    background: #00ffff;
+    box-shadow: 0 0 10px #ff00ff;
+    animation: opal-shift 2s infinite alternate;
+}
+
+@keyframes opal-shift {
+    0% {
+        background: #00ffff;
+        box-shadow: 0 0 10px #ff00ff;
+    }
+
+    33% {
+        background: #ff00ff;
+        box-shadow: 0 0 10px #ffff00;
+    }
+
+    66% {
+        background: #ffff00;
+        box-shadow: 0 0 10px #00ffff;
+    }
+
+    100% {
+        background: #00ffff;
+        box-shadow: 0 0 10px #ff00ff;
+    }
+}
+
+/* --- PHASE 4: REFINEMENTS --- */
+#soul-guidance {
+    right: 5rem;
+}
+
+#initiation-ritual {
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+}
+
+.init-step {
+    animation: fadeInStep 0.4s ease-out forwards;
+}
+
+@keyframes fadeInStep {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+#view-chamber {
+    background: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
+}
+
+/* --- THE LIVING VOID (ATMOSPHERIC BACKGROUND) --- */
+/* --- ATMOSPHERIC BACKGROUND (The Pulse) --- */
+.living-void-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000 100%);
+    overflow: hidden;
+}
+
+.pulse-aura {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(234, 88, 12, 0.05) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* --- ZION LOG TERMINAL --- */
+.zion-log {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    width: 280px;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 9px;
+    color: rgba(59, 130, 246, 0.6);
+    overflow: hidden;
+    z-index: 40;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.zion-log-content {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+/* --- 3D CARD OVERHAUL --- */
+.sanctuary-card {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease, border-color 0.4s ease;
+    overflow: hidden;
+}
+
+.sanctuary-card:hover {
+    transform: scale(1.05) rotateX(5deg) rotateY(5deg);
+    filter: saturate(1);
+    border-color: rgba(234, 88, 12, 0.5);
+}
+
+.card-image-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: saturate(0.2);
+    transition: filter 0.4s ease;
+    z-index: 0;
+    opacity: 0.6;
+}
+
+.sanctuary-card:hover .card-image-bg {
+    filter: saturate(1);
+}
+
+.card-content-overlay {
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- TREASURY PORTAL (The Pool) --- */
+.treasury-dashboard {
+    position: fixed;
+    inset: 0;
+    background: #050505;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+}
+
+.vault-header {
+    background: linear-gradient(to right, #000, #111, #000);
+    border-bottom: 1px solid rgba(234, 88, 12, 0.2);
+}
+
+.petition-stream {
+    scrollbar-width: none;
+}
+
+.petition-stream::-webkit-scrollbar {
+    display: none;
+}
+
+.petition-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.petition-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(234, 88, 12, 0.3);
+}
+
+.consensus-progress {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.consensus-bar {
+    height: 100%;
+    background: linear-gradient(to right, #ea580c, #f97316);
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- THE PATH OF ASCENSION (AURAS) --- */
+.aura-ember {
+    background: #ea580c !important;
+    box-shadow: 0 0 10px #ea580c;
+}
+
+.aura-silver {
+    background: #e2e8f0 !important;
+    box-shadow: 0 0 15px #94a3b8, 0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+.aura-gold {
+    background: #fbbf24 !important;
+    box-shadow: 0 0 15px #f59e0b, 0 0 30px rgba(251, 191, 36, 0.4);
+}
+
+.aura-opal {
+    background: #ef4444 !important;
+    box-shadow: 0 0 20px #ef4444, 0 0 40px rgba(14, 165, 233, 0.4);
+}
+
+/* --- HOLOFOIL CARD EFFECT --- */
+.holofoil {
+    position: relative;
+    overflow: hidden;
+}
+
+.holofoil::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(125deg, transparent 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 55%, transparent 100%);
+    background-size: 200% 200%;
+    animation: holo-shimmer 8s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes holo-shimmer {
+    0% {
+        background-position: 200% 200%;
+    }
+
+    100% {
+        background-position: -200% -200%;
+    }
+}
+
+/* --- PHASE 5: COMMUNITY HUB --- */
+.message-bubble {
+    position: relative;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 107, 53, 0.3);
+}
+
+.reply-line {
+    position: absolute;
+    left: -24px;
+    top: -12px;
+    width: 20px;
+    height: 24px;
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom-left-radius: 6px;
+}
+
+.heart-pop {
+    animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartPop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.4);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+#whispers-scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 107, 53, 0.2) transparent;
+}
+
+#whispers-scroll-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+#whispers-scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 107, 53, 0.2);
+    border-radius: 10px;
+}
+
+/* --- SOUL SIGNATURES (Premium Tier Animations) --- */
+
+@keyframes sig-ascended-glow {
+
+    0%,
+    100% {
+        text-shadow: 0 0 8px rgba(168, 85, 247, 0.6), 0 0 20px rgba(168, 85, 247, 0.2);
+    }
+
+    50% {
+        text-shadow: 0 0 16px rgba(168, 85, 247, 0.9), 0 0 40px rgba(168, 85, 247, 0.4);
+    }
+}
+
+@keyframes sig-primordial-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes sig-architect-pulse {
+
+    0%,
+    100% {
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 30px rgba(239, 68, 68, 0.3);
+        letter-spacing: 0.05em;
+    }
+
+    50% {
+        text-shadow: 0 0 20px rgba(239, 68, 68, 1), 0 0 60px rgba(239, 68, 68, 0.5);
+        letter-spacing: 0.08em;
+    }
+}
+
+.sig-ascended {
+    animation: sig-ascended-glow 3s ease-in-out infinite;
+    color: #c084fc !important;
+}
+
+.sig-primordial {
+    background: linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b, #fbbf24);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: sig-primordial-shimmer 4s ease infinite;
+}
+
+.sig-architect {
+    animation: sig-architect-pulse 2s ease-in-out infinite;
+    color: #f87171 !important;
+    font-weight: 700;
+}
+
+/* --- SOVEREIGN PROTOCOL: CLEANROOM & LOCKDOWN --- */
+
+/* Nuke Third-Party Badges */
+[class*="stackblitz"],
+[class*="vercel"],
+[id*="bolt"] {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Great Seal Lockdown */
+.encrypted-sector {
+    position: relative;
+    overflow: hidden;
+}
+
+.great-seal-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.85);
+    background-image: url('https://i.postimg.cc/4yv5Wz6L/tmphwe9t5an.png');
+    background-size: 80%;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.3s ease;
+}
+
+.great-seal-text {
+    position: absolute;
+    bottom: 20px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: #ea580c;
+    letter-spacing: 0.3em;
+    font-weight: 900;
+    text-shadow: 0 0 10px rgba(234, 88, 12, 0.5);
+}
+
+/* Whispers Overhaul */
+.whispers-sovereign-bg {
+    background-image: url('https://i.postimg.cc/tRdNQN6r/tmp5qjlnjyx.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    opacity: 0.10;
+}
+
+/* Heavy dark gradient to sit ABOVE the bg image so text is clean */
+#whispers-scroll-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
     background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.60) 0%,
+            rgba(0, 0, 0, 0.80) 40%,
+            #050505 100%);
+    pointer-events: none;
+}
+
+.whisper-mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace !important;
+}
+
+.whisper-input:focus {
+    border-color: #ea580c !important;
+    box-shadow: 0 0 20px rgba(234, 88, 12, 0.4) !important;
+}
+
+/* Disbursement Chart */
+.allocation-pie {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: conic-gradient(#ea580c 0% 45%,
+            /* Hardware */
+            #f97316 45% 70%,
+            /* Aid */
+            #fbbf24 70% 100%
+            /* Research */
+        );
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+.shake-animation {
+    animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+/* Protocol Badge */
+.protocol-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 20;
+    background: rgba(234, 88, 12, 0.2);
+    border: 1px solid rgba(234, 88, 12, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 8px;
+    color: #ea580c;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(234, 88, 12, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(234, 88, 12, 0.5);
+    }
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.marquee-ticker {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 15s linear infinite;
+    padding-left: 20px;
+}
+
+.marquee-container {
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* --- ARCHITECT BROADCAST PINNED CARD --- */
+.architect-broadcast-pinned {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(234, 88, 12, 0.05) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.1), inset 0 0 0 1px rgba(245, 158, 11, 0.05);
+    animation: architect-glow 3s ease-in-out infinite;
+}
+
+@keyframes architect-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.1), inset 0 0 0 1px rgba(245, 158, 11, 0.05);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(245, 158, 11, 0.2), inset 0 0 0 1px rgba(245, 158, 11, 0.1);
+    }
+}
+
+/* --- GUILLOTINE TABLE --- */
+#guillotine-table tr:hover td {
+    background: rgba(239, 68, 68, 0.04);
+}
+
+#guillotine-table td {
+    padding: 10px 16px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    color: #a3a3a3;
+    vertical-align: middle;
+    transition: background 0.2s ease;
+}
+
+/* Freeze toggle active state */
+.pool-frozen #freeze-toggle-btn {
+    background: #dc2626;
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.pool-frozen #freeze-knob {
+    transform: translateX(28px);
+}
+
+/* Confidentiality toggle active state */
+.conf-active {
+    background: #ea580c !important;
+    border-color: rgba(234, 88, 12, 0.5) !important;
+}
+
+.conf-active #conf-knob {
+    transform: translateX(24px);
+    background: white !important;
+}
+
+/* ============================================================ */
+/* PHASE 2 CSS — TIER SHADERS, SOUL RING, CATALYST, ETC.       */
+/* ============================================================ */
+
+/* --- TIER SHADER GRADIENTS (Profile Card) --- */
+.tier-shader-initiate {
+    background: radial-gradient(ellipse at 50% 30%, rgba(100, 100, 110, 0.18) 0%, transparent 70%) !important;
+    box-shadow: 0 0 30px rgba(80, 80, 90, 0.15), 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+}
+
+.tier-shader-ascended {
+    background: radial-gradient(ellipse at 50% 30%, rgba(139, 92, 246, 0.28) 0%, rgba(76, 29, 149, 0.12) 50%, transparent 75%) !important;
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.2), 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 0 60px rgba(139, 92, 246, 0.06) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.tier-shader-primordial {
+    background: radial-gradient(ellipse at 50% 30%, rgba(234, 88, 12, 0.32) 0%, rgba(234, 179, 8, 0.18) 40%, transparent 70%) !important;
+    box-shadow: 0 0 40px rgba(234, 88, 12, 0.25), 0 0 80px rgba(234, 179, 8, 0.08), 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+    border-color: rgba(234, 179, 8, 0.3) !important;
+}
+
+.tier-shader-architect {
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(200, 200, 255, 0.08) 25%,
+            rgba(255, 220, 200, 0.10) 50%,
+            rgba(200, 255, 220, 0.08) 75%,
+            rgba(255, 255, 255, 0.12) 100%) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 40px rgba(255, 255, 255, 0.1), 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    animation: holographic-shift 5s ease-in-out infinite !important;
+}
+
+@keyframes holographic-shift {
+
+    0%,
+    100% {
+        filter: hue-rotate(0deg) brightness(1);
+    }
+
+    25% {
+        filter: hue-rotate(15deg) brightness(1.05);
+    }
+
+    50% {
+        filter: hue-rotate(-10deg) brightness(1.08);
+    }
+
+    75% {
+        filter: hue-rotate(20deg) brightness(1.03);
+    }
+}
+
+/* --- SOUL POWER PROGRESS RING --- */
+#soul-ring {
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+    filter: drop-shadow(0 0 4px rgba(234, 88, 12, 0.6));
+}
+
+/* --- WHISPERS: NEURAL DRIFT ANIMATION --- */
+.whispers-sovereign-bg {
+    background-image: url('https://i.postimg.cc/tRdNQN6r/tmp5qjlnjyx.png');
+    background-size: 120%;
+    background-position: center;
+    opacity: 0.05;
+    animation: neural-drift 120s linear infinite;
+}
+
+@keyframes neural-drift {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    25% {
+        background-position: 100% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+
+    75% {
+        background-position: 0% 100%;
+    }
+
+    100% {
+        background-position: 0% 0%;
+    }
+}
+
+/* Whispers container blur layer */
+#whispers-scroll-area {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* --- ARCHITECT BROADCAST: NEON AMBER GLOW --- */
+.architect-broadcast-pinned {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(234, 88, 12, 0.05) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    box-shadow:
+        0 0 20px rgba(245, 158, 11, 0.5),
+        0 0 40px rgba(245, 158, 11, 0.2),
+        0 0 80px rgba(245, 158, 11, 0.08),
+        inset 0 0 0 1px rgba(245, 158, 11, 0.15);
+    animation: architect-glow 3s ease-in-out infinite;
+}
+
+@keyframes architect-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.15), inset 0 0 0 1px rgba(245, 158, 11, 0.15);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(245, 158, 11, 0.7), 0 0 60px rgba(245, 158, 11, 0.3), inset 0 0 0 1px rgba(245, 158, 11, 0.25);
+    }
+}
+
+/* --- CONSENSUS GLOW PROGRESS BAR --- */
+.consensus-bar-glow {
+    background: linear-gradient(90deg, #ea580c, #f59e0b);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    transition: width 0.8s ease, box-shadow 0.5s ease;
+    border-radius: 9999px;
+    height: 100%;
+}
+
+/* --- POOL FROST OVERLAY --- */
+#pool-frost-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: linear-gradient(135deg, rgba(147, 210, 255, 0.08) 0%, rgba(200, 240, 255, 0.05) 100%);
+    backdrop-filter: blur(12px) contrast(0.9) brightness(0.85);
+    -webkit-backdrop-filter: blur(12px) contrast(0.9) brightness(0.85);
+    pointer-events: none;
+}
+
+#pool-frost-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(0deg,
             transparent,
-            rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+            transparent 3px,
+            rgba(147, 210, 255, 0.03) 3px,
+            rgba(147, 210, 255, 0.03) 4px);
+}
+
+/* --- CRT STATIC GLITCH OVERLAY --- */
+#static-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.85);
+    pointer-events: none;
+}
+
+#static-overlay canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.65;
+}
+
+.static-scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(to bottom,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.15) 2px,
+            rgba(0, 0, 0, 0.15) 4px);
+    pointer-events: none;
+}
+
+/* --- THE CATALYST HUD --- */
+.catalyst-strip {
+    background: linear-gradient(90deg, #f59e0b 0%, #ea580c 33%, #f59e0b 66%, #ea580c 100%);
+    background-size: 300% 100%;
+    animation: catalyst-sweep 3s ease-in-out infinite;
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
+}
+
+@keyframes catalyst-sweep {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.catalyst-strip span {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* --- PULSE RATE MARQUEE STATES --- */
+.marquee-pulse-low {
+    color: #4ade80 !important;
+    /* green-400 */
+}
+
+.marquee-pulse-normal {
+    color: #fb923c !important;
+    /* orange-400 */
+}
+
+.marquee-pulse-emergency {
+    color: #f87171 !important;
+    /* red-400 */
+    animation: emergency-flash 0.5s ease infinite;
+}
+
+@keyframes emergency-flash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* --- SOUL POWER AURA RING (Pool Ledger) --- */
+.petition-aura {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.3), 0 0 40px rgba(234, 88, 12, 0.1);
+    border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* --- OFFERINGS HISTORY CARDS --- */
+.offering-history-card {
+    background: rgba(10, 10, 10, 0.8);
+    border: 1px solid rgba(255, 107, 53, 0.12);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.offering-history-card:hover {
+    border-color: rgba(255, 107, 53, 0.3);
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.08);
+}
+
+/* Admin & Protocol Sovereignty */
+.protocol-secured-aura::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    border: 4px solid rgba(220, 38, 38, 0.2);
+    box-shadow: inset 0 0 100px rgba(220, 38, 38, 0.1);
+    animation: protocol-pulse 4s ease-in-out infinite;
+}
+
+@keyframes protocol-pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.admin-only-glow {
+    box-shadow: 0 0 20px rgba(234, 88, 12, 0.15);
+}
+
+/* Truth B Told Cineworks Styles */
+#view-cineworks {
+    background: #000 !important;
+}
+
+.cinema-glass-overlay {
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(234, 88, 12, 0.3);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.film-card:hover .cinema-glass-overlay {
+    opacity: 1 !important;
+}
+
+/* Visual Vault Cinema Mode */
+#view-treasury {
+    background-image: url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/pool_bg.png');
+    background-size: cover;
+    background-position: center;
+}
+
+@keyframes glow-emerald {
+    0% {
+        box-shadow: 0 0 5px #10b981;
+    }
+
+    50% {
+        box-shadow: 0 0 25px #10b981, 0 0 50px rgba(16, 185, 129, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 5px #10b981;
+    }
+}
+
+.glow-emerald {
+    animation: glow-emerald 2s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: #059669 !important;
+}
+
+.theater-overlay {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.film-card {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.film-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 88, 12, 0.2);
+}
+
+.film-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 60%);
+    opacity: 0.8;
+}
+
+.anamorphic-frame {
+    aspect-ratio: 2.39 / 1;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(234, 88, 12, 0.2);
 }
