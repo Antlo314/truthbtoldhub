@@ -12,11 +12,13 @@ export default function Gateway() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setErrorMsg('');
+        setSuccessMsg('');
 
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
@@ -41,6 +43,7 @@ export default function Gateway() {
         e.preventDefault();
         setLoading(true);
         setErrorMsg('');
+        setSuccessMsg('');
 
         if (password !== confirmPassword) {
             setErrorMsg('Ciphers do not match.');
@@ -60,11 +63,35 @@ export default function Gateway() {
             if (data?.session) {
                 router.push('/sanctum');
             } else {
-                setErrorMsg('Initiation successful. Check email or re-enter the Gate.');
+                setSuccessMsg('Initiation successful. Check email or re-enter the Gate.');
             }
         } catch (err: any) {
             console.error(err.message);
             setErrorMsg(err.message || 'Registration failed.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!email) {
+            setErrorMsg('Enter your Soul ID (Email) first to recover cipher.');
+            return;
+        }
+        setLoading(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/self`,
+            });
+
+            if (error) throw error;
+            setSuccessMsg('Recovery pathway sent. Check your email frequency.');
+        } catch (err: any) {
+            console.error(err.message);
+            setErrorMsg(err.message || 'Recovery failed.');
         } finally {
             setLoading(false);
         }
@@ -117,16 +144,19 @@ export default function Gateway() {
                             {errorMsg && !isFlipped && (
                                 <p className="text-[10px] text-red-500 font-mono text-center tracking-widest uppercase animate-fade-in">{errorMsg}</p>
                             )}
+                            {successMsg && !isFlipped && (
+                                <p className="text-[10px] text-green-500 font-mono text-center tracking-widest uppercase animate-fade-in">{successMsg}</p>
+                            )}
 
                             <div className="space-y-3 pt-2">
                                 <button type="submit" disabled={loading} className="w-full btn-ember py-4 rounded-xl text-xs shadow-lg shadow-orange-900/50 disabled:opacity-50">
                                     {loading ? 'AUTHENTICATING...' : 'ENTER THE VOID'}
                                 </button>
                                 <div className="flex justify-between items-center text-[10px] font-mono px-2">
-                                    <button type="button" onClick={() => { setIsFlipped(true); setErrorMsg(''); setEmail(''); setPassword(''); }} className="text-gray-500 hover:text-white transition-colors uppercase tracking-widest outline-none">
+                                    <button type="button" onClick={() => { setIsFlipped(true); setErrorMsg(''); setSuccessMsg(''); setEmail(''); setPassword(''); }} className="text-gray-500 hover:text-white transition-colors uppercase tracking-widest outline-none">
                                         SEEK INITIATION
                                     </button>
-                                    <button type="button" className="text-gray-600 hover:text-orange-500 transition-colors uppercase tracking-widest outline-none">
+                                    <button type="button" onClick={handleResetPassword} className="text-gray-600 hover:text-orange-500 transition-colors uppercase tracking-widest outline-none">
                                         LOST CIPHER?
                                     </button>
                                 </div>
@@ -181,12 +211,15 @@ export default function Gateway() {
                             {errorMsg && isFlipped && (
                                 <p className="text-[10px] text-red-500 font-mono text-center tracking-widest uppercase animate-fade-in">{errorMsg}</p>
                             )}
+                            {successMsg && isFlipped && (
+                                <p className="text-[10px] text-green-500 font-mono text-center tracking-widest uppercase animate-fade-in">{successMsg}</p>
+                            )}
 
                             <div className="space-y-3 pt-2">
                                 <button type="submit" disabled={loading} className="w-full bg-white text-black font-ritual font-bold py-4 rounded-xl text-xs uppercase tracking-[0.2em] hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50">
                                     {loading ? 'AWAKENING...' : 'AWAKEN'}
                                 </button>
-                                <button type="button" onClick={() => { setIsFlipped(false); setErrorMsg(''); setEmail(''); setPassword(''); setConfirmPassword(''); }} className="w-full text-[10px] text-gray-500 hover:text-white transition-colors uppercase tracking-widest font-mono outline-none pt-2">
+                                <button type="button" onClick={() => { setIsFlipped(false); setErrorMsg(''); setSuccessMsg(''); setEmail(''); setPassword(''); setConfirmPassword(''); }} className="w-full text-[10px] text-gray-500 hover:text-white transition-colors uppercase tracking-widest font-mono outline-none pt-2">
                                     RETURN TO GATE
                                 </button>
                             </div>
