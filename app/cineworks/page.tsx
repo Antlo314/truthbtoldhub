@@ -2,15 +2,39 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Play, Clapperboard, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function Cineworks() {
     const router = useRouter();
 
-    const films = [
-        { id: 1, title: 'AWAKENING', duration: '03:14', format: '1080p', isNew: true },
-        { id: 2, title: 'THE OFFERING', duration: '05:22', format: '4K', isNew: false },
-        { id: 3, title: 'ECHOES OF ZION', duration: '12:05', format: '4K', isNew: false },
-    ];
+    const [films, setFilms] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchFilms() {
+            try {
+                const { data, error } = await supabase.from('films').select('*').order('created_at', { ascending: false });
+
+                if (data && data.length > 0) {
+                    setFilms(data);
+                } else {
+                    // Fallback to placeholder data if database is empty after reset
+                    setFilms([
+                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: true },
+                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false },
+                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false },
+                    ]);
+                }
+            } catch (err) {
+                console.error("Error fetching films:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchFilms();
+    }, []);
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-purple-500/30 font-sans flex flex-col">
@@ -82,7 +106,7 @@ export default function Cineworks() {
                                     </div>
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            {film.isNew && (
+                                            {film.is_new && (
                                                 <span className="text-[8px] text-purple-400 font-bold uppercase tracking-wider mb-1 block">New Arrival</span>
                                             )}
                                             <h4 className="font-ritual text-lg text-white tracking-widest">{film.title}</h4>

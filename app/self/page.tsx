@@ -2,17 +2,44 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers } from 'lucide-react';
 
 export default function PowerSelf() {
     const router = useRouter();
 
     // Mock auth state for UI development
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isAdminState, setIsAdminState] = useState(false);
     const [activeTab, setActiveTab] = useState('profile'); // profile | wallet | admin
 
+    const [userAuth, setUserAuth] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
+
+    useEffect(() => {
+        async function fetchIdentity() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    setUserAuth(user);
+                    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                    if (data) setProfile(data);
+                }
+            } catch (err) {
+                console.error("Error fetching identity:", err);
+            }
+        }
+        fetchIdentity();
+    }, []);
+
+    const isAdmin = profile?.tier === 'Architect' || isAdminState;
+    const displayName = profile?.display_name || profile?.username || 'Guest Soul';
+    const userEmail = userAuth?.email || 'guest@obsidianvoid.net';
+    const currentTier = profile?.tier || 'Initiate';
+    const currentPower = profile?.soul_power || 100;
+    const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
+
     // Toggle for testing admin view easily
-    const toggleAdmin = () => setIsAdmin(!isAdmin);
+    const toggleAdmin = () => setIsAdminState(!isAdminState);
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
@@ -45,7 +72,7 @@ export default function PowerSelf() {
 
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <div className="w-24 h-24 rounded-2xl bg-zinc-900 border border-orange-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(234,88,12,0.15)] relative group cursor-pointer overflow-hidden p-1">
-                            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=soul" alt="Avatar" className="w-full h-full object-cover rounded-xl" />
+                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-xl" />
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span className="text-[10px] font-mono text-white uppercase tracking-widest">Update</span>
                             </div>
@@ -53,7 +80,7 @@ export default function PowerSelf() {
 
                         <div className="flex-1 text-center md:text-left space-y-2">
                             <div className="flex flex-col md:flex-row items-center gap-3">
-                                <h1 className="font-ritual text-3xl font-bold tracking-widest text-white">Guest Soul</h1>
+                                <h1 className="font-ritual text-3xl font-bold tracking-widest text-white">{displayName}</h1>
                                 {isAdmin && (
                                     <span className="text-[9px] px-2 py-0.5 rounded bg-red-950/40 text-red-400 border border-red-500/30 uppercase tracking-[0.2em] font-bold">
                                         Architect
@@ -61,20 +88,20 @@ export default function PowerSelf() {
                                 )}
                                 {!isAdmin && (
                                     <span className="text-[9px] px-2 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-500/30 uppercase tracking-[0.2em] font-bold">
-                                        Initiate
+                                        {currentTier}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-gray-400 font-mono tracking-widest">guest@obsidianvoid.net</p>
+                            <p className="text-xs text-gray-400 font-mono tracking-widest">{userEmail}</p>
 
                             <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 pt-4 border-t border-white/5">
                                 <div className="flex items-center gap-2">
                                     <Zap className="w-4 h-4 text-orange-500" />
-                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Sanctum Power: <strong className="text-white">100 SP</strong></span>
+                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Sanctum Power: <strong className="text-white">{currentPower} SP</strong></span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Key className="w-4 h-4 text-orange-500" />
-                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Tier: <strong className="text-white">Base</strong></span>
+                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Tier: <strong className="text-white">{currentTier}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -129,7 +156,7 @@ export default function PowerSelf() {
                                 <form className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Identity Name</label>
-                                        <input type="text" defaultValue="Guest Soul" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                        <input type="text" defaultValue={displayName} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Update Cipher (Password)</label>
@@ -169,7 +196,7 @@ export default function PowerSelf() {
                                 <div className="mt-8 mb-4 px-12 py-6 glass bg-black/40 border border-orange-500/30 rounded-2xl flex flex-col gap-2">
                                     <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Current Balance</span>
                                     <span className="font-ritual text-5xl text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                                        100 SP
+                                        {currentPower} SP
                                     </span>
                                 </div>
 
