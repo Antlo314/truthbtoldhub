@@ -4,6 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload } from 'lucide-react';
+import { Howl } from 'howler';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// --- AUDIO ASSETS ---
+let uiHoverSfx: any = null;
+let uiClickSfx: any = null;
+let ambientDrone: any = null;
+
+if (typeof window !== 'undefined') {
+    uiHoverSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], volume: 0.1 });
+    uiClickSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], volume: 0.2 });
+}
 
 export default function PowerSelf() {
     const router = useRouter();
@@ -15,6 +28,40 @@ export default function PowerSelf() {
     const [uploading, setUploading] = useState(false);
     const [isRecovery, setIsRecovery] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const bgRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const idCardRef = useRef<HTMLDivElement>(null);
+
+    const playHover = () => uiHoverSfx?.play();
+    const playClick = () => uiClickSfx?.play();
+
+    // GSAP Parallax Background
+    useGSAP(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!bgRef.current) return;
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 30;
+            gsap.to(bgRef.current, { x, y, duration: 1.5, ease: "power2.out" });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
+
+    // Ambient Drone
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            ambientDrone = new Howl({
+                src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
+                loop: true,
+                volume: 0.1,
+            });
+            ambientDrone.play();
+        }
+        return () => {
+            if (ambientDrone) ambientDrone.stop();
+        };
+    }, []);
 
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.hash.includes('recovery=true')) {
@@ -82,13 +129,20 @@ export default function PowerSelf() {
     };
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
-            {/* Background - Inner Sanctum */}
-            <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,#1a0a00_0%,#000_100%)]"></div>
+        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col overflow-x-hidden">
+            {/* Background Parallax - Inner Sanctum */}
+            <div ref={bgRef} className="fixed inset-0 z-0 scale-110 pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a0a00_0%,#000_100%)]"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(234,88,12,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(234,88,12,0.015)_1px,transparent_1px)] bg-[size:30px_30px]"></div>
+            </div>
 
             {/* Header */}
             <header className="sticky top-0 z-50 glass bg-black/60 backdrop-blur-xl px-4 py-4 md:px-6 flex justify-between items-center border-b border-orange-500/10">
-                <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
+                <button
+                    onMouseEnter={playHover}
+                    onClick={() => { playClick(); router.push('/sanctum'); }}
+                    className="text-orange-500 hover:text-white transition-colors group"
+                >
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
                 <div className="flex flex-col items-center pl-8">
@@ -120,7 +174,18 @@ export default function PowerSelf() {
                 )}
 
                 {/* Profile Identity Card */}
-                <div className="glass-panel rounded-3xl p-6 relative overflow-hidden border-orange-500/20">
+                <div
+                    ref={idCardRef}
+                    onMouseEnter={(e) => {
+                        playHover();
+                        gsap.to(e.currentTarget, { scale: 1.01, rotationX: 1, rotationY: -1, duration: 0.5, ease: "power2.out", filter: "brightness(1.1)" });
+                    }}
+                    onMouseLeave={(e) => {
+                        gsap.to(e.currentTarget, { scale: 1, rotationX: 0, rotationY: 0, duration: 0.5, ease: "power2.out", filter: "brightness(1)" });
+                    }}
+                    style={{ perspective: '1000px' }}
+                    className="glass-panel rounded-3xl p-6 relative overflow-hidden border-orange-500/20 transition-all cursor-default"
+                >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/10 rounded-full blur-3xl mix-blend-screen -z-10"></div>
 
                     <div className="flex flex-col md:flex-row items-center gap-6">
@@ -178,7 +243,8 @@ export default function PowerSelf() {
                 {/* Navigation Tabs */}
                 <div className="flex border-b border-white/10 gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
                     <button
-                        onClick={() => setActiveTab('profile')}
+                        onMouseEnter={playHover}
+                        onClick={() => { playClick(); setActiveTab('profile'); }}
                         className={`pb-3 text-xs uppercase tracking-[0.2em] font-bold transition-colors relative ${activeTab === 'profile' ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         Identity Core
@@ -186,7 +252,8 @@ export default function PowerSelf() {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('wallet')}
+                        onMouseEnter={playHover}
+                        onClick={() => { playClick(); setActiveTab('wallet'); }}
                         className={`pb-3 text-xs uppercase tracking-[0.2em] font-bold transition-colors relative ${activeTab === 'wallet' ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         Lumen Wallet
@@ -195,7 +262,8 @@ export default function PowerSelf() {
 
                     {isAdmin && (
                         <button
-                            onClick={() => setActiveTab('admin')}
+                            onMouseEnter={playHover}
+                            onClick={() => { playClick(); setActiveTab('admin'); }}
                             className={`pb-3 text-xs uppercase tracking-[0.2em] font-bold transition-colors relative ${activeTab === 'admin' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}
                         >
                             Architect Chamber
@@ -295,7 +363,11 @@ export default function PowerSelf() {
                                     </span>
                                 </div>
 
-                                <button className="px-8 py-3 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)] mt-6">
+                                <button
+                                    onMouseEnter={playHover}
+                                    onClick={playClick}
+                                    className="px-8 py-3 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-gray-200 hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] mt-6"
+                                >
                                     MINT NEW ENERGY
                                 </button>
                             </div>
