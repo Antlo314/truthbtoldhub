@@ -131,7 +131,7 @@ export default function SanctumHub() {
                             onClick={() => router.push('/treasury')}
                             className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
                         >
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
@@ -153,7 +153,7 @@ export default function SanctumHub() {
 
                         {/* The Stage */}
                         <div className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card">
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
@@ -178,7 +178,7 @@ export default function SanctumHub() {
                             onClick={() => router.push('/cineworks')}
                             className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
                         >
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
@@ -224,25 +224,26 @@ export default function SanctumHub() {
 
                     </div>
 
-                    {/* Quick Nav elements (Mobile Bottom Bar representation) */}
-                    <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10">
-                        <div className="flex justify-around items-center p-4">
-                            <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1"><Flame className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Sanctum</span></button>
-                            <button onClick={() => router.push('/treasury')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors"><Shield className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Treasury</span></button>
-                            <button onClick={() => router.push('/self')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors">
-                                <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-500">
-                                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                </div>
-                                <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Self</span>
-                            </button>
-                            <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 flex flex-col items-center gap-1 transition-colors">
-                                <LogOut className="w-5 h-5" />
-                                <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Exit</span>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </main>
+
+            {/* Quick Nav elements (Mobile Bottom Bar representation) */}
+            <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+                <div className="flex justify-around items-center p-4">
+                    <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1"><Flame className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Sanctum</span></button>
+                    <button onClick={() => router.push('/treasury')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors"><Shield className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Treasury</span></button>
+                    <button onClick={() => router.push('/self')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors">
+                        <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-500">
+                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        </div>
+                        <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Self</span>
+                    </button>
+                    <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 flex flex-col items-center gap-1 transition-colors">
+                        <LogOut className="w-5 h-5" />
+                        <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Exit</span>
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
