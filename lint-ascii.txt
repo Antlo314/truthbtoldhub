@@ -1,0 +1,21 @@
+node.exe : Invalid project 
+directory provided, no 
+such directory: C:\Users\aa
+rons\Desktop\sacred-sanctum
+\lint
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (Inv  
+  alid project...ed-sanc   
+ tum\lint:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 

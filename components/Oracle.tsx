@@ -6,7 +6,7 @@ import { Sparkles, Mic, Radio, X } from 'lucide-react';
 
 export default function Oracle() {
     const [isOpen, setIsOpen] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
     const [textInput, setTextInput] = useState('');
     const [convo, setConvo] = useState<{ role: string, text: string }[]>([]);
 
@@ -35,35 +35,14 @@ export default function Oracle() {
         });
     }, []);
 
-    const speak = (text: string) => {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-            const synth = window.speechSynthesis;
-            const utterThis = new SpeechSynthesisUtterance(text);
-
-            // Try to find a deep/robotic voice
-            const voices = synth.getVoices();
-            console.log("Found voices:", voices.length);
-            const oracleVoice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Daniel') || v.name.includes('Samantha') || v.name.includes('Zira'));
-            if (oracleVoice) utterThis.voice = oracleVoice;
-
-            utterThis.pitch = 0.5; // Deep voice
-            utterThis.rate = 0.9;  // Slightly slow
-
-            utterThis.onstart = () => setIsSpeaking(true);
-            utterThis.onend = () => setIsSpeaking(false);
-
-            synth.speak(utterThis);
-        }
-    };
-
-    // React to speaking state
+    // React to thinking state
     useEffect(() => {
         if (!orbRef.current) return;
-        if (isSpeaking) {
+        if (isThinking) {
             gsap.to(orbRef.current, {
-                scale: 1.2,
+                scale: 1.15,
                 boxShadow: "0 0 40px rgba(168, 85, 247, 0.8)",
-                duration: 0.2,
+                duration: 0.4,
                 repeat: -1,
                 yoyo: true,
                 ease: "power1.inOut"
@@ -76,15 +55,16 @@ export default function Oracle() {
                 ease: "power2.out"
             });
         }
-    }, [isSpeaking]);
+    }, [isThinking]);
 
-    const handleAsk = (e: React.FormEvent) => {
+    const handleAsk = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!textInput.trim()) return;
+        if (!textInput.trim() || isThinking) return;
 
         const newQuery = textInput;
         setConvo(prev => [...prev, { role: 'user', text: newQuery }]);
         setTextInput('');
+        setIsThinking(true);
 
         // Provide conversational context based on current path
         const contextMap: any = {
@@ -98,12 +78,23 @@ export default function Oracle() {
 
         const pageContext = contextMap[pathname] || 'You are traversing the unknown regions of the Sanctum.';
 
-        // MOCK INTELLIGENCE (Until Gemini/OpenAI are hooked up via API routes)
-        setTimeout(() => {
-            const responseText = `I hear you, wanderer. ${pageContext} For now, my neural pathways to the external LLM are inactive, but my visual and auditory nodes are online. You said: "${newQuery}"`;
-            setConvo(prev => [...prev, { role: 'oracle', text: responseText }]);
-            speak(responseText);
-        }, 1000);
+        try {
+            const res = await fetch('/api/oracle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: newQuery,
+                    context: pageContext,
+                    history: convo.slice(-4)
+                }),
+            });
+            const data = await res.json();
+            setConvo(prev => [...prev, { role: 'oracle', text: data.message }]);
+        } catch (error) {
+            setConvo(prev => [...prev, { role: 'oracle', text: "My connection to the æther is unstable right now." }]);
+        } finally {
+            setIsThinking(false);
+        }
     };
 
     return (
