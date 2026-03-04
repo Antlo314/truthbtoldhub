@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Flame, DollarSign, Send, Zap, ChevronRight, Lock } from 'lucide-react';
+import { ArrowLeft, Flame, DollarSign, Send, Zap, ChevronRight, Lock, LogOut } from 'lucide-react';
 
 export default function Treasury() {
     const router = useRouter();
     const [isConfidential, setIsConfidential] = useState(false);
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.push('/');
+    };
 
     const [escrow, setEscrow] = useState("4,000.00");
     const [petitions, setPetitions] = useState<any[]>([]);
@@ -49,7 +54,7 @@ export default function Treasury() {
                 <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center pl-8">
                     <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none drop-shadow-md">
                         THE POOL
                     </span>
@@ -57,7 +62,10 @@ export default function Treasury() {
                         Mutual Aid Treasury
                     </span>
                 </div>
-                <div className="opacity-0 w-6"></div> {/* Balance spacer */}
+                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
+                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
+                    <LogOut className="w-5 h-5" />
+                </button>
             </header>
 
             <main className="flex-1 w-full max-w-lg relative z-10 p-4 md:p-6 pb-32 space-y-8 animate-fade-in">

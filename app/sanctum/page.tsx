@@ -10,6 +10,7 @@ export default function SanctumHub() {
 
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [broadcastMsg, setBroadcastMsg] = useState('The initial architecture is stabilizing...');
 
     useEffect(() => {
         const checkUser = async () => {
@@ -18,8 +19,18 @@ export default function SanctumHub() {
                 router.push('/');
             } else {
                 setUserAuth(session.user);
-                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                if (data) setProfile(data);
+
+                // Fetch User Profile
+                const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                if (data && !error) {
+                    setProfile({ ...data }); // Spread to trigger strict re-render
+                }
+
+                // Fetch Global System Broadcast
+                const { data: sysData } = await supabase.from('system_settings').select('broadcast_message').eq('id', 1).single();
+                if (sysData && sysData.broadcast_message) {
+                    setBroadcastMsg(sysData.broadcast_message);
+                }
             }
         };
 
@@ -48,7 +59,7 @@ export default function SanctumHub() {
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
+        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex md:pl-20">
             {/* Background FX corresponding to living-void-bg */}
             <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,#0a0a0a_0%,#000_100%)]"></div>
             <div className="fixed inset-0 z-0 bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)] opacity-30 pointer-events-none pulse-aura -z-1"></div>
@@ -75,16 +86,19 @@ export default function SanctumHub() {
                     >
                         <div className="text-right hidden sm:block">
                             <span className="block text-xs font-bold text-white group-hover:text-orange-500 transition-colors uppercase tracking-widest">
-                                Soul Name
+                                {displayName}
                             </span>
                             <span className="block text-[9px] text-gray-500 font-mono">
-                                SP: 9,001
+                                SP: {currentPower}
                             </span>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-zinc-900 border border-orange-500/30 flex items-center justify-center overflow-hidden group-hover:border-orange-500 transition-colors shadow-[0_0_15px_rgba(234,88,12,0.2)]">
                             {/* Fallback avatar generator */}
-                            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=soul" alt="Avatar" className="w-full h-full object-cover" />
+                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
+                    </button>
+                    <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group p-2 rounded-full hover:bg-white/5" title="Sign Out">
+                        <LogOut className="w-5 h-5" />
                     </button>
                 </div>
             </header>
@@ -94,7 +108,7 @@ export default function SanctumHub() {
                 <div className="whitespace-nowrap flex gap-8 items-center text-[10px] font-mono tracking-widest text-orange-400">
                     <span className="flex-none font-bold text-white px-4 border-r border-orange-500/30">SYSTEM BROADCAST</span>
                     <span className="animate-marquee font-bold">
-                        ◈ Welcome to the Next.js Architectural Restructuring of the Obsidian Void. ◈
+                        ◈ {broadcastMsg} ◈
                     </span>
                 </div>
             </div>
@@ -184,7 +198,7 @@ export default function SanctumHub() {
                             </div>
                         </div>
 
-                        {/* Encrypted Sector */}
+                        {/* The Trial (Locked) */}
                         <div className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-not-allowed opacity-60">
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-60 transition-opacity duration-700 mix-blend-screen" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.mp4" type="video/mp4" />
@@ -193,11 +207,11 @@ export default function SanctumHub() {
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-10 blur-[1px] pointer-events-none z-0"></div>
                             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
                                 <div>
-                                    <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center mb-4 text-zinc-500">
+                                    <div className="w-12 h-12 rounded-xl bg-orange-950/30 border border-orange-900/50 flex items-center justify-center mb-4 text-orange-800">
                                         <Shield className="w-6 h-6" />
                                     </div>
-                                    <h3 className="font-ritual text-xl text-gray-500 tracking-widest mb-2 line-through decoration-zinc-800 decoration-2">OBSIDIAN X</h3>
-                                    <p className="text-[10px] text-red-500 font-mono tracking-widest uppercase font-bold">Encrypted Protocol</p>
+                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2 shadow-black drop-shadow-lg opacity-50">THE TRIAL</h3>
+                                    <p className="text-[10px] text-red-500 font-mono tracking-widest uppercase font-bold">Coming Soon</p>
                                 </div>
                                 <div className="flex items-center justify-between text-zinc-600">
                                     <span className="text-[10px] font-bold uppercase tracking-widest">Locked Sector</span>
@@ -213,13 +227,17 @@ export default function SanctumHub() {
                     {/* Quick Nav elements (Mobile Bottom Bar representation) */}
                     <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10">
                         <div className="flex justify-around items-center p-4">
-                            <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1"><Flame className="w-5 h-5" /> <span className="text-[8px] font-mono tracking-wider uppercase">Sanctum</span></button>
-                            <button onClick={() => router.push('/treasury')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors"><Shield className="w-5 h-5" /> <span className="text-[8px] font-mono tracking-wider uppercase">Treasury</span></button>
+                            <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1"><Flame className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Sanctum</span></button>
+                            <button onClick={() => router.push('/treasury')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors"><Shield className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Treasury</span></button>
                             <button onClick={() => router.push('/self')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors">
                                 <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-500">
-                                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=soul" alt="Avatar" className="w-full h-full object-cover" />
+                                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 </div>
-                                <span className="text-[8px] font-mono tracking-wider uppercase">Self</span>
+                                <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Self</span>
+                            </button>
+                            <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 flex flex-col items-center gap-1 transition-colors">
+                                <LogOut className="w-5 h-5" />
+                                <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Exit</span>
                             </button>
                         </div>
                     </div>

@@ -1,12 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Play, Clapperboard, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Play, Clapperboard, ChevronRight, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function Cineworks() {
     const router = useRouter();
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.push('/');
+    };
 
     const [films, setFilms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,7 +51,7 @@ export default function Cineworks() {
                 <button onClick={() => router.push('/sanctum')} className="text-purple-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center pl-8">
                     <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none">
                         CINEWORKS
                     </span>
@@ -54,7 +59,10 @@ export default function Cineworks() {
                         Visual Vault OPS
                     </span>
                 </div>
-                <div className="w-6 hidden"></div>
+                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
+                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
+                    <LogOut className="w-5 h-5" />
+                </button>
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32">

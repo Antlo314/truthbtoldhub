@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard } from 'lucide-react';
+import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload } from 'lucide-react';
 
 export default function PowerSelf() {
     const router = useRouter();
@@ -12,15 +12,27 @@ export default function PowerSelf() {
 
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [uploading, setUploading] = useState(false);
+    const [isRecovery, setIsRecovery] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.hash.includes('recovery=true')) {
+            setIsRecovery(true);
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+
         async function fetchIdentity() {
             try {
+                // Ensure we get the absolute latest auth token
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    setUserAuth(user);
-                    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                    if (data) setProfile(data);
+                    setUserAuth({ ...user });
+                    // Fetch profile, ensuring we don't hit a Next.js cached response
+                    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                    if (data && !error) {
+                        setProfile({ ...data }); // spread to force strict react re-render
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching identity:", err);
@@ -36,6 +48,39 @@ export default function PowerSelf() {
     const currentPower = profile?.soul_power || 100;
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.push('/');
+    };
+
+    const uploadAvatar = async (event: any) => {
+        try {
+            setUploading(true);
+            if (!event.target.files || event.target.files.length === 0) {
+                throw new Error('You must select an image to upload.');
+            }
+            const file = event.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userAuth.id}-${Math.random()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            const newAvatarUrl = publicUrlData.publicUrl;
+
+            const { error: updateError } = await supabase.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', userAuth.id);
+            if (updateError) throw updateError;
+
+            setProfile({ ...profile, avatar_url: newAvatarUrl });
+        } catch (error: any) {
+            alert('Error uploading avatar: ' + error.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
             {/* Background - Inner Sanctum */}
@@ -46,7 +91,7 @@ export default function PowerSelf() {
                 <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center pl-8">
                     <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none">
                         SOUL MATRIX
                     </span>
@@ -54,20 +99,43 @@ export default function PowerSelf() {
                         Identity & Authority
                     </span>
                 </div>
-                <div className="w-8 h-8"></div> {/* Spacer for symmetry */}
+                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
+                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
+                    <LogOut className="w-5 h-5" />
+                </button>
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32 max-w-4xl mx-auto w-full animate-fade-in space-y-8">
+
+                {isRecovery && (
+                    <div className="glass bg-green-950/40 border border-green-500/30 p-6 rounded-2xl relative overflow-hidden animate-fade-in">
+                        <div className="absolute top-0 left-0 w-2 h-full bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div>
+                        <h2 className="text-green-400 font-bold tracking-widest uppercase text-sm mb-1 flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4" /> Identity Recovery Verified
+                        </h2>
+                        <p className="text-[10px] text-green-500/70 font-mono tracking-widest uppercase mt-2">
+                            Your secure link was accepted. Please navigate to "Update Cipher" in your Identity Core below to assign a new password immediately.
+                        </p>
+                    </div>
+                )}
 
                 {/* Profile Identity Card */}
                 <div className="glass-panel rounded-3xl p-6 relative overflow-hidden border-orange-500/20">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/10 rounded-full blur-3xl mix-blend-screen -z-10"></div>
 
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                        <div className="w-24 h-24 rounded-2xl bg-zinc-900 border border-orange-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(234,88,12,0.15)] relative group cursor-pointer overflow-hidden p-1">
-                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-xl" />
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={uploadAvatar} />
+                        <div onClick={() => !uploading && fileInputRef.current?.click()} className="w-24 h-24 rounded-2xl bg-zinc-900 border border-orange-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(234,88,12,0.15)] relative group cursor-pointer overflow-hidden p-1 shrink-0">
+                            <img src={avatarUrl} alt="Avatar" className={`w-full h-full object-cover rounded-xl ${uploading ? 'opacity-50 grayscale' : ''}`} />
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-mono text-white uppercase tracking-widest">Update</span>
+                                {uploading ? (
+                                    <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Upload className="w-4 h-4 text-white" />
+                                        <span className="text-[8px] font-mono text-white uppercase tracking-widest">Update</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -108,7 +176,7 @@ export default function PowerSelf() {
                 </div>
 
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-white/10 gap-6">
+                <div className="flex border-b border-white/10 gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
                     <button
                         onClick={() => setActiveTab('profile')}
                         className={`pb-3 text-xs uppercase tracking-[0.2em] font-bold transition-colors relative ${activeTab === 'profile' ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
@@ -240,6 +308,32 @@ export default function PowerSelf() {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                                {/* Global System Override Form */}
+                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl lg:col-span-2">
+                                    <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                                        <Zap className="w-5 h-5 text-red-500" />
+                                        <h4 className="font-ritual text-lg text-white tracking-widest uppercase">Global Override</h4>
+                                    </div>
+                                    <form className="space-y-4" onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.currentTarget);
+                                        const broadcast_message = formData.get('broadcast_message') as string;
+
+                                        const { error } = await supabase.from('system_settings').update({ broadcast_message }).eq('id', 1);
+
+                                        if (error) alert("Error updating broadcast: " + error.message);
+                                        else { alert("System Broadcast Override Successful!"); (e.target as HTMLFormElement).reset(); }
+                                    }}>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">System Marquee Broadcast</label>
+                                            <input name="broadcast_message" required placeholder="Alert: New Content Drop in The Gallery..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <button type="submit" className="w-full md:w-auto bg-red-950/40 text-red-500 border border-red-500/30 font-bold py-3 px-8 rounded-lg text-[10px] uppercase tracking-widest hover:bg-red-900/60 transition-colors mt-2">
+                                            Initiate Override Sequence
+                                        </button>
+                                    </form>
+                                </div>
 
                                 {/* Films / Cineworks Admin Form */}
                                 <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl">

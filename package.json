@@ -12,10 +12,12 @@
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/postcss": "^4.2.1",
     "clsx": "latest",
+    "dotenv": "^17.3.1",
     "gsap": "latest",
     "howler": "^2.2.4",
     "lucide-react": "latest",
     "next": "latest",
+    "puppeteer": "^24.37.5",
     "react": "latest",
     "react-dom": "latest",
     "tailwind-merge": "latest"

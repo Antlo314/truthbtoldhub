@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 export default function Gateway() {
     const router = useRouter();
     const [isFlipped, setIsFlipped] = useState(false);
+    const [authMode, setAuthMode] = useState<'signin' | 'reset'>('signin');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -97,22 +98,33 @@ export default function Gateway() {
         }
     };
 
-    const handleResetPassword = async () => {
-        if (!email) {
-            setErrorMsg('Enter your Soul ID (Email) first to recover cipher.');
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (authMode !== 'reset') {
+            setAuthMode('reset');
+            setErrorMsg('');
+            setSuccessMsg('');
             return;
         }
+
+        if (!email) {
+            setErrorMsg('Enter your Soul ID (Email) to recover cipher.');
+            return;
+        }
+
         setLoading(true);
         setErrorMsg('');
         setSuccessMsg('');
 
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/self`,
+                redirectTo: `${window.location.origin}/self#recovery=true`,
             });
 
             if (error) throw error;
             setSuccessMsg('Recovery pathway sent. Check your email frequency.');
+            setTimeout(() => setAuthMode('signin'), 5000); // Auto revert after 5s
         } catch (err: any) {
             console.error(err.message);
             setErrorMsg(err.message || 'Recovery failed.');
@@ -139,7 +151,7 @@ export default function Gateway() {
                             <p className="text-[9px] text-gray-500 font-mono tracking-[0.3em] uppercase mt-4">The Obsidian Void</p>
                         </div>
 
-                        <form onSubmit={handleSignIn} className="w-full space-y-6 mt-8 relative z-10 animate-fade-in">
+                        <form onSubmit={authMode === 'signin' ? handleSignIn : handleResetPassword} className="w-full space-y-6 mt-8 relative z-10 animate-fade-in">
                             <div className="space-y-4">
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-amber-500 rounded-xl blur opacity-0 group-focus-within:opacity-30 transition duration-500"></div>
@@ -152,17 +164,19 @@ export default function Gateway() {
                                         placeholder="Identify Soul (Email)"
                                     />
                                 </div>
-                                <div className="relative group">
-                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-amber-500 rounded-xl blur opacity-0 group-focus-within:opacity-30 transition duration-500"></div>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors font-mono tracking-widest"
-                                        placeholder="Cipher (Password)"
-                                    />
-                                </div>
+                                {authMode === 'signin' && (
+                                    <div className="relative group animate-fade-in">
+                                        <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-amber-500 rounded-xl blur opacity-0 group-focus-within:opacity-30 transition duration-500"></div>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors font-mono tracking-widest"
+                                            placeholder="Cipher (Password)"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {errorMsg && !isFlipped && (
@@ -173,16 +187,24 @@ export default function Gateway() {
                             )}
 
                             <div className="space-y-3 pt-2">
-                                <button type="submit" disabled={loading} className="w-full btn-ember py-4 rounded-xl text-xs shadow-lg shadow-orange-900/50 disabled:opacity-50">
-                                    {loading ? 'AUTHENTICATING...' : 'ENTER THE VOID'}
+                                <button type="submit" disabled={loading} className="w-full btn-ember py-4 rounded-xl text-xs shadow-lg shadow-orange-900/50 disabled:opacity-50 transition-all">
+                                    {loading ? 'TRANSMITTING...' : authMode === 'signin' ? 'ENTER THE VOID' : 'SEND RECOVERY LINK'}
                                 </button>
                                 <div className="flex justify-between items-center text-[10px] font-mono px-2">
-                                    <button type="button" onClick={() => { setIsFlipped(true); setErrorMsg(''); setSuccessMsg(''); setEmail(''); setPassword(''); }} className="text-gray-500 hover:text-white transition-colors uppercase tracking-widest outline-none">
-                                        SEEK INITIATION
-                                    </button>
-                                    <button type="button" onClick={handleResetPassword} className="text-gray-600 hover:text-orange-500 transition-colors uppercase tracking-widest outline-none">
-                                        LOST CIPHER?
-                                    </button>
+                                    {authMode === 'signin' ? (
+                                        <>
+                                            <button type="button" onClick={() => { setIsFlipped(true); setErrorMsg(''); setSuccessMsg(''); setEmail(''); setPassword(''); }} className="text-gray-500 hover:text-white transition-colors uppercase tracking-widest outline-none">
+                                                SEEK INITIATION
+                                            </button>
+                                            <button type="button" onClick={() => { setAuthMode('reset'); setErrorMsg(''); setSuccessMsg(''); }} className="text-gray-600 hover:text-orange-500 transition-colors uppercase tracking-widest outline-none">
+                                                LOST CIPHER?
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button type="button" onClick={() => { setAuthMode('signin'); setErrorMsg(''); setSuccessMsg(''); }} className="w-full text-center text-gray-500 hover:text-white transition-colors uppercase tracking-widest outline-none">
+                                            Return to Login
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </form>
