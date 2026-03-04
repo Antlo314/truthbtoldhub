@@ -9,15 +9,14 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 // --- AUDIO ASSETS ---
-// Fallback synthetic beeps using web audio api, but wrapped nicely if we wanted to
-// For a production app we'd load real MP3s from Supabase Storage
 let uiHoverSfx: any = null;
 let pledgeSfx: any = null;
 let errorSfx: any = null;
+let ambientDrone: any = null;
 
 if (typeof window !== 'undefined') {
     uiHoverSfx = new Howl({
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], // Placeholder or use synthesized if not found
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'],
         volume: 0.1,
         onloaderror: () => console.log('Hover sound failed to load, moving on silently.')
     });
@@ -32,6 +31,7 @@ if (typeof window !== 'undefined') {
         volume: 0.2,
     });
 }
+
 
 export default function Treasury() {
     const router = useRouter();
@@ -63,11 +63,58 @@ export default function Treasury() {
     const mainContainerRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
     const escrowObjRef = useRef<HTMLDivElement>(null);
-    const hudRef = useRef<HTMLDivElement>(null);
+    const bgRef = useRef<HTMLDivElement>(null);
+    const escrowDisplayRef = useRef<HTMLHeadingElement>(null);
 
     const playHover = () => uiHoverSfx?.play();
     const playSuccess = () => pledgeSfx?.play();
     const playError = () => errorSfx?.play();
+
+    // GSAP Parallax Background
+    useGSAP(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!bgRef.current) return;
+            const x = (e.clientX / window.innerWidth - 0.5) * 40;
+            const y = (e.clientY / window.innerHeight - 0.5) * 40;
+            gsap.to(bgRef.current, { x, y, duration: 2, ease: "power2.out" });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
+
+    // Ambient Drone
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            ambientDrone = new Howl({
+                src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
+                loop: true,
+                volume: 0.1,
+            });
+            ambientDrone.play();
+        }
+        return () => {
+            if (ambientDrone) ambientDrone.stop();
+        };
+    }, []);
+
+    // GSAP Animated Escrow Counter
+    useEffect(() => {
+        if (escrowDisplayRef.current) {
+            const targetVal = typeof escrow === 'string' ? parseFloat(escrow.replace(/,/g, '')) : Number(escrow);
+            const currentVal = parseFloat(escrowDisplayRef.current.innerText.replace(/[$,]/g, '')) || 0;
+
+            gsap.to({ val: currentVal }, {
+                val: targetVal,
+                duration: 2,
+                ease: "power3.out",
+                onUpdate: function () {
+                    if (escrowDisplayRef.current) {
+                        escrowDisplayRef.current.innerText = '$' + this.targets()[0].val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                }
+            });
+        }
+    }, [escrow]);
 
     useGSAP(() => {
         // Entrance animation for cards
@@ -363,7 +410,7 @@ export default function Treasury() {
         }
     };
 
-    // Derived formatting
+    // Deprecated static derived formatting (Handled by GSAP now)
     const formattedEscrow = typeof escrow === 'number'
         ? escrow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : escrow;
@@ -380,9 +427,9 @@ export default function Treasury() {
     };
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center">
-            {/* Background - The Treasury uses the custom pool void asset */}
-            <div className="fixed inset-0 z-0 bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png')] bg-cover bg-center brightness-50 contrast-125"></div>
+        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center overflow-x-hidden">
+            {/* Background - The Treasury uses the custom pool void asset with Parallax */}
+            <div ref={bgRef} className="fixed inset-0 z-0 bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png')] bg-cover bg-center brightness-50 contrast-125 scale-110 pointer-events-none"></div>
 
             {/* Header */}
             <header className="sticky top-0 w-full max-w-lg z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-orange-500/10">
@@ -432,7 +479,7 @@ export default function Treasury() {
                             </div>
                             <div>
                                 <h2 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Global Escrow</h2>
-                                <h3 className="font-ritual text-2xl text-white tracking-widest leading-none mt-1">${formattedEscrow}</h3>
+                                <h3 ref={escrowDisplayRef} className="font-ritual text-2xl text-white tracking-widest leading-none mt-1">$0.00</h3>
                             </div>
                         </div>
                         <div className="text-right">
