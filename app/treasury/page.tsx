@@ -11,21 +11,27 @@ import { useGSAP } from '@gsap/react';
 // --- AUDIO ASSETS ---
 // Fallback synthetic beeps using web audio api, but wrapped nicely if we wanted to
 // For a production app we'd load real MP3s from Supabase Storage
-const uiHoverSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], // Placeholder or use synthesized if not found
-    volume: 0.1,
-    onloaderror: () => console.log('Hover sound failed to load, moving on silently.')
-});
+let uiHoverSfx: any = null;
+let pledgeSfx: any = null;
+let errorSfx: any = null;
 
-const pledgeSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'],
-    volume: 0.3,
-});
+if (typeof window !== 'undefined') {
+    uiHoverSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], // Placeholder or use synthesized if not found
+        volume: 0.1,
+        onloaderror: () => console.log('Hover sound failed to load, moving on silently.')
+    });
 
-const errorSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'],
-    volume: 0.2,
-});
+    pledgeSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'],
+        volume: 0.3,
+    });
+
+    errorSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'],
+        volume: 0.2,
+    });
+}
 
 export default function Treasury() {
     const router = useRouter();
@@ -57,9 +63,9 @@ export default function Treasury() {
     const mainContainerRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
-    const playHover = () => uiHoverSfx.play();
-    const playSuccess = () => pledgeSfx.play();
-    const playError = () => errorSfx.play();
+    const playHover = () => uiHoverSfx?.play();
+    const playSuccess = () => pledgeSfx?.play();
+    const playError = () => errorSfx?.play();
 
     useGSAP(() => {
         if (petitions.length > 0 && cardsRef.current.length > 0) {

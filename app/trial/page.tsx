@@ -9,10 +9,17 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 // --- AUDIO ASSETS ---
-const uiHoverSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], volume: 0.1 });
-const correctSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], volume: 0.2 });
-const errorSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.3 });
-const alarmSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.05, loop: true, rate: 0.8 });
+let uiHoverSfx: any = null;
+let correctSfx: any = null;
+let errorSfx: any = null;
+let alarmSfx: any = null;
+
+if (typeof window !== 'undefined') {
+    uiHoverSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], volume: 0.1 });
+    correctSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], volume: 0.2 });
+    errorSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.3 });
+    alarmSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.05, loop: true, rate: 0.8 });
+}
 
 type DifficultyLevel = 'INITIATE' | 'ARCHITECT' | 'SOVEREIGN';
 
@@ -49,9 +56,9 @@ export default function TheTrial() {
     const timerRef = useRef<HTMLDivElement>(null);
     const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
-    const playHover = () => uiHoverSfx.play();
-    const playSuccess = () => correctSfx.play();
-    const playError = () => errorSfx.play();
+    const playHover = () => uiHoverSfx?.play();
+    const playSuccess = () => correctSfx?.play();
+    const playError = () => errorSfx?.play();
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -62,7 +69,7 @@ export default function TheTrial() {
 
         return () => {
             if (timerInterval.current) clearInterval(timerInterval.current);
-            alarmSfx.stop();
+            alarmSfx?.stop();
         };
     }, []);
 
@@ -73,8 +80,8 @@ export default function TheTrial() {
                 setGameState(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
             }, 1000);
 
-            if (gameState.timeLeft <= 10 && !alarmSfx.playing()) {
-                alarmSfx.play();
+            if (gameState.timeLeft <= 10 && !alarmSfx?.playing()) {
+                alarmSfx?.play();
                 gsap.to(timerRef.current, { color: '#ef4444', scale: 1.1, yoyo: true, repeat: -1, duration: 0.5 });
             }
         } else if (gameState.timeLeft <= 0 && gameState.isPlaying) {
@@ -103,7 +110,7 @@ export default function TheTrial() {
             currentInput: [],
             earnedSP: 0
         });
-        alarmSfx.stop();
+        alarmSfx?.stop();
         if (timerRef.current) gsap.killTweensOf(timerRef.current);
 
         // Glitch Entrance
@@ -164,7 +171,7 @@ export default function TheTrial() {
     };
 
     const triggerGameOver = () => {
-        alarmSfx.stop();
+        alarmSfx?.stop();
         if (timerRef.current) gsap.killTweensOf(timerRef.current);
 
         const spYield = Math.floor(gameState.score / 10); // 10% conversion to SP

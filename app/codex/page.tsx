@@ -9,20 +9,26 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 // --- AUDIO ASSETS ---
-const uiHoverSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'],
-    volume: 0.1,
-});
+let uiHoverSfx: any = null;
+let submitSfx: any = null;
+let encryptSfx: any = null;
 
-const submitSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'],
-    volume: 0.3,
-});
+if (typeof window !== 'undefined') {
+    uiHoverSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'],
+        volume: 0.1,
+    });
 
-const encryptSfx = new Howl({
-    src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'],
-    volume: 0.1,
-});
+    submitSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'],
+        volume: 0.3,
+    });
+
+    encryptSfx = new Howl({
+        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'],
+        volume: 0.1,
+    });
+}
 
 // Mock Data structure for Whispers if no table exists
 interface Whisper {
@@ -30,7 +36,7 @@ interface Whisper {
     content: string;
     author: string;
     alignment: number;
-    timestamp: Date;
+    timestamp: string;
     isEncrypted: boolean;
 }
 
@@ -40,7 +46,7 @@ const MOCK_WHISPERS: Whisper[] = [
         content: "The Architect moves in silence. Ensure your SP reserves are fortified before the next solar cycle.",
         author: "Unknown Cipher",
         alignment: 42,
-        timestamp: new Date(Date.now() - 3600000), // 1 hr ago
+        timestamp: "1 HOUR AGO",
         isEncrypted: false
     },
     {
@@ -48,7 +54,7 @@ const MOCK_WHISPERS: Whisper[] = [
         content: "0x89F2A... [DATA CORRUPTED] ...the sequence requires 4 pillars, not 3.",
         author: "Initiate 77",
         alignment: 12,
-        timestamp: new Date(Date.now() - 86400000), // 1 day ago
+        timestamp: "1 DAY AGO",
         isEncrypted: true
     },
     {
@@ -56,7 +62,7 @@ const MOCK_WHISPERS: Whisper[] = [
         content: "We must push the 'Equipment Grant' petition to consensus today. The collective depends on it.",
         author: "Soul Weaver",
         alignment: 156,
-        timestamp: new Date(Date.now() - 172800000), // 2 days ago
+        timestamp: "2 DAYS AGO",
         isEncrypted: false
     }
 ];
@@ -75,9 +81,9 @@ export default function Codex() {
     const listRef = useRef<HTMLDivElement>(null);
     const whispersRef = useRef<(HTMLDivElement | null)[]>([]);
 
-    const playHover = () => uiHoverSfx.play();
-    const playSubmit = () => submitSfx.play();
-    const playEncrypt = () => encryptSfx.play();
+    const playHover = () => uiHoverSfx?.play();
+    const playSubmit = () => submitSfx?.play();
+    const playEncrypt = () => encryptSfx?.play();
 
     useEffect(() => {
         async function checkAuth() {
@@ -122,7 +128,7 @@ export default function Codex() {
             content: newWhisper,
             author: profile?.display_name || 'Anonymous',
             alignment: 1,
-            timestamp: new Date(),
+            timestamp: "JUST NOW",
             isEncrypted: false
         };
 
@@ -247,7 +253,7 @@ export default function Codex() {
                                     <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">{whisper.author}</span>
                                 </div>
                                 <span className="text-[9px] font-mono text-zinc-600">
-                                    {whisper.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {whisper.timestamp}
                                 </span>
                             </div>
 
@@ -272,8 +278,8 @@ export default function Codex() {
                                 <button
                                     onClick={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition-all ${whisper.isEncrypted
-                                            ? 'border-red-500/20 text-red-500/50 cursor-not-allowed bg-red-950/20'
-                                            : 'border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-black hover:shadow-[0_0_10px_rgba(14,165,233,0.5)]'
+                                        ? 'border-red-500/20 text-red-500/50 cursor-not-allowed bg-red-950/20'
+                                        : 'border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-black hover:shadow-[0_0_10px_rgba(14,165,233,0.5)]'
                                         }`}
                                 >
                                     <Zap className="w-3 h-3" />
