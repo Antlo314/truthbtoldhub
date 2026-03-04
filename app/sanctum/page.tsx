@@ -1,9 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame } from 'lucide-react';
+import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame, Cpu } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { Howl } from 'howler';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// --- AUDIO ASSETS ---
+let uiHoverSfx: any = null;
+let uiClickSfx: any = null;
+let ambientDrone: any = null;
+
+if (typeof window !== 'undefined') {
+    uiHoverSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], volume: 0.1 });
+    uiClickSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], volume: 0.2 });
+}
 
 export default function SanctumHub() {
     const router = useRouter();
@@ -11,6 +24,37 @@ export default function SanctumHub() {
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [broadcastMsg, setBroadcastMsg] = useState('The initial architecture is stabilizing...');
+    const bgRef = useRef<HTMLDivElement>(null);
+
+    const playHover = () => uiHoverSfx?.play();
+    const playClick = () => uiClickSfx?.play();
+
+    // GSAP Parallax Background
+    useGSAP(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!bgRef.current) return;
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 30;
+            gsap.to(bgRef.current, { x, y, duration: 1.5, ease: "power2.out" });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
+
+    // Ambient Drone
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            ambientDrone = new Howl({
+                src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
+                loop: true,
+                volume: 0.1,
+            });
+            ambientDrone.play();
+        }
+        return () => {
+            if (ambientDrone) ambientDrone.stop();
+        };
+    }, []);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -59,10 +103,13 @@ export default function SanctumHub() {
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
-            {/* Background FX corresponding to living-void-bg */}
-            <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,#0a0a0a_0%,#000_100%)]"></div>
-            <div className="fixed inset-0 z-0 bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)] opacity-30 pointer-events-none pulse-aura -z-1"></div>
+        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col overflow-x-hidden">
+            {/* Dynamic Parallax Background Map */}
+            <div ref={bgRef} className="fixed inset-0 z-0 scale-110 pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#0a0a0a_0%,#000_100%)]"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(234,88,12,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(234,88,12,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)] opacity-40 pulse-aura"></div>
+            </div>
 
             {/* Global Navigation Header - Sanctum */}
             <header className="sticky top-0 z-50 glass bg-black/50 backdrop-blur-md px-6 py-4 flex justify-between items-center border-b border-white/5">
@@ -81,7 +128,8 @@ export default function SanctumHub() {
                 <div className="flex items-center gap-4">
                     <button
                         id="tour-profile-btn"
-                        onClick={() => router.push('/self')}
+                        onMouseEnter={playHover}
+                        onClick={() => { playClick(); router.push('/self'); }}
                         className="flex items-center gap-3 group relative perspective-1000 outline-none"
                     >
                         <div className="text-right hidden sm:block">
@@ -128,8 +176,16 @@ export default function SanctumHub() {
 
                         {/* The Pool (Treasury) */}
                         <div
-                            onClick={() => router.push('/treasury')}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
+                            onMouseEnter={(e) => {
+                                playHover();
+                                gsap.to(e.currentTarget, { scale: 1.02, rotationY: 2, rotationX: 2, duration: 0.4, ease: "power2.out", filter: 'brightness(1.1)' });
+                            }}
+                            onMouseLeave={(e) => {
+                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
+                            }}
+                            onClick={() => { playClick(); router.push('/treasury'); }}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.mp4" type="video/mp4" />
@@ -153,8 +209,16 @@ export default function SanctumHub() {
 
                         {/* The Stage */}
                         <div
-                            onClick={() => router.push('/codex')}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
+                            onMouseEnter={(e) => {
+                                playHover();
+                                gsap.to(e.currentTarget, { scale: 1.02, rotationY: -2, rotationX: 2, duration: 0.4, ease: "power2.out", filter: 'brightness(1.1)' });
+                            }}
+                            onMouseLeave={(e) => {
+                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
+                            }}
+                            onClick={() => { playClick(); router.push('/codex'); }}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
@@ -178,8 +242,16 @@ export default function SanctumHub() {
 
                         {/* The Gallery / Cineworks */}
                         <div
-                            onClick={() => router.push('/cineworks')}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
+                            onMouseEnter={(e) => {
+                                playHover();
+                                gsap.to(e.currentTarget, { scale: 1.02, rotationY: 2, rotationX: -2, duration: 0.4, ease: "power2.out", filter: 'brightness(1.1)' });
+                            }}
+                            onMouseLeave={(e) => {
+                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
+                            }}
+                            onClick={() => { playClick(); router.push('/cineworks'); }}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.mp4" type="video/mp4" />
@@ -201,26 +273,35 @@ export default function SanctumHub() {
                             </div>
                         </div>
 
-                        {/* The Trial (Locked) */}
-                        <div className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-not-allowed opacity-60 sanctuary-card">
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-60 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
+                        {/* The Trial (Unlocked - Sandbox) */}
+                        <div
+                            onMouseEnter={(e) => {
+                                playHover();
+                                gsap.to(e.currentTarget, { scale: 1.02, rotationY: -2, rotationX: -2, duration: 0.4, ease: "power2.out", filter: 'brightness(1.1)' });
+                            }}
+                            onMouseLeave={(e) => {
+                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
+                            }}
+                            onClick={() => { playClick(); router.push('/trial'); }}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            style={{ perspective: '1000px' }}
+                        >
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-10 blur-[1px] pointer-events-none z-0"></div>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:bg-green-500/20 transition-colors pointer-events-none z-0"></div>
                             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
                                 <div>
-                                    <div className="w-12 h-12 rounded-xl bg-orange-950/30 border border-orange-900/50 flex items-center justify-center mb-4 text-orange-800">
-                                        <Shield className="w-6 h-6" />
+                                    <div className="w-12 h-12 rounded-xl bg-green-950/30 border border-green-500/30 flex items-center justify-center mb-4 text-green-400 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                        <Cpu className="w-6 h-6" />
                                     </div>
-                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2 shadow-black drop-shadow-lg opacity-50">THE TRIAL</h3>
-                                    <p className="text-[10px] text-red-500 font-mono tracking-widest uppercase font-bold">Coming Soon</p>
+                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2 shadow-black drop-shadow-lg">THE TRIAL</h3>
+                                    <p className="text-[10px] text-green-400 font-mono tracking-widest uppercase font-bold">Encrypted Sandbox</p>
                                 </div>
-                                <div className="flex items-center justify-between text-zinc-600">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Locked Sector</span>
-                                    <div className="w-4 h-4 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center pulse">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                                    </div>
+                                <div className="flex items-center justify-between text-green-400">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-green-500/30 px-3 py-1 rounded-full text-green-500">Decrypt Signal</span>
+                                    <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                                 </div>
                             </div>
                         </div>
