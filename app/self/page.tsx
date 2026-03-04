@@ -227,6 +227,13 @@ export default function PowerSelf() {
                                         else msg += "Identity Name Updated.\n";
                                     }
 
+                                    const userVal = formData.get('userName') as string;
+                                    if (userVal && userVal !== profile?.username) {
+                                        const { error } = await supabase.from('profiles').update({ username: userVal }).eq('id', userAuth.id);
+                                        if (error) msg += "Failed to update Username: " + error.message + "\n";
+                                        else msg += "Username Updated.\n";
+                                    }
+
                                     if (passVal) {
                                         const { error } = await supabase.auth.updateUser({ password: passVal });
                                         if (error) msg += "Failed to update Cipher: " + error.message + "\n";
@@ -241,6 +248,10 @@ export default function PowerSelf() {
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Identity Name</label>
                                         <input name="identityName" type="text" defaultValue={displayName} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Username</label>
+                                        <input name="userName" type="text" defaultValue={profile?.username || ''} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Update Cipher (Password)</label>
