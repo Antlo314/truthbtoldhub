@@ -62,19 +62,89 @@ export default function Treasury() {
     // Layout Refs for GSAP
     const mainContainerRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+    const escrowObjRef = useRef<HTMLDivElement>(null);
+    const hudRef = useRef<HTMLDivElement>(null);
 
     const playHover = () => uiHoverSfx?.play();
     const playSuccess = () => pledgeSfx?.play();
     const playError = () => errorSfx?.play();
 
     useGSAP(() => {
+        // Entrance animation for cards
         if (petitions.length > 0 && cardsRef.current.length > 0) {
             gsap.fromTo(cardsRef.current,
                 { y: 50, opacity: 0, scale: 0.95 },
                 { y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.1, ease: "back.out(1.5)" }
             );
         }
+
+        // 3D Geometry Escrow continuous rotation
+        if (escrowObjRef.current) {
+            gsap.to(escrowObjRef.current, {
+                rotateX: 360,
+                rotateY: 360,
+                duration: 20,
+                repeat: -1,
+                ease: "none"
+            });
+        }
     }, { dependencies: [petitions], scope: mainContainerRef });
+
+    // GSAP Particle Engine
+    const fireParticles = () => {
+        const x = window.innerWidth / 2;
+        const y = window.innerHeight / 2;
+
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'fixed w-1.5 h-1.5 rounded-full bg-orange-500 pointer-events-none z-[200] mix-blend-screen shadow-[0_0_15px_#f97316]';
+            document.body.appendChild(particle);
+
+            gsap.set(particle, { x, y, scale: "random(0.5, 2)" });
+
+            gsap.to(particle, {
+                x: `+=${gsap.utils.random(-400, 400)}`,
+                y: `+=${gsap.utils.random(-400, 400)}`,
+                opacity: 0,
+                duration: "random(1, 2)",
+                ease: "power3.out",
+                onComplete: () => particle.remove()
+            });
+        }
+    };
+
+    // Magnetic Card Hover Logic
+    const handleCardMouseMove = (e: React.MouseEvent, index: number) => {
+        if (!cardsRef.current[index]) return;
+        const card = cardsRef.current[index];
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const rotateX = ((y - centerY) / centerY) * -10; // Max 10 deg tilt
+        const rotateY = ((x - centerX) / centerX) * 10;
+
+        gsap.to(card, {
+            rotateX,
+            rotateY,
+            transformPerspective: 1000,
+            ease: "power2.out",
+            duration: 0.4
+        });
+    };
+
+    const handleCardMouseLeave = (index: number) => {
+        if (!cardsRef.current[index]) return;
+        gsap.to(cardsRef.current[index], {
+            rotateX: 0,
+            rotateY: 0,
+            ease: "elastic.out(1, 0.3)",
+            duration: 1
+        });
+    };
 
     // Request Aid State
     const [isRequestingAid, setIsRequestingAid] = useState(false);
@@ -169,8 +239,9 @@ export default function Treasury() {
             setSelectedPetition(null);
             setPledgeAmount(0);
 
-            // Audio & Toast
+            // Audio & Toast & Particles
             playSuccess();
+            fireParticles();
             setToastMessage(`Pledged ${pledgeAmount} SP successfully.`);
             setTimeout(() => setToastMessage(null), 3000);
 
@@ -218,6 +289,7 @@ export default function Treasury() {
             setOfferingAmount(0);
 
             playSuccess();
+            fireParticles();
             setToastMessage(`Offering successful. Voids aligned.`);
             setTimeout(() => setToastMessage(null), 3000);
 
@@ -317,13 +389,16 @@ export default function Treasury() {
                 <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center pl-8">
+                <div className="flex flex-col items-center">
                     <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none drop-shadow-md">
                         THE POOL
                     </span>
-                    <span className="text-[9px] text-orange-500/80 font-mono uppercase tracking-[0.2em]">
-                        Mutual Aid Treasury
-                    </span>
+                    <div className="flex items-center gap-2 mt-1 px-3 py-0.5 bg-black/50 border border-orange-500/30 rounded-full shadow-[0_0_10px_rgba(234,88,12,0.2)]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_#22c55e]"></div>
+                        <span className="text-[9px] text-green-400 font-mono uppercase tracking-widest font-bold">
+                            {profile?.soul_power !== undefined ? `${profile.soul_power} SP` : 'SYNCING MATRIX...'}
+                        </span>
+                    </div>
                 </div>
                 <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
                     <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
@@ -339,8 +414,21 @@ export default function Treasury() {
 
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-orange-950/50 border border-orange-500/30 flex items-center justify-center text-orange-500">
-                                <Flame className="w-5 h-5" />
+                            {/* Geometric 3D Escrow Node */}
+                            <div className="w-12 h-12 relative [perspective:1000px] shrink-0 mr-2">
+                                <div ref={escrowObjRef} className="w-full h-full relative [transform-style:preserve-3d]">
+                                    {/* 3D Wireframe Cube Faces */}
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateZ(24px)] flex items-center justify-center shadow-[0_0_15px_rgba(234,88,12,0.4)]"></div>
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateZ(-24px)] flex items-center justify-center"></div>
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateY(24px)_rotateX(90deg)] flex items-center justify-center"></div>
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateY(-24px)_rotateX(-90deg)] flex items-center justify-center"></div>
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateX(24px)_rotateY(90deg)] flex items-center justify-center"></div>
+                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateX(-24px)_rotateY(-90deg)] flex items-center justify-center"></div>
+                                    {/* Core Flame */}
+                                    <div className="absolute inset-0 flex items-center justify-center [transform:translateZ(0px)]">
+                                        <Flame className="w-6 h-6 text-orange-400 drop-shadow-[0_0_10px_#f97316] animate-pulse" />
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <h2 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Global Escrow</h2>
@@ -388,8 +476,11 @@ export default function Treasury() {
                             <div
                                 key={pet.id}
                                 ref={el => { cardsRef.current[index] = el }}
-                                className={`glass bg-white/5 border ${pet.status === 'Consensus Reached' || pet.status === 'Disbursed' ? 'border-green-500/20 opacity-70' : 'border-white/5 hover:border-orange-500/30'} rounded-2xl p-5 relative overflow-hidden group transition-colors`}
+                                onMouseMove={(e) => handleCardMouseMove(e, index)}
+                                onMouseLeave={() => handleCardMouseLeave(index)}
+                                className={`glass bg-white/5 border ${pet.status === 'Consensus Reached' || pet.status === 'Disbursed' ? 'border-green-500/20 opacity-70' : 'border-white/5 hover:border-orange-500/30'} rounded-2xl p-5 relative group transition-colors [transform-style:preserve-3d]`}
                             >
+                                {/* We keep overflow-hidden off the main wrapper so 3D children can pop, but we use a psuedo element for background boundaries if needed. For now it's fine. */}
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex flex-col">
                                         <span className={`text-[9px] font-mono ${pet.status === 'Consensus Reached' || pet.status === 'Disbursed' ? 'text-gray-500' : 'text-orange-500/60'}`}>REQ_ID: {pet.id.toString().substring(0, 8)}</span>
