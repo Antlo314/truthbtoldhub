@@ -97,6 +97,59 @@ export default function Oracle() {
         }
     };
 
+    // Proactive Route Guidance
+    useEffect(() => {
+        const triggerProactiveGuide = async () => {
+            // Removed constraint so the tour guide opens upon entering a new section.
+
+            setIsThinking(true);
+            setIsOpen(true);
+
+            const contextMap: any = {
+                '/': 'Tell the user how to sign up: use their email, and expect a confirmation link in their inbox to verify their Soul. Explain that SP (Sanctum Power) is the future of our ecosystem.',
+                '/sanctum': 'They are in the Sanctum Hub. Explain this is the central nervous system holding all pillars together.',
+                '/codex': 'They are in The Codex. Explain the live communication layer for the community.',
+                '/cineworks': 'They are in Cineworks. Detail the original films and visual archives.',
+                '/treasury': 'They are in The Pool. Detail how they can fund petitions using SP.',
+                '/self': 'They are in the Soul Matrix. Detail how their identity and power are verified here.',
+                '/trial': 'They are in The Trial. Explain this is the initiation sequence to test their cryptographic resolve.'
+            };
+
+            const systemInstruction =
+                "System Instruction: The user just navigated to a new area. " +
+                (contextMap[pathname] || "Give a brief, cryptic 1-sentence greeting.") +
+                " Keep your response under 3 sentences.";
+
+            try {
+                const res = await fetch('/api/oracle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "System: Proactively greet the user and explain this page based on your knowledge base.",
+                        context: systemInstruction,
+                        history: convo.slice(-2) // Pass a tiny bit of history so it doesn't repeat itself verbatim
+                    }),
+                });
+                const data = await res.json();
+
+                // Only add if it's the first automated message for this route to prevent spam
+                setConvo(prev => [...prev, { role: 'oracle', text: data.message }]);
+            } catch (error) {
+                // Silently fail if they navigate away during fetch
+            } finally {
+                setIsThinking(false);
+            }
+        };
+
+        // Delay slightly to let the page settle
+        const timer = setTimeout(() => {
+            triggerProactiveGuide();
+        }, 1500);
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname]);
+
     return (
         <div className="fixed mb-12 sm:mb-0 bottom-6 right-6 z-[9999] flex flex-col items-end pointer-events-none">
 
