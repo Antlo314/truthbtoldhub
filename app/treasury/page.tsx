@@ -17,9 +17,24 @@ export default function Treasury() {
     const [escrow, setEscrow] = useState("4,000.00");
     const [petitions, setPetitions] = useState<any[]>([]);
 
+    // Pledging State
+    const [userAuth, setUserAuth] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
+    const [selectedPetition, setSelectedPetition] = useState<any>(null);
+    const [pledgeAmount, setPledgeAmount] = useState<number>(0);
+    const [isPledging, setIsPledging] = useState(false);
+
     useEffect(() => {
         async function fetchTreasury() {
             try {
+                // Fetch User Context
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    setUserAuth(user);
+                    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                    if (prof) setProfile(prof);
+                }
+
                 // Fetch Escrow Balance
                 const { data: escrowData } = await supabase.from('treasury_escrow').select('balance_usd').limit(1);
                 if (escrowData && escrowData.length > 0) {
@@ -27,14 +42,14 @@ export default function Treasury() {
                 }
 
                 // Fetch Petitions
-                const { data: petData } = await supabase.from('petitions').select('*').order('created_at', { ascending: false });
-                if (petData && petData.length > 0) {
+                const { data: petData, error } = await supabase.from('petitions').select('*').order('created_at', { ascending: false });
+                if (petData && petData.length > 0 && !error) {
                     setPetitions(petData);
                 } else {
-                    // Fallback to placeholder data if DB is empty
+                    // Fallback to placeholder data if DB is empty or missing columns
                     setPetitions([
-                        { id: '0x1a8b2', title: 'Equipment Grant: Studio Upgrade', amount_requested: 850.00, status: 'Consensus Building', consensus_percentage: 18 },
-                        { id: '0x0f3c1', title: 'Emergency Medical Fund', amount_requested: 1200.00, status: 'Consensus Reached', consensus_percentage: 100 }
+                        { id: '0x1a8b2', title: 'Equipment Grant: Studio Upgrade', amount_requested: 850.00, status: 'Consensus Building', consensus_percentage: 18, sp_goal: 10000, sp_pledged: 1800, backer_count: 4 },
+                        { id: '0x0f3c1', title: 'Emergency Medical Fund', amount_requested: 1200.00, status: 'Consensus Reached', consensus_percentage: 100, sp_goal: 5000, sp_pledged: 5000, backer_count: 12 }
                     ]);
                 }
             } catch (err) {
@@ -43,6 +58,65 @@ export default function Treasury() {
         }
         fetchTreasury();
     }, []);
+
+    const handleExecutePledge = async () => {
+        if (!selectedPetition || !userAuth || pledgeAmount <= 0) return;
+        if (profile?.soul_power < pledgeAmount) {
+            alert("Insufficient Sanctum Power for this pledge.");
+            return;
+        }
+
+        setIsPledging(true);
+        try {
+            // 1. Deduct SP from User
+            const newSP = profile.soul_power - pledgeAmount;
+            await supabase.from('profiles').update({ soul_power: newSP }).eq('id', userAuth.id);
+
+            // 2. Add SP to Petition
+            const newPledged = (selectedPetition.sp_pledged || 0) + pledgeAmount;
+            const newConsensus = Math.min(100, Math.floor((newPledged / (selectedPetition.sp_goal || 10000)) * 100));
+            const newBackerCount = (selectedPetition.backer_count || 0) + 1; // Simplistic count
+
+            // Determine if status should change
+            let newStatus = selectedPetition.status;
+            if (newConsensus >= 100) newStatus = 'Consensus Reached';
+
+            await supabase.from('petitions')
+                .update({
+                    sp_pledged: newPledged,
+                    consensus_percentage: newConsensus,
+                    backer_count: newBackerCount,
+                    status: newStatus
+                })
+                .eq('id', selectedPetition.id);
+
+            // 3. Log Transaction
+            await supabase.from('transactions').insert([{
+                profile_id: userAuth.id,
+                amount: -pledgeAmount, // Negative because it's a spend
+                transaction_type: 'PLEDGE',
+                description: `Pledged to Petition: ${selectedPetition.title}`
+            }]);
+
+            // Refresh local state
+            setProfile({ ...profile, soul_power: newSP });
+            setPetitions(petitions.map(p => {
+                if (p.id === selectedPetition.id) {
+                    return { ...p, sp_pledged: newPledged, consensus_percentage: newConsensus, backer_count: newBackerCount, status: newStatus };
+                }
+                return p;
+            }));
+
+            setSelectedPetition(null);
+            setPledgeAmount(0);
+
+        } catch (err) {
+            console.error("Pledge failed:", err);
+            alert("An error occurred while pledging.");
+        } finally {
+            setIsPledging(false);
+        }
+    };
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center">
@@ -148,13 +222,16 @@ export default function Treasury() {
                                 {pet.status !== 'Consensus Reached' && pet.status !== 'Disbursed' && (
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-[9px] font-mono">
-                                            <span className="text-gray-500 uppercase">Consensus</span>
-                                            <span className="text-orange-500 font-bold">{pet.consensus_percentage}%</span>
+                                            <span className="text-gray-500 uppercase">Consensus ({pet.sp_pledged || 0} / {pet.sp_goal || 10000} SP)</span>
+                                            <span className="text-orange-500 font-bold">{pet.consensus_percentage || 0}%</span>
                                         </div>
                                         <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
-                                            <div className="h-full bg-gradient-to-r from-orange-600 to-amber-500" style={{ width: `${pet.consensus_percentage}%` }}></div>
+                                            <div className="h-full bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-1000" style={{ width: `${pet.consensus_percentage || 0}%` }}></div>
                                         </div>
-                                        <button className="w-full py-2.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-orange-500/20 hover:border-orange-500 transition-all mt-3 text-orange-500 group-hover:text-white">
+                                        <button
+                                            onClick={() => setSelectedPetition(pet)}
+                                            className="w-full py-2.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-orange-500/20 hover:border-orange-500 transition-all mt-3 text-orange-500 group-hover:text-white"
+                                        >
                                             Vote to Align
                                         </button>
                                     </div>
@@ -164,6 +241,65 @@ export default function Treasury() {
                     </div>
                 </div>
             </main>
+
+            {/* Pledge Modal */}
+            {selectedPetition && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-zinc-950 border border-orange-500/30 rounded-2xl w-full max-w-sm overflow-hidden shadow-[0_0_50px_rgba(234,88,12,0.15)] animate-fade-in relative">
+                        {/* Decorative glow */}
+                        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent"></div>
+
+                        <div className="p-6">
+                            <h3 className="font-ritual text-2xl text-white tracking-widest mb-1">PLEDGE SP</h3>
+                            <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase mb-6 truncate">{selectedPetition.title}</p>
+
+                            <div className="bg-black/50 rounded-xl p-4 mb-6 border border-white/5">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[9px] uppercase tracking-widest text-gray-500">Available Balance</span>
+                                    <span className="text-xs font-mono font-bold text-orange-500">{profile?.soul_power || 0} SP</span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        value={pledgeAmount || ''}
+                                        onChange={(e) => setPledgeAmount(Number(e.target.value))}
+                                        placeholder="0"
+                                        className="w-full bg-transparent border-b border-orange-500/50 text-3xl font-mono text-white py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder:text-zinc-800"
+                                    />
+                                    <Zap className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500/50" />
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    {[100, 500, 1000].map(amt => (
+                                        <button
+                                            key={amt}
+                                            onClick={() => setPledgeAmount(amt)}
+                                            className="flex-1 py-1.5 bg-white/5 hover:bg-orange-500/20 border border-white/10 hover:border-orange-500/50 rounded text-[9px] font-mono text-gray-300 transition-colors"
+                                        >
+                                            +{amt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setSelectedPetition(null)}
+                                    className="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold text-gray-500 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleExecutePledge}
+                                    disabled={isPledging || pledgeAmount <= 0 || pledgeAmount > (profile?.soul_power || 0)}
+                                    className="flex-1 py-3 bg-gradient-to-r from-orange-600 to-orange-800 rounded-xl text-[10px] uppercase tracking-widest font-bold text-white shadow-lg disabled:opacity-50 transition-transform active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    {isPledging ? 'Processing...' : 'Confirm Pledge'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
