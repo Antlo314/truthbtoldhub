@@ -59,7 +59,7 @@ export default function SanctumHub() {
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex md:pl-20">
+        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
             {/* Background FX corresponding to living-void-bg */}
             <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,#0a0a0a_0%,#000_100%)]"></div>
             <div className="fixed inset-0 z-0 bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)] opacity-30 pointer-events-none pulse-aura -z-1"></div>
