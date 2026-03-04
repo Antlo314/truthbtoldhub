@@ -152,7 +152,10 @@ export default function SanctumHub() {
                         </div>
 
                         {/* The Stage */}
-                        <div className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card">
+                        <div
+                            onClick={() => router.push('/codex')}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
+                        >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
                             </video>
@@ -167,7 +170,7 @@ export default function SanctumHub() {
                                     <p className="text-xs text-gray-400 font-mono tracking-wider">Obsidian Whispers</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sky-400">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-sky-500/30 px-3 py-1 rounded-full text-sky-500">Vote Active</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-sky-500/30 px-3 py-1 rounded-full text-sky-500">Access Sector</span>
                                     <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                                 </div>
                             </div>
@@ -198,26 +201,27 @@ export default function SanctumHub() {
                             </div>
                         </div>
 
-                        {/* The Trial (Locked) */}
-                        <div className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-not-allowed opacity-60">
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-60 transition-opacity duration-700 mix-blend-screen" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
+                        {/* The Trial (Sandbox) */}
+                        <div
+                            onClick={() => router.push('/trial')}
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card"
+                        >
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-60 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-10 blur-[1px] pointer-events-none z-0"></div>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:bg-green-500/20 transition-colors pointer-events-none z-0"></div>
                             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
                                 <div>
-                                    <div className="w-12 h-12 rounded-xl bg-orange-950/30 border border-orange-900/50 flex items-center justify-center mb-4 text-orange-800">
+                                    <div className="w-12 h-12 rounded-xl bg-green-950/30 border border-green-500/30 flex items-center justify-center mb-4 text-green-400 group-hover:scale-110 transition-transform">
                                         <Shield className="w-6 h-6" />
                                     </div>
-                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2 shadow-black drop-shadow-lg opacity-50">THE TRIAL</h3>
-                                    <p className="text-[10px] text-red-500 font-mono tracking-widest uppercase font-bold">Coming Soon</p>
+                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2 shadow-black drop-shadow-lg">THE TRIAL</h3>
+                                    <p className="text-[10px] text-green-500 font-mono tracking-widest uppercase font-bold">Encrypted Sandbox</p>
                                 </div>
-                                <div className="flex items-center justify-between text-zinc-600">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Locked Sector</span>
-                                    <div className="w-4 h-4 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center pulse">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                                    </div>
+                                <div className="flex items-center justify-between text-green-400">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-green-500/30 px-3 py-1 rounded-full text-green-500">Access Sector</span>
+                                    <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                                 </div>
                             </div>
                         </div>

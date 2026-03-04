@@ -1,249 +1,200 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Play, Zap, Flame, Trophy } from 'lucide-react';
+import { ArrowLeft, Play, Zap, ShieldAlert, Cpu, Lock, Unlock } from 'lucide-react';
+import { Howl } from 'howler';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
+// --- AUDIO ASSETS ---
+const uiHoverSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], volume: 0.1 });
+const correctSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], volume: 0.2 });
+const errorSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.3 });
+const alarmSfx = new Howl({ src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'], volume: 0.05, loop: true, rate: 0.8 });
+
+type DifficultyLevel = 'INITIATE' | 'ARCHITECT' | 'SOVEREIGN';
+
+interface DecryptionState {
+    isPlaying: boolean;
+    gameOver: boolean;
+    level: DifficultyLevel;
+    score: number;
+    timeLeft: number;
+    targetSequence: number[];
+    currentInput: number[];
+    earnedSP: number;
+}
 
 export default function TheTrial() {
     const router = useRouter();
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    // Game state
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [gameOver, setGameOver] = useState(false);
-    const [score, setScore] = useState(0);
-    const [highScore, setHighScore] = useState(0);
-    const [soulPowerEarned, setSoulPowerEarned] = useState(0);
     const [userAuth, setUserAuth] = useState<any>(null);
     const [saving, setSaving] = useState(false);
 
-    // Engine references
-    const requestRef = useRef<number>(0);
-    const frameCount = useRef(0);
+    // Game State
+    const [gameState, setGameState] = useState<DecryptionState>({
+        isPlaying: false,
+        gameOver: false,
+        level: 'INITIATE',
+        score: 0,
+        timeLeft: 30,
+        targetSequence: [],
+        currentInput: [],
+        earnedSP: 0
+    });
 
-    // Physics constants
-    const GRAVITY = 0.6;
-    const JUMP_FORCE = -10;
-    const OBSTACLE_SPEED_INITIAL = 5;
-    const SPARK_RADIUS = 15;
+    // Refs for GSAP
+    const gameContainerRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef<HTMLDivElement>(null);
+    const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
-    // Entities
-    const spark = useRef({ x: 100, y: 300, velocity: 0 });
-    const obstacles = useRef<{ x: number; y: number; width: number; height: number; passed: boolean }[]>([]);
-    const timerRef = useRef<number>(0);
+    const playHover = () => uiHoverSfx.play();
+    const playSuccess = () => correctSfx.play();
+    const playError = () => errorSfx.play();
 
     useEffect(() => {
-        // Fetch user context aggressively bypassing cache to get true SP
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserAuth({ ...user }); // force new object ref
-            }
+            if (user) setUserAuth(user);
         };
         fetchUser();
 
-        // Initial Draw
-        const ctx = canvasRef.current?.getContext('2d');
-        if (ctx && !isPlaying && !gameOver) {
-            drawIdleState(ctx);
+        return () => {
+            if (timerInterval.current) clearInterval(timerInterval.current);
+            alarmSfx.stop();
+        };
+    }, []);
+
+    // Timer Logic
+    useEffect(() => {
+        if (gameState.isPlaying && gameState.timeLeft > 0) {
+            timerInterval.current = setInterval(() => {
+                setGameState(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
+            }, 1000);
+
+            if (gameState.timeLeft <= 10 && !alarmSfx.playing()) {
+                alarmSfx.play();
+                gsap.to(timerRef.current, { color: '#ef4444', scale: 1.1, yoyo: true, repeat: -1, duration: 0.5 });
+            }
+        } else if (gameState.timeLeft <= 0 && gameState.isPlaying) {
+            triggerGameOver();
         }
 
         return () => {
-            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            if (timerInterval.current) clearInterval(timerInterval.current);
         };
-    }, [isPlaying, gameOver]);
+    }, [gameState.isPlaying, gameState.timeLeft]);
 
-    const startGame = (e?: React.MouseEvent) => {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation(); // prevent bubbling to canvas click handler
-        }
-        spark.current = { x: 100, y: 300, velocity: 0 };
-        obstacles.current = [];
-        setScore(0);
-        setSoulPowerEarned(0);
-        setIsPlaying(true);
-        setGameOver(false);
-        frameCount.current = 0;
-        timerRef.current = performance.now();
-        lastTimeRef.current = performance.now();
-        requestRef.current = requestAnimationFrame(gameLoop);
+    const generateSequence = (level: DifficultyLevel): number[] => {
+        const length = level === 'INITIATE' ? 4 : level === 'ARCHITECT' ? 6 : 8;
+        return Array.from({ length }, () => Math.floor(Math.random() * 9) + 1); // 1-9
     };
 
-    const jump = useCallback(() => {
-        if (!isPlaying) return;
-        spark.current.velocity = JUMP_FORCE;
-    }, [isPlaying]);
+    const startGame = (level: DifficultyLevel) => {
+        playSuccess();
+        setGameState({
+            isPlaying: true,
+            gameOver: false,
+            level,
+            score: 0,
+            timeLeft: level === 'INITIATE' ? 30 : level === 'ARCHITECT' ? 45 : 60,
+            targetSequence: generateSequence(level),
+            currentInput: [],
+            earnedSP: 0
+        });
+        alarmSfx.stop();
+        if (timerRef.current) gsap.killTweensOf(timerRef.current);
 
-    // Handle spacebar / click
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                jump();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [jump]);
+        // Glitch Entrance
+        if (gameContainerRef.current) {
+            gsap.fromTo(gameContainerRef.current,
+                { opacity: 0, scale: 0.9, filter: 'hue-rotate(90deg) blur(10px)' },
+                { opacity: 1, scale: 1, filter: 'hue-rotate(0deg) blur(0px)', duration: 0.5, ease: 'power2.out' }
+            );
+        }
+    };
 
-    // Delta time physics
-    const lastTimeRef = useRef<number>(0);
+    const handleInput = (num: number) => {
+        if (!gameState.isPlaying || gameState.gameOver) return;
 
-    const gameLoop = (time: number) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
-        if (!canvas || !ctx) return;
+        playHover();
+        const newInput = [...gameState.currentInput, num];
+        const currentIndex = newInput.length - 1;
 
-        // Calculate delta time
-        const deltaTime = (time - lastTimeRef.current) / 1000;
-        lastTimeRef.current = time;
+        // Check if correct so far
+        if (newInput[currentIndex] !== gameState.targetSequence[currentIndex]) {
+            // Wrong input!
+            playError();
+            gsap.fromTo(gameContainerRef.current,
+                { x: -10 }, { x: 0, duration: 0.4, ease: "rough({ template: power0.none, strength: 8, points: 20, taper: 'none', randomize: true, clamp: false})" }
+            );
 
-        // If tab was inactive, cap deltaTime to prevent explosion
-        if (deltaTime > 0.1) {
-            requestRef.current = requestAnimationFrame(gameLoop);
+            // Penalty: lose time and reset sequence
+            setGameState(prev => ({
+                ...prev,
+                timeLeft: Math.max(0, prev.timeLeft - 3),
+                currentInput: [],
+                targetSequence: generateSequence(prev.level) // reroll sequence on fail
+            }));
             return;
         }
 
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Check if sequence completed
+        if (newInput.length === gameState.targetSequence.length) {
+            playSuccess();
+            const points = gameState.level === 'INITIATE' ? 100 : gameState.level === 'ARCHITECT' ? 250 : 500;
 
-        // Physics: Spark Fall
-        spark.current.velocity += GRAVITY;
-        spark.current.y += spark.current.velocity;
+            // Glitch flash for success
+            gsap.fromTo(gameContainerRef.current,
+                { backgroundColor: 'rgba(34, 197, 94, 0.3)' }, { backgroundColor: 'transparent', duration: 0.5 }
+            );
 
-        // Ground/Ceiling Collision
-        if (spark.current.y >= canvas.height - SPARK_RADIUS || spark.current.y <= SPARK_RADIUS) {
-            triggerGameOver();
-            return;
+            setGameState(prev => ({
+                ...prev,
+                score: prev.score + points,
+                currentInput: [],
+                targetSequence: generateSequence(prev.level),
+                timeLeft: prev.timeLeft + (prev.level === 'INITIATE' ? 5 : 3) // Add bonus time
+            }));
+        } else {
+            // Correct input, wait for more
+            setGameState(prev => ({ ...prev, currentInput: newInput }));
         }
-
-        // Difficulty scaling using performance.now()
-        const elapsedTime = (time - timerRef.current) / 1000;
-        const currentSpeed = OBSTACLE_SPEED_INITIAL + (elapsedTime * 0.1);
-
-        // Obstacle Generation (using frameCount roughly tied to 60fps)
-        frameCount.current++;
-        if (frameCount.current % Math.floor(90 / (currentSpeed / 5)) === 0) {
-            const gap = 150 - (elapsedTime * 0.5); // Gap shrinks over time
-            const minGap = 90;
-            const finalGap = Math.max(gap, minGap);
-            const obstacleHeight = Math.random() * (canvas.height - finalGap - 40) + 20;
-
-            // Top pillar
-            obstacles.current.push({ x: canvas.width, y: 0, width: 40, height: obstacleHeight, passed: false });
-            // Bottom pillar
-            obstacles.current.push({ x: canvas.width, y: obstacleHeight + finalGap, width: 40, height: canvas.height - (obstacleHeight + finalGap), passed: false });
-        }
-
-        let collision = false;
-
-        // Update Obstacles
-        for (let i = 0; i < obstacles.current.length; i++) {
-            const obs = obstacles.current[i];
-            obs.x -= currentSpeed;
-
-            // Draw Obstacle (Obsidian Pillar style)
-            ctx.fillStyle = '#1a0b2e'; // Dark purple/obsidian
-            ctx.strokeStyle = '#a855f7'; // Purple glow edge
-            ctx.lineWidth = 2;
-            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-            ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
-
-            // Collision Detection (AABB)
-            const sx = spark.current.x;
-            const sy = spark.current.y;
-            const sr = SPARK_RADIUS - 2; // slightly forgiving hitbox
-
-            if (sx + sr > obs.x && sx - sr < obs.x + obs.width &&
-                sy + sr > obs.y && sy - sr < obs.y + obs.height) {
-                collision = true;
-            }
-
-            // Score updating
-            if (!obs.passed && obs.x + obs.width < spark.current.x) {
-                obs.passed = true;
-                // Since there are 2 parts (top/bottom) per generation, we only increment score once per pair
-                if (obs.y === 0) {
-                    setScore(s => s + 10);
-                }
-            }
-        }
-
-        // Cleanup off-screen obstacles
-        obstacles.current = obstacles.current.filter(obs => obs.x + obs.width > 0);
-
-        if (collision) {
-            triggerGameOver();
-            return;
-        }
-
-        // Draw Spark
-        ctx.beginPath();
-        ctx.arc(spark.current.x, spark.current.y, SPARK_RADIUS, 0, Math.PI * 2);
-
-        // Ember glow effect
-        const gradient = ctx.createRadialGradient(
-            spark.current.x, spark.current.y, 0,
-            spark.current.x, spark.current.y, SPARK_RADIUS
-        );
-        gradient.addColorStop(0, '#ffffff');
-        gradient.addColorStop(0.3, '#f97316'); // Orange-500
-        gradient.addColorStop(1, 'rgba(234, 88, 12, 0)');
-
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Core
-        ctx.beginPath();
-        ctx.arc(spark.current.x, spark.current.y, SPARK_RADIUS * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-
-        // Draw Score
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '24px monospace';
-        ctx.fillText(`SCORE: ${score}`, 20, 40);
-
-        requestRef.current = requestAnimationFrame(gameLoop);
     };
 
     const triggerGameOver = () => {
-        setIsPlaying(false);
-        setGameOver(true);
-        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        alarmSfx.stop();
+        if (timerRef.current) gsap.killTweensOf(timerRef.current);
 
-        if (score > highScore) setHighScore(score);
+        const spYield = Math.floor(gameState.score / 10); // 10% conversion to SP
 
-        // Calculate SP Yield (e.g. 10% of score becomes SP)
-        const earned = Math.floor(score * 0.1);
-        setSoulPowerEarned(earned);
+        setGameState(prev => ({
+            ...prev,
+            isPlaying: false,
+            gameOver: true,
+            earnedSP: spYield
+        }));
 
-        if (earned > 0 && userAuth) {
-            saveScore(earned);
+        if (spYield > 0 && userAuth) {
+            saveScore(spYield);
         }
     };
 
     const saveScore = async (earned: number) => {
         setSaving(true);
         try {
-            // First fetch current SP aggressively bypassing cache
             const { data: profile } = await supabase.from('profiles').select('soul_power').eq('id', userAuth.id).single();
-            const currentSP = profile?.soul_power || 0;
-            const newSP = currentSP + earned;
+            const newSP = (profile?.soul_power || 0) + earned;
 
-            // Update SP
             await supabase.from('profiles').update({ soul_power: newSP }).eq('id', userAuth.id);
 
-            // Log Transaction history
             await supabase.from('transactions').insert([{
                 profile_id: userAuth.id,
                 amount: earned,
-                transaction_type: 'THE_TRIAL_YIELD',
-                description: `Earned from surviving The Trial (Score: ${score})`
+                transaction_type: 'DECRYPTION_YIELD',
+                description: `Decryption Matrix execution (Score: ${gameState.score})`
             }]);
-
         } catch (err) {
             console.error("Failed to save score:", err);
         } finally {
@@ -251,128 +202,163 @@ export default function TheTrial() {
         }
     };
 
-    const drawIdleState = (ctx: CanvasRenderingContext2D) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Just draw a faint grid or static background
-        ctx.strokeStyle = '#ffffff10';
-        for (let i = 0; i < canvas.width; i += 50) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-        }
-        for (let i = 0; i < canvas.height; i += 50) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
-    };
-
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center">
-            {/* Dark background */}
-            <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,#1a0b2e_0%,#000_100%)]"></div>
+        <div className="relative min-h-screen bg-zinc-950 text-green-500 selection:bg-green-500/30 font-mono flex flex-col items-center overflow-hidden">
+            {/* Background Grid */}
+            <div className="fixed inset-0 z-0 bg-[linear-gradient(rgba(34,197,94,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+
+            {/* Vignette */}
+            <div className="fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,transparent_20%,#09090b_90%)] pointer-events-none"></div>
 
             {/* Header */}
-            <header className="sticky top-0 w-full z-50 glass bg-black/60 backdrop-blur-xl px-4 py-4 flex justify-between items-center border-b border-orange-500/20">
-                <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
+            <header className="sticky top-0 w-full z-50 glass bg-black/80 backdrop-blur-xl px-4 py-4 flex justify-between items-center border-b border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                <button onClick={() => router.push('/sanctum')} className="text-green-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center">
-                    <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none drop-shadow-md">
-                        THE TRIAL
-                    </span>
-                    <span className="text-[9px] text-orange-500/80 font-mono uppercase tracking-[0.2em]">
-                        Raw Power Extraction
-                    </span>
-                </div>
-                <div className="w-6 opacity-0"></div>
-            </header>
-
-            <main className="flex-1 w-full max-w-4xl relative z-10 flex flex-col items-center justify-center p-4">
-
-                <div className="w-full flex justify-between items-end mb-4 px-2">
-                    <div className="flex items-center gap-2">
-                        <Trophy className="w-5 h-5 text-yellow-500" />
-                        <div>
-                            <span className="block text-[8px] text-gray-500 font-mono uppercase tracking-widest leading-none">High Score</span>
-                            <span className="text-lg font-bold font-mono text-white">{highScore}</span>
-                        </div>
+                <div className="flex items-center gap-3">
+                    <ShieldAlert className="w-5 h-5 animate-pulse text-green-400" />
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs font-bold tracking-widest text-white drop-shadow-[0_0_5px_rgba(34,197,94,0.8)]">
+                            ENCRYPTED SANDBOX
+                        </span>
+                        <span className="text-[9px] text-green-500/80 uppercase tracking-widest">
+                            Decryption Matrix
+                        </span>
                     </div>
                 </div>
+                <div className="w-6 hidden md:block opacity-0"></div>
+            </header>
 
-                {/* GAME CANVAS */}
-                <div className="relative w-full aspect-video md:aspect-[21/9] bg-zinc-950 border border-orange-500/30 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(234,88,12,0.1)] group">
-                    <canvas
-                        ref={canvasRef}
-                        width={800}
-                        height={400}
-                        className="w-full h-full object-cover cursor-pointer"
-                        onPointerDown={() => {
-                            if (!isPlaying && !gameOver) {
-                                startGame();
-                            } else {
-                                jump();
-                            }
-                        }}
-                    />
+            <main className="flex-1 w-full max-w-2xl relative z-10 flex flex-col items-center justify-center p-4 min-h-[80vh]">
 
-                    {/* Pre-Game Overlay */}
-                    {!isPlaying && !gameOver && (
-                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-[100] p-6 text-center">
-                            <div className="w-16 h-16 rounded-full bg-orange-900/30 border border-orange-500 flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(234,88,12,0.4)] animate-pulse">
-                                <Flame className="w-8 h-8 text-orange-500" />
-                            </div>
-                            <h2 className="font-ritual text-3xl md:text-5xl text-white tracking-widest mb-2 shadow-black drop-shadow-xl">SURVIVE THE DESCENT</h2>
-                            <p className="text-[10px] md:text-xs text-gray-300 font-mono uppercase tracking-[0.2em] max-w-lg mb-8 leading-relaxed">
-                                Guide your Soul Spark through the Obsidian Pillars. The longer you endure, the more raw Sanctum Power (SP) you extract for your wallet.
+                {/* PRE-GAME STATE */}
+                {!gameState.isPlaying && !gameState.gameOver && (
+                    <div className="w-full flex justify-center items-center h-full">
+                        <div className="w-full glass bg-black/60 border border-green-500/30 rounded-2xl p-8 flex flex-col items-center text-center shadow-[0_0_50px_rgba(34,197,94,0.1)] relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent animate-pulse"></div>
+
+                            <Cpu className="w-16 h-16 text-green-500 mb-6 drop-shadow-[0_0_15px_rgba(34,197,94,0.8)]" />
+                            <h2 className="text-2xl md:text-4xl text-white font-bold tracking-widest mb-4">Uplink Established</h2>
+                            <p className="text-xs text-green-400/80 max-w-md leading-relaxed mb-8">
+                                Connect to the Sanctum mainframe and sequence the decryption hashes before the firewall detects the breach. Successful node fractures grant raw Sanctum Power (SP).
                             </p>
-                            <button
-                                onClick={startGame}
-                                className="px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-orange-600 to-orange-800 text-white font-bold rounded-xl text-xs uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(234,88,12,0.5)] hover:scale-105 transition-all flex items-center gap-3 border border-orange-400"
-                            >
-                                <Play className="w-5 h-5" fill="currentColor" /> INITIATE EXTRACTION
-                            </button>
-                            <p className="text-[8px] text-gray-500 font-mono mt-6 uppercase tracking-widest">Controls: Click, Tap, or Spacebar to Jump</p>
+
+                            <div className="w-full flex flex-col md:flex-row gap-4 justify-center">
+                                {(["INITIATE", "ARCHITECT", "SOVEREIGN"] as DifficultyLevel[]).map((level) => (
+                                    <button
+                                        key={level}
+                                        onMouseEnter={playHover}
+                                        onClick={() => startGame(level)}
+                                        className="flex-1 border border-green-500/40 bg-green-950/20 hover:bg-green-500/20 text-green-400 hover:text-green-300 py-4 px-6 rounded-xl text-[10px] font-bold tracking-widest transition-all hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] flex flex-col items-center gap-2"
+                                    >
+                                        <Lock className="w-4 h-4" />
+                                        {level} PROTOCOL
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Game Over Overlay */}
-                    {gameOver && (
-                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-black/90 backdrop-blur-md z-[100] animate-fade-in p-6 text-center">
-                            <h2 className="font-ritual text-5xl text-red-500 tracking-widest mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">SPARK EXTINGUISHED</h2>
-                            <p className="text-xl font-mono text-white mb-6">Final Score: <span className="text-orange-500 font-bold">{score}</span></p>
+                {/* ACTIVE GAME STATE */}
+                {gameState.isPlaying && (
+                    <div ref={gameContainerRef} className="w-full flex justify-center items-start pt-8 pb-32">
+                        <div className="w-full max-w-sm flex flex-col gap-8">
 
-                            <div className="glass bg-white/5 border border-white/10 rounded-xl p-4 mb-8 flex flex-col items-center min-w-[200px]">
-                                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mb-1">Yield Extracted</span>
-                                <div className="flex items-center gap-2">
-                                    <Zap className="w-6 h-6 text-orange-400" />
-                                    <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600">+{soulPowerEarned} SP</span>
+                            {/* HUD */}
+                            <div className="flex justify-between items-center bg-black/50 border border-green-500/30 rounded-xl p-4">
+                                <div>
+                                    <span className="block text-[8px] text-green-500/60 uppercase tracking-widest">Score</span>
+                                    <span className="text-xl text-white font-bold">{gameState.score}</span>
                                 </div>
-                                {saving && <span className="text-[8px] text-orange-500 animate-pulse mt-2 uppercase">Depositing to Wallet...</span>}
-                                {!saving && soulPowerEarned > 0 && <span className="text-[8px] text-green-500 mt-2 uppercase">Secured in Lumen Wallet</span>}
+                                <div className="text-right">
+                                    <span className="block text-[8px] text-green-500/60 uppercase tracking-widest">Breach Timer</span>
+                                    <span ref={timerRef} className="text-2xl text-green-400 font-bold tracking-wider">{gameState.timeLeft}s</span>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={startGame}
-                                disabled={saving}
-                                className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-xl text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50"
-                            >
-                                Dive Again
-                            </button>
-                        </div>
-                    )}
-                </div>
+                            {/* Sequence Display */}
+                            <div className="flex flex-col items-center gap-4">
+                                <span className="text-[10px] text-green-500/80 uppercase tracking-widest">Target Sequence</span>
+                                <div className="flex gap-2 flex-wrap justify-center">
+                                    {gameState.targetSequence.map((num, i) => {
+                                        const isCompleted = i < gameState.currentInput.length;
+                                        const isActive = i === gameState.currentInput.length;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`w-10 h-12 flex items-center justify-center rounded-lg border text-lg font-bold transition-all duration-300
+                                                ${isCompleted ? 'bg-green-500/20 text-green-300 border-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.4)]' :
+                                                        isActive ? 'bg-white/10 text-white border-white/50 animate-pulse' :
+                                                            'bg-black/50 text-zinc-600 border-green-900/30'}`}
+                                            >
+                                                {isCompleted ? num : '?'}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
 
-                <div className="mt-8 flex flex-col items-center max-w-2xl px-4 gap-4 z-[200] relative">
-                    {/* Fallback override button just in case the overlay visually glitches but DOM is present */}
-                    {!isPlaying && !gameOver && (
-                        <button onClick={startGame} className="px-6 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded shadow-[0_0_15px_rgba(234,88,12,0.6)] text-xs uppercase tracking-widest flex items-center gap-2 transition-all">
-                            <Play className="w-4 h-4" /> START TRIAL MANUALLY
-                        </button>
-                    )}
-                    <p className="text-[9px] text-gray-500 font-mono uppercase tracking-widest leading-relaxed text-center">
-                        The Trial is a proving ground for Initiates to forge raw energy. Sanctum Power (SP) can be pledged in The Pool to fund mutual aid petitions or used to unlock premium artifacts in the Vault.
-                    </p>
-                </div>
+                            {/* Keypad */}
+                            <div className="grid grid-cols-3 gap-3">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => handleInput(num)}
+                                        className="h-16 bg-green-950/30 border border-green-500/20 hover:border-green-400/80 hover:bg-green-900/50 text-white text-2xl font-bold rounded-xl active:scale-95 transition-all outline-none"
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* GAME OVER STATE */}
+                {gameState.gameOver && (
+                    <div className="w-full h-full flex items-center justify-center animate-fade-in relative z-[100]">
+                        <div className="glass bg-zinc-950 border border-green-500/50 rounded-2xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(34,197,94,0.2)]">
+                            <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                            <h2 className="text-2xl text-white font-bold tracking-widest mb-1">FIREWALL TRIGGERED</h2>
+                            <p className="text-xs text-gray-400 mb-6 uppercase tracking-widest">Connection Terminated</p>
+
+                            <div className="bg-black/80 rounded-xl p-4 mb-6 border border-white/5">
+                                <span className="block text-[9px] text-green-500/60 uppercase tracking-widest mb-1">Final Score</span>
+                                <span className="text-3xl font-bold text-white">{gameState.score}</span>
+                            </div>
+
+                            <div className="flex flex-col items-center justify-center gap-2 mb-8 bg-green-900/10 py-4 rounded-xl border border-green-500/20">
+                                <span className="text-[10px] text-green-500/80 uppercase tracking-widest">Yield Extracted</span>
+                                <div className="flex items-center gap-2">
+                                    <Zap className="w-5 h-5 text-green-400 animate-pulse" />
+                                    <span className="text-2xl font-bold text-green-400">+{gameState.earnedSP} SP</span>
+                                </div>
+                                {saving ? (
+                                    <span className="text-[8px] text-green-500 animate-pulse uppercase tracking-widest">Encrypting transfer...</span>
+                                ) : (
+                                    <span className="text-[8px] text-gray-400 uppercase tracking-widest">Secured in Lumen Wallet</span>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => router.push('/sanctum')}
+                                    className="flex-1 py-3 text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-white border border-white/10 hover:border-white/30 rounded-xl transition-all"
+                                >
+                                    Log Out
+                                </button>
+                                <button
+                                    onClick={() => setGameState(prev => ({ ...prev, isPlaying: false, gameOver: false }))}
+                                    disabled={saving}
+                                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-black font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    <Unlock className="w-4 h-4" /> Re-Connect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );
