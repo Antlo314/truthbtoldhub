@@ -3,14 +3,49 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function SanctumHub() {
     const router = useRouter();
 
-    const handleSignOut = () => {
-        // Supabase auth sign-out logic will go here
+    const [userAuth, setUserAuth] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                router.push('/');
+            } else {
+                setUserAuth(session.user);
+                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                if (data) setProfile(data);
+            }
+        };
+
+        checkUser();
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                router.push('/');
+            } else if (session && !userAuth) {
+                checkUser();
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, [router, userAuth]);
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
         router.push('/');
     };
+
+    const displayName = profile?.display_name || profile?.username || 'Guest Soul';
+    const currentPower = profile?.soul_power || 100;
+    const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">

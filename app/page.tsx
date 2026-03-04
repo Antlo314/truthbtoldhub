@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 
@@ -13,6 +13,26 @@ export default function Gateway() {
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+
+    useEffect(() => {
+        // Check active session on mount
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                router.push('/sanctum');
+            }
+        });
+
+        // Listen for auth changes (e.g., successful login)
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                router.push('/sanctum');
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, [router]);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,7 +53,9 @@ export default function Gateway() {
             }
         } catch (err: any) {
             console.error(err.message);
-            setErrorMsg(err.message || 'Authentication failed.');
+            const msg = err.message || 'Authentication failed.';
+            setErrorMsg(msg);
+            alert("LOGIN FAILED: " + msg + "\nDouble check your email and password.");
         } finally {
             setLoading(false);
         }
@@ -67,7 +89,9 @@ export default function Gateway() {
             }
         } catch (err: any) {
             console.error(err.message);
-            setErrorMsg(err.message || 'Registration failed.');
+            const msg = err.message || 'Registration failed.';
+            setErrorMsg(msg);
+            alert("SIGNUP FAILED: " + msg + "\nIf it says 'Failed to fetch', your browser adblocker or shield is blocking Supabase!");
         } finally {
             setLoading(false);
         }

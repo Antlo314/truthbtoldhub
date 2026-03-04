@@ -3,13 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers } from 'lucide-react';
+import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard } from 'lucide-react';
 
 export default function PowerSelf() {
     const router = useRouter();
 
-    // Mock auth state for UI development
-    const [isAdminState, setIsAdminState] = useState(false);
     const [activeTab, setActiveTab] = useState('profile'); // profile | wallet | admin
 
     const [userAuth, setUserAuth] = useState<any>(null);
@@ -31,15 +29,12 @@ export default function PowerSelf() {
         fetchIdentity();
     }, []);
 
-    const isAdmin = profile?.tier === 'Architect' || isAdminState;
+    const isAdmin = profile?.tier === 'Architect';
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const userEmail = userAuth?.email || 'guest@obsidianvoid.net';
     const currentTier = profile?.tier || 'Initiate';
     const currentPower = profile?.soul_power || 100;
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
-
-    // Toggle for testing admin view easily
-    const toggleAdmin = () => setIsAdminState(!isAdminState);
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col">
@@ -59,9 +54,7 @@ export default function PowerSelf() {
                         Identity & Authority
                     </span>
                 </div>
-                <button onClick={toggleAdmin} className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isAdmin ? 'bg-red-950/50 border-red-500 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:border-white/30'}`}>
-                    <ShieldAlert className="w-4 h-4" />
-                </button>
+                <div className="w-8 h-8"></div> {/* Spacer for symmetry */}
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32 max-w-4xl mx-auto w-full animate-fade-in space-y-8">
@@ -153,16 +146,39 @@ export default function PowerSelf() {
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
                                     <User className="w-4 h-4 text-orange-500" /> Account Security
                                 </h3>
-                                <form className="space-y-4">
+                                <form className="space-y-4" onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    const nameVal = formData.get('identityName') as string;
+                                    const passVal = formData.get('newCipher') as string;
+                                    let msg = "Processing Updates...\n";
+
+                                    if (nameVal && nameVal !== displayName) {
+                                        const { error } = await supabase.from('profiles').update({ display_name: nameVal }).eq('id', userAuth.id);
+                                        if (error) msg += "Failed to update Name: " + error.message + "\n";
+                                        else msg += "Identity Name Updated.\n";
+                                    }
+
+                                    if (passVal) {
+                                        const { error } = await supabase.auth.updateUser({ password: passVal });
+                                        if (error) msg += "Failed to update Cipher: " + error.message + "\n";
+                                        else msg += "Cipher Successfully Changed!\n";
+                                    }
+
+                                    alert(msg);
+                                    if (passVal) {
+                                        (e.target as HTMLFormElement).reset();
+                                    }
+                                }}>
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Identity Name</label>
-                                        <input type="text" defaultValue={displayName} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                        <input name="identityName" type="text" defaultValue={displayName} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Update Cipher (Password)</label>
-                                        <input type="password" placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors tracking-widest" />
+                                        <input name="newCipher" type="password" placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors tracking-widest" />
                                     </div>
-                                    <button type="button" className="w-full mt-4 btn-ember py-3 rounded-lg text-[10px] uppercase font-bold tracking-widest">
+                                    <button type="submit" className="w-full mt-4 btn-ember py-3 rounded-lg text-[10px] uppercase font-bold tracking-widest">
                                         Save Changes
                                     </button>
                                 </form>
@@ -223,31 +239,96 @@ export default function PowerSelf() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                                {/* Admin Card */}
-                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl group cursor-pointer">
-                                    <Database className="w-8 h-8 text-red-500 mb-4 group-hover:scale-110 transition-transform" />
-                                    <h4 className="font-ritual text-lg text-white tracking-widest mb-2">Cycle Management</h4>
-                                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-relaxed">
-                                        Initiate or close global voting cycles for The Stage.
-                                    </p>
+                                {/* Films / Cineworks Admin Form */}
+                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl">
+                                    <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                                        <Clapperboard className="w-5 h-5 text-red-500" />
+                                        <h4 className="font-ritual text-lg text-white tracking-widest uppercase">Content Pillars</h4>
+                                    </div>
+                                    <form className="space-y-4" onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.currentTarget);
+                                        const title = formData.get('title') as string;
+                                        const duration = formData.get('duration') as string;
+                                        const format = formData.get('format') as string;
+                                        const video_url = formData.get('video_url') as string;
+                                        const thumbnail_url = formData.get('thumbnail_url') as string;
+
+                                        const { error } = await supabase.from('films').insert([{
+                                            title, duration, format, video_url, thumbnail_url
+                                        }]);
+
+                                        if (error) alert("Error adding film: " + error.message);
+                                        else { alert("Film added to the Gallery!"); (e.target as HTMLFormElement).reset(); }
+                                    }}>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Film Title</label>
+                                            <input name="title" required placeholder="e.g. THE FALL OF BABYLON" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Runtime</label>
+                                                <input name="duration" required placeholder="e.g. 15:00" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Format</label>
+                                                <input name="format" required defaultValue="4K" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Video Storage URL</label>
+                                            <input name="video_url" placeholder="https://..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Thumbnail URL</label>
+                                            <input name="thumbnail_url" placeholder="https://..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <button type="submit" className="w-full bg-red-950/40 text-red-500 border border-red-500/30 font-bold py-3 rounded-lg text-[10px] uppercase tracking-widest hover:bg-red-900/60 transition-colors mt-2">
+                                            Inject to Gallery
+                                        </button>
+                                    </form>
                                 </div>
 
-                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl group cursor-pointer">
-                                    <Layers className="w-8 h-8 text-red-500 mb-4 group-hover:scale-110 transition-transform" />
-                                    <h4 className="font-ritual text-lg text-white tracking-widest mb-2">Content Pillars</h4>
-                                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-relaxed">
-                                        Upload new items to the Stage or Gallery.
-                                    </p>
-                                </div>
+                                {/* Petitions / Treasury Admin Form */}
+                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl">
+                                    <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                                        <Database className="w-5 h-5 text-red-500" />
+                                        <h4 className="font-ritual text-lg text-white tracking-widest uppercase">Treasury Petitions</h4>
+                                    </div>
+                                    <form className="space-y-4" onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.currentTarget);
+                                        const title = formData.get('title') as string;
+                                        const description = formData.get('description') as string;
+                                        const amount_requested = parseFloat(formData.get('amount') as string);
 
-                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl group cursor-pointer">
-                                    <Zap className="w-8 h-8 text-red-500 mb-4 group-hover:scale-110 transition-transform" />
-                                    <h4 className="font-ritual text-lg text-white tracking-widest mb-2">System Broadcasts</h4>
-                                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest leading-relaxed">
-                                        Update the marquee or dispatch global notifications.
-                                    </p>
+                                        // As an Architect, you can lodge petitions on behalf of the system or yourself
+                                        const { error } = await supabase.from('petitions').insert([{
+                                            requester_id: userAuth.id,
+                                            title, description, amount_requested, status: 'Consensus Building'
+                                        }]);
+
+                                        if (error) alert("Error adding petition: " + error.message);
+                                        else { alert("Petition submitted to The Pool!"); (e.target as HTMLFormElement).reset(); }
+                                    }}>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Petition Concept</label>
+                                            <input name="title" required placeholder="e.g. Server Infrastructure Grant" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Request Amount (USD)</label>
+                                            <input name="amount" type="number" step="0.01" required placeholder="500.00" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Justification / Details</label>
+                                            <textarea name="description" required rows={3} placeholder="Describe the need..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none resize-none"></textarea>
+                                        </div>
+                                        <button type="submit" className="w-full bg-red-950/40 text-red-500 border border-red-500/30 font-bold py-3 rounded-lg text-[10px] uppercase tracking-widest hover:bg-red-900/60 transition-colors mt-2">
+                                            Lodge Petition
+                                        </button>
+                                    </form>
                                 </div>
 
                             </div>
