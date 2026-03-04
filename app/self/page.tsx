@@ -7,6 +7,7 @@ import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { ethers } from 'ethers';
 
 // --- AUDIO ASSETS ---
 let uiHoverSfx: any = null;
@@ -22,6 +23,12 @@ export default function PowerSelf() {
     const router = useRouter();
 
     const [activeTab, setActiveTab] = useState('profile'); // profile | wallet | admin
+
+    // Lumen Wallet Dual-Gateway States
+    const [walletAction, setWalletAction] = useState<'deposit' | 'withdraw'>('deposit');
+    const [paymentMethod, setPaymentMethod] = useState<'fiat' | 'crypto'>('fiat');
+    const [isProcessingTx, setIsProcessingTx] = useState(false);
+    const [depositAmount, setDepositAmount] = useState<string>('');
 
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
@@ -125,6 +132,59 @@ export default function PowerSelf() {
             alert('Error uploading avatar: ' + error.message);
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleGatewayInit = async () => {
+        playClick();
+        if (!depositAmount || Number(depositAmount) <= 0) {
+            alert("Enter a valid liquidity amount.");
+            return;
+        }
+
+        if (paymentMethod === 'fiat') {
+            // Stripe Gateway initialization
+            try {
+                setIsProcessingTx(true);
+                const res = await fetch('/api/stripe/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: depositAmount, userId: userAuth?.id })
+                });
+
+                if (!res.ok) throw new Error("Stripe keys missing or route err");
+
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url; // Redirect to Stripe
+                }
+            } catch (err: any) {
+                alert(`Fiat Gateway Error: ${err.message}. Add STRIPE_SECRET_KEY to .env.local`);
+            } finally {
+                setIsProcessingTx(false);
+            }
+        } else {
+            // Web3 Crypto Gateway initialization
+            setIsProcessingTx(true);
+            try {
+                // @ts-ignore - window.ethereum is injected by MetaMask
+                if (typeof window.ethereum !== 'undefined') {
+                    // @ts-ignore
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    // @ts-ignore
+                    const provider = new ethers.BrowserProvider(window.ethereum);
+                    const signer = await provider.getSigner();
+                    const address = await signer.getAddress();
+                    alert(`Web3 Uplink Established. Discovered wallet signature: ${address.substring(0, 6)}...${address.substring(address.length - 4)}`);
+                    // In a full implementation, you'd trigger a Smart Contract `deposit` here
+                } else {
+                    alert('MetaMask or Web3 Wallet provider not detected in browser.');
+                }
+            } catch (err: any) {
+                alert('Web3 Connection Terminated: ' + err.message);
+            } finally {
+                setIsProcessingTx(false);
+            }
         }
     };
 
@@ -344,32 +404,105 @@ export default function PowerSelf() {
 
                     {/* WALLET TAB */}
                     {activeTab === 'wallet' && (
-                        <div className="glass bg-white/5 border border-white/10 p-8 rounded-3xl relative overflow-hidden">
+                        <div className="glass bg-white/5 border border-white/10 p-4 md:p-8 rounded-3xl relative overflow-hidden">
                             <div className="absolute -top-24 -right-24 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
 
-                            <div className="flex flex-col items-center justify-center text-center py-12 space-y-4">
-                                <div className="w-16 h-16 rounded-full bg-orange-950/40 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.2)] mb-4">
-                                    <Zap className="w-8 h-8" />
+                            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6 border-b border-white/5 pb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-orange-950/40 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.2)] shrink-0">
+                                        <Zap className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <h2 className="font-ritual text-3xl text-white tracking-widest">LUMEN WALLET</h2>
+                                        <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase mt-1">
+                                            Universal Energy Gateway
+                                        </p>
+                                    </div>
                                 </div>
-                                <h2 className="font-ritual text-4xl text-white tracking-widest">LUMEN WALLET</h2>
-                                <p className="text-xs text-gray-400 font-mono tracking-widest uppercase max-w-sm">
-                                    Your energetic currency within the Obsidian Void ecosystem.
-                                </p>
-
-                                <div className="mt-8 mb-4 px-12 py-6 glass bg-black/40 border border-orange-500/30 rounded-2xl flex flex-col gap-2">
-                                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Current Balance</span>
-                                    <span className="font-ritual text-5xl text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                                        {currentPower} SP
+                                <div className="text-right">
+                                    <span className="text-[9px] text-gray-500 font-mono uppercase tracking-widest block mb-1">Available Liquidity</span>
+                                    <span className="font-ritual text-4xl text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)] leading-none">
+                                        {currentPower} <span className="text-2xl text-orange-500/80">SP</span>
                                     </span>
                                 </div>
+                            </div>
 
+                            {/* Wallet Action Toggle */}
+                            <div className="flex p-1 bg-black/40 border border-white/10 rounded-xl mb-8 max-w-sm mx-auto">
                                 <button
-                                    onMouseEnter={playHover}
-                                    onClick={playClick}
-                                    className="px-8 py-3 bg-white text-black font-bold uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-gray-200 hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] mt-6"
+                                    onClick={() => { playClick(); setWalletAction('deposit'); }}
+                                    className={`w-1/2 py-2 text-[10px] uppercase font-bold tracking-widest rounded-lg transition-all ${walletAction === 'deposit' ? 'bg-orange-500 text-black shadow-[0_0_15px_rgba(234,88,12,0.5)]' : 'text-gray-400 hover:text-white'}`}
                                 >
-                                    MINT NEW ENERGY
+                                    Deposit
                                 </button>
+                                <button
+                                    onClick={() => { playClick(); setWalletAction('withdraw'); }}
+                                    className={`w-1/2 py-2 text-[10px] uppercase font-bold tracking-widest rounded-lg transition-all ${walletAction === 'withdraw' ? 'bg-zinc-800 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'text-gray-400 hover:text-white'}`}
+                                >
+                                    Withdraw
+                                </button>
+                            </div>
+
+                            {/* Payment Method Toggle */}
+                            <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto mb-8">
+                                <button
+                                    onClick={() => { playClick(); setPaymentMethod('fiat'); }}
+                                    className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 ${paymentMethod === 'fiat' ? 'bg-blue-950/20 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'bg-black/40 border-white/10 opacity-50 hover:opacity-100'}`}
+                                >
+                                    <span className="text-2xl">💳</span>
+                                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">Fiat (Stripe)</span>
+                                </button>
+                                <button
+                                    onClick={() => { playClick(); setPaymentMethod('crypto'); }}
+                                    className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 ${paymentMethod === 'crypto' ? 'bg-purple-950/20 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : 'bg-black/40 border-white/10 opacity-50 hover:opacity-100'}`}
+                                >
+                                    <span className="text-2xl">💎</span>
+                                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">Web3 (Crypto)</span>
+                                </button>
+                            </div>
+
+                            {/* Transaction Form Engine */}
+                            <div className="max-w-md mx-auto aspect-video">
+                                {walletAction === 'deposit' ? (
+                                    <div className="space-y-4 animate-fade-in">
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={depositAmount}
+                                                onChange={(e) => setDepositAmount(e.target.value)}
+                                                placeholder="Amount..."
+                                                className="w-full bg-black/60 border border-orange-500/30 rounded-xl pl-12 pr-16 py-4 text-2xl text-white font-ritual focus:outline-none focus:border-orange-500 transition-colors placeholder:text-gray-700 placeholder:font-sans placeholder:text-base"
+                                            />
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-ritual text-2xl">$</span>
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-mono tracking-widest uppercase">USD</span>
+                                        </div>
+                                        <p className="text-center text-[9px] text-orange-500/70 font-mono tracking-widest uppercase">
+                                            Est. Output: {(Number(depositAmount) * 100).toLocaleString()} Lumen (SP)
+                                        </p>
+                                        <button
+                                            onMouseEnter={playHover}
+                                            onClick={handleGatewayInit}
+                                            disabled={isProcessingTx}
+                                            className={`w-full py-4 rounded-xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all flex items-center justify-center gap-2 ${paymentMethod === 'fiat' ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]'} ${isProcessingTx ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            {isProcessingTx ? 'Processing...' : (paymentMethod === 'fiat' ? 'Initialize Stripe Checkout' : 'Connect Web3 Wallet')}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 animate-fade-in text-center p-6 border border-zinc-800 rounded-2xl bg-black/40">
+                                        <Database className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Withdrawal Protocol</h3>
+                                        <p className="text-[10px] text-gray-400 font-mono leading-relaxed mt-2 text-left">
+                                            Requesting liquidity exit requires a minimum of <strong className="text-orange-500">10,000 SP</strong>. Validated withdrawals are processed to your linked identity {paymentMethod === 'fiat' ? 'bank account via Stripe Connect' : 'crypto wallet via Smart Contract payout'}.
+                                        </p>
+                                        <button
+                                            disabled
+                                            className="w-full mt-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-600 uppercase tracking-widest text-[9px] font-bold rounded-lg cursor-not-allowed"
+                                        >
+                                            Insufficient Liquidity
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
