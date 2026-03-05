@@ -423,6 +423,30 @@ export default function Treasury() {
         }
     };
 
+    const handleAdminErase = async (petitionId: string) => {
+        if (!userAuth || !isAdmin) return;
+
+        if (!confirm("Are you sure you want to completely erase this petition from The Pool?")) return;
+
+        try {
+            const { error } = await supabase.from('petitions')
+                .delete()
+                .eq('id', petitionId);
+
+            if (error) throw error;
+
+            setPetitions(petitions.filter(p => p.id !== petitionId));
+
+            // Audio & visual fallback
+            playSuccess();
+
+        } catch (err: any) {
+            console.error("Admin erase failed:", err);
+            playError();
+            alert("Error erasing petition: " + err.message);
+        }
+    };
+
     // Deprecated static derived formatting (Handled by GSAP now)
     const formattedEscrow = typeof escrow === 'number'
         ? escrow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -636,6 +660,13 @@ export default function Treasury() {
                                             className="flex-1 py-1.5 bg-red-900/30 border border-red-500/30 rounded text-[9px] text-red-400 font-bold uppercase tracking-widest hover:bg-red-900/50"
                                         >
                                             Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleAdminErase(pet.id)}
+                                            className="flex-1 py-1.5 bg-zinc-900/50 border border-zinc-500/30 rounded text-[9px] text-zinc-400 font-bold uppercase tracking-widest hover:bg-red-900/80 hover:text-red-400 hover:border-red-500/50 transition-colors"
+                                            title="Erase from Void"
+                                        >
+                                            Erase
                                         </button>
                                     </div>
                                 )}
