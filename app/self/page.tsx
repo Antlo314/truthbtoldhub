@@ -637,6 +637,43 @@ export default function PowerSelf() {
                                     </form>
                                 </div>
 
+                                {/* Architect Promotion Form */}
+                                <div className="glass bg-white/5 border border-white/10 hover:border-red-500/30 transition-colors p-6 rounded-2xl lg:col-span-2">
+                                    <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+                                        <ShieldAlert className="w-5 h-5 text-red-500" />
+                                        <h4 className="font-ritual text-lg text-white tracking-widest uppercase">Promote Soul to Architect</h4>
+                                    </div>
+                                    <form className="space-y-4" onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const formData = new FormData(e.currentTarget);
+                                        const soulIdentifier = formData.get('identifier') as string;
+
+                                        // Find user by display_name
+                                        const { data: users, error: searchError } = await supabase.from('profiles')
+                                            .select('id, display_name')
+                                            .ilike('display_name', soulIdentifier);
+
+                                        if (searchError || !users || users.length === 0) {
+                                            alert("Soul not found in the matrix. Ensure exact spelling of their Identity Name.");
+                                            return;
+                                        }
+
+                                        const targetId = users[0].id;
+                                        const { error } = await supabase.from('profiles').update({ tier: 'Architect' }).eq('id', targetId);
+
+                                        if (error) alert("Error upgrading soul: " + error.message);
+                                        else { alert(`Success: ${users[0].display_name} has ascended to Architect.`); (e.target as HTMLFormElement).reset(); }
+                                    }}>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Identity Name</label>
+                                            <input name="identifier" required placeholder="e.g. Neo" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500 outline-none" />
+                                        </div>
+                                        <button type="submit" className="w-full md:w-auto bg-red-950/40 text-red-500 border border-red-500/30 font-bold py-3 px-8 rounded-lg text-[10px] uppercase tracking-widest hover:bg-red-900/60 transition-colors mt-2">
+                                            Execute Ascension
+                                        </button>
+                                    </form>
+                                </div>
+
                             </div>
                         </div>
                     )}
