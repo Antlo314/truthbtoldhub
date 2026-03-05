@@ -73,36 +73,8 @@ Current user context (where they are right now): ${context}
             cleanText = text.replace(routeMatch[0], '').trim();
         }
 
+        // Ensure no audio is returned to save costs
         let audioBase64 = null;
-        if (ELEVENLABS_API_KEY && !message.startsWith('System:')) {
-            try {
-                // Generate TTS audio via direct REST API to avoid Next.js module build issues
-                const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELDER_VOICE_ID}?output_format=mp3_44100_128`, {
-                    method: 'POST',
-                    headers: {
-                        'xi-api-key': ELEVENLABS_API_KEY,
-                        'Content-Type': 'application/json',
-                        'Accept': 'audio/mpeg'
-                    },
-                    body: JSON.stringify({
-                        text: cleanText,
-                        model_id: "eleven_monolingual_v1",
-                        voice_settings: { stability: 0.8, similarity_boost: 0.8 }
-                    })
-                });
-
-                if (ttsResponse.ok) {
-                    const arrayBuffer = await ttsResponse.arrayBuffer();
-                    const buffer = Buffer.from(arrayBuffer);
-                    audioBase64 = buffer.toString('base64');
-                } else {
-                    console.error("ElevenLabs HTTP Error:", await ttsResponse.text());
-                }
-            } catch (ttsErr) {
-                console.error("ElevenLabs Fetch Error:", ttsErr);
-                // Fail gracefully without TTS
-            }
-        }
 
         return NextResponse.json({ message: cleanText, route: routeAction, audio: audioBase64 });
     } catch (error: any) {
