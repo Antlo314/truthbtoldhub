@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS system_announcements CASCADE;
 DROP TABLE IF EXISTS votes CASCADE;
 DROP TABLE IF EXISTS vote_cycles CASCADE;
 DROP TABLE IF EXISTS codex_whispers CASCADE;
+DROP TABLE IF EXISTS codex_replies CASCADE;
 
 -- ==========================================
 -- 3. UPGRADE EXISTING PROFILES (DO NOT DROP)
@@ -42,6 +43,14 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='bio') THEN
         ALTER TABLE profiles ADD COLUMN bio TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='custom_title') THEN
+        ALTER TABLE profiles ADD COLUMN custom_title TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='theme_color') THEN
+        ALTER TABLE profiles ADD COLUMN theme_color TEXT DEFAULT 'sky';
     END IF;
 END $$;
 
@@ -115,6 +124,15 @@ CREATE TABLE codex_whispers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- THE CODEX: REPLIES
+CREATE TABLE codex_replies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    whisper_id UUID REFERENCES codex_whispers(id) ON DELETE CASCADE,
+    author_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ==========================================
 -- 4. RLS (Row Level Security) POLICIES
 -- ==========================================
@@ -126,6 +144,7 @@ ALTER TABLE petition_votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE films ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE codex_whispers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE codex_replies ENABLE ROW LEVEL SECURITY;
 
 -- Basic Public Read Policies (Customize as needed)
 CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING (true);
@@ -133,10 +152,12 @@ CREATE POLICY "Treasury is visible to all." ON treasury_escrow FOR SELECT USING 
 CREATE POLICY "Petitions are visible to all." ON petitions FOR SELECT USING (true);
 CREATE POLICY "Films are visible to all." ON films FOR SELECT USING (true);
 CREATE POLICY "Codex whispers are visible to all." ON codex_whispers FOR SELECT USING (true);
+CREATE POLICY "Codex replies are visible to all." ON codex_replies FOR SELECT USING (true);
 
 -- Codex Write Policies
 CREATE POLICY "Users can insert their own whispers" ON codex_whispers FOR INSERT WITH CHECK (auth.uid() = author_id);
 CREATE POLICY "Authenticated users can update whisper alignments" ON codex_whispers FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert their own replies" ON codex_replies FOR INSERT WITH CHECK (auth.uid() = author_id);
 
 -- User Update Policies
 DO $$

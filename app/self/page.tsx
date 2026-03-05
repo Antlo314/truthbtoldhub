@@ -278,7 +278,10 @@ export default function PowerSelf() {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-gray-400 font-mono tracking-widest">{userEmail}</p>
+                            <p className="text-xs text-gray-400 font-mono tracking-widest leading-relaxed">
+                                {profile?.custom_title && <span className="block text-orange-500 mb-1">{profile.custom_title}</span>}
+                                {profile?.bio || userEmail}
+                            </p>
 
                             <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 pt-4 border-t border-white/5">
                                 <div className="flex items-center gap-2">
@@ -358,6 +361,27 @@ export default function PowerSelf() {
                                         else msg += "Username Updated.\n";
                                     }
 
+                                    const titleVal = formData.get('customTitle') as string;
+                                    if (titleVal !== undefined && titleVal !== (profile?.custom_title || '')) {
+                                        const { error } = await supabase.from('profiles').update({ custom_title: titleVal }).eq('id', userAuth.id);
+                                        if (error) msg += "Failed to update Title: " + error.message + "\n";
+                                        else msg += "Title Updated.\n";
+                                    }
+
+                                    const bioVal = formData.get('bio') as string;
+                                    if (bioVal !== undefined && bioVal !== (profile?.bio || '')) {
+                                        const { error } = await supabase.from('profiles').update({ bio: bioVal }).eq('id', userAuth.id);
+                                        if (error) msg += "Failed to update Bio: " + error.message + "\n";
+                                        else msg += "Bio Updated.\n";
+                                    }
+
+                                    const colorVal = formData.get('themeColor') as string;
+                                    if (colorVal && colorVal !== profile?.theme_color) {
+                                        const { error } = await supabase.from('profiles').update({ theme_color: colorVal }).eq('id', userAuth.id);
+                                        if (error) msg += "Failed to update Theme: " + error.message + "\n";
+                                        else msg += "Theme Updated.\n";
+                                    }
+
                                     if (passVal) {
                                         const { error } = await supabase.auth.updateUser({ password: passVal });
                                         if (error) msg += "Failed to update Cipher: " + error.message + "\n";
@@ -380,6 +404,29 @@ export default function PowerSelf() {
                                     <div className="space-y-1">
                                         <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Update Cipher (Password)</label>
                                         <input name="newCipher" type="password" placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors tracking-widest" />
+                                    </div>
+                                    <div className="pt-4 border-t border-white/10">
+                                        <h4 className="text-[10px] uppercase font-bold tracking-widest text-orange-500 mb-4">Aesthetics & Lore</h4>
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Custom Title</label>
+                                                <input name="customTitle" type="text" defaultValue={profile?.custom_title || ''} placeholder="e.g. Master of the Void" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Bio</label>
+                                                <textarea name="bio" defaultValue={profile?.bio || ''} placeholder="Tell the Sanctum your purpose..." rows={3} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors resize-none"></textarea>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Aura Color (Theme)</label>
+                                                <select name="themeColor" defaultValue={profile?.theme_color || 'sky'} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors appearance-none">
+                                                    <option value="sky">Sky Blue</option>
+                                                    <option value="orange">Ember Orange</option>
+                                                    <option value="purple">Void Purple</option>
+                                                    <option value="green">Matrix Green</option>
+                                                    <option value="red">Blood Red</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
                                     <button type="submit" className="w-full mt-4 btn-ember py-3 rounded-lg text-[10px] uppercase font-bold tracking-widest">
                                         Save Changes

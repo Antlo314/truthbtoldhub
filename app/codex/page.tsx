@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut } from 'lucide-react';
+import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut, MessageSquare, X, Trash2 } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -51,6 +51,29 @@ interface Whisper {
     isNew?: boolean;
     author_id?: string;
     avatar_url?: string;
+    replies?: Reply[];
+}
+
+interface Reply {
+    id: string;
+    whisper_id: string;
+    author: string;
+    author_id: string;
+    avatar_url?: string;
+    content: string;
+    timestamp: string;
+}
+
+interface ProfileOverview {
+    id: string;
+    display_name: string;
+    soul_power: number;
+    tier: string;
+    created_at: string;
+    avatar_url?: string;
+    bio?: string;
+    custom_title?: string;
+    theme_color?: string;
 }
 
 const MOCK_WHISPERS: Whisper[] = [
@@ -90,6 +113,17 @@ export default function Codex() {
     const [whispers, setWhispers] = useState<Whisper[]>(MOCK_WHISPERS);
     const [newWhisper, setNewWhisper] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Reply State
+    const [activeReplyBox, setActiveReplyBox] = useState<string | null>(null);
+    const [replyContent, setReplyContent] = useState('');
+    const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+    // Profile Modal State
+    const [selectedProfile, setSelectedProfile] = useState<ProfileOverview | null>(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+    const isAdmin = profile?.tier === 'Architect';
 
     // Telemetry State
     const [keystrokes, setKeystrokes] = useState<number[]>([]);
@@ -161,9 +195,9 @@ export default function Codex() {
         }
         checkAuth();
 
-        // 1. Fetch initial live whispers (assuming we have a 'codex_whispers' table, fallback to mock if none)
+        // 1. Fetch initial live whispers & replies (assuming we have a 'codex_whispers' table, fallback to mock if none)
         const fetchWhispers = async () => {
-            const { data, error } = await supabase.from('codex_whispers').select('*, author:profiles(display_name, avatar_url)').order('created_at', { ascending: false }).limit(50);
+            const { data, error } = await supabase.from('codex_whispers').select('*, author:profiles(display_name, avatar_url), codex_replies(*, author:profiles(display_name, avatar_url))').order('created_at', { ascending: false }).limit(50);
             if (data && data.length > 0 && !error) {
                 const formatted = data.map(w => ({
                     id: w.id,
@@ -173,7 +207,16 @@ export default function Codex() {
                     avatar_url: w.author?.avatar_url,
                     alignment: w.alignment || 0,
                     timestamp: new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isEncrypted: w.is_encrypted || false
+                    isEncrypted: w.is_encrypted || false,
+                    replies: (w.codex_replies || []).map((r: any) => ({
+                        id: r.id,
+                        whisper_id: r.whisper_id,
+                        author: r.author?.display_name || 'Anonymous',
+                        author_id: r.author_id,
+                        avatar_url: r.author?.avatar_url,
+                        content: r.content,
+                        timestamp: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    })).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                 }));
                 setWhispers(formatted);
             }
@@ -196,11 +239,11 @@ export default function Codex() {
                     alignment: payload.new.alignment || 0,
                     timestamp: "JUST NOW",
                     isEncrypted: payload.new.is_encrypted,
-                    isNew: true
+                    isNew: true,
+                    replies: []
                 };
 
                 setWhispers(prev => {
-                    // Prevent duplicates if we just inserted it locally
                     if (prev.find(w => w.id === newW.id)) return prev;
                     return [newW, ...prev.map(w => ({ ...w, isNew: false }))];
                 });
@@ -214,7 +257,40 @@ export default function Codex() {
             } else if (payload.eventType === 'DELETE') {
                 setWhispers(prev => prev.filter(w => w.id !== payload.old.id));
             }
-        }).subscribe();
+        });
+
+        // Listen for new and deleted Replies
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'codex_replies' }, async (payload) => {
+            if (payload.eventType === 'INSERT') {
+                const { data: profData } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.author_id).single();
+
+                const newR: Reply = {
+                    id: payload.new.id,
+                    whisper_id: payload.new.whisper_id,
+                    author: profData?.display_name || 'Anonymous',
+                    author_id: payload.new.author_id,
+                    avatar_url: profData?.avatar_url,
+                    content: payload.new.content,
+                    timestamp: "JUST NOW"
+                };
+
+                setWhispers(prev => prev.map(w => {
+                    if (w.id === newR.whisper_id) {
+                        // Prevent duplicate if we just created it locally
+                        if (w.replies?.find(r => r.id === newR.id)) return w;
+                        return { ...w, replies: [...(w.replies || []), newR] };
+                    }
+                    return w;
+                }));
+            } else if (payload.eventType === 'DELETE') {
+                setWhispers(prev => prev.map(w => ({
+                    ...w,
+                    replies: w.replies?.filter(r => r.id !== payload.old.id)
+                })));
+            }
+        });
+
+        setTimeout(() => channel.subscribe(), 500);
 
         // 3. Presence tracking (Simulated count for now until full presence is implemented)
         const presenceInterval = setInterval(() => {
@@ -309,7 +385,8 @@ export default function Codex() {
             alignment: 1,
             timestamp: "JUST NOW",
             isEncrypted: false,
-            isNew: true
+            isNew: true,
+            replies: []
         };
 
         // Try to insert into DB
@@ -411,6 +488,119 @@ export default function Codex() {
         } else {
             playEncrypt(); // Fail sound
             // Flash screen red or shake modal
+        }
+    };
+
+    const handleDeleteWhisper = async (id: string, authorId?: string) => {
+        if (!userAuth) return;
+        if (userAuth.id !== authorId && !isAdmin) return;
+
+        if (!confirm("Erase this whisper from the Codex?")) return;
+
+        setWhispers(prev => prev.filter(w => w.id !== id));
+        if (!id.startsWith('w_')) {
+            await supabase.from('codex_whispers').delete().eq('id', id);
+        }
+        playHover();
+    };
+
+    const handleDeleteReply = async (replyId: string, whisperId: string, authorId: string) => {
+        if (!userAuth) return;
+        if (userAuth.id !== authorId && !isAdmin) return;
+
+        if (!confirm("Erase this reply?")) return;
+
+        setWhispers(prev => prev.map(w => {
+            if (w.id === whisperId) {
+                return { ...w, replies: w.replies?.filter(r => r.id !== replyId) };
+            }
+            return w;
+        }));
+
+        if (!replyId.startsWith('r_')) {
+            await supabase.from('codex_replies').delete().eq('id', replyId);
+        }
+        playHover();
+    };
+
+    const handleLodgeReply = async (e: React.FormEvent, whisperId: string) => {
+        e.preventDefault();
+        if (!replyContent.trim() || !userAuth) return;
+
+        setIsSubmittingReply(true);
+
+        const newlyLodged: Reply = {
+            id: `r_${Date.now()}`,
+            whisper_id: whisperId,
+            author: profile?.display_name || 'Anonymous',
+            author_id: userAuth.id,
+            avatar_url: profile?.avatar_url,
+            content: replyContent,
+            timestamp: "JUST NOW",
+        };
+
+        // Try to insert into DB
+        const { error } = await supabase.from('codex_replies').insert([{
+            author_id: userAuth.id,
+            whisper_id: whisperId,
+            content: replyContent,
+        }]);
+
+        if (error) {
+            console.warn("Could not insert reply to DB. Falling back to local state.", error);
+            setWhispers(prev => prev.map(w => {
+                if (w.id === whisperId) {
+                    return { ...w, replies: [...(w.replies || []), newlyLodged] };
+                }
+                return w;
+            }));
+        }
+
+        playSubmit();
+        setReplyContent('');
+        setActiveReplyBox(null);
+        setIsSubmittingReply(false);
+    };
+
+    const handleProfileClick = async (authorId?: string) => {
+        if (!authorId) return;
+        playHover();
+
+        // Fetch full profile data
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', authorId).single();
+        if (data && !error) {
+            setSelectedProfile({
+                id: data.id,
+                display_name: data.display_name || data.username || 'Anonymous',
+                soul_power: data.soul_power || 0,
+                tier: data.tier || 'Initiate',
+                created_at: data.created_at,
+                avatar_url: data.avatar_url,
+                bio: data.bio,
+                custom_title: data.custom_title,
+                theme_color: data.theme_color || 'sky'
+            });
+            setIsProfileModalOpen(true);
+        }
+    };
+
+    const getThemeColorClass = (color?: string) => {
+        switch (color) {
+            case 'orange': return 'text-orange-500 border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.3)] bg-orange-950/20';
+            case 'purple': return 'text-purple-500 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)] bg-purple-950/20';
+            case 'green': return 'text-green-500 border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)] bg-green-950/20';
+            case 'red': return 'text-red-500 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)] bg-red-950/20';
+            default: return 'text-sky-500 border-sky-500/30 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-sky-950/20';
+        }
+    };
+
+    const getThemeBgGlow = (color?: string) => {
+        switch (color) {
+            case 'orange': return 'bg-orange-500/10';
+            case 'purple': return 'bg-purple-500/10';
+            case 'green': return 'bg-green-500/10';
+            case 'red': return 'bg-red-500/10';
+            default: return 'bg-sky-500/10';
         }
     };
 
@@ -542,13 +732,15 @@ export default function Codex() {
                                     <div className="absolute inset-0 bg-[linear-gradient(rgba(14,165,233,0.05)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none"></div>
 
                                     <div>
-                                        <div className="flex justify-between items-start mb-3 relative z-10">
+                                        <div className="flex justify-between items-start mb-3 relative z-10 w-full group/header cursor-default">
                                             <div className="flex items-center gap-3">
-                                                {whisper.avatar_url ? (
-                                                    <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-full border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-                                                ) : (
-                                                    <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-                                                )}
+                                                <button onClick={() => handleProfileClick(whisper.author_id)} className="hover:scale-105 transition-transform">
+                                                    {whisper.avatar_url ? (
+                                                        <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-full border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+                                                    ) : (
+                                                        <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] rounded-full" />
+                                                    )}
+                                                </button>
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-2">
                                                         <div className={`w-1.5 h-1.5 rounded-full ${whisper.isEncrypted ? 'bg-red-500' : 'bg-green-400 shadow-[0_0_5px_#4ade80]'}`}></div>
@@ -557,6 +749,16 @@ export default function Codex() {
                                                     <span className="text-[8px] font-mono text-sky-500/60 uppercase">{whisper.timestamp}</span>
                                                 </div>
                                             </div>
+
+                                            {(userAuth?.id === whisper.author_id || isAdmin) && (
+                                                <button
+                                                    onClick={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
+                                                    className="text-sky-500/40 hover:text-red-500 transition-colors shrink-0 p-1 opacity-0 group-hover/header:opacity-100"
+                                                    title="Erase Whisper"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div className="relative z-10">
@@ -573,7 +775,20 @@ export default function Codex() {
                                     </div>
 
                                     <div className="mt-4 pt-3 border-t border-sky-500/20 flex justify-between items-center relative z-10">
-                                        <span className="text-[9px] font-mono text-sky-500/60 uppercase">{whisper.timestamp}</span>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-[9px] font-mono text-sky-500/60 uppercase">{whisper.timestamp}</span>
+
+                                            {!whisper.isEncrypted && (
+                                                <button
+                                                    onClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-950/40 text-[9px] font-mono text-sky-300 hover:text-white hover:bg-sky-600/40 transition-all border border-sky-500/30 hover:border-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.1)]"
+                                                >
+                                                    <MessageSquare className="w-3 h-3" />
+                                                    <span className="uppercase tracking-widest font-bold">{whisper.replies?.length ? `${whisper.replies.length} REPLIES` : 'REPLY'}</span>
+                                                </button>
+                                            )}
+                                        </div>
+
                                         <button
                                             onClick={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
                                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition-all ${whisper.isEncrypted
@@ -585,6 +800,69 @@ export default function Codex() {
                                             <span>Align ({whisper.alignment})</span>
                                         </button>
                                     </div>
+
+                                    {/* Core Replies Section */}
+                                    {activeReplyBox === whisper.id && (
+                                        <div className="mt-4 pt-4 border-t border-sky-500/20 relative z-10">
+
+                                            {/* Existing Replies List */}
+                                            {whisper.replies && whisper.replies.length > 0 && (
+                                                <div className="space-y-2 mb-4 mx-2 pl-4 border-l-2 border-sky-500/20 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar relative">
+                                                    {whisper.replies.map(reply => (
+                                                        <div key={reply.id} className="flex flex-col gap-1 relative group/reply hover:bg-white/[0.03] p-2 rounded-lg -ml-2 transition-colors">
+                                                            <div className="flex justify-between items-center">
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform">
+                                                                        {reply.avatar_url ? (
+                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-4 h-4 rounded-full border border-sky-500/50" />
+                                                                        ) : (
+                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={16} className="border-sky-500/50 rounded-full" />
+                                                                        )}
+                                                                    </button>
+                                                                    <span className="text-[9px] font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="text-[8px] font-mono text-sky-500/60">{reply.timestamp}</span>
+
+                                                                    {(userAuth?.id === reply.author_id || isAdmin) && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteReply(reply.id, whisper.id, reply.author_id)}
+                                                                            className="text-sky-500/30 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                            title="Erase Reply"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-[11px] font-mono text-sky-100/70 w-full pl-6">
+                                                                {reply.content}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Input Area */}
+                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={replyContent}
+                                                    onChange={(e) => setReplyContent(e.target.value)}
+                                                    placeholder="Lodge a reply..."
+                                                    maxLength={100}
+                                                    className="flex-1 bg-sky-950/20 border border-sky-500/30 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-sky-500/40 focus:outline-none focus:border-sky-400"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmittingReply || !replyContent.trim()}
+                                                    className="bg-sky-500/20 text-sky-400 hover:text-black hover:bg-sky-500 border border-sky-500/50 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                                >
+                                                    <Send className="w-3 h-3" />
+                                                </button>
+                                            </form>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -603,13 +881,15 @@ export default function Codex() {
                                     ref={el => { fringeRefs.current[index] = el; }}
                                     className={`glass bg-black/40 border ${whisper.isNew ? 'border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.2)]' : whisper.isEncrypted ? 'border-zinc-900' : 'border-white/5'} rounded-xl p-4 relative overflow-hidden group hover:bg-white/5 transition-colors`}
                                 >
-                                    <div className="flex justify-between items-start mb-3 relative z-10 w-full">
-                                        <div className="flex items-center gap-3 w-full">
-                                            {whisper.avatar_url ? (
-                                                <img src={whisper.avatar_url} alt={whisper.author} className="w-5 h-5 rounded-full border border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)] shrink-0" />
-                                            ) : (
-                                                <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={20} className="border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)] shrink-0" />
-                                            )}
+                                    <div className="flex justify-between items-start mb-3 relative z-10 w-full group/header">
+                                        <div className="flex items-center gap-3 w-full pr-6">
+                                            <button onClick={() => handleProfileClick(whisper.author_id)} className="hover:scale-105 transition-transform shrink-0">
+                                                {whisper.avatar_url ? (
+                                                    <img src={whisper.avatar_url} alt={whisper.author} className="w-5 h-5 rounded-full border border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)]" />
+                                                ) : (
+                                                    <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={20} className="border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)] rounded-full" />
+                                                )}
+                                            </button>
                                             <div className="flex flex-col flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${whisper.isEncrypted ? 'bg-red-900' : whisper.isNew ? 'bg-sky-400 animate-pulse shadow-[0_0_5px_#38bdf8]' : 'bg-green-500 shadow-[0_0_5px_#22c55e]'}`}></div>
@@ -621,6 +901,16 @@ export default function Codex() {
                                                 </span>
                                             </div>
                                         </div>
+
+                                        {(userAuth?.id === whisper.author_id || isAdmin) && (
+                                            <button
+                                                onClick={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
+                                                className="absolute top-0 right-0 text-zinc-600 hover:text-red-500 transition-colors shrink-0 p-1 opacity-0 group-hover/header:opacity-100 bg-black/40 rounded-bl-lg"
+                                                title="Erase Whisper"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="relative z-10 pl-3 border-l border-white/5">
@@ -639,10 +929,22 @@ export default function Codex() {
                                     </div>
 
                                     <div className="mt-3 flex justify-between items-center relative z-10 pl-3">
-                                        <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-600 flex items-center gap-1">
-                                            {whisper.isEncrypted ? <Lock className="w-3 h-3 text-red-900" /> : <Eye className="w-3 h-3 text-zinc-600" />}
-                                            {whisper.isEncrypted ? 'ENCRYPTED' : 'PUBLIC'}
-                                        </span>
+                                        <div className="flex flex-wrap items-center gap-4">
+                                            <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-600 flex items-center gap-1">
+                                                {whisper.isEncrypted ? <Lock className="w-3 h-3 text-red-900" /> : <Eye className="w-3 h-3 text-zinc-600" />}
+                                                {whisper.isEncrypted ? 'ENCRYPTED' : 'PUBLIC'}
+                                            </span>
+
+                                            {!whisper.isEncrypted && (
+                                                <button
+                                                    onClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 text-[9px] font-mono text-zinc-400 hover:text-sky-400 hover:bg-sky-950/50 transition-all border border-zinc-800 hover:border-sky-500/30"
+                                                >
+                                                    <MessageSquare className="w-3 h-3" />
+                                                    <span className="uppercase tracking-widest font-bold">{whisper.replies?.length ? `${whisper.replies.length} REPLIES` : 'REPLY'}</span>
+                                                </button>
+                                            )}
+                                        </div>
 
                                         <button
                                             onClick={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
@@ -655,6 +957,69 @@ export default function Codex() {
                                             <span>Align ({whisper.alignment})</span>
                                         </button>
                                     </div>
+
+                                    {/* Fringe Replies Section */}
+                                    {activeReplyBox === whisper.id && (
+                                        <div className="mt-4 pt-4 border-t border-white/5 relative z-10">
+
+                                            {/* Existing Replies List */}
+                                            {whisper.replies && whisper.replies.length > 0 && (
+                                                <div className="space-y-2 mb-4 mx-2 pl-4 border-l-2 border-zinc-700 relative">
+                                                    {whisper.replies.map(reply => (
+                                                        <div key={reply.id} className="flex flex-col gap-1 relative group/reply hover:bg-white/[0.03] p-2 rounded-lg -ml-2 transition-colors">
+                                                            <div className="flex justify-between items-center">
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform">
+                                                                        {reply.avatar_url ? (
+                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-4 h-4 rounded-full border border-sky-500/20" />
+                                                                        ) : (
+                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={16} className="border-sky-500/20 rounded-full" />
+                                                                        )}
+                                                                    </button>
+                                                                    <span className="text-[9px] font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="text-[8px] font-mono text-zinc-600">{reply.timestamp}</span>
+
+                                                                    {(userAuth?.id === reply.author_id || isAdmin) && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteReply(reply.id, whisper.id, reply.author_id)}
+                                                                            className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                            title="Erase Reply"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-[11px] font-mono text-zinc-400 w-full pl-6">
+                                                                {reply.content}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Input Area */}
+                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={replyContent}
+                                                    onChange={(e) => setReplyContent(e.target.value)}
+                                                    placeholder="Lodge a reply..."
+                                                    maxLength={100}
+                                                    className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-sky-500/50"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmittingReply || !replyContent.trim()}
+                                                    className="bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-sky-500/40 border border-white/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                                >
+                                                    <Send className="w-3 h-3" />
+                                                </button>
+                                            </form>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -662,6 +1027,59 @@ export default function Codex() {
 
                 </div>
             </main>
+
+            {/* Profile Overview Modal */}
+            {isProfileModalOpen && selectedProfile && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}></div>
+                    <div className="relative glass-panel bg-zinc-950/90 border border-white/10 p-6 md:p-8 rounded-3xl w-full max-w-sm animate-fade-in shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+                        <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl mix-blend-screen pointer-events-none opacity-50 ${getThemeBgGlow(selectedProfile.theme_color)}`}></div>
+
+                        <button onClick={() => setIsProfileModalOpen(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center">
+                            <div className="mb-4 relative group">
+                                {selectedProfile.avatar_url ? (
+                                    <img src={selectedProfile.avatar_url} alt={selectedProfile.display_name} className={`w-20 h-20 rounded-2xl object-cover ${getThemeColorClass(selectedProfile.theme_color)}`} />
+                                ) : (
+                                    <GenerativeIdenticon idString={selectedProfile.id || selectedProfile.display_name} size={80} className={`rounded-2xl ${getThemeColorClass(selectedProfile.theme_color)}`} />
+                                )}
+                            </div>
+
+                            <h2 className="font-ritual text-2xl font-bold tracking-widest text-white">{selectedProfile.display_name}</h2>
+
+                            {selectedProfile.custom_title && (
+                                <span className={`text-[10px] uppercase tracking-widest font-bold mt-1 ${getThemeColorClass(selectedProfile.theme_color).split(' ')[0]}`}>
+                                    {selectedProfile.custom_title}
+                                </span>
+                            )}
+
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[9px] px-2 py-0.5 rounded border border-white/10 uppercase tracking-[0.2em] font-bold text-zinc-400">
+                                    {selectedProfile.tier}
+                                </span>
+                                <span className="text-[9px] px-2 py-0.5 rounded border border-sky-500/30 uppercase tracking-[0.2em] font-bold bg-sky-950/30 text-sky-400 flex items-center gap-1">
+                                    <Zap className="w-3 h-3" /> {selectedProfile.soul_power} SP
+                                </span>
+                            </div>
+
+                            {selectedProfile.bio && (
+                                <p className="mt-4 text-xs font-mono text-zinc-400 leading-relaxed max-w-[250px] mx-auto border-t border-white/5 pt-4">
+                                    "{selectedProfile.bio}"
+                                </p>
+                            )}
+
+                            <div className="mt-6 w-full text-center">
+                                <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest block">
+                                    Initiated on {new Date(selectedProfile.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

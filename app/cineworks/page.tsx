@@ -83,9 +83,9 @@ export default function Cineworks() {
                 } else {
                     // Fallback to placeholder data if database is empty after reset
                     setFilms([
-                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: true },
-                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false },
-                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false },
+                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: true, image: '/cineworks/poster1.png', status: 'AVAILABLE' },
+                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false, image: '/cineworks/poster2.png', status: 'COMING SOON' },
+                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false, image: '/cineworks/poster3.png', status: 'POST-PRODUCTION' },
                     ]);
                 }
             } catch (err) {
@@ -184,26 +184,55 @@ export default function Cineworks() {
                                     key={film.id}
                                     ref={el => { filmRefs.current[index] = el; }}
                                     onMouseEnter={playHover}
-                                    onClick={playClick}
-                                    className="glass-panel p-4 rounded-2xl group cursor-pointer relative overflow-hidden border-purple-500/10 hover:border-purple-500/40 hover:scale-[1.02] hover:-translate-y-1 transition-all"
+                                    onClick={film.status === 'AVAILABLE' ? playClick : undefined}
+                                    className={`glass-panel p-4 rounded-3xl group relative overflow-hidden transition-all duration-500 flex flex-col h-full ${film.status === 'AVAILABLE'
+                                        ? 'cursor-pointer border-purple-500/20 hover:border-purple-500/60 hover:scale-[1.03] hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(168,85,247,0.2)]'
+                                        : 'cursor-not-allowed opacity-80 border-white/5 grayscale-[0.5] hover:grayscale-0'
+                                        }`}
                                 >
-                                    <div className="aspect-video bg-zinc-900 rounded-xl mb-4 relative overflow-hidden shadow-inner">
-                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-10 blur-[1px]"></div>
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm z-10">
-                                            <Play className="w-10 h-10 text-white" />
-                                        </div>
+                                    <div className="aspect-video bg-zinc-950 rounded-2xl mb-4 relative overflow-hidden shadow-inner group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-shadow">
+                                        {film.thumbnail_url || film.image ? (
+                                            <img src={film.thumbnail_url || film.image} alt={film.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-100" />
+                                        ) : (
+                                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-10 blur-[1px]"></div>
+                                        )}
+
+                                        {/* Status Overlay */}
+                                        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 to-transparent z-10"></div>
+                                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
+
+                                        {film.status === 'AVAILABLE' ? (
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm z-20">
+                                                <div className="w-16 h-16 rounded-full bg-purple-600/30 border border-purple-400/50 flex items-center justify-center backdrop-blur-md animate-pulse">
+                                                    <Play className="w-6 h-6 text-white ml-1" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                <div className="px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
+                                                    <Clapperboard className="w-4 h-4 text-purple-400" />
+                                                    <span className="text-[10px] font-bold tracking-[0.2em] text-white uppercase">{film.status || 'COMING SOON'}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {film.is_new && film.status === 'AVAILABLE' && (
+                                            <div className="absolute top-3 left-3 z-30">
+                                                <span className="text-[9px] text-white font-bold uppercase tracking-widest px-2 py-1 bg-purple-600/80 rounded backdrop-blur-md border border-purple-400/50 shadow-[0_0_10px_rgba(168,85,247,0.8)]">New Arrival</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex justify-between items-start">
+
+                                    <div className="mt-auto flex justify-between items-start px-1 relative z-20 pt-4">
                                         <div>
-                                            {film.is_new && (
-                                                <span className="text-[8px] text-purple-400 font-bold uppercase tracking-wider mb-1 block">New Arrival</span>
-                                            )}
-                                            <h4 className="font-ritual text-lg text-white tracking-widest">{film.title}</h4>
-                                            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{film.duration}</p>
+                                            <h4 className={`font-ritual text-xl tracking-widest ${film.status === 'AVAILABLE' ? 'text-white' : 'text-gray-400'}`}>{film.title}</h4>
+                                            <p className="text-[10px] text-purple-500/60 font-mono uppercase tracking-[0.15em] mt-1">{film.duration}</p>
                                         </div>
-                                        <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10 uppercase tracking-widest">
-                                            {film.format}
-                                        </span>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className="text-[9px] px-2 py-1 rounded bg-black/40 text-gray-400 border border-white/10 uppercase tracking-widest font-bold">
+                                                {film.format}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
