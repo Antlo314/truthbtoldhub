@@ -221,15 +221,26 @@ export default function Treasury() {
 
                 // Fetch Petitions
                 const { data: petData, error } = await supabase.from('petitions').select('*').order('created_at', { ascending: false });
-                if (petData && petData.length > 0 && !error) {
-                    setPetitions(petData);
-                } else {
-                    // Fallback to placeholder data if DB is empty or missing columns
-                    setPetitions([
-                        { id: '0x1a8b2', title: 'Equipment Grant: Studio Upgrade', amount_requested: 850.00, status: 'Consensus Building', consensus_percentage: 18, sp_goal: 10000, sp_pledged: 1800, backer_count: 4 },
-                        { id: '0x0f3c1', title: 'Emergency Medical Fund', amount_requested: 1200.00, status: 'Consensus Reached', consensus_percentage: 100, sp_goal: 5000, sp_pledged: 5000, backer_count: 12 }
-                    ]);
+
+                const examplePetition = {
+                    id: 'example-void',
+                    title: '[EXAMPLE] Infrastructure Funding',
+                    amount_requested: 10000.00,
+                    status: 'Awaiting',
+                    consensus_percentage: 0,
+                    sp_goal: 100000,
+                    sp_pledged: 0,
+                    backer_count: 0,
+                    description: 'This is an example petition. Real needs will be listed here soon.',
+                    isExample: true
+                };
+
+                let finalPetitions: any[] = [];
+                if (petData && !error) {
+                    finalPetitions = [...petData];
                 }
+                finalPetitions.push(examplePetition);
+                setPetitions(finalPetitions);
             } catch (err) {
                 console.error("Error fetching treasury:", err);
             }
@@ -525,10 +536,15 @@ export default function Treasury() {
                             <div
                                 key={pet.id}
                                 ref={el => { cardsRef.current[index] = el }}
-                                onMouseMove={(e) => handleCardMouseMove(e, index)}
-                                onMouseLeave={() => handleCardMouseLeave(index)}
-                                className={`glass bg-white/5 border ${pet.status === 'Consensus Reached' || pet.status === 'Disbursed' ? 'border-green-500/20 opacity-70' : 'border-white/5 hover:border-orange-500/30'} rounded-2xl p-5 relative group transition-colors [transform-style:preserve-3d]`}
+                                onMouseMove={(e) => !pet.isExample && handleCardMouseMove(e, index)}
+                                onMouseLeave={() => !pet.isExample && handleCardMouseLeave(index)}
+                                className={`glass bg-white/5 border ${pet.status === 'Consensus Reached' || pet.status === 'Disbursed' ? 'border-green-500/20 opacity-70' : 'border-white/5'} ${pet.isExample ? 'opacity-30 grayscale pointer-events-none' : 'hover:border-orange-500/30 transition-colors'} rounded-2xl p-5 relative group [transform-style:preserve-3d]`}
                             >
+                                {pet.isExample && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 overflow-hidden rounded-2xl pointer-events-none">
+                                        <span className="text-4xl md:text-6xl font-ritual tracking-[0.5em] text-white/10 rotate-[-15deg] select-none mix-blend-overlay drop-shadow-lg">EXAMPLE</span>
+                                    </div>
+                                )}
                                 {/* We keep overflow-hidden off the main wrapper so 3D children can pop, but we use a psuedo element for background boundaries if needed. For now it's fine. */}
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex flex-col">

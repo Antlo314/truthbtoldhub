@@ -12,16 +12,16 @@ VALUES
 -- THE POOL: PETITIONS (Mutual Aid Requests)
 -- We'll link these to a user if possible, or just insert the text.
 -- Since requester_id must be a UUID from profiles, we will pull the first profile UUID found or fall back on an anonymous insert (if RLS allows, but our schema requires requester_id references profiles(id)).
-DO $$
-DECLARE
-    first_profile_id UUID;
-BEGIN
-    SELECT id INTO first_profile_id FROM profiles LIMIT 1;
-
-    IF first_profile_id IS NOT NULL THEN
-        INSERT INTO petitions (requester_id, title, description, amount_requested, status, consensus_percentage)
-        VALUES 
-            (first_profile_id, 'Equipment Grant: Studio Upgrade', 'Need resources for audio hardware.', 850.00, 'Consensus Building', 18),
-            (first_profile_id, 'Emergency Medical Fund', 'Assistance for unexpected hospital bill.', 1200.00, 'Disbursed', 100);
-    END IF;
-END $$;
+-- DO $$
+-- DECLARE
+--     first_profile_id UUID;
+-- BEGIN
+--     SELECT id INTO first_profile_id FROM profiles LIMIT 1;
+-- 
+--     IF first_profile_id IS NOT NULL THEN
+--         INSERT INTO petitions (requester_id, title, description, amount_requested, status, consensus_percentage)
+--         VALUES 
+--             (first_profile_id, 'Equipment Grant: Studio Upgrade', 'Need resources for audio hardware.', 850.00, 'Consensus Building', 18),
+--             (first_profile_id, 'Emergency Medical Fund', 'Assistance for unexpected hospital bill.', 1200.00, 'Disbursed', 100);
+--     END IF;
+-- END $$;
