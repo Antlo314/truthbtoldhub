@@ -57,38 +57,51 @@ export default function SanctumHub() {
     }, []);
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.push('/');
-            } else {
-                setUserAuth(session.user);
+        let isMounted = true;
 
+        const checkUser = async (session: any) => {
+            if (!session) {
+                if (isMounted) router.push('/');
+                return;
+            }
+
+            if (isMounted) setUserAuth(session.user);
+
+            try {
                 // Fetch User Profile
-                const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                if (data && !error) {
-                    setProfile({ ...data }); // Spread to trigger strict re-render
+                const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+                if (error && error.code !== 'PGRST116') {
+                    console.error("Profile fetch error:", error);
+                } else if (data && isMounted) {
+                    setProfile({ ...data });
                 }
 
                 // Fetch Global System Broadcast
-                const { data: sysData } = await supabase.from('system_settings').select('broadcast_message').eq('id', 1).single();
-                if (sysData && sysData.broadcast_message) {
+                const { data: sysData, error: sysErr } = await supabase.from('system_settings').select('broadcast_message').eq('id', 1).maybeSingle();
+                if (!sysErr && sysData && sysData.broadcast_message && isMounted) {
                     setBroadcastMsg(sysData.broadcast_message);
                 }
+            } catch (err) {
+                console.error("Unexpected error in checkUser:", err);
             }
         };
 
-        checkUser();
+        // Initial check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            checkUser(session);
+        });
 
+        // Listen for auth changes, but DO NOT infinitely call checkUser if session is stable
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || !session) {
-                router.push('/');
-            } else if (session && !userAuth) {
-                checkUser();
+                if (isMounted) router.push('/');
+            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                checkUser(session);
             }
         });
 
         return () => {
+            isMounted = false;
             authListener.subscription.unsubscribe();
         };
     }, [router]);
