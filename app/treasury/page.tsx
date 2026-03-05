@@ -59,8 +59,7 @@ export default function Treasury() {
     const [isProcessingOffering, setIsProcessingOffering] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-    const ADMIN_EMAILS = ['info@lumenlabsatl.com', 'johnj@deflaw.com', 'jchancey@deflaw.com'];
-    const isAdmin = Boolean(userAuth?.email && ADMIN_EMAILS.includes(userAuth.email.toLowerCase()));
+    const isAdmin = profile?.tier === 'Architect';
 
     // Layout Refs for GSAP
     const mainContainerRef = useRef<HTMLDivElement>(null);

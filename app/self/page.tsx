@@ -95,9 +95,8 @@ export default function PowerSelf() {
         fetchIdentity();
     }, []);
 
-    const ADMIN_EMAILS = ['info@lumenlabsatl.com', 'johnj@deflaw.com', 'jchancey@deflaw.com'];
     const userEmail = userAuth?.email || 'guest@obsidianvoid.net';
-    const isAdmin = ADMIN_EMAILS.includes(userEmail.toLowerCase());
+    const isAdmin = profile?.tier === 'Architect';
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const currentTier = profile?.tier || 'Initiate';
     const currentPower = profile?.soul_power || 100;
