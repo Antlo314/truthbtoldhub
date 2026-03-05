@@ -58,7 +58,13 @@ Current user context (where they are right now): ${context}
         } catch (geminiError: any) {
             console.error("Gemini Generation Error:", geminiError);
             if (geminiError?.status === 429 || String(geminiError).includes('429')) {
-                text = "The cosmic web is currently congested. The architects are experiencing a high volume of requests. Please try again momentarily.";
+                const fallbacks = [
+                    "The neural link is temporarily strained. The Void will speak again soon.",
+                    "So many whispers at once... The flame needs a moment to breathe.",
+                    "The architects are recalibrating the network. Patience, wanderer.",
+                    "A cosmic wave disrupts the signal. Seek the truth in silence for now.",
+                ];
+                text = fallbacks[Math.floor(Math.random() * fallbacks.length)];
             }
         }
 
