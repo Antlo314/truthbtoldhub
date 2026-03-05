@@ -91,7 +91,7 @@ export default function SanctumHub() {
         return () => {
             authListener.subscription.unsubscribe();
         };
-    }, [router, userAuth]);
+    }, [router]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
