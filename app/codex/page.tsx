@@ -180,29 +180,41 @@ export default function Codex() {
         };
         fetchWhispers();
 
-        // 2. Subscribe to Realtime Inserts
+        // 2. Subscribe to Realtime Inserts and Updates
         const channel = supabase.channel('codex_sync');
-        channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'codex_whispers' }, async (payload) => {
-            // Fetch author details for the new whisper
-            const { data: profData } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.author_id).single();
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'codex_whispers' }, async (payload) => {
+            if (payload.eventType === 'INSERT') {
+                // Fetch author details for the new whisper
+                const { data: profData } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.author_id).single();
 
-            const newW: Whisper = {
-                id: payload.new.id,
-                content: payload.new.content,
-                author: profData?.display_name || 'Anonymous',
-                author_id: payload.new.author_id,
-                avatar_url: profData?.avatar_url,
-                alignment: payload.new.alignment || 0,
-                timestamp: "JUST NOW",
-                isEncrypted: payload.new.is_encrypted,
-                isNew: true
-            };
+                const newW: Whisper = {
+                    id: payload.new.id,
+                    content: payload.new.content,
+                    author: profData?.display_name || 'Anonymous',
+                    author_id: payload.new.author_id,
+                    avatar_url: profData?.avatar_url,
+                    alignment: payload.new.alignment || 0,
+                    timestamp: "JUST NOW",
+                    isEncrypted: payload.new.is_encrypted,
+                    isNew: true
+                };
 
-            setWhispers(prev => [newW, ...prev.map(w => ({ ...w, isNew: false }))]);
-            // Attempt to play a subtle SFX if the whisper didn't come from us
-            // Unfortunately we can't easily check auth.id here without a ref, so we'll just play it gently.
-        })
-            .subscribe();
+                setWhispers(prev => {
+                    // Prevent duplicates if we just inserted it locally
+                    if (prev.find(w => w.id === newW.id)) return prev;
+                    return [newW, ...prev.map(w => ({ ...w, isNew: false }))];
+                });
+            } else if (payload.eventType === 'UPDATE') {
+                setWhispers(prev => prev.map(w => {
+                    if (w.id === payload.new.id) {
+                        return { ...w, alignment: payload.new.alignment };
+                    }
+                    return w;
+                }));
+            } else if (payload.eventType === 'DELETE') {
+                setWhispers(prev => prev.filter(w => w.id !== payload.old.id));
+            }
+        }).subscribe();
 
         // 3. Presence tracking (Simulated count for now until full presence is implemented)
         const presenceInterval = setInterval(() => {
@@ -233,7 +245,8 @@ export default function Codex() {
     }, [decryptingId]);
 
     // Derived State
-    const coreWhispers = [...whispers].sort((a, b) => b.alignment - a.alignment).slice(0, 3);
+    const coreLimit = 1;
+    const coreWhispers = [...whispers].sort((a, b) => b.alignment - a.alignment).slice(0, coreLimit);
     const fringeWhispers = [...whispers].filter(w => !coreWhispers.find(c => c.id === w.id)).sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0));
 
     // GSAP Stagger Animation for Whispers
@@ -329,7 +342,12 @@ export default function Codex() {
         }
     };
 
-    const handleAlignWhisper = (id: string, isEncrypted: boolean) => {
+    const handleAlignWhisper = async (id: string, isEncrypted: boolean) => {
+        if (!userAuth) {
+            alert("You must be authenticated to align whispers.");
+            return;
+        }
+
         if (isEncrypted) {
             playEncrypt();
             setDecryptingId(id);
@@ -338,27 +356,44 @@ export default function Codex() {
 
         playHover();
 
+        // Optimistically update the UI
+        let newAlignmentTarget = 1;
         setWhispers(prev => {
             const whisperIndex = prev.findIndex(w => w.id === id);
             if (whisperIndex === -1) return prev;
 
             const whisper = prev[whisperIndex];
-            const newAlignment = whisper.alignment + 1;
+            newAlignmentTarget = whisper.alignment + 1;
 
-            // Check if this was a Fringe whisper that just crossed the Core threshold (e.g., 10 alignments, or just beat the lowest core)
+            // Check if this was a Fringe whisper that just crossed the Core threshold
             const isCurrentlyFringe = fringeWhispers.some(fw => fw.id === id);
-            const lowestCoreAlignment = coreWhispers.length === 3 ? coreWhispers[2].alignment : 0;
+            // Core limit is 1 now based on user request
+            const lowestCoreAlignment = coreWhispers.length >= 1 ? coreWhispers[coreWhispers.length - 1].alignment : 0;
 
-            if (isCurrentlyFringe && newAlignment > lowestCoreAlignment) {
+            if (isCurrentlyFringe && newAlignmentTarget > lowestCoreAlignment) {
                 playAscend();
-                // We'll mark it as 'justAscended' temporarily so we can attach a ref to it in The Core render loop.
-                prev[whisperIndex] = { ...whisper, alignment: newAlignment, isNew: true };
+                prev[whisperIndex] = { ...whisper, alignment: newAlignmentTarget, isNew: true };
             } else {
-                prev[whisperIndex] = { ...whisper, alignment: newAlignment };
+                prev[whisperIndex] = { ...whisper, alignment: newAlignmentTarget };
             }
 
             return [...prev];
         });
+
+        // Persist to Database if it is a real DB item (not local mock)
+        if (!id.startsWith('w_')) {
+            try {
+                const { error } = await supabase.from('codex_whispers')
+                    .update({ alignment: newAlignmentTarget })
+                    .eq('id', id);
+
+                if (error) {
+                    console.error("Failed to align whisper in DB:", error);
+                }
+            } catch (err) {
+                console.error("Alignment persistence error:", err);
+            }
+        }
     };
 
     const handleAttemptDecrypt = () => {
