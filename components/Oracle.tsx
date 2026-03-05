@@ -225,6 +225,17 @@ export default function Oracle() {
                 (contextMap[pathname] || "Give a brief, cryptic 1-sentence greeting.") +
                 " Keep your response under 3 sentences.";
 
+            // THROTTLE: Only allow proactive greetings once every 30 seconds to prevent rapid-click API spam
+            const lastGreetingStr = sessionStorage.getItem('oracle_last_greet');
+            const now = Date.now();
+            if (lastGreetingStr) {
+                const lastGreeting = parseInt(lastGreetingStr, 10);
+                if (now - lastGreeting < 30000) { // 30 seconds
+                    return; // Abort greeting
+                }
+            }
+            sessionStorage.setItem('oracle_last_greet', now.toString());
+
             try {
                 const res = await fetch('/api/oracle', {
                     method: 'POST',
