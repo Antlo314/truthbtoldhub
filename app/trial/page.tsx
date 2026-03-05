@@ -26,7 +26,8 @@ export default function TheTrial() {
         "CONNECTING TO THE SANCTUM MAINFRAME...",
         "CONNECTION ESTABLISHED.",
         "WARNING: UNAUTHORIZED ENTITY DETECTED.",
-        "PLEASE ENTER ACCESS CIPHER TO INITIATE PROTOCOL. HINT: ASCEND"
+        "CIPHER REQUIRED.",
+        "RIDDLE: 'I am the motion of the awakened. To escape the gravity of the matrix and claim the sky, what must you do?'"
     ]);
     const [isGranted, setIsGranted] = useState(false);
 
@@ -64,7 +65,7 @@ export default function TheTrial() {
                     router.push('/self'); // Send them to Soul Matrix after ascension
                 }, 3000);
             } else if (cmd === 'HELP') {
-                setHistory(prev => [...prev, "Available Commands: HELP, CLEAR, ASCEND"]);
+                setHistory(prev => [...prev, "Available Commands: HELP, CLEAR, [REDACTED]"]);
             } else if (cmd === 'CLEAR') {
                 setHistory(["OBSIDIAN VOID OS v9.9.0"]);
             } else {
