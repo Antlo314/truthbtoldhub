@@ -57,7 +57,7 @@ export default function TheTrial() {
         setInput('');
 
         setTimeout(() => {
-            if (cmd === 'ASCEND' || cmd === 'ACTIVATE') {
+            if (cmd === 'ASCEND') {
                 accessGrantedSfx?.play();
                 setHistory(prev => [...prev, "[ SYSTEM ] CIPHER ACCEPTED. TIER UPGRADE AUTHORIZED.", "[ SYSTEM ] WELCOME TO THE ARCHITECT CHAMBER."]);
                 setIsGranted(true);
