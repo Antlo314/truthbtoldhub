@@ -95,9 +95,10 @@ export default function PowerSelf() {
         fetchIdentity();
     }, []);
 
-    const isAdmin = profile?.tier === 'Architect';
-    const displayName = profile?.display_name || profile?.username || 'Guest Soul';
+    const ADMIN_EMAILS = ['info@lumenlabsatl.com', 'johnj@deflaw.com', 'jchancey@deflaw.com'];
     const userEmail = userAuth?.email || 'guest@obsidianvoid.net';
+    const isAdmin = ADMIN_EMAILS.includes(userEmail.toLowerCase());
+    const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const currentTier = profile?.tier || 'Initiate';
     const currentPower = profile?.soul_power || 100;
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
@@ -292,11 +293,7 @@ export default function PowerSelf() {
                             </div>
                         </div>
 
-                        <div className="w-full md:w-auto flex flex-col gap-2">
-                            <button className="w-full md:w-auto px-6 py-3 glass bg-white/5 border border-white/10 hover:border-white/30 rounded-xl text-[10px] uppercase tracking-[0.2em] font-bold transition-all flex items-center justify-center gap-2">
-                                <Settings className="w-3.5 h-3.5" /> Modify Protocol
-                            </button>
-                        </div>
+                        {/* Modify Protocol Removed per protocol */}
                     </div>
                 </div>
 

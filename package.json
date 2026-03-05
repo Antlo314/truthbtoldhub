@@ -16,6 +16,8 @@
     "@tailwindcss/postcss": "^4.2.1",
     "clsx": "latest",
     "dotenv": "^17.3.1",
+    "elevenlabs": "^1.59.0",
+    "elevenlabs-node": "^2.0.3",
     "ethers": "^6.16.0",
     "framer-motion": "^12.34.5",
     "gsap": "^3.14.2",
@@ -25,6 +27,7 @@
     "puppeteer": "^24.37.5",
     "react": "latest",
     "react-dom": "latest",
+    "react-draggable": "^4.5.0",
     "stripe": "^20.4.0",
     "tailwind-merge": "latest"
   },

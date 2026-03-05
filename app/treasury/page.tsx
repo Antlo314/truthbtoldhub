@@ -59,6 +59,9 @@ export default function Treasury() {
     const [isProcessingOffering, setIsProcessingOffering] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+    const ADMIN_EMAILS = ['info@lumenlabsatl.com', 'johnj@deflaw.com', 'jchancey@deflaw.com'];
+    const isAdmin = Boolean(userAuth?.email && ADMIN_EMAILS.includes(userAuth.email.toLowerCase()));
+
     // Layout Refs for GSAP
     const mainContainerRef = useRef<HTMLDivElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -390,7 +393,7 @@ export default function Treasury() {
     };
 
     const handleAdminAction = async (petitionId: string, newStatus: string) => {
-        if (!userAuth || profile?.tier !== 'Architect') return;
+        if (!userAuth || !isAdmin) return;
 
         try {
             const { error } = await supabase.from('petitions')
@@ -605,7 +608,7 @@ export default function Treasury() {
                                     </div>
                                 )}
 
-                                {profile?.tier === 'Architect' && (
+                                {isAdmin && (
                                     <div className="mt-4 pt-4 border-t border-white/10 flex gap-2">
                                         <button
                                             onClick={() => handleAdminAction(pet.id, 'Disbursed')}
