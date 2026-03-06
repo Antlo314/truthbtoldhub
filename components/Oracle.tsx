@@ -19,45 +19,8 @@ export default function Oracle() {
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Cursor Dodging Logic (Smart positioning)
-    useEffect(() => {
-        if (!isOpen && containerRef.current) {
-            const handleMouseMove = (e: MouseEvent) => {
-                const rect = containerRef.current?.getBoundingClientRect();
-                if (!rect) return;
-
-                // Calculate distance from mouse to the center of the oracle
-                const oracleX = rect.left + rect.width / 2;
-                const oracleY = rect.top + rect.height / 2;
-                const dist = Math.hypot(e.clientX - oracleX, e.clientY - oracleY);
-
-                // If mouse is within 150px, dodge it
-                if (dist < 150) {
-                    const angle = Math.atan2(oracleY - e.clientY, oracleX - e.clientX);
-                    const pushDistance = 150 - dist;
-                    const newX = Math.cos(angle) * pushDistance * 1.5;
-                    const newY = Math.sin(angle) * pushDistance * 1.5;
-
-                    gsap.to(containerRef.current, {
-                        x: newX,
-                        y: newY,
-                        duration: 0.5,
-                        ease: "power2.out"
-                    });
-                } else {
-                    gsap.to(containerRef.current, {
-                        x: 0,
-                        y: 0,
-                        duration: 1.5,
-                        ease: "elastic.out(1, 0.3)"
-                    });
-                }
-            };
-
-            window.addEventListener('mousemove', handleMouseMove);
-            return () => window.removeEventListener('mousemove', handleMouseMove);
-        }
-    }, [isOpen]);
+    // Cursor Dodging Logic (Smart positioning) - DISABLED per user request
+    // The Oracle will no longer run away when the window is closed.
 
     // Sprite Idling animation
     useEffect(() => {
@@ -208,27 +171,37 @@ export default function Oracle() {
     useEffect(() => {
         const triggerProactiveGuide = async () => {
             setIsThinking(true);
-            setIsOpen(true);
+            const isNewUser = !localStorage.getItem('oracle_tour_completed');
 
-            const contextMap: any = {
-                '/': 'Tell the user how to sign up: use their email, and expect a confirmation link in their inbox to verify their Soul. Explain that SP (Sanctum Power) is the future of our ecosystem.',
-                '/sanctum': 'They are in the Sanctum Hub. Explain this is the central nervous system holding all pillars together.',
-                '/codex': 'They are in The Codex. Explain the live communication layer for the community.',
-                '/cineworks': 'They are in Cineworks. Detail the original films and visual archives.',
-                '/treasury': 'They are in The Pool. Detail how they can fund petitions using SP.',
-                '/self': 'They are in the Soul Matrix. Detail how their identity and power are verified here.',
-                '/trial': 'They are in The Trial. Explain this is the initiation sequence to test their cryptographic resolve.'
-            };
+            let systemInstruction = "";
+            if (isNewUser) {
+                setIsOpen(true); // Force open for first time users on all screen sizes
+                localStorage.setItem('oracle_tour_completed', 'true');
+                systemInstruction = "System Instruction: This is the user's VERY FIRST TIME on the application! Give them a powerful, cinematic 2-sentence welcome to the Sacred Sanctum. Emphasize that you are The Oracle, their guide, and they must verify their soul (log in or sign up) to begin.";
+            } else {
+                if (window.innerWidth >= 768) {
+                    setIsOpen(true);
+                }
+                const contextMap: Record<string, string> = {
+                    '/': 'Tell the user how to sign up: use their email, and expect a confirmation link in their inbox to verify their Soul. Explain that SP (Sanctum Power) is the future of our ecosystem.',
+                    '/sanctum': 'They are in the Sanctum Hub. Explain this is the central nervous system holding all pillars together.',
+                    '/codex': 'They are in The Codex. Explain the live communication layer for the community.',
+                    '/cineworks': 'They are in Cineworks. Detail the original films and visual archives.',
+                    '/treasury': 'They are in The Pool. Detail how they can fund petitions using SP.',
+                    '/self': 'They are in the Soul Matrix. Detail how their identity and power are verified here.',
+                    '/trial': 'They are in The Trial. Explain this is the initiation sequence to test their cryptographic resolve.'
+                };
 
-            const systemInstruction =
-                "System Instruction: The user just navigated to a new area. " +
-                (contextMap[pathname] || "Give a brief, cryptic 1-sentence greeting.") +
-                " Keep your response under 3 sentences.";
+                systemInstruction =
+                    "System Instruction: The user just navigated to a new area. " +
+                    (contextMap[pathname] || "Give a brief, cryptic 1-sentence greeting.") +
+                    " Keep your response under 3 sentences.";
+            }
 
-            // THROTTLE: Only allow proactive greetings once every 30 seconds to prevent rapid-click API spam
+            // THROTTLE: Only allow proactive greetings once every 30 seconds to prevent rapid-click API spam (unless it's a brand new user)
             const lastGreetingStr = sessionStorage.getItem('oracle_last_greet');
             const now = Date.now();
-            if (lastGreetingStr) {
+            if (lastGreetingStr && !isNewUser) {
                 const lastGreeting = parseInt(lastGreetingStr, 10);
                 if (now - lastGreeting < 30000) { // 30 seconds
                     return; // Abort greeting
@@ -298,7 +271,7 @@ export default function Oracle() {
             {isOpen && (
                 <div
                     ref={panelRef}
-                    className="mb-6 w-80 md:w-96 h-[400px] glass bg-black/90 border border-orange-500/40 rounded-3xl p-4 flex flex-col pointer-events-auto shadow-[0_0_50px_rgba(249,115,22,0.15)] origin-bottom-right animate-in fade-in zoom-in duration-300"
+                    className="mb-6 w-80 md:w-[400px] h-[450px] bg-black/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 flex flex-col pointer-events-auto shadow-[0_0_40px_rgba(0,0,0,0.8)] origin-bottom-right animate-in fade-in zoom-in duration-300"
                 >
                     <div className="flex justify-between items-center mb-4 border-b border-orange-500/30 pb-2">
                         <div className="flex items-center gap-2 text-orange-400">

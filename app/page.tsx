@@ -134,7 +134,7 @@ export default function Gateway() {
     };
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center p-4 selection:bg-orange-500/30">
+        <div className="relative min-h-[100dvh] flex items-center justify-center p-4 selection:bg-orange-500/30 overflow-hidden">
             <div id="stars-container" className="fixed inset-0 z-0 bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_void.png')] bg-cover bg-center opacity-80 mix-blend-screen"></div>
 
             <main className="relative z-10 w-full max-w-sm px-4 md:px-0" id="auth-container-wrapper">
@@ -160,7 +160,7 @@ export default function Gateway() {
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors font-mono"
+                                        className="relative w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/50 transition-all font-mono"
                                         placeholder="Identify Soul (Email)"
                                     />
                                 </div>
@@ -172,7 +172,7 @@ export default function Gateway() {
                                             required
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors font-mono tracking-widest"
+                                            className="relative w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/80 focus:ring-1 focus:ring-orange-500/50 transition-all font-mono tracking-widest"
                                             placeholder="Cipher (Password)"
                                         />
                                     </div>
@@ -228,7 +228,7 @@ export default function Gateway() {
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-white/40 transition-colors font-mono"
+                                        className="relative w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-500 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all font-mono"
                                         placeholder="Email Signature"
                                     />
                                 </div>
@@ -238,7 +238,7 @@ export default function Gateway() {
                                         required
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-white/40 transition-colors font-mono tracking-widest"
+                                        className="relative w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-500 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all font-mono tracking-widest"
                                         placeholder="Define Cipher (Password)"
                                     />
                                 </div>
@@ -248,7 +248,7 @@ export default function Gateway() {
                                         required
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="relative w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-600 focus:outline-none focus:border-white/40 transition-colors font-mono tracking-widest"
+                                        className="relative w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-sm text-center text-white placeholder-gray-500 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all font-mono tracking-widest"
                                         placeholder="Confirm Cipher"
                                     />
                                 </div>
@@ -275,7 +275,7 @@ export default function Gateway() {
             </main>
 
             {/* Footer Details */}
-            <footer className="fixed bottom-6 w-full text-center z-10 pointer-events-none">
+            <footer className="fixed bottom-10 w-full text-center z-10 pointer-events-none">
                 <p className="text-[8px] font-mono text-gray-700 tracking-[0.3em] uppercase">
                     PROTOCOL V25.2.0 • NEXT.JS ROUTER INITIALIZED
                 </p>

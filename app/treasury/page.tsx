@@ -222,24 +222,10 @@ export default function Treasury() {
                 // Fetch Petitions
                 const { data: petData, error } = await supabase.from('petitions').select('*').order('created_at', { ascending: false });
 
-                const examplePetition = {
-                    id: 'example-void',
-                    title: '[EXAMPLE] Infrastructure Funding',
-                    amount_requested: 10000.00,
-                    status: 'Awaiting',
-                    consensus_percentage: 0,
-                    sp_goal: 100000,
-                    sp_pledged: 0,
-                    backer_count: 0,
-                    description: 'This is an example petition. Real needs will be listed here soon.',
-                    isExample: true
-                };
-
                 let finalPetitions: any[] = [];
                 if (petData && !error) {
                     finalPetitions = [...petData];
                 }
-                finalPetitions.push(examplePetition);
                 setPetitions(finalPetitions);
             } catch (err) {
                 console.error("Error fetching treasury:", err);
