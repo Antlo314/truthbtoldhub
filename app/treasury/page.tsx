@@ -302,48 +302,19 @@ export default function Treasury() {
     };
 
     const handleExecuteOffering = async () => {
-        if (!userAuth || offeringAmount <= 0) return;
-
         setIsProcessingOffering(true);
         try {
-            // Simulated payment processor success
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-            // 1. Update Escrow Balance
-            const currentEscrow = typeof escrow === 'string' ? parseFloat(escrow.replace(/,/g, '')) : Number(escrow);
-            const newEscrow = currentEscrow + offeringAmount;
+            playError();
+            setToastMessage("Fiat integration coming soon. See The Codex for updates.");
+            setTimeout(() => setToastMessage(null), 4000);
 
-            await supabase.from('treasury_escrow').update({ balance_usd: newEscrow }).eq('id', 1); // Assuming ID 1 for global escrow
-
-            // 2. Log Transaction
-            await supabase.from('transactions').insert([{
-                profile_id: userAuth.id,
-                amount: offeringAmount, // Positive because it's a deposit
-                transaction_type: 'OFFERING',
-                description: `Fiat Offering to The Pool`
-            }]);
-
-            // 3. Grant SP Bonus (e.g., 10x fiat amount as a bonus for supporting the treasury)
-            if (profile) {
-                const spBonus = offeringAmount * 10;
-                await supabase.from('profiles').update({ soul_power: profile.soul_power + spBonus }).eq('id', userAuth.id);
-                setProfile({ ...profile, soul_power: profile.soul_power + spBonus });
-            }
-
-            setEscrow(newEscrow);
             setIsMakingOffering(false);
             setOfferingAmount(0);
-
-            playSuccess();
-            fireParticles();
-            setToastMessage(`Offering successful. Voids aligned.`);
-            setTimeout(() => setToastMessage(null), 3000);
-
         } catch (err) {
             console.error("Offering failed:", err);
-            playError();
-            setToastMessage("Offering failed.");
-            setTimeout(() => setToastMessage(null), 3000);
+            setIsProcessingOffering(false);
         } finally {
             setIsProcessingOffering(false);
         }
