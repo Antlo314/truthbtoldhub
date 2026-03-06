@@ -79,13 +79,14 @@ export default function Cineworks() {
                 const { data, error } = await supabase.from('films').select('*').order('created_at', { ascending: false });
 
                 if (data && data.length > 0) {
-                    setFilms(data);
+                    const placeholderData = data.map((f: any) => ({ ...f, status: 'COMING SOON' }));
+                    setFilms(placeholderData);
                 } else {
                     // Fallback to placeholder data if database is empty after reset
                     setFilms([
-                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: true, image: '/cineworks/poster1.png', status: 'AVAILABLE' },
-                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false, image: '/cineworks/poster2.png', status: 'COMING SOON' },
-                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false, image: '/cineworks/poster3.png', status: 'POST-PRODUCTION' },
+                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: false, image: null, status: 'COMING SOON' },
+                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false, image: null, status: 'COMING SOON' },
+                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false, image: null, status: 'COMING SOON' },
                     ]);
                 }
             } catch (err) {
@@ -132,6 +133,14 @@ export default function Cineworks() {
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32">
                 <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
 
+                    {/* Placeholder Warning Overlay */}
+                    <div className="bg-purple-900/20 border border-purple-500/30 rounded-2xl p-4 text-center backdrop-blur-md shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+                        <span className="text-purple-300 font-mono text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2">
+                            <Clapperboard className="w-4 h-4" />
+                            Prototype Environment: All visual assets are placeholders. Full archives coming soon.
+                        </span>
+                    </div>
+
                     {/* Featured Premiere */}
                     <div
                         onMouseEnter={(e) => {
@@ -157,14 +166,14 @@ export default function Cineworks() {
                         </div>
 
                         <div className="absolute bottom-0 left-0 w-full p-8 z-20">
-                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block">
-                                World Premiere
+                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block shadow-md">
+                                Placeholder Asset
                             </span>
-                            <h2 className="font-ritual text-4xl md:text-6xl text-white font-bold tracking-widest leading-none drop-shadow-lg">
-                                ARCHITECTS OF EXODUS
+                            <h2 className="font-ritual text-4xl md:text-6xl text-gray-300 font-bold tracking-widest leading-none drop-shadow-lg opacity-80">
+                                COMING SOON
                             </h2>
-                            <p className="text-xs text-gray-300 font-mono tracking-widest uppercase mt-4 opacity-80">
-                                Directed by The Void • Runtime 42:00
+                            <p className="text-xs text-gray-500 font-mono tracking-widest uppercase mt-4 opacity-80">
+                                Directed by The Void • Runtime --:-
                             </p>
                         </div>
                     </div>
