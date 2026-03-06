@@ -103,7 +103,7 @@ const MOCK_WHISPERS: Whisper[] = [
     }
 ];
 
-export default function Codex() {
+export default function Archive() {
     const router = useRouter();
 
     const [userAuth, setUserAuth] = useState<any>(null);
@@ -495,7 +495,7 @@ export default function Codex() {
         if (!userAuth) return;
         if (userAuth.id !== authorId && !isAdmin) return;
 
-        if (!confirm("Erase this whisper from the Codex?")) return;
+        if (!confirm("Erase this whisper from the Archive?")) return;
 
         setWhispers(prev => prev.filter(w => w.id !== id));
         if (!id.startsWith('w_')) {
@@ -606,7 +606,7 @@ export default function Codex() {
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-sky-500/30 font-sans flex flex-col items-center overflow-x-hidden">
-            {/* Background - Codex Theme with Parallax */}
+            {/* Background - Archive Theme with Parallax */}
             <div className="fixed inset-0 z-0 bg-black scale-110">
                 <video
                     ref={bgRef}
@@ -629,7 +629,7 @@ export default function Codex() {
                 </button>
                 <div className="flex flex-col items-center">
                     <span className="font-ritual text-sm font-bold tracking-widest text-sky-100 leading-none drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]">
-                        THE CODEX
+                        THE ARCHIVE
                     </span>
                     <div className="flex items-center gap-2 mt-1 px-3 py-0.5 bg-sky-950/30 border border-sky-500/30 rounded-full shadow-[0_0_10px_rgba(14,165,233,0.3)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] shadow-[0_0_5px_#22d3ee]"></div>
@@ -660,7 +660,7 @@ export default function Codex() {
                         <div>
                             <h2 className="font-ritual text-lg text-white font-bold tracking-widest uppercase shadow-sm">Global Ledger</h2>
                             <p className="text-xs text-gray-400 font-mono mt-1 leading-relaxed">
-                                The Codex immutable ledger records the anonymous dispatches and decrees of the Sanctum. Lodge a whisper to guide the collective consciousness.
+                                The Archive immutable ledger records the anonymous dispatches and decrees of the Sanctum. Lodge a whisper to guide the collective consciousness.
                             </p>
                         </div>
                     </div>

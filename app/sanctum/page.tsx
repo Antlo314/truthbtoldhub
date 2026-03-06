@@ -243,7 +243,7 @@ export default function SanctumHub() {
                                     <div className="w-12 h-12 rounded-xl bg-sky-950/30 border border-sky-500/30 flex items-center justify-center mb-4 text-sky-400 group-hover:scale-110 transition-transform">
                                         <Sparkles className="w-6 h-6" />
                                     </div>
-                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2">THE CODEX</h3>
+                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2">THE ARCHIVE</h3>
                                     <p className="text-xs text-gray-400 font-mono tracking-wider">Obsidian Whispers</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sky-400">

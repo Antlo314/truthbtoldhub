@@ -68,7 +68,7 @@ export default function Oracle() {
         if (lower.includes('treasury') || lower.includes('pool')) {
             selectors.push('a[href="/treasury"]');
         }
-        if (lower.includes('codex') || lower.includes('whispers')) {
+        if (lower.includes('archive') || lower.includes('whispers') || lower.includes('codex')) {
             selectors.push('a[href="/codex"]');
         }
         if (lower.includes('soul matrix') || lower.includes('identity') || lower.includes('profile')) {
@@ -185,7 +185,7 @@ export default function Oracle() {
                 const contextMap: Record<string, string> = {
                     '/': 'Tell the user how to sign up: use their email, and expect a confirmation link in their inbox to verify their Soul. Explain that SP (Sanctum Power) is the future of our ecosystem.',
                     '/sanctum': 'They are in the Sanctum Hub. Explain this is the central nervous system holding all pillars together.',
-                    '/codex': 'They are in The Codex. Explain the live communication layer for the community.',
+                    '/codex': 'They are in The Archive. Explain the live communication layer for the community.',
                     '/cineworks': 'They are in Cineworks. Detail the original films and visual archives.',
                     '/treasury': 'They are in The Pool. Detail how they can fund petitions using SP.',
                     '/self': 'They are in the Soul Matrix. Detail how their identity and power are verified here.',
