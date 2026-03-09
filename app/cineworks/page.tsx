@@ -42,9 +42,6 @@ export default function Cineworks() {
         e.stopPropagation();
         playClick();
         setIsPlayingFeature(true);
-        if (featureVideoRef.current) {
-            featureVideoRef.current.play();
-        }
     };
 
     // GSAP Parallax Background
@@ -168,15 +165,22 @@ export default function Cineworks() {
                         style={{ perspective: '1000px' }}
                     >
                         {!isPlayingFeature && <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none"></div>}
-                        <video
-                            ref={featureVideoRef}
-                            playsInline
-                            controls={isPlayingFeature}
-                            className="absolute inset-0 w-full h-full object-cover z-0"
-                            poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png"
-                        >
-                            <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/joel_3.mp4" type="video/mp4" />
-                        </video>
+
+                        {!isPlayingFeature ? (
+                            <img
+                                src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png"
+                                className="absolute inset-0 w-full h-full object-cover z-0"
+                                alt="Premiere Preview"
+                            />
+                        ) : (
+                            <iframe
+                                className="absolute inset-0 w-full h-full z-0 bg-black"
+                                src="https://www.youtube.com/embed/9vYmj7r_s9k?autoplay=1&rel=0&modestbranding=1"
+                                title="Who are the Sabeans? (Joel 3)"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                            ></iframe>
+                        )}
 
                         {!isPlayingFeature && (
                             <>
