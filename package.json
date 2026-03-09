@@ -29,6 +29,7 @@
     "react": "latest",
     "react-dom": "latest",
     "react-draggable": "^4.5.0",
+    "rss-parser": "^3.13.0",
     "stripe": "^20.4.0",
     "tailwind-merge": "latest"
   },

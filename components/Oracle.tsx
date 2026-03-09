@@ -175,13 +175,9 @@ export default function Oracle() {
 
             let systemInstruction = "";
             if (isNewUser) {
-                setIsOpen(true); // Force open for first time users on all screen sizes
                 localStorage.setItem('oracle_tour_completed', 'true');
                 systemInstruction = "System Instruction: This is the user's VERY FIRST TIME on the application! Give them a powerful, cinematic 2-sentence welcome to the Sacred Sanctum. Emphasize that you are The Oracle, their guide, and they must verify their soul (log in or sign up) to begin.";
             } else {
-                if (window.innerWidth >= 768) {
-                    setIsOpen(true);
-                }
                 const contextMap: Record<string, string> = {
                     '/': 'Tell the user how to sign up: use their email, and expect a confirmation link in their inbox to verify their Soul. Explain that SP (Sanctum Power) is the future of our ecosystem.',
                     '/sanctum': 'They are in the Sanctum Hub. Explain this is the central nervous system holding all pillars together.',
@@ -316,7 +312,17 @@ export default function Oracle() {
             )}
 
             {/* Flaming Sprite Core */}
-            <div className="relative pointer-events-auto cursor-pointer group mt-2" onClick={() => setIsOpen(!isOpen)}>
+            <div className="relative pointer-events-auto cursor-pointer group mt-2 flex items-center justify-center" onClick={() => setIsOpen(!isOpen)}>
+                {!isOpen && (
+                    <div className="absolute right-full mr-2 md:mr-4 top-1/2 -translate-y-1/2 opacity-70 group-hover:opacity-100 transition-opacity bg-black/80 border border-orange-500/30 text-orange-400 text-[10px] md:text-xs uppercase font-mono tracking-widest px-3 py-1 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.2)] whitespace-nowrap hidden sm:block">
+                        Open Me
+                    </div>
+                )}
+                {!isOpen && (
+                    <div className="absolute top-0 -mt-8 left-1/2 -translate-x-1/2 opacity-80 group-hover:opacity-100 transition-opacity bg-black/80 border border-orange-500/30 text-orange-400 text-[10px] uppercase font-mono tracking-widest px-3 py-1 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.2)] whitespace-nowrap sm:hidden">
+                        Open Me
+                    </div>
+                )}
                 {/* Oracle Sprite rendering */}
                 <div
                     ref={orbRef}

@@ -28,13 +28,24 @@ export default function Cineworks() {
 
     const [films, setFilms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isPlayingFeature, setIsPlayingFeature] = useState(false);
 
     const bgRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
     const filmRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const featureVideoRef = useRef<HTMLVideoElement>(null);
 
     const playHover = () => uiHoverSfx?.play();
     const playClick = () => uiClickSfx?.play();
+
+    const handlePlayFeature = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        playClick();
+        setIsPlayingFeature(true);
+        if (featureVideoRef.current) {
+            featureVideoRef.current.play();
+        }
+    };
 
     // GSAP Parallax Background
     useGSAP(() => {
@@ -144,38 +155,51 @@ export default function Cineworks() {
                     {/* Featured Premiere */}
                     <div
                         onMouseEnter={(e) => {
+                            if (isPlayingFeature) return;
                             playHover();
                             gsap.to(e.currentTarget, { scale: 1.01, rotationY: -1, rotationX: 1, duration: 0.5, ease: "power2.out", filter: 'saturate(1.2) brightness(1.1)' });
                         }}
                         onMouseLeave={(e) => {
+                            if (isPlayingFeature) return;
                             gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.5, ease: "power2.out", filter: 'saturate(0.5) brightness(1)' });
                         }}
-                        onClick={playClick}
-                        className="relative w-full aspect-video rounded-3xl overflow-hidden glass border-purple-500/30 group cursor-pointer shadow-[0_0_50px_rgba(168,85,247,0.15)] filter saturate-50 transition-all"
+                        onClick={isPlayingFeature ? undefined : handlePlayFeature}
+                        className={`relative w-full aspect-video rounded-3xl overflow-hidden glass border-purple-500/30 transition-all shadow-[0_0_50px_rgba(168,85,247,0.15)] ${isPlayingFeature ? '' : 'group cursor-pointer filter saturate-50'}`}
                         style={{ perspective: '1000px' }}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none"></div>
-                        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
-                            <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.mp4" type="video/mp4" />
+                        {!isPlayingFeature && <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none"></div>}
+                        <video
+                            ref={featureVideoRef}
+                            playsInline
+                            controls={isPlayingFeature}
+                            className="absolute inset-0 w-full h-full object-cover z-0"
+                            poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png"
+                        >
+                            <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/joel_3.mp4" type="video/mp4" />
                         </video>
 
-                        <div className="absolute inset-0 flex items-center justify-center z-20">
-                            <div className="w-20 h-20 rounded-full glass bg-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600/20 group-hover:border-purple-500/50 transition-all duration-300">
-                                <Play className="w-8 h-8 text-white ml-2 drop-shadow-lg" />
-                            </div>
-                        </div>
+                        {!isPlayingFeature && (
+                            <>
+                                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                                    <div className="w-20 h-20 rounded-full glass bg-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600/20 group-hover:border-purple-500/50 transition-all duration-300 pointer-events-auto">
+                                        <Play className="w-8 h-8 text-white ml-2 drop-shadow-lg" />
+                                    </div>
+                                </div>
 
-                        <div className="absolute bottom-0 left-0 w-full p-8 z-20">
-                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block shadow-md">
-                                Placeholder Asset
-                            </span>
-                            <h2 className="font-ritual text-4xl md:text-6xl text-gray-300 font-bold tracking-widest leading-none drop-shadow-lg opacity-80">
-                                COMING SOON
-                            </h2>
-                            <p className="text-xs text-gray-500 font-mono tracking-widest uppercase mt-4 opacity-80">
-                                Directed by The Void • Runtime --:-
-                            </p>
-                        </div>
+                                <div className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
+                                    <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block shadow-md">
+                                        Featured Premiere
+                                    </span>
+                                    <h2 className="font-ritual text-3xl md:text-5xl text-gray-100 font-bold tracking-widest leading-none drop-shadow-lg mb-4">
+                                        JOEL 3: THE SABEANS
+                                    </h2>
+                                    <div className="text-sm text-gray-300 font-sans max-w-2xl bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-sm pointer-events-auto mb-2">
+                                        <p className="mb-2">Who are the Sabeans mentioned in Joel 3:8, and why does it matter today?</p>
+                                        <p>As we dive into Joel Chapter 3, verses 1–13, the "Valley of Jehoshaphat" becomes the stage for a divine reckoning. While history points to the Sabeans as a distant trading nation, modern insight and geopolitical shifts point directly toward the region of modern-day Iran.</p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* The Archive Grid */}
