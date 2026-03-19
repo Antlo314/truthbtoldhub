@@ -82,29 +82,42 @@ export default function Cineworks() {
     }, []);
 
     useEffect(() => {
-        async function fetchFilms() {
-            try {
-                const { data, error } = await supabase.from('films').select('*').order('created_at', { ascending: false });
-
-                if (data && data.length > 0) {
-                    const placeholderData = data.map((f: any) => ({ ...f, status: 'COMING SOON' }));
-                    setFilms(placeholderData);
-                } else {
-                    // Fallback to placeholder data if database is empty after reset
-                    setFilms([
-                        { id: '1', title: 'AWAKENING', duration: '03:14', format: '1080p', is_new: false, image: null, status: 'COMING SOON' },
-                        { id: '2', title: 'THE OFFERING', duration: '05:22', format: '4K', is_new: false, image: null, status: 'COMING SOON' },
-                        { id: '3', title: 'ECHOES OF ZION', duration: '12:05', format: '4K', is_new: false, image: null, status: 'COMING SOON' },
-                    ]);
-                }
-            } catch (err) {
-                console.error("Error fetching films:", err);
-            } finally {
-                setLoading(false);
+        // Hardcoded YouTube VODs for Prototype 
+        setFilms([
+            { 
+                id: 'fVqAox73uCE', 
+                title: 'Prelude to the Destroyer', 
+                duration: 'CODEX', format: '4K', is_new: true, 
+                image: 'https://img.youtube.com/vi/fVqAox73uCE/maxresdefault.jpg', 
+                status: 'AVAILABLE',
+                description: "The Stone We Built On explores ancient warnings, the cracked foundation of America, and the signs of collapse." 
+            },
+            { 
+                id: '_5LzmdhiBRQ', 
+                title: 'Episode 3: The Judgment', 
+                duration: 'CODEX', format: '4K', is_new: false, 
+                image: 'https://img.youtube.com/vi/_5LzmdhiBRQ/maxresdefault.jpg', 
+                status: 'AVAILABLE',
+                description: "Enoch walks into the presence of the Watchers. Semjaza and the fallen stand in mourning as their sentence is revealed." 
+            },
+            { 
+                id: 'OBkUITCVQao', 
+                title: 'Episode 2: The Messenger', 
+                duration: 'CODEX', format: '4K', is_new: false, 
+                image: 'https://img.youtube.com/vi/OBkUITCVQao/maxresdefault.jpg', 
+                status: 'AVAILABLE',
+                description: "Two hundred fallen beings leave heaven behind and walk into a world that is about to change forever." 
+            },
+            { 
+                id: 'g0VedgHt0cE', 
+                title: 'Episode 1: The Watchers', 
+                duration: 'CODEX', format: '4K', is_new: false, 
+                image: 'https://img.youtube.com/vi/g0VedgHt0cE/maxresdefault.jpg', 
+                status: 'AVAILABLE',
+                description: "Before the flood. Before the giants. Before the world burned... a shadow approached the city." 
             }
-        }
-
-        fetchFilms();
+        ]);
+        setLoading(false);
     }, []);
 
     return (
@@ -196,7 +209,7 @@ export default function Cineworks() {
                                             Featured Transmission
                                         </span>
                                         <h1 className="font-ritual text-3xl md:text-5xl text-gray-100 font-bold tracking-widest leading-none drop-shadow-lg mb-4">
-                                            ATL ZION: THE AWAKENING
+                                            14
                                         </h1>
                                         <div className="text-sm text-gray-300 font-sans max-w-2xl bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-sm pointer-events-auto mb-2">
                                             <p className="mb-2">"STL in the spirit, Judah in the flesh. They never told us who we really was."</p>
@@ -244,7 +257,7 @@ export default function Cineworks() {
                                     key={film.id}
                                     ref={el => { filmRefs.current[index] = el; }}
                                     onMouseEnter={playHover}
-                                    onClick={film.status === 'AVAILABLE' ? playClick : undefined}
+                                    onClick={film.status === 'AVAILABLE' ? () => { playClick(); window.open(`https://youtu.be/${film.id}`, '_blank'); } : undefined}
                                     className={`glass-panel p-4 rounded-3xl group relative overflow-hidden transition-all duration-500 flex flex-col h-full ${film.status === 'AVAILABLE'
                                         ? 'cursor-pointer border-purple-500/20 hover:border-purple-500/60 hover:scale-[1.03] hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(168,85,247,0.2)]'
                                         : 'cursor-not-allowed opacity-80 border-white/5 grayscale-[0.5] hover:grayscale-0'
@@ -286,7 +299,10 @@ export default function Cineworks() {
                                     <div className="mt-auto flex justify-between items-start px-1 relative z-20 pt-4">
                                         <div>
                                             <h4 className={`font-ritual text-xl tracking-widest ${film.status === 'AVAILABLE' ? 'text-white' : 'text-gray-400'}`}>{film.title}</h4>
-                                            <p className="text-[10px] text-purple-500/60 font-mono uppercase tracking-[0.15em] mt-1">{film.duration}</p>
+                                            <p className="text-[10px] text-purple-500/60 font-mono uppercase tracking-[0.15em] mt-1 mb-2">{film.duration}</p>
+                                            {film.description && (
+                                                <p className="text-xs text-gray-400 font-sans leading-relaxed line-clamp-3">{film.description}</p>
+                                            )}
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <span className="text-[9px] px-2 py-1 rounded bg-black/40 text-gray-400 border border-white/10 uppercase tracking-widest font-bold">
