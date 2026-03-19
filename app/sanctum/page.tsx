@@ -24,6 +24,7 @@ export default function SanctumHub() {
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [broadcastMsg, setBroadcastMsg] = useState('The initial architecture is stabilizing...');
+    const [tourStep, setTourStep] = useState(0);
     const bgRef = useRef<HTMLDivElement>(null);
 
     const playHover = () => uiHoverSfx?.play();
@@ -50,11 +51,26 @@ export default function SanctumHub() {
                 volume: 0.1,
             });
             ambientDrone.play();
+
+            // Auto-trigger tour if first time
+            if (!localStorage.getItem('sanctum_tour_complete')) {
+                setTimeout(() => setTourStep(1), 1500);
+            }
         }
         return () => {
             if (ambientDrone) ambientDrone.stop();
         };
     }, []);
+
+    const nextTourStep = () => {
+        playClick();
+        if (tourStep === 4) {
+            setTourStep(0);
+            localStorage.setItem('sanctum_tour_complete', 'true');
+        } else {
+            setTourStep(s => s + 1);
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -209,9 +225,14 @@ export default function SanctumHub() {
                                 <Trophy className="w-3 h-3" /> View Global Hierarchy
                             </button>
                         </div>
-                        <p className="text-[9px] text-gray-500 font-mono uppercase tracking-widest pl-4 mt-2">
-                            [SYS_HINT: Engage <span className="text-orange-500">The Oracle</span> (bottom right) to initiate your Guided Tour of the Sanctum.]
-                        </p>
+                        <div className="flex items-center gap-4 pl-4 mt-2">
+                            <p className="text-[9px] text-gray-500 font-mono uppercase tracking-widest">
+                                [SYS_HINT: Establish your domain. Choose your sector.]
+                            </p>
+                            <button onClick={() => { playClick(); setTourStep(1); }} className="text-[9px] text-orange-500 hover:text-orange-400 font-bold uppercase tracking-widest border border-orange-500/30 px-3 py-1 rounded-full transition-colors flex items-center gap-1">
+                                <Shield className="w-3 h-3" /> Re-initiate Tour
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -226,7 +247,7 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/treasury'); }}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 1 ? 'z-50 shadow-[0_0_50px_rgba(234,88,12,0.6)] scale-[1.02] border-orange-500 pointer-events-none' : ''}`}
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
@@ -259,7 +280,7 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/codex'); }}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 2 ? 'z-50 shadow-[0_0_50px_rgba(14,165,233,0.6)] scale-[1.02] border-sky-500 pointer-events-none' : ''}`}
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
@@ -292,7 +313,7 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/cineworks'); }}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 3 ? 'z-50 shadow-[0_0_50px_rgba(168,85,247,0.6)] scale-[1.02] border-purple-500 pointer-events-none' : ''}`}
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
@@ -325,7 +346,7 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/trial'); }}
-                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
+                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 4 ? 'z-50 shadow-[0_0_50px_rgba(34,197,94,0.6)] scale-[1.02] border-green-500 pointer-events-none' : ''}`}
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
@@ -352,6 +373,37 @@ export default function SanctumHub() {
 
                 </div>
             </main>
+
+            {/* Tour Overlay Modal */}
+            {tourStep > 0 && (
+                <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end justify-center pb-32 md:pb-12 pointer-events-auto">
+                    <div className="bg-zinc-950 border border-orange-500/50 p-6 rounded-2xl max-w-md w-full mx-4 shadow-[0_0_30px_rgba(234,88,12,0.3)] animate-fade-in relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/0 via-orange-500 to-orange-500/0"></div>
+                        <h3 className="font-ritual text-xl tracking-widest mb-2 uppercase" style={{ color: tourStep === 1 ? '#ea580c' : tourStep === 2 ? '#38bdf8' : tourStep === 3 ? '#a855f7' : '#22c55e' }}>
+                            {tourStep === 1 && "Sector 1: The Pool"}
+                            {tourStep === 2 && "Sector 2: The Archive"}
+                            {tourStep === 3 && "Sector 3: The Gallery"}
+                            {tourStep === 4 && "Sector 4: The Trial"}
+                        </h3>
+                        <p className="text-xs text-orange-200/70 font-mono tracking-widest leading-relaxed mb-6 h-12">
+                            {tourStep === 1 && "The central treasury. Pledge your SP to fund mutual aid petitions or lodge your own requests to the global collective."}
+                            {tourStep === 2 && "The permanent ledger. Burn SP to decrypt the encrypted whispers of the void left by other Initiates."}
+                            {tourStep === 3 && "The cinematic sanctuary. View prophetic architectural broadcasts. Boost transmissions globally."}
+                            {tourStep === 4 && "The proving grounds. A secure sandbox for untested code, cryptic mechanics, and encrypted simulations."}
+                        </p>
+                        <div className="flex justify-between items-center">
+                            <div className="flex gap-1.5">
+                                {[1, 2, 3, 4].map(s => (
+                                    <div key={s} className={`w-8 h-1 rounded-full transition-colors ${s === tourStep ? (s===1?'bg-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.8)]' : s===2?'bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.8)]' : s===3?'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]') : 'bg-zinc-800'}`}></div>
+                                ))}
+                            </div>
+                            <button onClick={nextTourStep} className="bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold uppercase tracking-widest px-6 py-2 rounded-lg transition-colors">
+                                {tourStep === 4 ? "Acknowledge" : "Continue"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Nav elements (Mobile Bottom Bar representation) */}
             <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
