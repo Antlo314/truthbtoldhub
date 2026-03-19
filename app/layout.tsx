@@ -8,20 +8,21 @@ const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel', weight: [
 
 export const metadata: Metadata = {
     title: {
-        template: '%s | TruthBTold Hub',
-        default: 'TruthBTold Hub | Prophetic Breakdowns & Geopolitical Radar',
+        template: '%s | Sacred Sanctum',
+        default: 'Sacred Sanctum | TruthBTold Hub',
     },
-    description: 'Explore deep biblical prophecy, end-times geopolitical radar, and unfiltered truth. Dive into the Valley of Decision with TruthBTold.',
+    description: 'Enter the Obsidian Void. Watch uncensored prophetic breakdowns, track live geopolitical radar events, and unlearn everything. The truth shall make you free.',
     openGraph: {
-        title: 'TruthBTold Hub',
-        description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events.',
+        title: 'Sacred Sanctum | TruthBTold Hub',
+        description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events before the world shakes.',
         url: 'https://truthbtoldhub.com',
-        siteName: 'TruthBTold Hub',
+        siteName: 'Sacred Sanctum',
         images: [
             {
-                url: 'https://truthbtoldhub.com/api/og', // This is a standard Next.js OG Image route convention if we add one later, or it will fallback gracefully.
+                url: 'https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg', // Epic 14 video thumbnail as the default share image!
                 width: 1200,
                 height: 630,
+                alt: 'Sacred Sanctum Preview'
             },
         ],
         locale: 'en_US',
@@ -29,9 +30,10 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'TruthBTold Hub | Uncut Prophecy',
+        title: 'Sacred Sanctum | The Obsidian Void',
         description: 'Explore deep biblical prophecy, end-times geopolitical radar, and unfiltered truth.',
-        creator: '@truufbtold', // Assumed from YouTube handle
+        creator: '@truufbtold',
+        images: ['https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg'],
     },
     metadataBase: new URL('https://truthbtoldhub.com'),
 };
