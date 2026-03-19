@@ -169,8 +169,8 @@ export default function Cineworks() {
 
                             {!isPlayingFeature ? (
                                 <img
-                                    src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png"
-                                    className="absolute inset-0 w-full h-full object-cover z-0"
+                                    src="https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg"
+                                    className="absolute inset-0 w-full h-full object-cover z-0 opacity-80"
                                     alt="Premiere Preview"
                                 />
                             ) : (
@@ -193,14 +193,14 @@ export default function Cineworks() {
 
                                     <header className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
                                         <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block shadow-md">
-                                            Featured Premiere
+                                            Featured Transmission
                                         </span>
                                         <h1 className="font-ritual text-3xl md:text-5xl text-gray-100 font-bold tracking-widest leading-none drop-shadow-lg mb-4">
-                                            JOEL 3: THE SABEANS
+                                            ATL ZION: THE AWAKENING
                                         </h1>
                                         <div className="text-sm text-gray-300 font-sans max-w-2xl bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-sm pointer-events-auto mb-2">
-                                            <p className="mb-2">Who are the Sabeans mentioned in Joel 3:8, and why does it matter today?</p>
-                                            <p>As we dive into Joel Chapter 3, verses 1–13, the "Valley of Jehoshaphat" becomes the stage for a divine reckoning. While history points to the Sabeans as a distant trading nation, modern insight and geopolitical shifts point directly toward the region of modern-day Iran.</p>
+                                            <p className="mb-2">"STL in the spirit, Judah in the flesh. They never told us who we really was."</p>
+                                            <p>A powerful prophetic breakdown touching on the 14th amendment, the transatlantic scattering, and the geopolitical awakening of the Medes (Iran). The earth is preparing to shake as the King invades.</p>
                                         </div>
                                     </header>
                                 </>
