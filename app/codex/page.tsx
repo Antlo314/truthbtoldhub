@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut, MessageSquare, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut, MessageSquare, X, Trash2, Flame } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -109,6 +109,7 @@ export default function Archive() {
     const [userAuth, setUserAuth] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [onlineUsers, setOnlineUsers] = useState<number>(1);
+    const [isLocked, setIsLocked] = useState(true); // Default locked until profile loads
 
     const [whispers, setWhispers] = useState<Whisper[]>(MOCK_WHISPERS);
     const [newWhisper, setNewWhisper] = useState('');
@@ -188,7 +189,13 @@ export default function Archive() {
             if (user) {
                 setUserAuth(user);
                 const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                if (data) setProfile(data);
+                if (data) {
+                    setProfile(data);
+                    // Core Gating Logic
+                    if (data.tier === 'Architect' || data.tier === 'Sentinel') {
+                        setIsLocked(false);
+                    }
+                }
             } else {
                 router.push('/');
             }
@@ -365,6 +372,24 @@ export default function Archive() {
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         router.push('/');
+    };
+
+    const handleUnlockWithSP = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 5, userId: session.user.id }) // $5 for 500 SP Unlock
+            });
+            if (!res.ok) throw new Error("Stripe checkout failed");
+            const { url } = await res.json();
+            if (url) window.location.href = url;
+        } catch (err: any) {
+            console.error(err);
+            alert("Error initializing sequence: " + err.message);
+        }
     };
 
     const handleLodgeWhisper = async (e: React.FormEvent) => {
@@ -647,11 +672,33 @@ export default function Archive() {
                 </button>
             </header>
 
-            <main className="flex-1 w-full max-w-2xl relative z-10 p-4 md:p-6 pb-32 space-y-8 min-h-screen">
+            <main className={`flex-1 w-full max-w-2xl relative z-10 p-4 md:p-6 pb-32 ${isLocked ? 'flex flex-col items-center justify-center min-h-[80vh]' : 'space-y-8 min-h-screen'}`}>
 
-                {/* Protocol Info Block */}
-                <div className="glass-panel p-6 rounded-2xl border-sky-500/20 shadow-[0_0_30px_rgba(14,165,233,0.05)] relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50"></div>
+                {isLocked ? (
+                    <div className="glass-panel p-8 md:p-12 rounded-3xl border border-sky-500/20 shadow-[0_0_50px_rgba(14,165,233,0.1)] text-center relative overflow-hidden w-full max-w-lg mx-auto">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_60%)]"></div>
+                        <Lock className="w-16 h-16 text-sky-500/80 mx-auto mb-6" />
+                        <h2 className="font-ritual text-3xl text-white tracking-widest uppercase shadow-sm mb-4">Archive Encrypted</h2>
+                        <p className="text-sm font-mono text-gray-400 leading-relaxed mb-8 border-l-2 border-sky-500/30 pl-4 text-left">
+                            The Codex contains unfiltered prophetic breakdowns and classified transmissions. Your current clearance tier <span className="text-white font-bold">(Initiate)</span> is insufficient to access these records.
+                        </p>
+                        
+                        <div className="space-y-4 relative z-10">
+                            <button onClick={() => alert("Subscription portal activating...")} className="w-full flex justify-between items-center px-6 py-4 bg-sky-900/10 hover:bg-sky-900/40 border border-sky-500/30 rounded-xl transition-all group/btn">
+                                <span className="font-bold tracking-widest text-sky-400 text-xs uppercase group-hover/btn:translate-x-1 transition-transform">Ascend to Sentinel</span>
+                                <span className="font-mono text-xs text-sky-200/50">$14 / Month</span>
+                            </button>
+                            <button onClick={handleUnlockWithSP} className="w-full flex justify-between items-center px-6 py-4 bg-orange-950/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-xl transition-all group/btn shadow-[0_0_15px_rgba(234,88,12,0.1)]">
+                                <span className="font-bold tracking-widest text-orange-400 text-xs uppercase flex items-center gap-2 group-hover/btn:translate-x-1 transition-transform"><Flame className="w-4 h-4 text-orange-500" /> One-Time Decrypt</span>
+                                <span className="font-mono text-xs text-orange-200/50">500 SP</span>
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Protocol Info Block */}
+                        <div className="glass-panel p-6 rounded-2xl border-sky-500/20 shadow-[0_0_30px_rgba(14,165,233,0.05)] relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50"></div>
 
                     <div className="flex items-start gap-4">
                         <div className="w-12 h-12 rounded-xl bg-sky-950/50 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
@@ -1026,6 +1073,8 @@ export default function Archive() {
                     </div>
 
                 </div>
+                </>
+                )}
             </main>
 
             {/* Profile Overview Modal */}

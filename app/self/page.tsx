@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload } from 'lucide-react';
+import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -434,12 +434,53 @@ export default function PowerSelf() {
                                 </form>
                             </div>
 
-                            <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl">
-                                <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
-                                    <CheckSquare className="w-4 h-4 text-orange-500" /> Active Votes (The Stage)
-                                </h3>
-                                <div className="text-center py-8">
-                                    <p className="text-[10px] uppercase font-mono tracking-widest text-gray-600">No active voting signatures.</p>
+                            <div className="space-y-6">
+                                {/* Affiliation Cipher */}
+                                <div className="glass bg-orange-950/20 border border-orange-500/30 p-6 rounded-2xl relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(234,88,12,0.1)_0%,transparent_50%)]"></div>
+                                    <h3 className="text-xs uppercase tracking-widest text-white font-bold mb-2 flex items-center gap-2">
+                                        <Share2 className="w-4 h-4 text-orange-500" /> Cipher Link (Affiliation)
+                                    </h3>
+                                    <p className="text-[10px] text-gray-400 font-mono tracking-widest mb-4">
+                                        Share your unique signature. Referrals grant you +100 SP.
+                                    </p>
+                                    <div className="flex gap-2 relative z-10">
+                                        <input 
+                                            readOnly 
+                                            title="Cipher Link"
+                                            placeholder="Cipher Link"
+                                            value={`https://truthbtoldhub.com/?cipher=${userAuth?.id?.substring(0,8) || 'INIT...'}`}
+                                            className="flex-1 bg-black/60 border border-orange-500/30 rounded-lg px-3 py-2.5 text-xs text-orange-200 font-mono focus:outline-none"
+                                        />
+                                        <button 
+                                            onClick={(e) => {
+                                                navigator.clipboard.writeText(`Begin Initiation: https://truthbtoldhub.com/?cipher=${userAuth?.id?.substring(0,8) || 'INIT...'}`);
+                                                const btn = e.currentTarget;
+                                                const originalText = btn.innerHTML;
+                                                btn.innerHTML = '<span class="text-[10px] uppercase font-bold tracking-widest text-white">COPIED</span>';
+                                                setTimeout(() => btn.innerHTML = originalText, 2000);
+                                            }}
+                                            title="Copy Cipher Link"
+                                            aria-label="Copy Cipher Link"
+                                            className="bg-orange-600 hover:bg-orange-500 text-white px-4 rounded-lg transition-colors flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(234,88,12,0.4)]"
+                                        >
+                                            <Link className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-orange-500/20 flex justify-between items-center relative z-10">
+                                        <span className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Echoes (Recruits)</span>
+                                        <span className="text-sm font-bold text-orange-400">0</span>
+                                    </div>
+                                </div>
+
+                                {/* Active Votes */}
+                                <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl">
+                                    <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
+                                        <CheckSquare className="w-4 h-4 text-orange-500" /> Active Votes (The Stage)
+                                    </h3>
+                                    <div className="text-center py-4 text-[10px] uppercase font-mono tracking-widest text-gray-600">
+                                        No active voting signatures.
+                                    </div>
                                 </div>
                             </div>
                         </div>

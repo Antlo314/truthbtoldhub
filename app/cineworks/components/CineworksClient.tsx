@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Play, Clapperboard, ChevronRight, LogOut } from 'lucide-react';
+import { ArrowLeft, Play, Clapperboard, ChevronRight, LogOut, Share2, Flame, Loader2 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Howl } from 'howler';
@@ -29,6 +29,45 @@ export default function Cineworks() {
     const [films, setFilms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPlayingFeature, setIsPlayingFeature] = useState(false);
+    const [isMinting, setIsMinting] = useState(false);
+
+    const handleShare = async () => {
+        try {
+            await navigator.clipboard.writeText("Awakening initiated. Watch the latest transmission on Sacred Sanctum. https://truthbtoldhub.com/cineworks");
+            alert("Coordinates copied to your clipboard. Awaken the masses.");
+        } catch (err) {
+            console.error("Failed to copy", err);
+        }
+    };
+
+    const handleMintSP = async () => {
+        setIsMinting(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                alert("Initiation Required: Must be logged in to Mint SP.");
+                setIsMinting(false);
+                return;
+            }
+
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 14, userId: session.user.id }) // $14 standard energy contribution
+            });
+
+            if (!res.ok) throw new Error("Stripe checkout failed to initialize.");
+            
+            const { url } = await res.json();
+            if (url) window.location.href = url;
+            else setIsMinting(false);
+
+        } catch (err: any) {
+            console.error(err);
+            alert("Error: " + err.message);
+            setIsMinting(false);
+        }
+    };
 
     const bgRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
@@ -218,6 +257,21 @@ export default function Cineworks() {
                                     </header>
                                 </>
                             )}
+                        </div>
+
+                        {/* Action Bar (Share & Monetize) */}
+                        <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <button onClick={handleShare} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold tracking-widest text-white uppercase transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+                                    <Share2 className="w-4 h-4 text-purple-400" /> Spread Coordinates
+                                </button>
+                                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase hidden md:inline">Generate Viral Lift</span>
+                            </div>
+                            
+                            <button disabled={isMinting} onClick={handleMintSP} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-orange-600/20 hover:bg-orange-600/40 border border-orange-500/50 rounded-xl text-xs font-bold tracking-widest text-orange-400 uppercase transition-all shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:opacity-50">
+                                {isMinting ? <Loader2 className="w-4 h-4 animate-spin text-orange-400" /> : <Flame className="w-4 h-4 text-orange-500" />}
+                                {isMinting ? 'Initializing...' : 'Boost Signal (Mint SP)'}
+                            </button>
                         </div>
 
                         {/* Lyrics / Transcript Section */}
