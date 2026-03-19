@@ -176,7 +176,7 @@ export default function Cineworks() {
                             ) : (
                                 <iframe
                                     className="absolute inset-0 w-full h-full z-0 bg-black"
-                                    src="https://www.youtube.com/embed/9vYmj7r_s9k?autoplay=1&rel=0&modestbranding=1"
+                                    src="https://www.youtube.com/embed/msKxh1gInMU?autoplay=1&rel=0&modestbranding=1"
                                     title="Who are the Sabeans? (Joel 3)"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                     allowFullScreen
@@ -205,6 +205,27 @@ export default function Cineworks() {
                                     </header>
                                 </>
                             )}
+                        </div>
+
+                        {/* Lyrics / Transcript Section */}
+                        <div className="mt-8 bg-black/40 p-6 md:p-8 rounded-3xl border border-purple-500/20 glass relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none"></div>
+                            <h3 className="font-ritual text-xl text-purple-300 font-bold tracking-widest uppercase mb-6 flex items-center gap-3 relative z-10">
+                                <Clapperboard className="w-5 h-5" />
+                                Transmission Transcript
+                            </h3>
+                            <div className="text-gray-300 font-sans text-sm md:text-base leading-relaxed space-y-4 max-h-[400px] overflow-y-auto pr-6 scrollbar-thin scrollbar-thumb-purple-500/30 scrollbar-track-transparent relative z-10">
+                                <p>STL in the spirit, Judah in the flesh. They never told us who we really was. Constitutional lies and Biblical truths.<br/>Let's talk about it.</p>
+                                <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
+                                <p>Born out the blood of the cotton fields. 14th amendment ain't love, it's a raw deal. Citizenship given, but never gave land. No reparations, just jail and the chain hand.<br/>My king came through ships, through the storm in a mist. Now they acting like immigrants man, dismissed.</p>
+                                <p>We the ones Deuteronomy warn about, 400 years now the time getting drawn out. Mass deportation, that's revelation, but not for us, it's the other nations. Bible said it scattered all over, now Babylon fallen better read Jehovah. Iran in the east yea the Medes getting bold, it's written in the scrolls not just what the news told.<br/>Joel chapter 3, the captives coming back, and the ones that sold them I'm going to feel that wrath.</p>
+                                <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
+                                <p>You sold the children of Judah for wine that you might drink, but the Most High remember the cup coming back full.</p>
+                                <p>This ain't no trap, it's a trumpet ATL sound like Zion when we bumping. Scrolls in the trunk, got the fire in the booth. They feel the truth more than the nukes in the roof.</p>
+                                <p>Don't sleep on the Medes thats Iran in your vision. Babylon split like a surgical incision. We ain't Gentiles. We the root of the tree. The 14th was a band-aid, but the wound still bleeds.</p>
+                                <p>It was always about the children of the slave trade.</p>
+                                <p>Now the earth going to shake when the King invades.<br/>ATL Judah. We wait.</p>
+                            </div>
                         </div>
                     </section>
 
