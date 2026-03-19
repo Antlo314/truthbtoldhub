@@ -767,7 +767,17 @@ export default function Archive() {
                             <h3 className="font-ritual text-xl text-sky-400 tracking-widest shadow-sky-500/50 drop-shadow-md">THE CORE</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {coreWhispers.map((whisper, index) => (
+                            {coreWhispers.length === 0 ? (
+                                <div className="col-span-1 md:col-span-3 glass bg-black/40 border border-white/5 rounded-3xl p-12 text-center relative overflow-hidden group min-h-[300px] flex flex-col items-center justify-center">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                                    <Sparkles className="w-12 h-12 text-sky-500/30 mb-6 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
+                                    <h3 className="font-ritual text-2xl md:text-3xl tracking-[0.3em] text-white/40 mb-4 uppercase">The Core is Silent</h3>
+                                    <p className="text-[10px] md:text-xs text-gray-500 font-mono tracking-widest uppercase max-w-sm mx-auto leading-relaxed">
+                                        No whispers have been inscribed into the eternal ledger. Lodge the first transmission to align the collective.
+                                    </p>
+                                </div>
+                            ) : (
+                                coreWhispers.map((whisper, index) => (
                                 <div
                                     key={whisper.id}
                                     ref={el => {
@@ -911,7 +921,7 @@ export default function Archive() {
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                            )))}
                         </div>
                     </div>
 
@@ -922,7 +932,15 @@ export default function Archive() {
                             <h3 className="font-ritual text-lg text-zinc-500 tracking-widest">THE FRINGE</h3>
                         </div>
                         <div className="space-y-3">
-                            {fringeWhispers.map((whisper, index) => (
+                            {fringeWhispers.length === 0 ? (
+                                <div className="glass bg-black/40 border border-white/5 rounded-xl p-8 text-center relative overflow-hidden group">
+                                    <Eye className="w-8 h-8 text-zinc-600/50 mb-4 mx-auto" />
+                                    <p className="text-[10px] text-zinc-600 font-mono tracking-widest uppercase">
+                                        The Fringe is empty. No public whispers orbit the Core.
+                                    </p>
+                                </div>
+                            ) : (
+                                fringeWhispers.map((whisper, index) => (
                                 <div
                                     key={whisper.id}
                                     ref={el => { fringeRefs.current[index] = el; }}
@@ -1068,7 +1086,7 @@ export default function Archive() {
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                            )))}
                         </div>
                     </div>
 

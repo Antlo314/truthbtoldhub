@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link } from 'lucide-react';
+import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link, Trophy } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -34,6 +34,7 @@ export default function PowerSelf() {
     const [profile, setProfile] = useState<any>(null);
     const [uploading, setUploading] = useState(false);
     const [isRecovery, setIsRecovery] = useState(false);
+    const [globalRank, setGlobalRank] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const bgRef = useRef<HTMLDivElement>(null);
@@ -86,6 +87,14 @@ export default function PowerSelf() {
                     const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
                     if (data && !error) {
                         setProfile({ ...data }); // spread to force strict react re-render
+
+                        if (data.soul_power > 0) {
+                            const { count } = await supabase
+                                .from('profiles')
+                                .select('id', { count: 'exact', head: true })
+                                .gt('soul_power', data.soul_power);
+                            setGlobalRank((count || 0) + 1);
+                        }
                     }
                 }
             } catch (err) {
@@ -292,6 +301,12 @@ export default function PowerSelf() {
                                     <Key className="w-4 h-4 text-orange-500" />
                                     <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Tier: <strong className="text-white">{currentTier}</strong></span>
                                 </div>
+                                {globalRank !== null && globalRank > 0 && (
+                                    <button onClick={() => router.push('/hierarchy')} className="flex items-center gap-2 bg-orange-950/20 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg border border-orange-500/30 transition-all group">
+                                        <Trophy className="w-3.5 h-3.5 text-orange-500 group-hover:scale-110 transition-transform" />
+                                        <span className="text-[10px] uppercase font-mono tracking-widest text-orange-200">Global Rank: <strong className="text-orange-500 font-bold ml-1">#{globalRank}</strong></span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -336,8 +351,15 @@ export default function PowerSelf() {
 
                     {/* PROFILE TAB */}
                     {activeTab === 'profile' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative">
+                        <div className="flex flex-col gap-6">
+                            <div className="glass bg-orange-950/10 border border-orange-500/20 p-4 rounded-xl flex items-start gap-4">
+                                <ShieldAlert className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-orange-200/70 font-mono tracking-widest leading-relaxed uppercase">
+                                    [SYS_HINT]: The Identity Core is your master control terminal. Configure your public aesthetics, manage security ciphers, and monitor your Global Rank. Distribute your Cipher Link below to recruit new Initiates—each successful referral automatically synthesizes <strong className="text-orange-400">+100 SP</strong> into your ledger.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
                                     <User className="w-4 h-4 text-orange-500" /> Account Security
                                 </h3>
@@ -483,6 +505,7 @@ export default function PowerSelf() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     )}
 

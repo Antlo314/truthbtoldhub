@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import { Play, ShieldAlert, ChevronDown, Eye, Globe2, Clapperboard, Flame } from 'lucide-react';
+
+function CipherTracker() {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        const cipher = searchParams.get('cipher');
+        if (cipher) localStorage.setItem('cipher_referral', cipher);
+    }, [searchParams]);
+    return null;
+}
 
 export default function Gateway() {
     const router = useRouter();
@@ -136,7 +145,10 @@ export default function Gateway() {
     };
 
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 overflow-x-hidden font-sans">
+        <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-orange-500/30">
+            <Suspense fallback={null}>
+                <CipherTracker />
+            </Suspense>
             
             {/* HEROS SECTION */}
             <section className="relative min-h-[100dvh] flex flex-col items-center justify-center p-4">

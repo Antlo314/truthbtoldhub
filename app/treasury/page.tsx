@@ -513,7 +513,28 @@ export default function Treasury() {
                     </div>
 
                     <div className="space-y-4" ref={mainContainerRef}>
-                        {petitions.map((pet, index) => (
+                        {petitions.length === 0 ? (
+                            <div className="glass bg-black/40 border border-white/5 rounded-3xl p-12 text-center relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(234,88,12,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                                <div className="w-20 h-20 mx-auto rounded-full bg-orange-950/20 border border-orange-500/10 flex items-center justify-center mb-6 relative">
+                                    <div className="absolute inset-0 bg-orange-500/20 blur-xl animate-pulse rounded-full"></div>
+                                    <Flame className="w-8 h-8 text-orange-500/50 relative z-10" />
+                                </div>
+                                <h3 className="font-ritual text-2xl md:text-3xl tracking-[0.3em] text-white/40 mb-4 uppercase">The Pool is Undisturbed</h3>
+                                <p className="text-[10px] md:text-xs text-gray-500 font-mono tracking-widest uppercase max-w-md mx-auto leading-relaxed">
+                                    There are currently no active petitions for aid. The Void awaits the first initiate to step forward and request consensus.
+                                </p>
+                                <div className="mt-8 border-t border-white/5 pt-8">
+                                    <button 
+                                        onClick={() => setIsRequestingAid(true)}
+                                        className="text-[10px] uppercase font-bold tracking-widest text-orange-500 hover:text-orange-400 border border-orange-500/30 px-6 py-3 rounded-xl hover:bg-orange-500/10 transition-all"
+                                    >
+                                        Initiate Petition
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            petitions.map((pet, index) => (
                             <div
                                 key={pet.id}
                                 ref={el => { cardsRef.current[index] = el }}
@@ -628,7 +649,7 @@ export default function Treasury() {
                                     </div>
                                 )}
                             </div>
-                        ))}
+                        )))}
                     </div>
                 </div>
             </main>

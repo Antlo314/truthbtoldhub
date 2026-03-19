@@ -306,7 +306,17 @@ export default function Cineworks() {
                         </header>
 
                         <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {films.map((film, index) => (
+                            {films.length === 0 ? (
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3 glass bg-black/40 border border-white/5 rounded-3xl p-16 text-center relative overflow-hidden group min-h-[400px] flex flex-col items-center justify-center">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                                    <Clapperboard className="w-16 h-16 text-purple-500/30 mb-6 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)] animate-pulse" />
+                                    <h3 className="font-ritual text-3xl md:text-4xl tracking-[0.4em] text-white/40 mb-4 uppercase">Transmissions Offline</h3>
+                                    <p className="text-xs md:text-sm text-gray-500 font-mono tracking-widest uppercase max-w-lg mx-auto leading-relaxed">
+                                        The cinematic archives are currently devoid of signal. Await the next prophetic broadcast from the Architect.
+                                    </p>
+                                </div>
+                            ) : (
+                                films.map((film, index) => (
                                 <article
                                     key={film.id}
                                     ref={el => { filmRefs.current[index] = el; }}
@@ -365,7 +375,7 @@ export default function Cineworks() {
                                         </div>
                                     </div>
                                 </article>
-                            ))}
+                            )))}
                         </div>
                     </section>
 

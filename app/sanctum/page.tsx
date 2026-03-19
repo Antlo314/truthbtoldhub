@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame, Cpu } from 'lucide-react';
+import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame, Cpu, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Howl } from 'howler';
 import gsap from 'gsap';
@@ -74,6 +74,22 @@ export default function SanctumHub() {
                     console.error("Profile fetch error:", error);
                 } else if (data && isMounted) {
                     setProfile({ ...data });
+
+                    // Check for pending Cipher Referral
+                    const cipherReferral = localStorage.getItem('cipher_referral');
+                    if (cipherReferral) {
+                        fetch('/api/affiliation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ cipher: cipherReferral, newUserId: session.user.id })
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            console.log('Affiliation response:', res);
+                            localStorage.removeItem('cipher_referral');
+                        })
+                        .catch(err => console.error('Affiliation error:', err));
+                    }
                 }
 
                 // Fetch Global System Broadcast
@@ -178,11 +194,24 @@ export default function SanctumHub() {
             <main className="flex-1 relative z-10 p-4 md:p-8 overflow-y-auto pb-32">
                 <div className="max-w-6xl mx-auto space-y-8">
 
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-1.5 h-6 bg-orange-600 rounded-full"></div>
-                        <h2 className="font-ritual text-lg text-white font-bold tracking-widest uppercase shadow-sm">
-                            The Great Grid
-                        </h2>
+                    <div className="flex flex-col gap-1 mb-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-orange-600 rounded-full"></div>
+                                <h2 className="font-ritual text-lg text-white font-bold tracking-widest uppercase shadow-sm">
+                                    The Great Grid
+                                </h2>
+                            </div>
+                            <button
+                                onClick={() => router.push('/hierarchy')}
+                                className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-orange-400 hover:text-white bg-orange-950/30 hover:bg-orange-500/50 border border-orange-500/30 px-4 py-2 rounded-full transition-all shadow-[0_0_10px_rgba(234,88,12,0.2)]"
+                            >
+                                <Trophy className="w-3 h-3" /> View Global Hierarchy
+                            </button>
+                        </div>
+                        <p className="text-[9px] text-gray-500 font-mono uppercase tracking-widest pl-4 mt-2">
+                            [SYS_HINT: Engage <span className="text-orange-500">The Oracle</span> (bottom right) to initiate your Guided Tour of the Sanctum.]
+                        </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
