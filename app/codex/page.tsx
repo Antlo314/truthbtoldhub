@@ -522,9 +522,14 @@ export default function Archive() {
 
         if (!confirm("Erase this whisper from the Archive?")) return;
 
+        const backup = whispers;
         setWhispers(prev => prev.filter(w => w.id !== id));
         if (!id.startsWith('w_')) {
-            await supabase.from('codex_whispers').delete().eq('id', id);
+            const { error } = await supabase.from('codex_whispers').delete().eq('id', id);
+            if(error) {
+                alert("Deletion rejected by the server: " + error.message);
+                setWhispers(backup);
+            }
         }
         playHover();
     };
@@ -535,6 +540,7 @@ export default function Archive() {
 
         if (!confirm("Erase this reply?")) return;
 
+        const backup = whispers;
         setWhispers(prev => prev.map(w => {
             if (w.id === whisperId) {
                 return { ...w, replies: w.replies?.filter(r => r.id !== replyId) };
@@ -543,7 +549,11 @@ export default function Archive() {
         }));
 
         if (!replyId.startsWith('r_')) {
-            await supabase.from('codex_replies').delete().eq('id', replyId);
+            const { error } = await supabase.from('codex_replies').delete().eq('id', replyId);
+            if(error) {
+                alert("Deletion rejected by the server: " + error.message);
+                setWhispers(backup);
+            }
         }
         playHover();
     };
@@ -762,17 +772,17 @@ export default function Archive() {
 
                     {/* The Core */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3 border-b border-sky-500/30 pb-3">
-                            <Zap className="w-5 h-5 text-sky-400" />
-                            <h3 className="font-ritual text-xl text-sky-400 tracking-widest shadow-sky-500/50 drop-shadow-md">THE CORE</h3>
+                        <div className="flex items-center gap-4 border-b-2 border-sky-500/30 pb-4 mb-6">
+                            <Zap className="w-8 h-8 md:w-10 md:h-10 text-sky-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)]" />
+                            <h3 className="font-ritual text-3xl md:text-5xl text-sky-400 tracking-[0.2em] shadow-sky-500/50 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]">THE CORE</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {coreWhispers.length === 0 ? (
-                                <div className="col-span-1 md:col-span-3 glass bg-black/40 border border-white/5 rounded-3xl p-12 text-center relative overflow-hidden group min-h-[300px] flex flex-col items-center justify-center">
+                                <div className="col-span-1 md:col-span-3 glass bg-black/40 border border-white/5 rounded-3xl p-12 md:p-24 text-center relative overflow-hidden group min-h-[300px] flex flex-col items-center justify-center">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                                    <Sparkles className="w-12 h-12 text-sky-500/30 mb-6 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
-                                    <h3 className="font-ritual text-2xl md:text-3xl tracking-[0.3em] text-white/40 mb-4 uppercase">The Core is Silent</h3>
-                                    <p className="text-[10px] md:text-xs text-gray-500 font-mono tracking-widest uppercase max-w-sm mx-auto leading-relaxed">
+                                    <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-sky-500/30 mb-6 md:mb-8 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
+                                    <h3 className="font-ritual text-2xl md:text-5xl tracking-[0.3em] text-white/40 mb-4 md:mb-6 uppercase">The Core is Silent</h3>
+                                    <p className="text-xs md:text-base text-gray-500 font-mono tracking-widest uppercase max-w-lg mx-auto leading-relaxed">
                                         No whispers have been inscribed into the eternal ledger. Lodge the first transmission to align the collective.
                                     </p>
                                 </div>
@@ -820,11 +830,11 @@ export default function Archive() {
 
                                         <div className="relative z-10">
                                             {whisper.isEncrypted ? (
-                                                <p className="text-sm font-mono text-zinc-500 select-none blur-[2px] transition-all group-hover:blur-[1px]">
+                                                <p className="text-sm md:text-base font-mono text-zinc-500 select-none blur-[2px] transition-all group-hover:blur-[1px]">
                                                     {whisper.content}
                                                 </p>
                                             ) : (
-                                                <p className="text-base font-bold font-mono text-white leading-relaxed drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
+                                                <p className="text-base md:text-xl font-bold font-mono text-white leading-relaxed drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
                                                     "{whisper.content}"
                                                 </p>
                                             )}
@@ -864,22 +874,22 @@ export default function Archive() {
 
                                             {/* Existing Replies List */}
                                             {whisper.replies && whisper.replies.length > 0 && (
-                                                <div className="space-y-2 mb-4 mx-2 pl-4 border-l-2 border-sky-500/20 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar relative">
+                                                <div className="space-y-3 mb-6 bg-black/40 border border-sky-500/20 p-4 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar relative shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
                                                     {whisper.replies.map(reply => (
-                                                        <div key={reply.id} className="flex flex-col gap-1 relative group/reply hover:bg-white/[0.03] p-2 rounded-lg -ml-2 transition-colors">
-                                                            <div className="flex justify-between items-center">
-                                                                <div className="flex items-center gap-2">
-                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform">
+                                                        <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-sky-950/10 hover:bg-sky-900/20 p-3 md:p-4 rounded-lg border border-white/5 transition-colors">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <div className="flex items-center gap-3">
+                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
                                                                         {reply.avatar_url ? (
-                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-4 h-4 rounded-full border border-sky-500/50" />
+                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-sky-500/50" />
                                                                         ) : (
-                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={16} className="border-sky-500/50 rounded-full" />
+                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={20} className="border-sky-500/50 rounded-full" />
                                                                         )}
                                                                     </button>
-                                                                    <span className="text-[9px] font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
+                                                                    <span className="text-[10px] md:text-xs font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="text-[8px] font-mono text-sky-500/60">{reply.timestamp}</span>
+                                                                <div className="flex items-center gap-4">
+                                                                    <span className="text-[9px] md:text-[10px] font-mono text-sky-500/60">{reply.timestamp}</span>
 
                                                                     {(userAuth?.id === reply.author_id || isAdmin) && (
                                                                         <button
@@ -887,12 +897,12 @@ export default function Archive() {
                                                                             className="text-sky-500/30 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
                                                                             title="Erase Reply"
                                                                         >
-                                                                            <Trash2 className="w-3 h-3" />
+                                                                            <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <p className="text-[11px] font-mono text-sky-100/70 w-full pl-6">
+                                                            <p className="text-xs md:text-sm font-mono text-sky-100/90 w-full pl-8 md:pl-10 leading-relaxed">
                                                                 {reply.content}
                                                             </p>
                                                         </div>
@@ -901,21 +911,21 @@ export default function Archive() {
                                             )}
 
                                             {/* Input Area */}
-                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-2">
-                                                <input
-                                                    type="text"
+                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-3 items-end bg-black/40 p-2 rounded-xl border border-sky-500/30">
+                                                <textarea
                                                     value={replyContent}
                                                     onChange={(e) => setReplyContent(e.target.value)}
                                                     placeholder="Lodge a reply..."
-                                                    maxLength={100}
-                                                    className="flex-1 bg-sky-950/20 border border-sky-500/30 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-sky-500/40 focus:outline-none focus:border-sky-400"
+                                                    maxLength={280}
+                                                    rows={1}
+                                                    className="flex-1 bg-transparent border-none px-3 py-2 text-sm md:text-base text-white placeholder:text-sky-500/40 focus:outline-none resize-none min-h-[44px] custom-scrollbar"
                                                 />
                                                 <button
                                                     type="submit"
                                                     disabled={isSubmittingReply || !replyContent.trim()}
-                                                    className="bg-sky-500/20 text-sky-400 hover:text-black hover:bg-sky-500 border border-sky-500/50 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                                    className="bg-sky-500/20 text-sky-400 hover:text-black hover:bg-sky-500 border border-sky-500/50 p-3 rounded-lg transition-all disabled:opacity-50 shrink-0"
                                                 >
-                                                    <Send className="w-3 h-3" />
+                                                    <Send className="w-4 h-4" />
                                                 </button>
                                             </form>
                                         </div>
@@ -927,15 +937,15 @@ export default function Archive() {
 
                     {/* The Fringe */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-                            <Eye className="w-4 h-4 text-zinc-500" />
-                            <h3 className="font-ritual text-lg text-zinc-500 tracking-widest">THE FRINGE</h3>
+                        <div className="flex items-center gap-4 border-b border-white/10 pb-4 mt-8 mb-6">
+                            <Eye className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
+                            <h3 className="font-ritual text-2xl md:text-3xl text-zinc-500 tracking-[0.2em]">THE FRINGE</h3>
                         </div>
                         <div className="space-y-3">
                             {fringeWhispers.length === 0 ? (
-                                <div className="glass bg-black/40 border border-white/5 rounded-xl p-8 text-center relative overflow-hidden group">
-                                    <Eye className="w-8 h-8 text-zinc-600/50 mb-4 mx-auto" />
-                                    <p className="text-[10px] text-zinc-600 font-mono tracking-widest uppercase">
+                                <div className="glass bg-black/40 border border-white/5 rounded-xl p-8 md:p-16 text-center relative overflow-hidden group">
+                                    <Eye className="w-8 h-8 md:w-12 md:h-12 text-zinc-600/50 mb-4 mx-auto" />
+                                    <p className="text-[10px] md:text-sm text-zinc-600 font-mono tracking-widest uppercase">
                                         The Fringe is empty. No public whispers orbit the Core.
                                     </p>
                                 </div>
@@ -980,13 +990,13 @@ export default function Archive() {
 
                                     <div className="relative z-10 pl-3 border-l border-white/5">
                                         {whisper.isEncrypted ? (
-                                            <p className="text-xs font-mono text-zinc-600 select-none blur-[2px]">
+                                            <p className="text-xs md:text-sm font-mono text-zinc-600 select-none blur-[2px]">
                                                 {whisper.content}
                                             </p>
                                         ) : (
                                             <p
                                                 ref={whisper.isNew ? newTextRef : null}
-                                                className={`text-xs font-mono ${whisper.isNew ? 'text-sky-300 font-bold' : 'text-zinc-400'} leading-relaxed`}
+                                                className={`text-sm md:text-base font-mono ${whisper.isNew ? 'text-sky-300 font-bold' : 'text-zinc-300'} leading-relaxed`}
                                             >
                                                 {whisper.content}
                                             </p>
@@ -1029,22 +1039,22 @@ export default function Archive() {
 
                                             {/* Existing Replies List */}
                                             {whisper.replies && whisper.replies.length > 0 && (
-                                                <div className="space-y-2 mb-4 mx-2 pl-4 border-l-2 border-zinc-700 relative">
+                                                <div className="space-y-3 mb-6 bg-black/60 border border-white/10 p-4 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar relative shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
                                                     {whisper.replies.map(reply => (
-                                                        <div key={reply.id} className="flex flex-col gap-1 relative group/reply hover:bg-white/[0.03] p-2 rounded-lg -ml-2 transition-colors">
-                                                            <div className="flex justify-between items-center">
-                                                                <div className="flex items-center gap-2">
-                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform">
+                                                        <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-white/[0.02] hover:bg-white/[0.04] p-3 md:p-4 rounded-lg border border-white/5 transition-colors">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <div className="flex items-center gap-3">
+                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
                                                                         {reply.avatar_url ? (
-                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-4 h-4 rounded-full border border-sky-500/20" />
+                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-sky-500/20" />
                                                                         ) : (
-                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={16} className="border-sky-500/20 rounded-full" />
+                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={20} className="border-sky-500/20 rounded-full" />
                                                                         )}
                                                                     </button>
-                                                                    <span className="text-[9px] font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
+                                                                    <span className="text-[10px] md:text-xs font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="text-[8px] font-mono text-zinc-600">{reply.timestamp}</span>
+                                                                <div className="flex items-center gap-4">
+                                                                    <span className="text-[9px] md:text-[10px] font-mono text-zinc-500">{reply.timestamp}</span>
 
                                                                     {(userAuth?.id === reply.author_id || isAdmin) && (
                                                                         <button
@@ -1052,12 +1062,12 @@ export default function Archive() {
                                                                             className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
                                                                             title="Erase Reply"
                                                                         >
-                                                                            <Trash2 className="w-3 h-3" />
+                                                                            <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <p className="text-[11px] font-mono text-zinc-400 w-full pl-6">
+                                                            <p className="text-xs md:text-sm font-mono text-zinc-300 w-full pl-8 md:pl-10 leading-relaxed">
                                                                 {reply.content}
                                                             </p>
                                                         </div>
@@ -1066,21 +1076,21 @@ export default function Archive() {
                                             )}
 
                                             {/* Input Area */}
-                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-2">
-                                                <input
-                                                    type="text"
+                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-3 items-end bg-black/40 p-2 rounded-xl border border-white/10">
+                                                <textarea
                                                     value={replyContent}
                                                     onChange={(e) => setReplyContent(e.target.value)}
                                                     placeholder="Lodge a reply..."
-                                                    maxLength={100}
-                                                    className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-sky-500/50"
+                                                    maxLength={280}
+                                                    rows={1}
+                                                    className="flex-1 bg-transparent px-3 py-2 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none resize-none custom-scrollbar min-h-[44px]"
                                                 />
                                                 <button
                                                     type="submit"
                                                     disabled={isSubmittingReply || !replyContent.trim()}
-                                                    className="bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-sky-500/40 border border-white/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                                    className="bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-sky-500/40 border border-white/10 p-3 rounded-lg transition-all disabled:opacity-50 shrink-0"
                                                 >
-                                                    <Send className="w-3 h-3" />
+                                                    <Send className="w-4 h-4" />
                                                 </button>
                                             </form>
                                         </div>
