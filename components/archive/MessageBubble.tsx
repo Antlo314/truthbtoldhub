@@ -1,13 +1,16 @@
 'use client';
 
 import { ArchiveMessage } from '@/lib/store/useArchiveStore';
+import { Trash2 } from 'lucide-react';
 
 interface MessageBubbleProps {
     message: ArchiveMessage;
     isGrouped?: boolean;
+    canDelete?: boolean;
+    onDelete?: () => void;
 }
 
-export default function MessageBubble({ message, isGrouped = false }: MessageBubbleProps) {
+export default function MessageBubble({ message, isGrouped = false, canDelete = false, onDelete }: MessageBubbleProps) {
     const timestamp = new Date(message.created_at);
     const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const fullDateString = timestamp.toLocaleDateString([], { 
@@ -30,6 +33,13 @@ export default function MessageBubble({ message, isGrouped = false }: MessageBub
                         )}
                     </div>
                 </div>
+                {canDelete && (
+                    <div className="absolute right-4 -top-3 hidden group-hover:flex items-center bg-[#313338] border border-[#2b2d31] shadow-sm rounded overflow-hidden z-10">
+                        <button onClick={onDelete} title="Delete Message" className="p-1.5 text-[#b5bac1] hover:text-[#da373c] hover:bg-[#2b2d31] transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }
@@ -64,10 +74,14 @@ export default function MessageBubble({ message, isGrouped = false }: MessageBub
                 </div>
             </div>
             
-            {/* Hover Action Menu placeholder */}
-            <div className="absolute right-4 -top-3 hidden group-hover:flex items-center bg-[#313338] border border-[#2b2d31] shadow-sm rounded overflow-hidden">
-                {/* Icons can be added here like Edit, Delete, Reply */}
-            </div>
+            {/* Hover Action Menu */}
+            {canDelete && (
+                <div className="absolute right-4 -top-3 hidden group-hover:flex items-center bg-[#313338] border border-[#2b2d31] shadow-sm rounded overflow-hidden z-10">
+                    <button onClick={onDelete} title="Delete Message" className="p-1.5 text-[#b5bac1] hover:text-[#da373c] hover:bg-[#2b2d31] transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

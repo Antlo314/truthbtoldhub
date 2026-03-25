@@ -7,7 +7,7 @@ import MessageBubble from './MessageBubble';
 import { Hash, PlusCircle, Smile, Gift, FileImage, Send, Menu } from 'lucide-react';
 
 export default function ChatArea() {
-    const { activeChannelId, workspaces, activeWorkspaceId, channels, messages, setMessages, addMessage, setIsMobileMenuOpen } = useArchiveStore();
+    const { activeChannelId, workspaces, activeWorkspaceId, channels, messages, setMessages, addMessage, setIsMobileMenuOpen, members, deleteMessage } = useArchiveStore();
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -17,6 +17,11 @@ export default function ChatArea() {
     const workspaceChannels = activeWorkspaceId ? (channels[activeWorkspaceId] || []) : [];
     const activeChannel = workspaceChannels.find(c => c.id === activeChannelId);
     const channelMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
+    
+    // Auth & Roles
+    const activeWorkspaceMembers = activeWorkspaceId ? (members[activeWorkspaceId] || []) : [];
+    const currentMemberRole = currentUser ? activeWorkspaceMembers.find(m => m.user_id === currentUser.id)?.role : null;
+    const isGlobalAdmin = currentMemberRole === 'Admin' || currentMemberRole === 'Moderator';
 
     // Scroll to bottom when messages change
     useEffect(() => {
@@ -61,7 +66,7 @@ export default function ChatArea() {
 
         fetchMessages();
 
-        // Subscribe to Realtime Inserts
+        // Subscribe to Realtime Inserts and Deletes
         const messageSub = supabase.channel(`channel_${activeChannelId}_msgs`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'archive_messages', filter: `channel_id=eq.${activeChannelId}` }, async (payload) => {
                 // Ignore if we just sent it locally (can check if it already exists or manage optimistic UI better)
@@ -78,7 +83,11 @@ export default function ChatArea() {
                     created_at: payload.new.created_at,
                     author: profile || { display_name: 'Unknown' }
                 });
-            }).subscribe();
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'archive_messages', filter: `channel_id=eq.${activeChannelId}` }, (payload) => {
+                deleteMessage(payload.old.id);
+            })
+            .subscribe();
 
         return () => {
             supabase.removeChannel(messageSub);
@@ -120,6 +129,16 @@ export default function ChatArea() {
             console.error('Failed to send message:', error);
         }
         setIsSending(false);
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        // Optimistic delete
+        deleteMessage(messageId);
+        try {
+            await supabase.from('archive_messages').delete().eq('id', messageId);
+        } catch (error) {
+            console.error('Failed to delete message:', error);
+        }
     };
 
     if (!activeChannelId) {
@@ -189,7 +208,17 @@ export default function ChatArea() {
                                           prevMsg.author_id === msg.author_id && 
                                           (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 5 * 60000);
                         
-                        return <MessageBubble key={msg.id} message={msg} isGrouped={isGrouped} />;
+                        const canDelete = currentUser?.id === msg.author_id || isGlobalAdmin;
+
+                        return (
+                            <MessageBubble 
+                                key={msg.id} 
+                                message={msg} 
+                                isGrouped={isGrouped} 
+                                canDelete={canDelete}
+                                onDelete={() => handleDeleteMessage(msg.id)}
+                            />
+                        );
                     })}
                     <div ref={messagesEndRef} />
                 </div>
