@@ -2,6 +2,11 @@
 -- THE ARCHIVE: DISCORD-STYLE CHAT SCHEMA
 -- ==========================================
 
+DROP TABLE IF EXISTS archive_messages CASCADE;
+DROP TABLE IF EXISTS archive_workspace_members CASCADE;
+DROP TABLE IF EXISTS archive_channels CASCADE;
+DROP TABLE IF EXISTS archive_workspaces CASCADE;
+
 -- 1. Workspaces (Servers)
 CREATE TABLE IF NOT EXISTS archive_workspaces (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,5 +103,10 @@ CREATE TRIGGER trigger_archive_message_modtime
     WHEN (OLD.content IS DISTINCT FROM NEW.content)
     EXECUTE FUNCTION update_archive_message_modtime();
 
--- Initial Seed Data: A Defualt Global Workspace
-INSERT INTO archive_workspaces (name) VALUES ('Sanctum Global') ON CONFLICT DO NOTHING;
+-- Initial Seed Data: A Defualt Global Workspace and Channels
+INSERT INTO archive_workspaces (id, name) VALUES ('00000000-0000-0000-0000-000000000000', 'Sanctum Global') ON CONFLICT DO NOTHING;
+INSERT INTO archive_channels (workspace_id, name, type, topic) VALUES 
+('00000000-0000-0000-0000-000000000000', 'general', 'text', 'Global frequency for all Architects and Initiates'),
+('00000000-0000-0000-0000-000000000000', 'announcements', 'text', 'Official transmissions from the Void'),
+('00000000-0000-0000-0000-000000000000', 'voice-uplink', 'voice', '')
+ON CONFLICT DO NOTHING;

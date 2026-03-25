@@ -4,10 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import { useArchiveStore } from '@/lib/store/useArchiveStore';
 import { supabase } from '@/lib/supabase';
 import MessageBubble from './MessageBubble';
-import { Hash, PlusCircle, Smile, Gift, FileImage, Send } from 'lucide-react';
+import { Hash, PlusCircle, Smile, Gift, FileImage, Send, Menu } from 'lucide-react';
 
 export default function ChatArea() {
-    const { activeChannelId, workspaces, activeWorkspaceId, channels, messages, setMessages, addMessage } = useArchiveStore();
+    const { activeChannelId, workspaces, activeWorkspaceId, channels, messages, setMessages, addMessage, setIsMobileMenuOpen } = useArchiveStore();
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -124,12 +124,24 @@ export default function ChatArea() {
 
     if (!activeChannelId) {
         return (
-            <div className="flex-1 bg-[#313338] flex flex-col items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-[#2b2d31] flex items-center justify-center mb-4">
-                    <Hash className="w-8 h-8 text-[#949ba4]" />
+            <div className="flex-1 bg-[#313338] flex flex-col min-w-0">
+                <header className="h-12 border-b border-[#1f2023] flex items-center px-4 shrink-0 shadow-sm z-10 md:hidden">
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="mr-3 text-[#b5bac1] hover:text-[#dbdee1]"
+                        title="Menu"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                    <span className="font-bold text-white text-[15px]">The Archive</span>
+                </header>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-[#2b2d31] flex items-center justify-center mb-4">
+                        <Hash className="w-8 h-8 text-[#949ba4]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">No Channel Selected</h3>
+                    <p className="text-[#949ba4]">Select a channel from the sidebar to start chatting.</p>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">No Channel Selected</h3>
-                <p className="text-[#949ba4]">Select a channel from the sidebar to start chatting.</p>
             </div>
         );
     }
@@ -138,6 +150,13 @@ export default function ChatArea() {
         <div className="flex-1 bg-[#313338] flex flex-col min-w-0">
             {/* Header */}
             <header className="h-12 border-b border-[#1f2023] flex items-center px-4 shrink-0 shadow-sm z-10">
+                <button 
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className="md:hidden mr-3 text-[#b5bac1] hover:text-[#dbdee1]"
+                    title="Menu"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
                 <Hash className="w-6 h-6 text-[#949ba4] mr-2" />
                 <h2 className="font-bold text-white text-[15px]">{activeChannel?.name || 'loading...'}</h2>
                 {activeChannel?.topic && (
@@ -182,7 +201,7 @@ export default function ChatArea() {
                     onSubmit={handleSendMessage}
                     className="bg-[#383a40] rounded-lg flex items-center px-4 py-2.5 relative group outline-none focus-within:ring-1 focus-within:ring-[#5865F2]"
                 >
-                    <button type="button" className="text-[#b5bac1] hover:text-[#dbdee1] p-1 mr-2 bg-[#2b2d31] rounded-full shrink-0">
+                    <button type="button" title="Add Attachment" className="text-[#b5bac1] hover:text-[#dbdee1] p-1 mr-2 bg-[#2b2d31] rounded-full shrink-0">
                         <PlusCircle className="w-5 h-5" />
                     </button>
                     
@@ -195,11 +214,12 @@ export default function ChatArea() {
                     />
 
                     <div className="flex items-center gap-2 ml-2 shrink-0">
-                        <button type="button" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Gift className="w-5 h-5" /></button>
-                        <button type="button" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><FileImage className="w-5 h-5" /></button>
-                        <button type="button" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Smile className="w-5 h-5" /></button>
+                        <button type="button" title="Gift" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Gift className="w-5 h-5" /></button>
+                        <button type="button" title="GIF" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><FileImage className="w-5 h-5" /></button>
+                        <button type="button" title="Emoji" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Smile className="w-5 h-5" /></button>
                         <button 
                             type="submit" 
+                            title="Send"
                             disabled={!newMessage.trim() || isSending}
                             className={`p-1 ml-1 rounded transition-colors ${newMessage.trim() ? 'bg-[#5865F2] text-white hover:bg-[#4752c4]' : 'text-[#b5bac1]'}`}
                         >

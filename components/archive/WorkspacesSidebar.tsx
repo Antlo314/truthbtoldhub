@@ -44,7 +44,7 @@ export default function WorkspacesSidebar() {
             ))}
 
             {/* Add Server Button */}
-            <button className="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] text-[#23a559] hover:bg-[#23a559] hover:text-white transition-all duration-200 flex items-center justify-center mt-2 group">
+            <button title="Add Server" className="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] text-[#23a559] hover:bg-[#23a559] hover:text-white transition-all duration-200 flex items-center justify-center mt-2 group">
                 <Plus className="w-6 h-6" />
             </button>
         </div>

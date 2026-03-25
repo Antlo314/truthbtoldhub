@@ -15,7 +15,9 @@ export default function ArchiveClient() {
         setActiveWorkspaceId, 
         activeWorkspaceId,
         setMembers,
-        setOnlineStatus
+        setOnlineStatus,
+        isMobileMenuOpen,
+        setIsMobileMenuOpen
     } = useArchiveStore();
 
     useEffect(() => {
@@ -90,12 +92,24 @@ export default function ArchiveClient() {
     }
 
     return (
-        <div className="flex h-full w-full overflow-hidden bg-[#1e1f22]">
-            {/* 1. Far Left Sidebar: Workspaces */}
-            <WorkspacesSidebar />
+        <div className="flex h-full w-full overflow-hidden bg-[#1e1f22] relative">
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
 
-            {/* 2. Inner Left Sidebar: Channels */}
-            <ChannelsSidebar />
+            {/* Sidebars (Hidden on mobile unless menu is open) */}
+            <div className={`
+                fixed md:static inset-y-0 left-0 z-50 flex h-full transform transition-transform duration-300 ease-in-out
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+                md:translate-x-0
+            `}>
+                <WorkspacesSidebar />
+                <ChannelsSidebar />
+            </div>
 
             {/* 3. Center: Chat Area */}
             <ChatArea />

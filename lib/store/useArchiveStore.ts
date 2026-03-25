@@ -55,6 +55,10 @@ interface ArchiveState {
     // Presence
     onlineUsers: Set<string>; // Set of user_ids that are currently online
     
+    // UI State
+    isMobileMenuOpen: boolean;
+    setIsMobileMenuOpen: (isOpen: boolean) => void;
+    
     // Actions
     setActiveWorkspaceId: (id: string | null) => void;
     setActiveChannelId: (id: string | null) => void;
@@ -79,6 +83,9 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
     messages: {},
     members: {},
     onlineUsers: new Set(),
+    isMobileMenuOpen: false,
+
+    setIsMobileMenuOpen: (isOpen) => set({ isMobileMenuOpen: isOpen }),
     
     setActiveWorkspaceId: (id) => set({ activeWorkspaceId: id }),
     setActiveChannelId: (id) => set({ activeChannelId: id }),
