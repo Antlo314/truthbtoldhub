@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useArchiveStore } from '@/lib/store/useArchiveStore';
 import { supabase } from '@/lib/supabase';
 
-// Mock members currently until proper DB data
+// Mock roles currently until proper DB data
 const MOCK_ROLES = [
-    { title: 'ADMINISTRATOR', color: '#ff5252' },
-    { title: 'MODERATOR', color: '#ffb74d' },
-    { title: 'ONLINE', color: '#949ba4' }
+    { title: 'ARCHITECT', color: '#f97316' }, // Orange-500
+    { title: 'SENTINEL', color: '#f59e0b' },  // Amber-500
+    { title: 'INITIATE', color: '#71717a' }   // Zinc-400
 ];
 
 export default function MemberListSidebar() {
@@ -48,32 +48,32 @@ export default function MemberListSidebar() {
 
     // Group members by role
     const grouped = {
-        'ADMINISTRATOR': activeMembers.filter(m => m.role === 'Admin'),
-        'MODERATOR': activeMembers.filter(m => m.role === 'Moderator'),
+        'ARCHITECT': activeMembers.filter(m => m.role === 'Admin'),
+        'SENTINEL': activeMembers.filter(m => m.role === 'Moderator'),
         'ONLINE': activeMembers.filter(m => m.role === 'Member' && onlineUsers.has(m.user_id)),
         'OFFLINE': activeMembers.filter(m => m.role === 'Member' && !onlineUsers.has(m.user_id))
     };
 
     if (!activeWorkspaceId) {
-        return <div className="hidden lg:flex w-[240px] min-w-[240px] h-full bg-[#2b2d31] shrink-0" />;
+        return <div className="hidden lg:flex w-[240px] min-w-[240px] h-full bg-zinc-950 shrink-0 border-l border-white/5" />;
     }
 
     return (
-        <div className="hidden lg:flex w-[240px] min-w-[240px] h-full bg-[#2b2d31] flex-col shrink-0">
+        <div className="hidden lg:flex w-[240px] min-w-[240px] h-full bg-zinc-950 flex-col shrink-0 border-l border-white/5" id="archive-members-sidebar">
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pt-6">
                 
-                {['ADMINISTRATOR', 'MODERATOR', 'ONLINE', 'OFFLINE'].map((roleKey) => {
+                {['ARCHITECT', 'SENTINEL', 'ONLINE', 'OFFLINE'].map((roleKey) => {
                     const roleMembers = grouped[roleKey as keyof typeof grouped] || [];
                     if (roleMembers.length === 0) return null;
 
-                    const titleColor = roleKey === 'ADMINISTRATOR' ? 'text-[#ff5252]' : 
-                                     roleKey === 'MODERATOR' ? 'text-[#ffb74d]' : 'text-[#949ba4]';
+                    const titleColor = roleKey === 'ARCHITECT' ? 'text-orange-500' : 
+                                     roleKey === 'SENTINEL' ? 'text-amber-500' : 'text-zinc-500';
                     
                     const isOfflineGroup = roleKey === 'OFFLINE';
 
                     return (
                         <div key={roleKey} className="mb-6">
-                            <h3 className={`text-[11px] font-bold uppercase tracking-wider px-2 mb-1 ${isOfflineGroup ? 'text-[#949ba4]' : titleColor}`}>
+                            <h3 className={`text-[9px] font-bold uppercase tracking-[0.2em] px-2 mb-2 font-mono ${isOfflineGroup ? 'text-zinc-700' : titleColor}`}>
                                 {roleKey} — {roleMembers.length}
                             </h3>
                             
@@ -84,28 +84,29 @@ export default function MemberListSidebar() {
                                     return (
                                         <button 
                                             key={member.user_id} 
-                                            className={`w-full flex items-center gap-3 px-2 py-1.5 rounded hover:bg-[#35373c] hover:text-[#dbdee1] transition-colors group
-                                                ${isOfflineGroup ? 'opacity-50 hover:opacity-100 text-[#949ba4]' : 'text-[#80848e]'}
+                                            className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-all group
+                                                ${isOfflineGroup ? 'opacity-40 hover:opacity-100 text-zinc-600' : 'text-zinc-400'}
                                             `}
                                         >
                                             <div className="relative">
-                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-[#313338]">
+                                                <div className="w-8 h-8 rounded-lg overflow-hidden bg-zinc-900 border border-white/5 shadow-inner">
                                                     <img 
                                                         src={member.profile?.avatar_url || "https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/default_avatar.png"} 
                                                         alt="Avatar" 
                                                         className="w-full h-full object-cover" 
                                                     />
                                                 </div>
+                                                </div>
                                                 {/* Status Indicator */}
-                                                <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-[#2b2d31] flex items-center justify-center">
-                                                    <div className={`w-[10px] h-[10px] rounded-full ${isOnline ? 'bg-[#23a559]' : 'bg-[#80848e] border-2 border-[#2b2d31] bg-transparent'}`} />
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-[12px] h-[12px] rounded-full bg-zinc-950 flex items-center justify-center">
+                                                    <div className={`w-[8px] h-[8px] rounded-full ${isOnline ? 'bg-orange-500 shadow-[0_0_8px_rgba(234,88,12,0.6)]' : 'bg-zinc-800'}`} />
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0 text-left">
-                                                <span className={`text-[15px] font-medium truncate block leading-5 
-                                                    ${roleKey === 'ADMINISTRATOR' ? 'text-[#ff5252]' : roleKey === 'MODERATOR' ? 'text-[#ffb74d]' : 'text-[#dbdee1]'}
+                                                <span className={`text-[13px] font-mono tracking-wide truncate block leading-5 
+                                                    ${roleKey === 'ARCHITECT' ? 'text-orange-500 font-bold' : roleKey === 'SENTINEL' ? 'text-amber-500' : 'text-zinc-300'}
                                                 `}>
-                                                    {member.profile?.display_name || 'Anonymous User'}
+                                                    {member.profile?.display_name || 'Initiate'}
                                                 </span>
                                             </div>
                                         </button>

@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Flame, Cpu, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useSoulStore } from '@/lib/store/useSoulStore';
+import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -20,12 +22,39 @@ if (typeof window !== 'undefined') {
 
 export default function SanctumHub() {
     const router = useRouter();
+    const { user, profile, fetchIdentity, signOut: storeSignOut } = useSoulStore();
 
-    const [userAuth, setUserAuth] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
     const [broadcastMsg, setBroadcastMsg] = useState('The initial architecture is stabilizing...');
-    const [tourStep, setTourStep] = useState(0);
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
     const bgRef = useRef<HTMLDivElement>(null);
+
+    const SANCTUM_PROTOCOL_STEPS: GuideStep[] = [
+        {
+            title: "Sector 1: The Pool",
+            description: "The collective treasury. Here, Initiates lodge petitions for mutual aid or pledge Soul Power to fund systemic upgrades.",
+            selector: "#sanctum-pool"
+        },
+        {
+            title: "Sector 2: The Archive",
+            description: "The permanent encrypted ledger. Burn SP to decrypt prophetic whispers left by those who walked the void before you.",
+            selector: "#sanctum-archive"
+        },
+        {
+            title: "Sector 3: The Gallery",
+            description: "Cinematic architecture rendered in 8K. Monitor transmissions from the Destroyer and boost signals to the collective.",
+            selector: "#sanctum-gallery"
+        },
+        {
+            title: "Sector 4: The Trial",
+            description: "The proving grounds. A secure sandbox for testing encrypted sequences and proving your alignment with the movement.",
+            selector: "#sanctum-trial"
+        },
+        {
+            title: "The Soul Matrix",
+            description: "Your digital fingerprint. Monitor your SP reserves, Identity Tier, and Global Rank from the Identity Core.",
+            selector: "#tour-profile-btn"
+        }
+    ];
 
     const playHover = () => uiHoverSfx?.play();
     const playClick = () => uiClickSfx?.play();
@@ -52,9 +81,9 @@ export default function SanctumHub() {
             });
             ambientDrone.play();
 
-            // Auto-trigger tour if first time
-            if (!localStorage.getItem('sanctum_tour_complete')) {
-                setTimeout(() => setTourStep(1), 1500);
+            // Auto-trigger guide if first time
+            if (!localStorage.getItem('sanctum_guide_complete')) {
+                setTimeout(() => setIsGuideOpen(true), 2000);
             }
         }
         return () => {
@@ -62,50 +91,40 @@ export default function SanctumHub() {
         };
     }, []);
 
-    const nextTourStep = () => {
-        playClick();
-        if (tourStep === 4) {
-            setTourStep(0);
-            localStorage.setItem('sanctum_tour_complete', 'true');
-        } else {
-            setTourStep(s => s + 1);
-        }
+    const handleGuideComplete = () => {
+        localStorage.setItem('sanctum_guide_complete', 'true');
+        setIsGuideOpen(false);
     };
 
     useEffect(() => {
         let isMounted = true;
 
-        const checkUser = async (session: any) => {
-            if (!session) {
+        const initSanctum = async () => {
+            // Fetch identity once on mount
+            await fetchIdentity();
+            
+            // Check if user is authenticated after fetch
+            const currentSession = await supabase.auth.getSession();
+            if (!currentSession.data.session) {
                 if (isMounted) router.push('/');
                 return;
             }
 
-            if (isMounted) setUserAuth(session.user);
-
             try {
-                // Fetch User Profile
-                const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-                if (error && error.code !== 'PGRST116') {
-                    console.error("Profile fetch error:", error);
-                } else if (data && isMounted) {
-                    setProfile({ ...data });
-
-                    // Check for pending Cipher Referral
-                    const cipherReferral = localStorage.getItem('cipher_referral');
-                    if (cipherReferral) {
-                        fetch('/api/affiliation', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ cipher: cipherReferral, newUserId: session.user.id })
-                        })
-                        .then(r => r.json())
-                        .then(res => {
-                            console.log('Affiliation response:', res);
-                            localStorage.removeItem('cipher_referral');
-                        })
-                        .catch(err => console.error('Affiliation error:', err));
-                    }
+                // Check for pending Cipher Referral
+                const cipherReferral = localStorage.getItem('cipher_referral');
+                if (cipherReferral && isMounted) {
+                    fetch('/api/affiliation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cipher: cipherReferral, newUserId: currentSession.data.session.user.id })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        console.log('Affiliation response:', res);
+                        localStorage.removeItem('cipher_referral');
+                    })
+                    .catch(err => console.error('Affiliation error:', err));
                 }
 
                 // Fetch Global System Broadcast
@@ -114,21 +133,16 @@ export default function SanctumHub() {
                     setBroadcastMsg(sysData.broadcast_message);
                 }
             } catch (err) {
-                console.error("Unexpected error in checkUser:", err);
+                console.error("Unexpected error in initSanctum:", err);
             }
         };
 
-        // Initial check
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            checkUser(session);
-        });
+        initSanctum();
 
-        // Listen for auth changes, but DO NOT infinitely call checkUser if session is stable
+        // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || !session) {
                 if (isMounted) router.push('/');
-            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                checkUser(session);
             }
         });
 
@@ -136,10 +150,10 @@ export default function SanctumHub() {
             isMounted = false;
             authListener.subscription.unsubscribe();
         };
-    }, [router]);
+    }, [router, fetchIdentity]);
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await storeSignOut();
         router.push('/');
     };
 
@@ -231,8 +245,8 @@ export default function SanctumHub() {
                             <p className="text-[9px] text-gray-500 font-mono uppercase tracking-widest">
                                 [SYS_HINT: Establish your domain. Choose your sector.]
                             </p>
-                            <button onClick={() => { playClick(); setTourStep(1); }} className="text-[9px] text-orange-500 hover:text-orange-400 font-bold uppercase tracking-widest border border-orange-500/30 px-3 py-1 rounded-full transition-colors flex items-center gap-1">
-                                <Shield className="w-3 h-3" /> Re-initiate Tour
+                            <button onClick={() => { playClick(); setIsGuideOpen(true); }} className="text-[9px] text-orange-500 hover:text-orange-400 font-bold uppercase tracking-widest border border-orange-500/30 px-3 py-1 rounded-full transition-colors flex items-center gap-1">
+                                <Shield className="w-3 h-3" /> Re-initiate Protocol
                             </button>
                         </div>
                     </div>
@@ -241,7 +255,8 @@ export default function SanctumHub() {
 
                         {/* The Pool (Treasury) - OFFLINE */}
                         <div
-                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden sanctuary-card transition-all cursor-not-allowed filter grayscale opacity-70 border-zinc-800 ${tourStep === 1 ? 'z-50 shadow-[0_0_50px_rgba(234,88,12,0.6)] scale-[1.02] pointer-events-none' : ''}`}
+                            id="sanctum-pool"
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden sanctuary-card transition-all cursor-not-allowed filter grayscale opacity-70 border-zinc-800"
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
@@ -273,7 +288,8 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/codex'); }}
-                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 2 ? 'z-50 shadow-[0_0_50px_rgba(14,165,233,0.6)] scale-[1.02] border-sky-500 pointer-events-none' : ''}`}
+                            id="sanctum-archive"
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png">
@@ -306,7 +322,8 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/cineworks'); }}
-                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 3 ? 'z-50 shadow-[0_0_50px_rgba(168,85,247,0.6)] scale-[1.02] border-purple-500 pointer-events-none' : ''}`}
+                            id="sanctum-gallery"
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png">
@@ -339,7 +356,8 @@ export default function SanctumHub() {
                                 gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
                             }}
                             onClick={() => { playClick(); router.push('/trial'); }}
-                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 4 ? 'z-50 shadow-[0_0_50px_rgba(34,197,94,0.6)] scale-[1.02] border-green-500 pointer-events-none' : ''}`}
+                            id="sanctum-trial"
+                            className="group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all"
                             style={{ perspective: '1000px' }}
                         >
                             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.png">
@@ -367,36 +385,14 @@ export default function SanctumHub() {
                 </div>
             </main>
 
-            {/* Tour Overlay Modal */}
-            {tourStep > 0 && (
-                <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end justify-center pb-32 md:pb-12 pointer-events-auto">
-                    <div className="bg-zinc-950 border border-orange-500/50 p-6 rounded-2xl max-w-md w-full mx-4 shadow-[0_0_30px_rgba(234,88,12,0.3)] animate-fade-in relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/0 via-orange-500 to-orange-500/0"></div>
-                        <h3 className="font-ritual text-xl tracking-widest mb-2 uppercase" style={{ color: tourStep === 1 ? '#ea580c' : tourStep === 2 ? '#38bdf8' : tourStep === 3 ? '#a855f7' : '#22c55e' }}>
-                            {tourStep === 1 && "Sector 1: The Pool"}
-                            {tourStep === 2 && "Sector 2: The Archive"}
-                            {tourStep === 3 && "Sector 3: The Gallery"}
-                            {tourStep === 4 && "Sector 4: The Trial"}
-                        </h3>
-                        <p className="text-xs text-orange-200/70 font-mono tracking-widest leading-relaxed mb-6 h-12">
-                            {tourStep === 1 && "The central treasury. Pledge your SP to fund mutual aid petitions or lodge your own requests to the global collective."}
-                            {tourStep === 2 && "The permanent ledger. Burn SP to decrypt the encrypted whispers of the void left by other Initiates."}
-                            {tourStep === 3 && "The cinematic sanctuary. View prophetic architectural broadcasts. Boost transmissions globally."}
-                            {tourStep === 4 && "The proving grounds. A secure sandbox for untested code, cryptic mechanics, and encrypted simulations."}
-                        </p>
-                        <div className="flex justify-between items-center">
-                            <div className="flex gap-1.5">
-                                {[1, 2, 3, 4].map(s => (
-                                    <div key={s} className={`w-8 h-1 rounded-full transition-colors ${s === tourStep ? (s===1?'bg-orange-500 shadow-[0_0_10px_rgba(234,88,12,0.8)]' : s===2?'bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.8)]' : s===3?'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]') : 'bg-zinc-800'}`}></div>
-                                ))}
-                            </div>
-                            <button onClick={nextTourStep} className="bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold uppercase tracking-widest px-6 py-2 rounded-lg transition-colors">
-                                {tourStep === 4 ? "Acknowledge" : "Continue"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Sentinel Guide Protocol */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={SANCTUM_PROTOCOL_STEPS}
+                protocolName="SANCTUM PROTOCOL"
+            />
 
             {/* Quick Nav elements (Mobile Bottom Bar representation) */}
             <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10 pb-[env(safe-area-inset-bottom)]">

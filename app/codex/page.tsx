@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useSoulStore } from '@/lib/store/useSoulStore';
+import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
 import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut, MessageSquare, X, Trash2, Flame } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
@@ -105,11 +107,34 @@ const MOCK_WHISPERS: Whisper[] = [
 
 export default function Archive() {
     const router = useRouter();
+    const { user, profile, fetchIdentity } = useSoulStore();
 
-    const [userAuth, setUserAuth] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
     const [onlineUsers, setOnlineUsers] = useState<number>(1);
     const [isLocked, setIsLocked] = useState(true); // Default locked until profile loads
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+
+    const CODEX_PROTOCOL_STEPS: GuideStep[] = [
+        {
+            title: "The Whispers Ledger",
+            description: "The chronological record of all prophetic data. Each whisper is a fragment of the collective consciousness, stored permanently on the obsidian ledger.",
+            selector: "#codex-whispers-list"
+        },
+        {
+            title: "Encryption Gating",
+            description: "Some data is sensitive. To decrypt a redacted whisper, you must burn Soul Power to stabilize the signal and reveal the truth.",
+            selector: ".whisper-card-encrypted"
+        },
+        {
+            title: "Alignment Synthesis",
+            description: "Initiates can align with or diverge from whispers. Positive alignment amplifies the signal, while diverging identifies potential noise in the matrix.",
+            selector: ".alignment-controls"
+        },
+        {
+            title: "Protocol Injection",
+            description: "Contribute to the ledger. Inject your own observations or prophetic data into the whispers stream for all Initiates to witness.",
+            selector: "#codex-input-section"
+        }
+    ];
 
     const [whispers, setWhispers] = useState<Whisper[]>(MOCK_WHISPERS);
     const [newWhisper, setNewWhisper] = useState('');
@@ -156,9 +181,12 @@ export default function Archive() {
                 loop: true,
                 volume: 0.1,
             });
-            // Try playing it, but browser policy might block until interaction. 
-            // the Howler library handles this gracefully usually.
             ambientDrone.play();
+
+            // Auto-trigger guide if first time
+            if (!localStorage.getItem('codex_guide_complete')) {
+                setTimeout(() => setIsGuideOpen(true), 2000);
+            }
         }
         return () => {
             if (ambientDrone) ambientDrone.stop();
@@ -185,14 +213,15 @@ export default function Archive() {
 
     useEffect(() => {
         async function checkAuth() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserAuth(user);
-                const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                if (data) {
-                    setProfile(data);
+            await fetchIdentity();
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            
+            if (currentUser) {
+                // Check store state after fetch
+                const currentProfile = useSoulStore.getState().profile;
+                if (currentProfile) {
                     // Core Gating Logic
-                    if (data.tier === 'Architect' || data.tier === 'Sentinel') {
+                    if (currentProfile.tier === 'Architect' || currentProfile.tier === 'Sentinel') {
                         setIsLocked(false);
                     }
                 }
@@ -636,13 +665,15 @@ export default function Archive() {
             case 'green': return 'bg-green-500/10';
             case 'red': return 'bg-red-500/10';
             default: return 'bg-sky-500/10';
-        }
-    };
-
     const activeWhisper = activeReplyBox ? whispers.find(w => w.id === activeReplyBox) : null;
 
+    const handleGuideComplete = () => {
+        localStorage.setItem('codex_guide_complete', 'true');
+        setIsGuideOpen(false);
+    };
+
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-sky-500/30 font-sans flex flex-col items-center overflow-x-hidden">
+        <div className="relative h-screen bg-black text-white selection:bg-orange-500/30 overflow-hidden font-sans border-x border-white/5 max-w-7xl mx-auto flex flex-col md:flex-row">
             {/* Background - Archive Theme with Parallax */}
             <div className="fixed inset-0 z-0 bg-black scale-110">
                 <video
@@ -659,6 +690,18 @@ export default function Archive() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.08)_0%,transparent_60%)] pointer-events-none"></div>
                 <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
             </div>
+
+            {/* Protocol Overlay */}
+            <div ref={ascendRef} className="fixed inset-0 bg-orange-500/20 z-[9999] pointer-events-none opacity-0"></div>
+
+            {/* Sentinel Guide Protocol */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={CODEX_PROTOCOL_STEPS}
+                protocolName="CODEX PROTOCOL"
+            />
 
             {/* Header */}
             <header className="sticky top-0 w-full max-w-7xl z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-sky-500/10">
@@ -719,9 +762,20 @@ export default function Archive() {
                                         <div className="text-[9px] text-gray-500 font-mono flex items-center gap-1.5"><div className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></div> Live Feed</div>
                                     </div>
                                 </div>
+                                {/* Filter / Identity Nav */}
+                                <div className="flex border-b border-white/5 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                                    <div className="px-4 py-3 flex gap-4 md:gap-8 items-center" id="codex-filters">
+                                        <button className="text-[10px] uppercase font-bold tracking-widest text-orange-500 relative pb-1">
+                                            All Whispers
+                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 glow-sm"></div>
+                                        </button>
+                                        <button className="text-[10px] uppercase font-bold tracking-widest text-gray-500 hover:text-white transition-colors">Encrypted</button>
+                                        <button className="text-[10px] uppercase font-bold tracking-widest text-gray-500 hover:text-white transition-colors">Sector 7</button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6" ref={listRef}>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6" id="codex-whispers-list" ref={listRef}>
                                 {/* Core Whispers */}
                                 {coreWhispers.length > 0 && (
                                     <div className="space-y-3">
@@ -811,7 +865,7 @@ export default function Archive() {
                             </div>
 
                             {/* Lodge Whisper Input */}
-                            <div className="p-4 bg-black/40 backdrop-blur-lg border-t border-sky-500/10 shrink-0">
+                            <div className="p-4 bg-black/40 backdrop-blur-lg border-t border-sky-500/10 shrink-0" id="codex-input-section">
                                 <form onSubmit={handleLodgeWhisper} className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-600/30 to-blue-600/30 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
                                     <div className="relative glass bg-black/80 border border-white/10 rounded-xl p-1.5 flex gap-2">

@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link, Trophy } from 'lucide-react';
+import { useSoulStore } from '@/lib/store/useSoulStore';
+import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
+import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link, Trophy, History, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -19,13 +21,37 @@ if (typeof window !== 'undefined') {
 
 export default function PowerSelf() {
     const router = useRouter();
+    const { user, profile, fetchIdentity, updateProfile, signOut: storeSignOut } = useSoulStore();
 
     const [activeTab, setActiveTab] = useState('profile'); // profile | admin
-    const [userAuth, setUserAuth] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
     const [uploading, setUploading] = useState(false);
     const [isRecovery, setIsRecovery] = useState(false);
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [globalRank, setGlobalRank] = useState<number | null>(null);
+    const [transactions, setTransactions] = useState<any[]>([]);
+
+    const SELF_PROTOCOL_STEPS: GuideStep[] = [
+        {
+            title: "Identity Synchronization",
+            description: "Your sovereign record is mirrored across the void. Every achievement and contribution is etched into this identifier.",
+            selector: "#self-profile-card"
+        },
+        {
+            title: "Security Ciphers",
+            description: "Manage your access protocols. Keep your identity name and cipher link secure to maintain your position in the hierarchy.",
+            selector: "#self-security-form"
+        },
+        {
+            title: "The Referral Network",
+            description: "Expand the mission. Distributing your Cipher Link synchronizes new souls with the Ledger, granting you instant Soul Power bonuses.",
+            selector: "#self-referral-link"
+        },
+        {
+            title: "Transaction Ledger",
+            description: "Observe the flow of power. Every burn and gain is tracked chronologically to ensure total transparency in the movement.",
+            selector: "#self-transaction-ledger"
+        }
+    ];
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const bgRef = useRef<HTMLDivElement>(null);
@@ -56,6 +82,11 @@ export default function PowerSelf() {
                 volume: 0.1,
             });
             ambientDrone.play();
+
+            // Auto-trigger guide if first time
+            if (!localStorage.getItem('self_guide_complete')) {
+                setTimeout(() => setIsGuideOpen(true), 2000);
+            }
         }
         return () => {
             if (ambientDrone) ambientDrone.stop();
@@ -68,34 +99,30 @@ export default function PowerSelf() {
             window.history.replaceState(null, '', window.location.pathname);
         }
 
-        async function fetchIdentity() {
-            try {
-                // Ensure we get the absolute latest auth token
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    setUserAuth({ ...user });
-                    // Fetch profile, ensuring we don't hit a Next.js cached response
-                    const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                    if (data && !error) {
-                        setProfile({ ...data }); // spread to force strict react re-render
+        async function initSelf() {
+            await fetchIdentity();
+            const currentProfile = useSoulStore.getState().profile;
+            if (currentProfile && currentProfile.soul_power > 0) {
+                const { count } = await supabase
+                    .from('profiles')
+                    .select('id', { count: 'exact', head: true })
+                    .gt('soul_power', currentProfile.soul_power);
+                setGlobalRank((count || 0) + 1);
 
-                        if (data.soul_power > 0) {
-                            const { count } = await supabase
-                                .from('profiles')
-                                .select('id', { count: 'exact', head: true })
-                                .gt('soul_power', data.soul_power);
-                            setGlobalRank((count || 0) + 1);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching identity:", err);
+                // Fetch transactions
+                const { data: txs } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('profile_id', currentProfile.id)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                if (txs) setTransactions(txs);
             }
         }
-        fetchIdentity();
-    }, []);
+        initSelf();
+    }, [fetchIdentity]);
 
-    const userEmail = userAuth?.email || 'guest@obsidianvoid.net';
+    const userEmail = user?.email || 'guest@obsidianvoid.net';
     const isAdmin = profile?.tier === 'Architect';
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const currentTier = profile?.tier || 'Initiate';
@@ -103,11 +130,18 @@ export default function PowerSelf() {
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await storeSignOut();
         router.push('/');
     };
 
-    const uploadAvatar = async (event: any) => {
+    };
+
+    const handleGuideComplete = () => {
+        localStorage.setItem('self_guide_complete', 'true');
+        setIsGuideOpen(false);
+    };
+
+    return (
         try {
             setUploading(true);
             if (!event.target.files || event.target.files.length === 0) {
@@ -124,10 +158,7 @@ export default function PowerSelf() {
             const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
             const newAvatarUrl = publicUrlData.publicUrl;
 
-            const { error: updateError } = await supabase.from('profiles').update({ avatar_url: newAvatarUrl }).eq('id', userAuth.id);
-            if (updateError) throw updateError;
-
-            setProfile({ ...profile, avatar_url: newAvatarUrl });
+            await updateProfile({ avatar_url: newAvatarUrl });
         } catch (error: any) {
             alert('Error uploading avatar: ' + error.message);
         } finally {
@@ -184,6 +215,7 @@ export default function PowerSelf() {
                 {/* Profile Identity Card */}
                 <div
                     ref={idCardRef}
+                    id="self-profile-card"
                     onMouseEnter={(e) => {
                         playHover();
                         gsap.to(e.currentTarget, { scale: 1.01, rotationX: 1, rotationY: -1, duration: 0.5, ease: "power2.out", filter: "brightness(1.1)" });
@@ -254,7 +286,7 @@ export default function PowerSelf() {
                 </div>
 
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-white/10 gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
+                <div className="flex border-b border-white/10 gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1" id="self-tabs">
                     <button
                         onMouseEnter={playHover}
                         onClick={() => { playClick(); setActiveTab('profile'); }}
@@ -290,7 +322,7 @@ export default function PowerSelf() {
                                 </p>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative">
+                                <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative" id="self-security-form">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
                                     <User className="w-4 h-4 text-orange-500" /> Account Security
                                 </h3>
@@ -302,37 +334,32 @@ export default function PowerSelf() {
                                     let msg = "Processing Updates...\n";
 
                                     if (nameVal && nameVal !== displayName) {
-                                        const { error } = await supabase.from('profiles').update({ display_name: nameVal }).eq('id', userAuth.id);
-                                        if (error) msg += "Failed to update Name: " + error.message + "\n";
-                                        else msg += "Identity Name Updated.\n";
+                                        await updateProfile({ display_name: nameVal });
+                                        msg += "Identity Name Updated.\n";
                                     }
 
                                     const userVal = formData.get('userName') as string;
                                     if (userVal && userVal !== profile?.username) {
-                                        const { error } = await supabase.from('profiles').update({ username: userVal }).eq('id', userAuth.id);
-                                        if (error) msg += "Failed to update Username: " + error.message + "\n";
-                                        else msg += "Username Updated.\n";
+                                        await updateProfile({ username: userVal });
+                                        msg += "Username Updated.\n";
                                     }
 
                                     const titleVal = formData.get('customTitle') as string;
                                     if (titleVal !== undefined && titleVal !== (profile?.custom_title || '')) {
-                                        const { error } = await supabase.from('profiles').update({ custom_title: titleVal }).eq('id', userAuth.id);
-                                        if (error) msg += "Failed to update Title: " + error.message + "\n";
-                                        else msg += "Title Updated.\n";
+                                        await updateProfile({ custom_title: titleVal });
+                                        msg += "Title Updated.\n";
                                     }
 
                                     const bioVal = formData.get('bio') as string;
                                     if (bioVal !== undefined && bioVal !== (profile?.bio || '')) {
-                                        const { error } = await supabase.from('profiles').update({ bio: bioVal }).eq('id', userAuth.id);
-                                        if (error) msg += "Failed to update Bio: " + error.message + "\n";
-                                        else msg += "Bio Updated.\n";
+                                        await updateProfile({ bio: bioVal });
+                                        msg += "Bio Updated.\n";
                                     }
 
                                     const colorVal = formData.get('themeColor') as string;
                                     if (colorVal && colorVal !== profile?.theme_color) {
-                                        const { error } = await supabase.from('profiles').update({ theme_color: colorVal }).eq('id', userAuth.id);
-                                        if (error) msg += "Failed to update Theme: " + error.message + "\n";
-                                        else msg += "Theme Updated.\n";
+                                        await updateProfile({ theme_color: colorVal });
+                                        msg += "Theme Updated.\n";
                                     }
 
                                     if (passVal) {
@@ -389,7 +416,7 @@ export default function PowerSelf() {
 
                             <div className="space-y-6">
                                 {/* Affiliation Cipher */}
-                                <div className="glass bg-orange-950/20 border border-orange-500/30 p-6 rounded-2xl relative overflow-hidden">
+                                <div className="glass bg-orange-950/20 border border-orange-500/30 p-6 rounded-2xl relative overflow-hidden" id="self-referral-link">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(234,88,12,0.1)_0%,transparent_50%)]"></div>
                                     <h3 className="text-xs uppercase tracking-widest text-white font-bold mb-2 flex items-center gap-2">
                                         <Share2 className="w-4 h-4 text-orange-500" /> Cipher Link (Affiliation)
@@ -612,12 +639,66 @@ export default function PowerSelf() {
                                 </div>
 
                             </div>
+
+                            {/* Transaction Ledger Section */}
+                            <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative overflow-hidden" id="self-transaction-ledger">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold flex items-center gap-2">
+                                        <History className="w-4 h-4 text-orange-500" /> Transaction Ledger
+                                    </h3>
+                                    <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Live Sync Alpha</span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {transactions.length === 0 ? (
+                                        <div className="text-center py-6 text-[10px] uppercase font-mono tracking-widest text-zinc-600">
+                                            No recent activity detected in the ledger.
+                                        </div>
+                                    ) : (
+                                        transactions.map((tx) => (
+                                            <div key={tx.id} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-xl hover:bg-white/5 transition-colors group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${tx.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'} border border-current opacity-60`}>
+                                                        {tx.amount > 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-[11px] font-bold text-white uppercase tracking-wider">{tx.transaction_type}</h4>
+                                                        <p className="text-[9px] text-zinc-500 font-mono tracking-tighter truncate max-w-[150px]">{tx.description}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`text-xs font-mono font-bold ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {tx.amount > 0 ? '+' : ''}{tx.amount} SP
+                                                    </span>
+                                                    <span className="block text-[8px] text-zinc-600 font-mono mt-1">
+                                                        {new Date(tx.created_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                <div className="mt-6 pt-4 border-t border-white/5 text-center">
+                                    <button className="text-[9px] uppercase font-bold tracking-[0.2em] text-orange-500/50 hover:text-orange-500 transition-colors">
+                                        View All Archival Records
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
                 </div>
 
             </main>
+            {/* Sentinel Guide Protocol */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={SELF_PROTOCOL_STEPS}
+                protocolName="IDENTITY PROTOCOL"
+            />
         </div>
     );
 }

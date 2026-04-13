@@ -7,18 +7,33 @@ import WorkspacesSidebar from './WorkspacesSidebar';
 import ChannelsSidebar from './ChannelsSidebar';
 import ChatArea from './ChatArea';
 import MemberListSidebar from './MemberListSidebar';
+import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
 
-export default function ArchiveClient() {
-    const [isLoading, setIsLoading] = useState(true);
-    const { 
-        setWorkspaces, 
-        setActiveWorkspaceId, 
-        activeWorkspaceId,
-        setMembers,
-        setOnlineStatus,
-        isMobileMenuOpen,
-        setIsMobileMenuOpen
     } = useArchiveStore();
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+
+    const ARCHIVE_PROTOCOL_STEPS: GuideStep[] = [
+        {
+            title: "Sector Navigation",
+            description: "Access distinct mission environments. Each sector operates on a unique frequency, isolated from the collective void.",
+            selector: "#archive-home-btn"
+        },
+        {
+            title: "Frequency Protocols",
+            description: "Manage communication channels. Select specific protocols to listen or transmit data within this sector's ledger.",
+            selector: "#archive-channels-sidebar"
+        },
+        {
+            title: "Collective Presence",
+            description: "Observe the active initiates currently synchronized with this node. Recognition levels vary by contribution and alignment.",
+            selector: "#archive-members-sidebar"
+        },
+        {
+            title: "Data Injection",
+            description: "Inject your observations directly into the archival stream. All transmissions are permanently etched into the obsidian ledger.",
+            selector: "#archive-input-section"
+        }
+    ];
 
     useEffect(() => {
         let presenceChannel: any = null;
@@ -38,6 +53,11 @@ export default function ArchiveClient() {
                 if (!activeWorkspaceId) {
                     setActiveWorkspaceId(workspaces[0].id);
                 }
+            }
+
+            // Auto-trigger guide if first time
+            if (!localStorage.getItem('archive_guide_complete')) {
+                setTimeout(() => setIsGuideOpen(true), 2500);
             }
 
             // 2. Setup Global Presence
@@ -80,19 +100,24 @@ export default function ArchiveClient() {
         };
     }, []); // Run once on mount
 
+    const handleGuideComplete = () => {
+        localStorage.setItem('archive_guide_complete', 'true');
+        setIsGuideOpen(false);
+    };
+
     if (isLoading) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-[#1e1f22]">
+            <div className="flex-1 flex items-center justify-center bg-zinc-950">
                 <div className="animate-pulse flex flex-col items-center">
-                    <div className="w-12 h-12 border-4 border-[#5865F2] border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-[#a3a6aa] font-medium tracking-wide">CONNECTING TO THE ARCHIVE...</p>
+                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <p className="text-zinc-500 font-mono text-[10px] tracking-[0.3em] uppercase">Synchronizing with The Archive...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-full w-full overflow-hidden bg-[#1e1f22] relative">
+        <div className="flex h-full w-full overflow-hidden bg-zinc-950 relative">
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
                 <div 
@@ -116,6 +141,15 @@ export default function ArchiveClient() {
 
             {/* 4. Far Right Sidebar: Member List */}
             <MemberListSidebar />
+
+            {/* Sentinel Guide Protocol */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={ARCHIVE_PROTOCOL_STEPS}
+                protocolName="ARCHIVE PROTOCOL"
+            />
         </div>
     );
 }

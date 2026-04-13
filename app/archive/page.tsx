@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function ArchivePage() {
     return (
-        <main className="h-[100dvh] w-full bg-[#1e1f22] text-zinc-300 overflow-hidden flex flex-col font-sans">
+        <main className="h-[100dvh] w-full bg-zinc-950 text-zinc-300 overflow-hidden flex flex-col font-sans">
             <ArchiveClient />
         </main>
     );

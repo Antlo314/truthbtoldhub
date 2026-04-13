@@ -2,16 +2,17 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useArchiveStore } from '@/lib/store/useArchiveStore';
+import { useSoulStore } from '@/lib/store/useSoulStore';
 import { supabase } from '@/lib/supabase';
 import MessageBubble from './MessageBubble';
-import { Hash, PlusCircle, Smile, Gift, FileImage, Send, Menu } from 'lucide-react';
+import { Hash, PlusCircle, Smile, Gift, FileImage, Send, Menu, Activity } from 'lucide-react';
 
 export default function ChatArea() {
     const { activeChannelId, workspaces, activeWorkspaceId, channels, messages, setMessages, addMessage, setIsMobileMenuOpen, members, deleteMessage } = useArchiveStore();
+    const { profile: currentUserProfile, user: currentUserAuth } = useSoulStore();
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [currentUser, setCurrentUser] = useState<any>(null);
 
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
     const workspaceChannels = activeWorkspaceId ? (channels[activeWorkspaceId] || []) : [];
@@ -20,23 +21,13 @@ export default function ChatArea() {
     
     // Auth & Roles
     const activeWorkspaceMembers = activeWorkspaceId ? (members[activeWorkspaceId] || []) : [];
-    const currentMemberRole = currentUser ? activeWorkspaceMembers.find(m => m.user_id === currentUser.id)?.role : null;
+    const currentMemberRole = currentUserAuth ? activeWorkspaceMembers.find(m => m.user_id === currentUserAuth.id)?.role : null;
     const isGlobalAdmin = currentMemberRole === 'Admin' || currentMemberRole === 'Moderator';
 
     // Scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [channelMessages]);
-
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-                    setCurrentUser({ ...user, profile: data });
-                });
-            }
-        });
-    }, []);
 
     useEffect(() => {
         if (!activeChannelId) return;
@@ -96,7 +87,7 @@ export default function ChatArea() {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeChannelId || !currentUser) return;
+        if (!newMessage.trim() || !activeChannelId || !currentUserAuth) return;
         
         setIsSending(true);
         const optimisticId = `temp-${Date.now()}`;
@@ -106,11 +97,11 @@ export default function ChatArea() {
         addMessage({
             id: optimisticId,
             channel_id: activeChannelId,
-            author_id: currentUser.id,
+            author_id: currentUserAuth.id,
             content: msgContent,
             is_edited: false,
             created_at: new Date().toISOString(),
-            author: currentUser.profile || { display_name: 'You' }
+            author: currentUserProfile || { display_name: 'You' }
         });
         
         setNewMessage('');
@@ -119,7 +110,7 @@ export default function ChatArea() {
         try {
             await supabase.from('archive_messages').insert({
                 channel_id: activeChannelId,
-                author_id: currentUser.id,
+                author_id: currentUserAuth.id,
                 content: msgContent
             });
             // Note: Real-time will fire another insert but addMessage checks for duplicates if id matches.
@@ -143,62 +134,71 @@ export default function ChatArea() {
 
     if (!activeChannelId) {
         return (
-            <div className="flex-1 bg-[#313338] flex flex-col min-w-0">
-                <header className="h-12 border-b border-[#1f2023] flex items-center px-4 shrink-0 shadow-sm z-10 md:hidden">
+            <div className="flex-1 bg-zinc-950 flex flex-col min-w-0 relative">
+                <header className="h-12 border-b border-white/5 flex items-center px-4 shrink-0 shadow-sm z-10 md:hidden bg-zinc-950/80 backdrop-blur-xl">
                     <button 
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="mr-3 text-[#b5bac1] hover:text-[#dbdee1]"
+                        className="mr-3 text-zinc-500 hover:text-white"
                         title="Menu"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <span className="font-bold text-white text-[15px]">The Archive</span>
+                    <span className="font-ritual text-white text-[13px] tracking-widest uppercase">The Archive</span>
                 </header>
-                <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-[#2b2d31] flex items-center justify-center mb-4">
-                        <Hash className="w-8 h-8 text-[#949ba4]" />
+                <div className="flex-1 flex flex-col items-center justify-center relative">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(234,88,12,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+                    <div className="w-20 h-20 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 shadow-2xl relative">
+                        <div className="absolute inset-0 bg-orange-500/10 blur-xl animate-pulse"></div>
+                        <Hash className="w-10 h-10 text-orange-500/40 relative z-10" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">No Channel Selected</h3>
-                    <p className="text-[#949ba4]">Select a channel from the sidebar to start chatting.</p>
+                    <h3 className="font-ritual text-2xl tracking-[0.3em] text-white/40 mb-4 uppercase">Frequency Not Established</h3>
+                    <p className="text-[10px] text-zinc-600 font-mono tracking-widest uppercase">Select a protocol from the sidebar to stabilize signal.</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 bg-[#313338] flex flex-col min-w-0">
+        <div className="flex-1 bg-zinc-950 flex flex-col min-w-0" id="archive-chat-area">
             {/* Header */}
-            <header className="h-12 border-b border-[#1f2023] flex items-center px-4 shrink-0 shadow-sm z-10">
+            <header className="h-12 border-b border-white/5 flex items-center px-4 shrink-0 shadow-sm z-10 bg-zinc-950/50 backdrop-blur-md">
                 <button 
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className="md:hidden mr-3 text-[#b5bac1] hover:text-[#dbdee1]"
+                    className="md:hidden mr-3 text-zinc-500 hover:text-zinc-200"
                     title="Menu"
                 >
                     <Menu className="w-6 h-6" />
                 </button>
-                <Hash className="w-6 h-6 text-[#949ba4] mr-2" />
-                <h2 className="font-bold text-white text-[15px]">{activeChannel?.name || 'loading...'}</h2>
+                <Hash className="w-5 h-5 text-orange-500 mr-2" />
+                <h2 className="font-ritual text-white text-[14px] tracking-widest uppercase">{activeChannel?.name || 'loading...'}</h2>
                 {activeChannel?.topic && (
                     <>
-                        <div className="w-px h-6 bg-[#3f4147] mx-4" />
-                        <span className="text-sm text-[#dbdee1] font-medium truncate">{activeChannel.topic}</span>
+                        <div className="w-px h-6 bg-white/5 mx-4" />
+                        <span className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase truncate">{activeChannel.topic}</span>
                     </>
                 )}
+                <div className="ml-auto flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded bg-orange-500/10 border border-orange-500/20 shadow-[0_0_10px_rgba(234,88,12,0.1)]">
+                        <Activity className="w-3 h-3 text-orange-500 animate-pulse" />
+                        <span className="text-[9px] font-mono text-orange-500 font-bold uppercase tracking-widest leading-none">Signal Active</span>
+                    </div>
+                </div>
             </header>
 
             {/* Chat History */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 xl:px-6">
-                <div className="flex flex-col justify-end min-h-full">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 xl:px-6 relative" id="archive-messages-container">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(234,88,12,0.03)_0%,transparent_80%)] pointer-events-none"></div>
+                <div className="flex flex-col justify-end min-h-full relative z-10">
                     {/* Welcome Message Top */}
-                    <div className="mt-8 mb-6">
-                        <div className="w-16 h-16 rounded-full bg-[#4a505e] flex items-center justify-center mb-4 text-white">
-                            <Hash className="w-10 h-10" />
+                    <div className="mt-8 mb-6 group">
+                        <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-orange-500/30 flex items-center justify-center mb-4 text-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.1)] group-hover:border-orange-500 transition-all duration-500">
+                            <Hash className="w-8 h-8 group-hover:scale-110 transition-transform" />
                         </div>
-                        <h1 className="text-[32px] font-bold text-white mb-2">Welcome to #{activeChannel?.name}!</h1>
-                        <p className="text-[#dbdee1]">This is the start of the #{activeChannel?.name} channel.</p>
+                        <h1 className="font-ritual text-2xl md:text-3xl font-bold text-white mb-2 uppercase tracking-widest">Protocol Sector: #{activeChannel?.name}</h1>
+                        <p className="text-[11px] text-zinc-500 font-mono tracking-widest uppercase">Stabilizing initial frequency... Data stream start.</p>
                     </div>
 
-                    <div className="w-full h-px bg-[#3f4147] my-6" />
+                    <div className="w-full h-px bg-white/5 my-6" />
 
                     {/* Messages List */}
                     {channelMessages.map((msg, idx) => {
@@ -208,7 +208,7 @@ export default function ChatArea() {
                                           prevMsg.author_id === msg.author_id && 
                                           (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 5 * 60000);
                         
-                        const canDelete = currentUser?.id === msg.author_id || isGlobalAdmin;
+                        const canDelete = currentUserAuth?.id === msg.author_id || isGlobalAdmin;
 
                         return (
                             <MessageBubble 
@@ -225,12 +225,14 @@ export default function ChatArea() {
             </div>
 
             {/* Input Area */}
-            <div className="px-4 pb-6 pt-1 shrink-0">
+            <div className="px-4 pb-6 pt-2 shrink-0 relative z-20" id="archive-input-section">
                 <form 
                     onSubmit={handleSendMessage}
-                    className="bg-[#383a40] rounded-lg flex items-center px-4 py-2.5 relative group outline-none focus-within:ring-1 focus-within:ring-[#5865F2]"
+                    className="bg-zinc-900 border border-white/5 rounded-xl flex items-center px-4 py-2.5 relative group outline-none focus-within:border-orange-500/50 shadow-2xl transition-all"
                 >
-                    <button type="button" title="Add Attachment" className="text-[#b5bac1] hover:text-[#dbdee1] p-1 mr-2 bg-[#2b2d31] rounded-full shrink-0">
+                    <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-focus-within:opacity-100 transition-opacity rounded-xl pointer-events-none"></div>
+                    
+                    <button type="button" title="Inject Data" className="text-zinc-500 hover:text-orange-500 p-1.5 mr-2 bg-zinc-950 border border-white/5 rounded-lg shrink-0 transition-colors">
                         <PlusCircle className="w-5 h-5" />
                     </button>
                     
@@ -238,21 +240,22 @@ export default function ChatArea() {
                         type="text" 
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder={`Message #${activeChannel?.name || 'channel'}`}
-                        className="flex-1 bg-transparent border-none text-[15px] text-[#dbdee1] placeholder:text-[#888c94] focus:outline-none focus:ring-0 leading-5 min-h-[20px]"
+                        placeholder={`Inject protocol into #${activeChannel?.name || 'void'}...`}
+                        className="flex-1 bg-transparent border-none text-[14px] text-zinc-100 placeholder:text-zinc-700 font-mono tracking-wide focus:outline-none focus:ring-0 leading-5 min-h-[20px]"
                     />
 
-                    <div className="flex items-center gap-2 ml-2 shrink-0">
-                        <button type="button" title="Gift" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Gift className="w-5 h-5" /></button>
-                        <button type="button" title="GIF" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><FileImage className="w-5 h-5" /></button>
-                        <button type="button" title="Emoji" className="text-[#b5bac1] hover:text-[#dbdee1] p-1"><Smile className="w-5 h-5" /></button>
+                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                        <button type="button" title="Gift" className="text-zinc-500 hover:text-zinc-200 p-1.5 transition-colors"><Gift className="w-4 h-4 text-orange-500/40" /></button>
+                        <button type="button" title="GIF" className="text-zinc-500 hover:text-zinc-200 p-1.5 transition-colors"><FileImage className="w-4 h-4 text-orange-500/40" /></button>
+                        <button type="button" title="Emoji" className="text-zinc-500 hover:text-zinc-200 p-1.5 transition-colors"><Smile className="w-4 h-4 text-orange-500/40" /></button>
                         <button 
                             type="submit" 
-                            title="Send"
+                            title="Stabilize Segment"
                             disabled={!newMessage.trim() || isSending}
-                            className={`p-1 ml-1 rounded transition-colors ${newMessage.trim() ? 'bg-[#5865F2] text-white hover:bg-[#4752c4]' : 'text-[#b5bac1]'}`}
+                            className={`p-2 ml-1 rounded-lg transition-all ${newMessage.trim() ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.3)] hover:bg-orange-500 px-4' : 'text-zinc-700'}`}
                         >
-                            <Send className="w-5 h-5" />
+                            <span className="md:inline hidden text-[9px] font-bold uppercase tracking-widest mr-2">{isSending ? 'Sending...' : 'Inject'}</span>
+                            <Send className="w-4 h-4" />
                         </button>
                     </div>
                 </form>

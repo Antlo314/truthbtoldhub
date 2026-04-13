@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Flame, DollarSign, Send, Zap, ChevronRight, Lock, LogOut } from 'lucide-react';
+import { useSoulStore } from '@/lib/store/useSoulStore';
+import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
+import { ArrowLeft, Flame, DollarSign, Send, Zap, ChevronRight, Lock, LogOut, Trophy } from 'lucide-react';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -35,20 +37,38 @@ if (typeof window !== 'undefined') {
 
 export default function Treasury() {
     const router = useRouter();
+    const { user, profile, fetchIdentity, updateSP } = useSoulStore();
+
     const [isConfidential, setIsConfidential] = useState(false);
-
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/');
-    };
-
-    // Provide an explicit union type if we plan to store strings or numbers
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+    
     const [escrow, setEscrow] = useState<string | number>("4,000.00");
     const [petitions, setPetitions] = useState<any[]>([]);
 
+    const TREASURY_PROTOCOL_STEPS: GuideStep[] = [
+        {
+            title: "Global Escrow Node",
+            description: "The 3D crystallization of the movement's liquidity. This represents the total fiat reserves held in sovereign escrow for the collective.",
+            selector: "#treasury-escrow-node"
+        },
+        {
+            title: "Consensus Building",
+            description: "Petitions are requests for aid. To release funds, an initiate must convince the collective to align their Soul Power with the request.",
+            selector: "#treasury-petitions-list"
+        },
+        {
+            title: "The Offering Protocol",
+            description: "Increase the collective's weight. Making a fiat offering earns you instant Soul Power bonuses and strengthens the global infrastructure.",
+            selector: "#treasury-make-offering"
+        },
+        {
+            title: "Sovereign Petitions",
+            description: "If you require resources to expand the mission, lodge a formal request for aid here. Your request will then face the consensus ledger.",
+            selector: "#treasury-request-aid"
+        }
+    ];
+
     // Pledging State
-    const [userAuth, setUserAuth] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
     const [selectedPetition, setSelectedPetition] = useState<any>(null);
     const [pledgeAmount, setPledgeAmount] = useState<number>(0);
     const [isPledging, setIsPledging] = useState(false);
@@ -93,6 +113,11 @@ export default function Treasury() {
                 volume: 0.1,
             });
             ambientDrone.play();
+
+            // Auto-trigger guide if first time
+            if (!localStorage.getItem('treasury_guide_complete')) {
+                setTimeout(() => setIsGuideOpen(true), 2000);
+            }
         }
         return () => {
             if (ambientDrone) ambientDrone.stop();
@@ -205,13 +230,8 @@ export default function Treasury() {
     useEffect(() => {
         async function fetchTreasury() {
             try {
-                // Fetch User Context
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    setUserAuth(user);
-                    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                    if (prof) setProfile(prof);
-                }
+                // Fetch Identity from store
+                await fetchIdentity();
 
                 // Fetch Escrow Balance
                 const { data: escrowData } = await supabase.from('treasury_escrow').select('balance_usd').limit(1);
@@ -232,10 +252,10 @@ export default function Treasury() {
             }
         }
         fetchTreasury();
-    }, []);
+    }, [fetchIdentity]);
 
     const handleExecutePledge = async () => {
-        if (!selectedPetition || !userAuth || pledgeAmount <= 0) return;
+        if (!selectedPetition || !user || pledgeAmount <= 0) return;
         if (profile?.soul_power < pledgeAmount) {
             alert("Insufficient Sanctum Power for this pledge.");
             return;
@@ -243,9 +263,9 @@ export default function Treasury() {
 
         setIsPledging(true);
         try {
-            // 1. Deduct SP from User
+            // 1. Deduct SP from User via store
             const newSP = profile.soul_power - pledgeAmount;
-            await supabase.from('profiles').update({ soul_power: newSP }).eq('id', userAuth.id);
+            await updateSP(newSP);
 
             // 2. Add SP to Petition
             const newPledged = (selectedPetition.sp_pledged || 0) + pledgeAmount;
@@ -267,7 +287,7 @@ export default function Treasury() {
 
             // 3. Log Transaction
             await supabase.from('transactions').insert([{
-                profile_id: userAuth.id,
+                profile_id: user.id,
                 amount: -pledgeAmount, // Negative because it's a spend
                 transaction_type: 'PLEDGE',
                 description: `Pledged to Petition: ${selectedPetition.title}`
@@ -420,6 +440,11 @@ export default function Treasury() {
         }));
     };
 
+    const handleGuideComplete = () => {
+        localStorage.setItem('treasury_guide_complete', 'true');
+        setIsGuideOpen(false);
+    };
+
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center overflow-x-hidden">
             {/* Background - The Treasury uses the custom pool void asset with Parallax */}
@@ -456,7 +481,7 @@ export default function Treasury() {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             {/* Geometric 3D Escrow Node */}
-                            <div className="w-12 h-12 relative [perspective:1000px] shrink-0 mr-2">
+                            <div className="w-12 h-12 relative [perspective:1000px] shrink-0 mr-2" id="treasury-escrow-node">
                                 <div ref={escrowObjRef} className="w-full h-full relative [transform-style:preserve-3d]">
                                     {/* 3D Wireframe Cube Faces */}
                                     <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateZ(24px)] flex items-center justify-center shadow-[0_0_15px_rgba(234,88,12,0.4)]"></div>
@@ -489,6 +514,7 @@ export default function Treasury() {
 
                     <div className="mt-6 flex gap-3">
                         <button
+                            id="treasury-make-offering"
                             onMouseEnter={playHover}
                             onClick={() => setIsMakingOffering(true)}
                             className="flex-1 bg-gradient-to-r from-orange-600 to-orange-800 text-white font-bold py-3 rounded-xl text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-orange-900/40 hover:scale-[1.02] transition-transform"
@@ -496,6 +522,7 @@ export default function Treasury() {
                             Make Offering
                         </button>
                         <button
+                            id="treasury-request-aid"
                             onMouseEnter={playHover}
                             onClick={() => setIsRequestingAid(true)}
                             className="flex-1 glass bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl text-[10px] uppercase tracking-[0.2em] hover:bg-white/10 transition-colors"
@@ -512,7 +539,7 @@ export default function Treasury() {
                         <h3 className="font-ritual text-white text-base tracking-widest uppercase">Active Petitions</h3>
                     </div>
 
-                    <div className="space-y-4" ref={mainContainerRef}>
+                    <div className="space-y-4" ref={mainContainerRef} id="treasury-petitions-list">
                         {petitions.length === 0 ? (
                             <div className="glass bg-black/40 border border-white/5 rounded-3xl p-12 text-center relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(234,88,12,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
@@ -852,6 +879,14 @@ export default function Treasury() {
                     </div>
                 </div>
             )}
+            {/* Sentinel Guide Protocol */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={TREASURY_PROTOCOL_STEPS}
+                protocolName="TREASURY PROTOCOL"
+            />
         </div>
     );
 }
