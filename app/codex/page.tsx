@@ -639,6 +639,8 @@ export default function Archive() {
         }
     };
 
+    const activeWhisper = activeReplyBox ? whispers.find(w => w.id === activeReplyBox) : null;
+
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-sky-500/30 font-sans flex flex-col items-center overflow-x-hidden">
             {/* Background - Archive Theme with Parallax */}
@@ -649,16 +651,17 @@ export default function Archive() {
                     loop
                     muted
                     playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-cover opacity-[0.15] pointer-events-none filter contrast-125"
                     poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png"
                 >
                     <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
                 </video>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_60%)] pointer-events-none"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.08)_0%,transparent_60%)] pointer-events-none"></div>
+                <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
             </div>
 
             {/* Header */}
-            <header className="sticky top-0 w-full max-w-2xl z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-sky-500/20">
+            <header className="sticky top-0 w-full max-w-7xl z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-sky-500/10">
                 <button onClick={() => router.push('/sanctum')} className="text-sky-500 hover:text-white transition-colors group">
                     <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
@@ -672,20 +675,16 @@ export default function Archive() {
                             {profile?.soul_power !== undefined ? `${profile.soul_power} SP` : 'UPLINK ESTABLISHING...'}
                         </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]"></div>
-                        <span className="text-[8px] text-gray-400 font-mono tracking-widest">{onlineUsers} CONNECTED</span>
-                    </div>
                 </div>
                 <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group p-2">
                     <LogOut className="w-5 h-5" />
                 </button>
             </header>
 
-            <main className={`flex-1 w-full max-w-2xl relative z-10 p-4 md:p-6 pb-32 ${isLocked ? 'flex flex-col items-center justify-center min-h-[80vh]' : 'space-y-8 min-h-screen'}`}>
+            <main className={`flex-1 w-full max-w-7xl relative z-10 p-0 md:p-6 pb-32 flex ${isLocked ? 'items-center justify-center min-h-[80vh]' : 'min-h-[90vh]'}`}>
 
                 {isLocked ? (
-                    <div className="glass-panel p-8 md:p-12 rounded-3xl border border-sky-500/20 shadow-[0_0_50px_rgba(14,165,233,0.1)] text-center relative overflow-hidden w-full max-w-lg mx-auto">
+                    <div className="glass-panel p-8 md:p-12 rounded-3xl border border-sky-500/20 shadow-[0_0_50px_rgba(14,165,233,0.1)] text-center relative overflow-hidden w-full max-w-lg mx-auto m-4">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_60%)]"></div>
                         <Lock className="w-16 h-16 text-sky-500/80 mx-auto mb-6" />
                         <h2 className="font-ritual text-3xl text-white tracking-widest uppercase shadow-sm mb-4">Archive Encrypted</h2>
@@ -705,403 +704,276 @@ export default function Archive() {
                         </div>
                     </div>
                 ) : (
-                    <>
-                        {/* Protocol Info Block */}
-                        <div className="glass-panel p-6 rounded-2xl border-sky-500/20 shadow-[0_0_30px_rgba(14,165,233,0.05)] relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50"></div>
-
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-sky-950/50 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-                            <Sparkles className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="font-ritual text-lg text-white font-bold tracking-widest uppercase shadow-sm">Global Ledger</h2>
-                            <p className="text-xs text-gray-400 font-mono mt-1 leading-relaxed">
-                                The Archive immutable ledger records the anonymous dispatches and decrees of the Sanctum. Lodge a whisper to guide the collective consciousness.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Input Area */}
-                <form onSubmit={handleLodgeWhisper} className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-600 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                    <div className="relative glass bg-black/60 border border-white/10 rounded-2xl p-2 flex flex-col gap-2 overflow-hidden">
-
-                        {/* Keystroke Telemetry Waveform */}
-                        <div className="h-6 w-full flex items-end gap-[2px] px-4 opacity-50">
-                            {keystrokes.map((val, i) => (
-                                <div
-                                    key={i}
-                                    className="w-1 bg-sky-400 rounded-t-sm transition-all duration-75"
-                                    style={{ height: `${Math.max(20, val)}%` }}
-                                ></div>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-2 w-full">
-                            <input
-                                type="text"
-                                value={newWhisper}
-                                onChange={handleInput}
-                                maxLength={140}
-                                placeholder="Lodge an obsidian whisper... (140 max)"
-                                className="flex-1 bg-transparent text-sm text-white font-mono placeholder:text-zinc-600 px-4 focus:outline-none"
-                            />
-                            <button
-                                type="submit"
-                                disabled={isSubmitting || !newWhisper.trim()}
-                                onMouseEnter={playHover}
-                                className="bg-sky-900/40 text-sky-400 hover:bg-sky-500 hover:text-black hover:shadow-[0_0_15px_rgba(14,165,233,0.6)] border border-sky-500/30 p-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group/btn shrink-0"
-                            >
-                                <Send className={`w-5 h-5 ${isSubmitting ? 'animate-bounce' : 'group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform'}`} />
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-                {/* Divider */}
-                <div className="flex items-center gap-4 py-2 opacity-50">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-sky-500/50"></div>
-                    <Hexagon className="w-4 h-4 text-sky-500" />
-                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-sky-500/50"></div>
-                </div>
-
-                {/* Feed System */}
-                <div ref={listRef} className="space-y-12">
-
-                    {/* The Core */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 border-b-2 border-sky-500/30 pb-4 mb-6">
-                            <Zap className="w-8 h-8 md:w-10 md:h-10 text-sky-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)]" />
-                            <h3 className="font-ritual text-3xl md:text-5xl text-sky-400 tracking-[0.2em] shadow-sky-500/50 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]">THE CORE</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {coreWhispers.length === 0 ? (
-                                <div className="col-span-1 md:col-span-3 glass bg-black/40 border border-white/5 rounded-3xl p-12 md:p-24 text-center relative overflow-hidden group min-h-[300px] flex flex-col items-center justify-center">
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                                    <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-sky-500/30 mb-6 md:mb-8 drop-shadow-[0_0_15px_rgba(14,165,233,0.5)]" />
-                                    <h3 className="font-ritual text-2xl md:text-5xl tracking-[0.3em] text-white/40 mb-4 md:mb-6 uppercase">The Core is Silent</h3>
-                                    <p className="text-xs md:text-base text-gray-500 font-mono tracking-widest uppercase max-w-lg mx-auto leading-relaxed">
-                                        No whispers have been inscribed into the eternal ledger. Lodge the first transmission to align the collective.
-                                    </p>
-                                </div>
-                            ) : (
-                                coreWhispers.map((whisper, index) => (
-                                <div
-                                    key={whisper.id}
-                                    ref={el => {
-                                        coreRefs.current[index] = el;
-                                        if (whisper.isNew && whisper.alignment > 1) ascendRef.current = el; // Only attach ascend ref if it's truly new TO THE CORE, not just a brand new generic message
-                                    }}
-                                    className={`glass bg-sky-950/20 border ${whisper.isEncrypted ? 'border-zinc-800' : 'border-sky-500/50'} rounded-2xl p-5 relative overflow-hidden group hover:border-sky-400 hover:shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all flex flex-col justify-between min-h-[160px] ${whisper.isNew && whisper.alignment > 1 ? 'shadow-[0_0_50px_rgba(14,165,233,0.8)] border-sky-300' : ''}`}
-                                >
-                                    <div className="absolute inset-0 bg-[linear-gradient(rgba(14,165,233,0.05)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none"></div>
-
+                    <div className="flex w-full h-[85vh] overflow-hidden rounded-none md:rounded-2xl border-0 md:border border-sky-500/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                        
+                        {/* LEFT PANE: FEED */}
+                        <div className={`w-full md:w-[400px] lg:w-[450px] flex-shrink-0 flex flex-col bg-black/40 backdrop-blur-md border-r border-sky-500/10 transition-all ${activeReplyBox ? 'hidden md:flex' : 'flex'}`}>
+                            
+                            <div className="p-4 border-b border-sky-500/10 bg-black/20 shrink-0">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-8 h-8 rounded-lg bg-sky-950/50 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-[0_0_10px_rgba(14,165,233,0.2)]">
+                                        <Sparkles className="w-4 h-4" />
+                                    </div>
                                     <div>
-                                        <div className="flex justify-between items-start mb-3 relative z-10 w-full group/header cursor-default">
-                                            <div className="flex items-center gap-3">
-                                                <button onClick={() => handleProfileClick(whisper.author_id)} className="hover:scale-105 transition-transform">
+                                        <h2 className="font-ritual text-sm text-white font-bold tracking-widest uppercase shadow-sm">Global Ledger</h2>
+                                        <div className="text-[9px] text-gray-500 font-mono flex items-center gap-1.5"><div className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></div> Live Feed</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6" ref={listRef}>
+                                {/* Core Whispers */}
+                                {coreWhispers.length > 0 && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <Zap className="w-3 h-3 text-sky-400" />
+                                            <span className="text-[10px] font-mono font-bold text-sky-400 uppercase tracking-widest">Pin (Core)</span>
+                                        </div>
+                                        {coreWhispers.map((whisper, index) => (
+                                            <div
+                                                key={whisper.id}
+                                                ref={el => { coreRefs.current[index] = el; if (whisper.isNew && whisper.alignment > 1) ascendRef.current = el; }}
+                                                onClick={() => setActiveReplyBox(whisper.id)}
+                                                className={`glass bg-sky-950/10 border ${activeReplyBox === whisper.id ? 'border-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'border-sky-500/30'} rounded-xl p-4 cursor-pointer hover:bg-sky-900/20 transition-all relative overflow-hidden`}
+                                            >
+                                                <div className="flex items-start gap-3 mb-2">
                                                     {whisper.avatar_url ? (
-                                                        <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-full border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+                                                        <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-md border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] shrink-0" />
                                                     ) : (
-                                                        <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] rounded-full" />
+                                                        <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] rounded-md shrink-0" />
                                                     )}
-                                                </button>
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${whisper.isEncrypted ? 'bg-red-500' : 'bg-green-400 shadow-[0_0_5px_#4ade80]'}`}></div>
-                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-sky-200">{whisper.author}</span>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-sky-200 truncate">{whisper.author}</span>
+                                                        <span className="text-[8px] font-mono text-sky-500/60 uppercase truncate">{whisper.timestamp}</span>
                                                     </div>
-                                                    <span className="text-[8px] font-mono text-sky-500/60 uppercase">{whisper.timestamp}</span>
+                                                </div>
+                                                <p className="text-sm font-bold font-mono text-white leading-relaxed line-clamp-3 mb-3">
+                                                    "{whisper.content}"
+                                                </p>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[8px] px-2 py-0.5 rounded bg-sky-950/50 text-sky-400 font-mono uppercase tracking-widest font-bold">Align: {whisper.alignment}</span>
+                                                    <div className="flex items-center gap-1 text-sky-400 opacity-60 text-[10px] font-mono">
+                                                        <MessageSquare className="w-3 h-3" /> {whisper.replies?.length || 0}
+                                                    </div>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                )}
 
-                                            {(userAuth?.id === whisper.author_id || isAdmin) && (
-                                                <button
-                                                    onClick={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
-                                                    className="text-sky-500/40 hover:text-red-500 transition-colors shrink-0 p-1 opacity-0 group-hover/header:opacity-100"
-                                                    title="Erase Whisper"
-                                                >
+                                {/* Fringe Whispers */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 px-1 pt-4 border-t border-white/5">
+                                        <Eye className="w-3 h-3 text-zinc-500" />
+                                        <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Feed (Fringe)</span>
+                                    </div>
+                                    {fringeWhispers.map((whisper, index) => (
+                                        <div
+                                            key={whisper.id}
+                                            ref={el => { fringeRefs.current[index] = el; }}
+                                            onClick={() => setActiveReplyBox(whisper.id)}
+                                            className={`glass bg-white/[0.02] border ${activeReplyBox === whisper.id ? 'border-sky-500/50 bg-sky-950/10' : whisper.isEncrypted ? 'border-zinc-900' : whisper.isNew ? 'border-sky-500/30' : 'border-white/5'} rounded-xl p-4 cursor-pointer hover:bg-white/[0.05] transition-all relative overflow-hidden`}
+                                        >
+                                            <div className="flex items-start gap-3 mb-2">
+                                                {whisper.avatar_url ? (
+                                                    <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-md border border-white/10 shrink-0" />
+                                                ) : (
+                                                    <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-white/10 rounded-md shrink-0" />
+                                                )}
+                                                <div className="flex flex-col flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-300 truncate">{whisper.author}</span>
+                                                        {whisper.isNew && !whisper.isEncrypted && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shrink-0"></span>}
+                                                    </div>
+                                                    <span className="text-[8px] font-mono text-zinc-600 uppercase truncate">{whisper.timestamp}</span>
+                                                </div>
+                                            </div>
+                                            {whisper.isEncrypted ? (
+                                                <p className="text-sm font-mono text-zinc-600 select-none blur-[2px] line-clamp-2">
+                                                    {whisper.content}
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm font-mono text-zinc-300 leading-relaxed line-clamp-3 mb-3">
+                                                        {whisper.content}
+                                                    </p>
+                                                    <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
+                                                        <span className="uppercase tracking-widest font-bold">Align: {whisper.alignment}</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <MessageSquare className="w-3 h-3" /> {whisper.replies?.length || 0}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Lodge Whisper Input */}
+                            <div className="p-4 bg-black/40 backdrop-blur-lg border-t border-sky-500/10 shrink-0">
+                                <form onSubmit={handleLodgeWhisper} className="relative group">
+                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-600/30 to-blue-600/30 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
+                                    <div className="relative glass bg-black/80 border border-white/10 rounded-xl p-1.5 flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newWhisper}
+                                            onChange={handleInput}
+                                            maxLength={140}
+                                            placeholder="Lodge whisper..."
+                                            className="flex-1 bg-transparent text-xs text-white font-mono placeholder:text-zinc-600 px-3 py-2 focus:outline-none"
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting || !newWhisper.trim()}
+                                            className="bg-sky-500/20 text-sky-400 hover:text-white hover:bg-sky-500 border border-sky-500/30 p-2 rounded-lg transition-all disabled:opacity-50 shrink-0 aspect-square flex items-center justify-center"
+                                        >
+                                            <Send className={`w-4 h-4 ${isSubmitting ? 'animate-bounce' : ''}`} />
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* RIGHT PANE: ACTIVE THREAD */}
+                        <div className={`flex-1 flex-col bg-zinc-950/60 backdrop-blur-xl relative ${!activeReplyBox ? 'hidden md:flex items-center justify-center' : 'flex'}`}>
+                            
+                            {!activeWhisper ? (
+                                <div className="text-center opacity-50 flex flex-col items-center">
+                                    <MessageSquare className="w-12 h-12 text-sky-500/30 mb-4" />
+                                    <h3 className="font-ritual text-xl text-white tracking-widest uppercase">Select a Transmission</h3>
+                                    <p className="text-xs font-mono text-zinc-500 mt-2">The thread will materialize here.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Thread Header */}
+                                    <div className="p-4 md:px-8 md:py-6 border-b border-white/5 bg-black/40 flex items-center justify-between shrink-0 sticky top-0 z-20">
+                                        <div className="flex items-center gap-4">
+                                            <button onClick={() => setActiveReplyBox(null)} className="md:hidden text-sky-500 hover:text-white p-2 -ml-2">
+                                                <ArrowLeft className="w-5 h-5" />
+                                            </button>
+                                            <div className="flex items-center gap-3">
+                                                {activeWhisper.avatar_url ? (
+                                                    <img src={activeWhisper.avatar_url} alt={activeWhisper.author} className="w-8 h-8 md:w-10 md:h-10 rounded-xl border border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)]" />
+                                                ) : (
+                                                    <GenerativeIdenticon idString={activeWhisper.author_id || activeWhisper.author} size={40} className="border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)] rounded-xl" />
+                                                )}
+                                                <div>
+                                                    <h3 className="text-xs md:text-sm font-bold uppercase tracking-widest text-white">{activeWhisper.author}</h3>
+                                                    <span className="text-[9px] md:text-[10px] font-mono text-zinc-500 uppercase">{activeWhisper.timestamp}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {(userAuth?.id === activeWhisper.author_id || isAdmin) && (
+                                                <button onClick={() => { setActiveReplyBox(null); handleDeleteWhisper(activeWhisper.id, activeWhisper.author_id); }} className="text-zinc-600 hover:text-red-500 p-2" title="Erase">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             )}
                                         </div>
+                                    </div>
 
-                                        <div className="relative z-10">
-                                            {whisper.isEncrypted ? (
-                                                <p className="text-sm md:text-base font-mono text-zinc-500 select-none blur-[2px] transition-all group-hover:blur-[1px]">
-                                                    {whisper.content}
+                                    {/* Thread Content */}
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6">
+                                        
+                                        {/* Original Whisper */}
+                                        <div className="bg-black/60 border border-white/5 rounded-2xl p-6 relative group overflow-hidden">
+                                            {activeWhisper.isEncrypted ? (
+                                                <p className="text-lg md:text-xl font-mono text-zinc-500 select-none blur-[3px]">
+                                                    {activeWhisper.content}
                                                 </p>
                                             ) : (
-                                                <p className="text-base md:text-xl font-bold font-mono text-white leading-relaxed drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-                                                    "{whisper.content}"
+                                                <p className={`text-lg md:text-xl font-mono leading-relaxed ${coreWhispers.some(c=>c.id===activeWhisper.id) ? 'font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'text-zinc-200'}`}>
+                                                    {activeWhisper.content}
                                                 </p>
                                             )}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 pt-3 border-t border-sky-500/20 flex justify-between items-center relative z-10">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-[9px] font-mono text-sky-500/60 uppercase">{whisper.timestamp}</span>
-
-                                            {!whisper.isEncrypted && (
-                                                <button
-                                                    onClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
-                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-950/40 text-[9px] font-mono text-sky-300 hover:text-white hover:bg-sky-600/40 transition-all border border-sky-500/30 hover:border-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.1)]"
-                                                >
-                                                    <MessageSquare className="w-3 h-3" />
-                                                    <span className="uppercase tracking-widest font-bold">{whisper.replies?.length ? `${whisper.replies.length} REPLIES` : 'REPLY'}</span>
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <button
-                                            onClick={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition-all ${whisper.isEncrypted
-                                                ? 'border-red-500/20 text-red-500/50 cursor-not-allowed bg-red-950/20'
-                                                : 'border-sky-500 text-black bg-sky-500 hover:bg-white hover:border-white shadow-[0_0_10px_rgba(14,165,233,0.8)]'
-                                                }`}
-                                        >
-                                            <Zap className="w-3 h-3" />
-                                            <span>Align ({whisper.alignment})</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Core Replies Section */}
-                                    {activeReplyBox === whisper.id && (
-                                        <div className="mt-4 pt-4 border-t border-sky-500/20 relative z-10">
-
-                                            {/* Existing Replies List */}
-                                            {whisper.replies && whisper.replies.length > 0 && (
-                                                <div className="space-y-3 mb-6 bg-black/40 border border-sky-500/20 p-4 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar relative shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-                                                    {whisper.replies.map(reply => (
-                                                        <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-sky-950/10 hover:bg-sky-900/20 p-3 md:p-4 rounded-lg border border-white/5 transition-colors">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <div className="flex items-center gap-3">
-                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
-                                                                        {reply.avatar_url ? (
-                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-sky-500/50" />
-                                                                        ) : (
-                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={20} className="border-sky-500/50 rounded-full" />
-                                                                        )}
-                                                                    </button>
-                                                                    <span className="text-[10px] md:text-xs font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-4">
-                                                                    <span className="text-[9px] md:text-[10px] font-mono text-sky-500/60">{reply.timestamp}</span>
-
-                                                                    {(userAuth?.id === reply.author_id || isAdmin) && (
-                                                                        <button
-                                                                            onClick={() => handleDeleteReply(reply.id, whisper.id, reply.author_id)}
-                                                                            className="text-sky-500/30 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                                                            title="Erase Reply"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-xs md:text-sm font-mono text-sky-100/90 w-full pl-8 md:pl-10 leading-relaxed">
-                                                                {reply.content}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Input Area */}
-                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-3 items-end bg-black/40 p-2 rounded-xl border border-sky-500/30">
-                                                <textarea
-                                                    value={replyContent}
-                                                    onChange={(e) => setReplyContent(e.target.value)}
-                                                    placeholder="Lodge a reply..."
-                                                    maxLength={280}
-                                                    rows={1}
-                                                    className="flex-1 bg-transparent border-none px-3 py-2 text-sm md:text-base text-white placeholder:text-sky-500/40 focus:outline-none resize-none min-h-[44px] custom-scrollbar"
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmittingReply || !replyContent.trim()}
-                                                    className="bg-sky-500/20 text-sky-400 hover:text-black hover:bg-sky-500 border border-sky-500/50 p-3 rounded-lg transition-all disabled:opacity-50 shrink-0"
-                                                >
-                                                    <Send className="w-4 h-4" />
-                                                </button>
-                                            </form>
-                                        </div>
-                                    )}
-                                </div>
-                            )))}
-                        </div>
-                    </div>
-
-                    {/* The Fringe */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 border-b border-white/10 pb-4 mt-8 mb-6">
-                            <Eye className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
-                            <h3 className="font-ritual text-2xl md:text-3xl text-zinc-500 tracking-[0.2em]">THE FRINGE</h3>
-                        </div>
-                        <div className="space-y-3">
-                            {fringeWhispers.length === 0 ? (
-                                <div className="glass bg-black/40 border border-white/5 rounded-xl p-8 md:p-16 text-center relative overflow-hidden group">
-                                    <Eye className="w-8 h-8 md:w-12 md:h-12 text-zinc-600/50 mb-4 mx-auto" />
-                                    <p className="text-[10px] md:text-sm text-zinc-600 font-mono tracking-widest uppercase">
-                                        The Fringe is empty. No public whispers orbit the Core.
-                                    </p>
-                                </div>
-                            ) : (
-                                fringeWhispers.map((whisper, index) => (
-                                <div
-                                    key={whisper.id}
-                                    ref={el => { fringeRefs.current[index] = el; }}
-                                    className={`glass bg-black/40 border ${whisper.isNew ? 'border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.2)]' : whisper.isEncrypted ? 'border-zinc-900' : 'border-white/5'} rounded-xl p-4 relative overflow-hidden group hover:bg-white/5 transition-colors`}
-                                >
-                                    <div className="flex justify-between items-start mb-3 relative z-10 w-full group/header">
-                                        <div className="flex items-center gap-3 w-full pr-6">
-                                            <button onClick={() => handleProfileClick(whisper.author_id)} className="hover:scale-105 transition-transform shrink-0">
-                                                {whisper.avatar_url ? (
-                                                    <img src={whisper.avatar_url} alt={whisper.author} className="w-5 h-5 rounded-full border border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)]" />
-                                                ) : (
-                                                    <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={20} className="border-zinc-700 shadow-[0_0_5px_rgba(255,255,255,0.1)] rounded-full" />
-                                                )}
-                                            </button>
-                                            <div className="flex flex-col flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${whisper.isEncrypted ? 'bg-red-900' : whisper.isNew ? 'bg-sky-400 animate-pulse shadow-[0_0_5px_#38bdf8]' : 'bg-green-500 shadow-[0_0_5px_#22c55e]'}`}></div>
-                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-300 truncate">{whisper.author}</span>
-                                                    {whisper.isNew && <span className="text-[8px] bg-sky-500 text-black px-1.5 py-0.5 rounded font-bold uppercase ml-2 shrink-0">New</span>}
-                                                </div>
-                                                <span className="text-[8px] font-mono text-zinc-600 block truncate">
-                                                    {whisper.timestamp}
+                                            
+                                            <div className="mt-6 flex justify-between items-center border-t border-white/5 pt-4">
+                                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-sky-500/60 flex items-center gap-2">
+                                                    <Shield className="w-3 h-3" /> Thread Origin
                                                 </span>
+                                                <button
+                                                    onClick={() => handleAlignWhisper(activeWhisper.id, activeWhisper.isEncrypted)}
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] md:text-xs font-mono font-bold transition-all ${activeWhisper.isEncrypted
+                                                        ? 'border-red-500/20 text-red-500/50 cursor-not-allowed bg-red-950/20'
+                                                        : 'border-sky-500/50 text-sky-400 bg-sky-950/30 hover:bg-sky-500 hover:text-black hover:border-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.3)]'
+                                                        }`}
+                                                >
+                                                    <Zap className="w-4 h-4" />
+                                                    <span>Align ({activeWhisper.alignment})</span>
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {(userAuth?.id === whisper.author_id || isAdmin) && (
-                                            <button
-                                                onClick={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
-                                                className="absolute top-0 right-0 text-zinc-600 hover:text-red-500 transition-colors shrink-0 p-1 opacity-0 group-hover/header:opacity-100 bg-black/40 rounded-bl-lg"
-                                                title="Erase Whisper"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="relative z-10 pl-3 border-l border-white/5">
-                                        {whisper.isEncrypted ? (
-                                            <p className="text-xs md:text-sm font-mono text-zinc-600 select-none blur-[2px]">
-                                                {whisper.content}
-                                            </p>
-                                        ) : (
-                                            <p
-                                                ref={whisper.isNew ? newTextRef : null}
-                                                className={`text-sm md:text-base font-mono ${whisper.isNew ? 'text-sky-300 font-bold' : 'text-zinc-300'} leading-relaxed`}
-                                            >
-                                                {whisper.content}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-3 flex justify-between items-center relative z-10 pl-3">
-                                        <div className="flex flex-wrap items-center gap-4">
-                                            <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-600 flex items-center gap-1">
-                                                {whisper.isEncrypted ? <Lock className="w-3 h-3 text-red-900" /> : <Eye className="w-3 h-3 text-zinc-600" />}
-                                                {whisper.isEncrypted ? 'ENCRYPTED' : 'PUBLIC'}
-                                            </span>
-
-                                            {!whisper.isEncrypted && (
-                                                <button
-                                                    onClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
-                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 text-[9px] font-mono text-zinc-400 hover:text-sky-400 hover:bg-sky-950/50 transition-all border border-zinc-800 hover:border-sky-500/30"
-                                                >
-                                                    <MessageSquare className="w-3 h-3" />
-                                                    <span className="uppercase tracking-widest font-bold">{whisper.replies?.length ? `${whisper.replies.length} REPLIES` : 'REPLY'}</span>
-                                                </button>
-                                            )}
+                                        {/* Divider */}
+                                        <div className="flex items-center gap-4 py-2 opacity-30">
+                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-sky-500/50"></div>
+                                            <span className="text-[10px] font-mono tracking-widest text-sky-500 uppercase font-bold">Replies</span>
+                                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-sky-500/50"></div>
                                         </div>
 
-                                        <button
-                                            onClick={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
-                                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono transition-all ${whisper.isEncrypted
-                                                ? 'text-zinc-700 cursor-not-allowed hidden'
-                                                : 'text-zinc-500 hover:text-sky-400 hover:bg-sky-950/30'
-                                                }`}
-                                        >
-                                            <Zap className="w-3 h-3" />
-                                            <span>Align ({whisper.alignment})</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Fringe Replies Section */}
-                                    {activeReplyBox === whisper.id && (
-                                        <div className="mt-4 pt-4 border-t border-white/5 relative z-10">
-
-                                            {/* Existing Replies List */}
-                                            {whisper.replies && whisper.replies.length > 0 && (
-                                                <div className="space-y-3 mb-6 bg-black/60 border border-white/10 p-4 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar relative shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-                                                    {whisper.replies.map(reply => (
-                                                        <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-white/[0.02] hover:bg-white/[0.04] p-3 md:p-4 rounded-lg border border-white/5 transition-colors">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <div className="flex items-center gap-3">
-                                                                    <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
-                                                                        {reply.avatar_url ? (
-                                                                            <img src={reply.avatar_url} alt={reply.author} className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-sky-500/20" />
-                                                                        ) : (
-                                                                            <GenerativeIdenticon idString={reply.author_id || reply.author} size={20} className="border-sky-500/20 rounded-full" />
-                                                                        )}
-                                                                    </button>
-                                                                    <span className="text-[10px] md:text-xs font-bold text-sky-200/80 uppercase tracking-widest">{reply.author}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-4">
-                                                                    <span className="text-[9px] md:text-[10px] font-mono text-zinc-500">{reply.timestamp}</span>
-
-                                                                    {(userAuth?.id === reply.author_id || isAdmin) && (
-                                                                        <button
-                                                                            onClick={() => handleDeleteReply(reply.id, whisper.id, reply.author_id)}
-                                                                            className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                                                            title="Erase Reply"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </button>
+                                        {/* Replies */}
+                                        <div className="space-y-4">
+                                            {(!activeWhisper.replies || activeWhisper.replies.length === 0) ? (
+                                                <p className="text-center text-xs font-mono text-zinc-600 py-8 uppercase tracking-widest">No signals intercepted. Be the first.</p>
+                                            ) : (
+                                                activeWhisper.replies.map(reply => (
+                                                    <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <div className="flex items-center gap-3">
+                                                                <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
+                                                                    {reply.avatar_url ? (
+                                                                        <img src={reply.avatar_url} alt={reply.author} className="w-6 h-6 md:w-8 md:h-8 rounded-lg border border-sky-500/20" />
+                                                                    ) : (
+                                                                        <GenerativeIdenticon idString={reply.author_id || reply.author} size={32} className="border-sky-500/20 rounded-lg" />
                                                                     )}
+                                                                </button>
+                                                                <div>
+                                                                    <span className="text-xs font-bold text-sky-100 uppercase tracking-widest block">{reply.author}</span>
+                                                                    <span className="text-[9px] font-mono text-zinc-500">{reply.timestamp}</span>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-xs md:text-sm font-mono text-zinc-300 w-full pl-8 md:pl-10 leading-relaxed">
-                                                                {reply.content}
-                                                            </p>
+                                                            {(userAuth?.id === reply.author_id || isAdmin) && (
+                                                                <button onClick={() => handleDeleteReply(reply.id, activeWhisper.id, reply.author_id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity">
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                        <p className="text-sm md:text-base font-mono text-zinc-300 w-full pl-[44px] leading-relaxed">
+                                                            {reply.content}
+                                                        </p>
+                                                    </div>
+                                                ))
                                             )}
+                                        </div>
+                                    </div>
 
-                                            {/* Input Area */}
-                                            <form onSubmit={(e) => handleLodgeReply(e, whisper.id)} className="flex gap-3 items-end bg-black/40 p-2 rounded-xl border border-white/10">
+                                    {/* Lodge Reply Input */}
+                                    <div className="p-4 md:p-6 bg-black/60 backdrop-blur-xl border-t border-sky-500/10 shrink-0">
+                                        <form onSubmit={(e) => handleLodgeReply(e, activeWhisper.id)} className="flex gap-3 items-end">
+                                            <div className="flex-1 bg-black/50 border border-white/10 rounded-xl overflow-hidden focus-within:border-sky-500/50 transition-colors">
                                                 <textarea
                                                     value={replyContent}
                                                     onChange={(e) => setReplyContent(e.target.value)}
-                                                    placeholder="Lodge a reply..."
+                                                    placeholder="Transmit reply..."
                                                     maxLength={280}
                                                     rows={1}
-                                                    className="flex-1 bg-transparent px-3 py-2 text-sm md:text-base text-white placeholder:text-zinc-600 focus:outline-none resize-none custom-scrollbar min-h-[44px]"
+                                                    className="w-full bg-transparent px-4 py-3 text-sm md:text-base text-white font-mono placeholder:text-zinc-600 focus:outline-none min-h-[48px] resize-none custom-scrollbar"
                                                 />
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmittingReply || !replyContent.trim()}
-                                                    className="bg-zinc-900/40 text-zinc-400 hover:text-white hover:bg-sky-500/40 border border-white/10 p-3 rounded-lg transition-all disabled:opacity-50 shrink-0"
-                                                >
-                                                    <Send className="w-4 h-4" />
-                                                </button>
-                                            </form>
-                                        </div>
-                                    )}
-                                </div>
-                            )))}
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={isSubmittingReply || !replyContent.trim()}
+                                                className="bg-sky-500 text-black hover:bg-white min-h-[48px] px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-500 shrink-0 shadow-[0_0_15px_rgba(14,165,233,0.3)] disabled:shadow-none"
+                                            >
+                                                Send
+                                            </button>
+                                        </form>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
-
-                </div>
-                </>
                 )}
             </main>
 

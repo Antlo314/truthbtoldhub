@@ -930,7 +930,7 @@ h3,
 
 @keyframes marquee {
     0% {
-        transform: translateX(100%);
+        transform: translateX(0);
     }
 
     100% {
@@ -938,11 +938,17 @@ h3,
     }
 }
 
+.animate-marquee {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 25s linear infinite;
+}
+
 .marquee-ticker {
     display: inline-block;
     white-space: nowrap;
     animation: marquee 15s linear infinite;
-    padding-left: 20px;
+    padding-left: 100%;
 }
 
 .marquee-container {

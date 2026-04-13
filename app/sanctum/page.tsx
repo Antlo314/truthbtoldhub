@@ -198,11 +198,13 @@ export default function SanctumHub() {
 
             {/* Marquee Broadcast */}
             <div className="bg-gradient-to-r from-orange-950/40 via-orange-600/20 to-orange-950/40 border-y border-orange-500/20 py-2 overflow-hidden sticky top-[73px] z-40 backdrop-blur-sm">
-                <div className="whitespace-nowrap flex gap-8 items-center text-[10px] font-mono tracking-widest text-orange-400">
-                    <span className="flex-none font-bold text-white px-4 border-r border-orange-500/30">SYSTEM BROADCAST</span>
-                    <span className="animate-marquee font-bold">
-                        ◈ {broadcastMsg} ◈
-                    </span>
+                <div className="flex items-center text-[10px] font-mono tracking-widest text-orange-400">
+                    <span className="flex-none font-bold text-white px-4 border-r border-orange-500/30 z-10 bg-black/20">SYSTEM BROADCAST</span>
+                    <div className="flex-1 overflow-hidden whitespace-nowrap">
+                        <span className="animate-marquee font-bold">
+                            ◈ {broadcastMsg} ◈
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -237,35 +239,26 @@ export default function SanctumHub() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
-                        {/* The Pool (Treasury) */}
+                        {/* The Pool (Treasury) - OFFLINE */}
                         <div
-                            onMouseEnter={(e) => {
-                                playHover();
-                                gsap.to(e.currentTarget, { scale: 1.02, rotationY: 2, rotationX: 2, duration: 0.4, ease: "power2.out", filter: 'brightness(1.1)' });
-                            }}
-                            onMouseLeave={(e) => {
-                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.4, ease: "power2.out", filter: 'brightness(1)' });
-                            }}
-                            onClick={() => { playClick(); router.push('/treasury'); }}
-                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden cursor-pointer sanctuary-card transition-all ${tourStep === 1 ? 'z-50 shadow-[0_0_50px_rgba(234,88,12,0.6)] scale-[1.02] border-orange-500 pointer-events-none' : ''}`}
+                            className={`group glass-panel rounded-2xl p-6 relative overflow-hidden sanctuary-card transition-all cursor-not-allowed filter grayscale opacity-70 border-zinc-800 ${tourStep === 1 ? 'z-50 shadow-[0_0_50px_rgba(234,88,12,0.6)] scale-[1.02] pointer-events-none' : ''}`}
                             style={{ perspective: '1000px' }}
                         >
-                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-700 mix-blend-screen pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
+                            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none z-0" poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png">
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-colors pointer-events-none z-0"></div>
+                            
                             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
                                 <div>
-                                    <div className="w-12 h-12 rounded-xl bg-orange-950/30 border border-orange-500/30 flex items-center justify-center mb-4 text-orange-500 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                    <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-zinc-600">
                                         <Flame className="w-6 h-6" />
                                     </div>
-                                    <h3 className="font-ritual text-xl text-white tracking-widest mb-2">THE POOL</h3>
-                                    <p className="text-xs text-gray-400 font-mono tracking-wider">Treasury & Mutual Aid</p>
+                                    <h3 className="font-ritual text-xl text-zinc-500 tracking-widest mb-2">THE POOL</h3>
+                                    <p className="text-xs text-zinc-600 font-mono tracking-wider">Treasury & Mutual Aid</p>
                                 </div>
-                                <div className="flex items-center justify-between text-orange-500">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-orange-500/30 px-3 py-1 rounded-full">Access Sector</span>
-                                    <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                                <div className="flex items-center justify-between text-zinc-500">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest border border-red-900/50 text-red-500/70 bg-red-950/20 px-3 py-1 rounded-full">OFFLINE</span>
                                 </div>
                             </div>
                         </div>
