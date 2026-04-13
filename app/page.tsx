@@ -179,12 +179,29 @@ export default function Gateway() {
                         Venture into the Obsidian Void. An exclusive repository of uncut prophetic breakdowns, geo-political radar updates, and the biblical truth they try to hide. 
                     </p>
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-8 animate-fade-in w-full sm:w-auto px-4" style={{ animationDelay: '0.6s' }}>
-                        <button onClick={scrollToGate} className="group relative px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-[0_0_30px_rgba(234,88,12,0.4)] transition-all font-ritual tracking-[0.2em] uppercase text-sm md:text-base flex items-center justify-center gap-3 overflow-hidden">
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-                            <span className="relative z-10 font-bold">Initiate Awakening</span>
-                            <ChevronDown className="w-5 h-5 relative z-10 group-hover:translate-y-1 transition-transform" />
-                        </button>
+                    <div className="flex flex-col items-center gap-4 pt-8 animate-fade-in px-4 w-full" style={{ animationDelay: '0.6s' }}>
+                        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                            <button onClick={scrollToGate} className="group relative px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-[0_0_30px_rgba(234,88,12,0.4)] transition-all font-ritual tracking-[0.2em] uppercase text-sm md:text-base flex items-center justify-center gap-3 overflow-hidden">
+                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                                <span className="relative z-10 font-bold">Initiate Awakening</span>
+                                <ChevronDown className="w-5 h-5 relative z-10 group-hover:translate-y-1 transition-transform" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex flex-col items-center mt-4 w-full max-w-sm sm:max-w-md relative">
+                            <a 
+                                href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group relative w-full px-6 py-4 bg-black/60 border-2 border-[#FF4500] text-white hover:bg-[#FF4500]/10 rounded-xl shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_30px_rgba(255,69,0,0.8)] transition-all font-mono font-bold text-sm md:text-base uppercase tracking-widest text-center flex items-center justify-center backdrop-blur-sm"
+                            >
+                                <span className="relative z-10 group-hover:animate-glitch">FUEL THE 8K INFRASTRUCTURE</span>
+                                <span className="absolute bottom-1 right-2 text-[8px] opacity-40 text-[#FF4500] font-mono pointer-events-none group-hover:opacity-100 transition-opacity">$truufbold</span>
+                            </a>
+                            <p className="mt-3 text-[10px] md:text-xs text-gray-400 font-mono tracking-widest text-center uppercase">
+                                Directly funds the 8K rendering PC & AI synthesis suite.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -327,12 +344,12 @@ export default function Gateway() {
                         </a>
                         
                         <div className="flex flex-col items-center space-y-3">
-                           <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg backdrop-blur-md">
-                                <p className="text-[10px] md:text-xs font-mono text-white/80 tracking-widest uppercase flex flex-col md:flex-row items-center gap-2">
-                                    <span className="text-orange-500 font-bold">CRUCIAL:</span> Use code <span className="text-white font-bold bg-orange-500/20 px-3 py-1 rounded border border-orange-500/40 select-all tracking-[0.2em] shadow-[0_0_10px_rgba(234,88,12,0.2)]">truufbtold</span> in the referral field
+                           <div className="px-6 py-4 bg-white/5 border border-white/10 hover:border-[#FF4500]/50 transition-colors rounded-lg backdrop-blur-md max-w-xl text-center">
+                                <p className="text-[10px] md:text-[11px] font-mono text-white/80 tracking-widest uppercase leading-relaxed">
+                                    <span className="text-[#FF4500] font-bold block mb-2 md:inline md:mb-0">CRUCIAL:</span> 
+                                    Input code <span className="text-white font-bold bg-[#FF4500]/20 px-2 py-1 mx-1 rounded border border-[#FF4500]/40 select-all tracking-[0.2em] shadow-[0_0_10px_rgba(255,69,0,0.2)]">truufbtold</span> during checkout to be logged in the internal Founding Supporter registry.
                                 </p>
                             </div>
-                            <p className="text-[9px] font-mono text-gray-600 tracking-[0.3em] uppercase">To be logged in our internal registry</p>
                         </div>
                     </div>
                 </div>
