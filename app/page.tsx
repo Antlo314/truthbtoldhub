@@ -282,6 +282,63 @@ export default function Gateway() {
                 </div>
             </section>
 
+            {/* SUPPORT THE INFRASTRUCTURE SECTION */}
+            <section id="infrastructure" className="relative py-24 brushed-metal overflow-hidden z-20">
+                {/* Corona Glow Frame */}
+                <div className="absolute inset-4 corona-frame rounded-[2rem] pointer-events-none"></div>
+                
+                {/* Technical Blueprint Elements */}
+                <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:40px_40px] pointer-events-none opacity-50"></div>
+                <div className="absolute top-10 left-10 font-mono text-[8px] tracking-[0.4em] text-orange-500/20 uppercase select-none pointer-events-none">$truufbold</div>
+                <div className="absolute top-10 right-10 font-mono text-[8px] tracking-[0.4em] text-orange-500/20 uppercase select-none pointer-events-none">COORD: 33.7490° N, 84.3880° W</div>
+                <div className="absolute bottom-10 left-10 font-mono text-[8px] tracking-[0.4em] text-orange-500/20 uppercase select-none pointer-events-none">truthbtoldhub.com</div>
+                <div className="absolute bottom-10 right-10 font-mono text-[8px] tracking-[0.4em] text-orange-500/20 uppercase select-none pointer-events-none uppercase text-right">Sector: ATL-ZION</div>
+
+                <div className="max-w-4xl mx-auto px-6 relative z-10 text-center space-y-10">
+                    <div className="space-y-4">
+                        <h2 className="font-ritual text-4xl md:text-6xl font-black tracking-[0.2em] text-white uppercase drop-shadow-[0_0_15px_rgba(255,107,53,0.3)]">
+                            Fuel the Vision: <span className="text-orange-500">8K Infrastructure</span> Upgrade
+                        </h2>
+                        <div className="h-px w-32 bg-gradient-to-r from-transparent via-orange-500 to-transparent mx-auto opacity-50"></div>
+                    </div>
+
+                    <div className="space-y-6 max-w-2xl mx-auto">
+                        <p className="text-gray-300 font-sans text-lg md:text-xl leading-relaxed tracking-wide font-light">
+                            We are scaling the frequency. To deliver the full <span className="text-white font-bold underline decoration-orange-500/30 underline-offset-8">8K cinematic weight</span> of the TruthBTold mission—from high-fidelity music to deep-dive prophetic teachings—we are upgrading our hardware and AI synthesis tools.
+                        </p>
+                        <p className="text-orange-500/80 font-ritual text-sm md:text-base tracking-[0.3em] uppercase font-bold italic">
+                            This is the new empire's warning, rendered without compromise.
+                        </p>
+                    </div>
+
+                    <p className="text-gray-500 text-[10px] md:text-xs font-mono tracking-[0.3em] uppercase">
+                        Support the build and secure your place as a <span className="text-white">Founding Member</span> of the Hub.
+                    </p>
+
+                    <div className="pt-8 flex flex-col items-center space-y-8">
+                        <a 
+                            href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="group relative px-12 py-6 bg-orange-600 hover:bg-white text-white hover:text-orange-600 rounded-2xl shadow-[0_0_50px_rgba(234,88,12,0.4)] transition-all duration-300 font-ritual tracking-[0.4em] uppercase text-xl md:text-2xl font-black block w-full max-w-lg border-2 border-orange-500 animate-glitch overflow-hidden"
+                        >
+                            <span className="relative z-10 transition-colors duration-300 group-hover:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">Invest in the Truth</span>
+                            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        </a>
+                        
+                        <div className="flex flex-col items-center space-y-3">
+                           <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg backdrop-blur-md">
+                                <p className="text-[10px] md:text-xs font-mono text-white/80 tracking-widest uppercase flex flex-col md:flex-row items-center gap-2">
+                                    <span className="text-orange-500 font-bold">CRUCIAL:</span> Use code <span className="text-white font-bold bg-orange-500/20 px-3 py-1 rounded border border-orange-500/40 select-all tracking-[0.2em] shadow-[0_0_10px_rgba(234,88,12,0.2)]">truufbtold</span> in the referral field
+                                </p>
+                            </div>
+                            <p className="text-[9px] font-mono text-gray-600 tracking-[0.3em] uppercase">To be logged in our internal registry</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
             {/* AUTHENTICATION GATE */}
             <section id="auth-section" className="relative min-h-[90dvh] flex items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/black-mamba.png')] z-30">
                 <div className="absolute top-0 w-full h-32 bg-gradient-to-b from-black to-transparent pointer-events-none"></div>

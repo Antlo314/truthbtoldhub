@@ -17,6 +17,30 @@
     --glow-ember: 0 0 20px rgba(255, 107, 53, 0.3);
 }
 
+@keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+}
+
+.animate-glitch:hover {
+    animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
+.brushed-metal {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 25%, #0d0d0d 50%, #1a1a1a 75%, #0f0f0f 100%);
+    background-size: 400% 400%;
+}
+
+.corona-frame {
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    box-shadow: 0 0 40px rgba(255, 107, 53, 0.1), inset 0 0 60px rgba(255, 107, 53, 0.05);
+}
+
+
 @keyframes flameBreath {
 
     0%,
