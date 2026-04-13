@@ -30,6 +30,7 @@ export default function Cineworks() {
     const [loading, setLoading] = useState(true);
     const [isPlayingFeature, setIsPlayingFeature] = useState(false);
     const [isMinting, setIsMinting] = useState(false);
+    const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
 
     const handleShare = async () => {
         try {
@@ -172,22 +173,23 @@ export default function Cineworks() {
                 <button
                     onMouseEnter={playHover}
                     onClick={() => { playClick(); router.push('/sanctum'); }}
-                    className="text-purple-500 hover:text-white transition-colors group"
+                    className="text-purple-500 hover:text-white transition-colors group shrink-0"
                 >
-                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
+                    <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <div className="flex flex-col items-center pl-8">
-                    <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none">
+                <div className="flex flex-col items-center flex-1 px-4">
+                    <span className="font-ritual text-xs md:text-sm font-bold tracking-[0.3em] text-white leading-none text-center">
                         CINEWORKS
                     </span>
-                    <span className="text-[9px] text-purple-500/80 font-mono uppercase tracking-[0.2em]">
+                    <span className="text-[8px] md:text-[9px] text-purple-500/80 font-mono uppercase tracking-[0.2em] mt-1 text-center truncate">
                         Visual Vault OPS
                     </span>
                 </div>
-                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
-                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
-                    <LogOut className="w-5 h-5" />
+                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2 shrink-0" title="Sign Out">
+                    <span className="text-[9px] uppercase font-bold tracking-[0.2em] hidden lg:inline">Disconnect</span>
+                    <LogOut className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
+
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32">
@@ -203,61 +205,70 @@ export default function Cineworks() {
 
                     {/* Featured Premiere */}
                     <section aria-label="Featured Premiere">
-                        <div
-                            onMouseEnter={(e) => {
-                                if (isPlayingFeature) return;
-                                playHover();
-                                gsap.to(e.currentTarget, { scale: 1.01, rotationY: -1, rotationX: 1, duration: 0.5, ease: "power2.out", filter: 'saturate(1.2) brightness(1.1)' });
-                            }}
-                            onMouseLeave={(e) => {
-                                if (isPlayingFeature) return;
-                                gsap.to(e.currentTarget, { scale: 1, rotationY: 0, rotationX: 0, duration: 0.5, ease: "power2.out", filter: 'saturate(0.5) brightness(1)' });
-                            }}
-                            onClick={isPlayingFeature ? undefined : handlePlayFeature}
-                            className={`relative w-full aspect-video rounded-3xl overflow-hidden glass border-purple-500/30 transition-all shadow-[0_0_50px_rgba(168,85,247,0.15)] ${isPlayingFeature ? '' : 'group cursor-pointer filter saturate-50'}`}
-                            style={{ perspective: '1000px' }}
-                        >
-                            {!isPlayingFeature && <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none"></div>}
+                        <div className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden glass border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.15)] group">
+                            <div 
+                                onClick={isPlayingFeature ? undefined : handlePlayFeature}
+                                className={`relative w-full aspect-video transition-all ${isPlayingFeature ? '' : 'cursor-pointer filter saturate-50 hover:saturate-100 hover:scale-[1.01]'}`}
+                                onMouseEnter={(e) => {
+                                    if (isPlayingFeature) return;
+                                    playHover();
+                                }}
+                            >
+                                {!isPlayingFeature && <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none"></div>}
 
-                            {!isPlayingFeature ? (
-                                <img
-                                    src="https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg"
-                                    className="absolute inset-0 w-full h-full object-cover z-0 opacity-80"
-                                    alt="Premiere Preview"
-                                />
-                            ) : (
-                                <iframe
-                                    className="absolute inset-0 w-full h-full z-0 bg-black"
-                                    src="https://www.youtube.com/embed/msKxh1gInMU?autoplay=1&rel=0&modestbranding=1"
-                                    title="Who are the Sabeans? (Joel 3)"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                    allowFullScreen
-                                ></iframe>
-                            )}
+                                {!isPlayingFeature ? (
+                                    <img
+                                        src="https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg"
+                                        className="absolute inset-0 w-full h-full object-cover z-0 opacity-80"
+                                        alt="Premiere Preview"
+                                    />
+                                ) : (
+                                    <iframe
+                                        className="absolute inset-0 w-full h-full z-0 bg-black"
+                                        src="https://www.youtube.com/embed/msKxh1gInMU?autoplay=1&rel=0&modestbranding=1"
+                                        title="Who are the Sabeans? (Joel 3)"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    ></iframe>
+                                )}
 
-                            {!isPlayingFeature && (
-                                <>
-                                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                                        <div className="w-20 h-20 rounded-full glass bg-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600/20 group-hover:border-purple-500/50 transition-all duration-300 pointer-events-auto">
-                                            <Play className="w-8 h-8 text-white ml-2 drop-shadow-lg" />
+                                {!isPlayingFeature && (
+                                    <>
+                                        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full glass bg-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600/20 group-hover:border-purple-500/50 transition-all duration-300 pointer-events-auto">
+                                                <Play className="w-6 h-6 md:w-8 md:h-8 text-white ml-1 md:ml-2 drop-shadow-lg" />
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <header className="absolute bottom-0 left-0 w-full p-8 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
-                                        <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 mb-3 inline-block shadow-md">
+                                        {/* Desktop Only Labels inside video */}
+                                        <div className="absolute top-4 left-4 z-20 hidden md:inline-block">
+                                            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 shadow-md">
+                                                Featured Transmission
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Details Section: Adaptive Mobile/Desktop */}
+                            {!isPlayingFeature && (
+                                <div className="p-5 md:p-8 bg-black/60 md:bg-gradient-to-t md:from-black/90 md:via-black/60 md:to-transparent md:absolute md:bottom-0 md:left-0 md:right-0 z-20">
+                                    <div className="md:hidden mb-3">
+                                        <span className="text-[8px] text-purple-400 font-bold uppercase tracking-widest px-2 py-0.5 bg-purple-500/10 rounded-full border border-purple-500/20">
                                             Featured Transmission
                                         </span>
-                                        <h1 className="font-ritual text-3xl md:text-5xl text-gray-100 font-bold tracking-widest leading-none drop-shadow-lg mb-4">
-                                            14
-                                        </h1>
-                                        <div className="text-sm text-gray-300 font-sans max-w-2xl bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-sm pointer-events-auto mb-2">
-                                            <p className="mb-2">"STL in the spirit, Judah in the flesh. They never told us who we really was."</p>
-                                            <p>A powerful prophetic breakdown touching on the 14th amendment, the transatlantic scattering, and the geopolitical awakening of the Medes (Iran). The earth is preparing to shake as the King invades.</p>
-                                        </div>
-                                    </header>
-                                </>
+                                    </div>
+                                    <h1 className="font-ritual text-2xl md:text-5xl text-gray-100 font-bold tracking-widest leading-none drop-shadow-lg mb-3 md:mb-4">
+                                        14
+                                    </h1>
+                                    <div className="text-xs md:text-sm text-gray-300 font-sans max-w-2xl bg-black/40 md:bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                                        <p className="mb-2 italic">"STL in the spirit, Judah in the flesh. They never told us who we really was."</p>
+                                        <p className="opacity-80">A powerful prophetic breakdown touching on the 14th amendment, the transatlantic scattering, and the geopolitical awakening of the Medes (Iran). The earth is preparing to shake as the King invades.</p>
+                                    </div>
+                                </div>
                             )}
                         </div>
+
 
                         {/* Action Bar (Share & Monetize) */}
                         <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
@@ -275,25 +286,41 @@ export default function Cineworks() {
                         </div>
 
                         {/* Lyrics / Transcript Section */}
-                        <div className="mt-8 bg-black/40 p-6 md:p-8 rounded-3xl border border-purple-500/20 glass relative overflow-hidden group">
+                        <div className="mt-8 bg-black/40 p-5 md:p-8 rounded-2xl md:rounded-3xl border border-purple-500/20 glass relative overflow-hidden group">
                             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none"></div>
-                            <h3 className="font-ritual text-xl text-purple-300 font-bold tracking-widest uppercase mb-6 flex items-center gap-3 relative z-10">
-                                <Clapperboard className="w-5 h-5" />
-                                Transmission Transcript
-                            </h3>
-                            <div className="text-gray-300 font-sans text-sm md:text-base leading-relaxed space-y-4 max-h-[400px] overflow-y-auto pr-6 scrollbar-thin scrollbar-thumb-purple-500/30 scrollbar-track-transparent relative z-10">
-                                <p>STL in the spirit, Judah in the flesh. They never told us who we really was. Constitutional lies and Biblical truths.<br/>Let's talk about it.</p>
-                                <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
-                                <p>Born out the blood of the cotton fields. 14th amendment ain't love, it's a raw deal. Citizenship given, but never gave land. No reparations, just jail and the chain hand.<br/>My king came through ships, through the storm in a mist. Now they acting like immigrants man, dismissed.</p>
-                                <p>We the ones Deuteronomy warn about, 400 years now the time getting drawn out. Mass deportation, that's revelation, but not for us, it's the other nations. Bible said it scattered all over, now Babylon fallen better read Jehovah. Iran in the east yea the Medes getting bold, it's written in the scrolls not just what the news told.<br/>Joel chapter 3, the captives coming back, and the ones that sold them I'm going to feel that wrath.</p>
-                                <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
-                                <p>You sold the children of Judah for wine that you might drink, but the Most High remember the cup coming back full.</p>
-                                <p>This ain't no trap, it's a trumpet ATL sound like Zion when we bumping. Scrolls in the trunk, got the fire in the booth. They feel the truth more than the nukes in the roof.</p>
-                                <p>Don't sleep on the Medes thats Iran in your vision. Babylon split like a surgical incision. We ain't Gentiles. We the root of the tree. The 14th was a band-aid, but the wound still bleeds.</p>
-                                <p>It was always about the children of the slave trade.</p>
-                                <p>Now the earth going to shake when the King invades.<br/>ATL Judah. We wait.</p>
+                            <div className="flex justify-between items-center mb-6 relative z-10">
+                                <h3 className="font-ritual text-lg md:text-xl text-purple-300 font-bold tracking-widest uppercase flex items-center gap-3">
+                                    <Clapperboard className="w-5 h-5" />
+                                    Transcript
+                                </h3>
+                                <button 
+                                    onClick={() => setIsTranscriptExpanded(!isTranscriptExpanded)}
+                                    className="text-[10px] text-purple-400 font-bold uppercase tracking-widest px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg hover:bg-purple-500 hover:text-white transition-all shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+                                >
+                                    {isTranscriptExpanded ? 'Hide' : 'Reveal Signal'}
+                                </button>
                             </div>
+                            
+                            <div className={`text-gray-300 font-sans text-sm md:text-base leading-relaxed space-y-4 relative z-10 transition-all duration-500 overflow-hidden ${isTranscriptExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 md:max-h-[400px] opacity-60'}`}>
+                                <div className="pb-4">
+                                    <p>STL in the spirit, Judah in the flesh. They never told us who we really was. Constitutional lies and Biblical truths.<br/>Let's talk about it.</p>
+                                    <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
+                                    <p>Born out the blood of the cotton fields. 14th amendment ain't love, it's a raw deal. Citizenship given, but never gave land. No reparations, just jail and the chain hand.<br/>My king came through ships, through the storm in a mist. Now they acting like immigrants man, dismissed.</p>
+                                    <p>We the ones Deuteronomy warn about, 400 years now the time getting drawn out. Mass deportation, that's revelation, but not for us, it's the other nations. Bible said it scattered all over, now Babylon fallen better read Jehovah. Iran in the east yea the Medes getting bold, it's written in the scrolls not just what the news told.<br/>Joel chapter 3, the captives coming back, and the ones that sold them I'm going to feel that wrath.</p>
+                                    <p>14 for the slave child. They can't erase us. Bible in my hand, but the world want to replace us.<br/>People who know we the seed, they afraid of. Hebrews rising tell Iran, Get the blade up.<br/>Joel 3 written, Judgment in the pages. Chains in the past, now the war in the ages.<br/>Prophets done told y'all now the beast waking. ATL Zion, whole earth going to shake .</p>
+                                    <p>You sold the children of Judah for wine that you might drink, but the Most High remember the cup coming back full.</p>
+                                    <p>This ain't no trap, it's a trumpet ATL sound like Zion when we bumping. Scrolls in the trunk, got the fire in the booth. They feel the truth more than the nukes in the roof.</p>
+                                    <p>Don't sleep on the Medes thats Iran in your vision. Babylon split like a surgical incision. We ain't Gentiles. We the root of the tree. The 14th was a band-aid, but the wound still bleeds.</p>
+                                    <p>It was always about the children of the slave trade.</p>
+                                    <p>Now the earth going to shake when the King invades.<br/>ATL Judah. We wait.</p>
+                                </div>
+                            </div>
+
+                            {!isTranscriptExpanded && (
+                                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/80 to-transparent z-10 md:hidden pointer-events-none"></div>
+                            )}
                         </div>
+
                     </section>
 
                     {/* The Archive Grid */}

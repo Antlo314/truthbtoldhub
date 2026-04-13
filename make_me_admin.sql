@@ -1,22 +1,34 @@
--- Run this in your Supabase SQL Editor to make yourself an Admin of the Sanctum Global workspace
--- This permits you to delete ANY message.
+-- Run this in your Supabase SQL Editor!
+-- This will sync your existing global admin accounts to be the official Admins of the new Discord-style Chat workspace.
 
 DO $$
 DECLARE
-    target_user_id UUID;
-    global_workspace_id UUID := '00000000-0000-0000-0000-000000000000';
+    workspace_uid UUID := '00000000-0000-0000-0000-000000000000';
+    admin1_id UUID;
+    admin2_id UUID;
 BEGIN
-    -- NOTE: Change 'your-email@test.com' to the exact email you used to sign up/login!
-    SELECT id INTO target_user_id FROM auth.users WHERE email = 'your-email@test.com' LIMIT 1;
-
-    IF target_user_id IS NOT NULL THEN
-        INSERT INTO archive_workspace_members (user_id, workspace_id, role)
-        VALUES (target_user_id, global_workspace_id, 'Admin')
-        ON CONFLICT (user_id, workspace_id) 
-        DO UPDATE SET role = 'Admin';
+    -- Locate Admin 1
+    SELECT id INTO admin1_id FROM auth.users WHERE email = 'iamwhoiambook@gmail.com' LIMIT 1;
+    IF admin1_id IS NOT NULL THEN
+        -- Ensure profile exists first to prevent foreign key error
+        INSERT INTO profiles (id, display_name) VALUES (admin1_id, 'iamwhoiambook') ON CONFLICT DO NOTHING;
         
-        RAISE NOTICE 'Success! User promoted to Admin in Sanctum Global.';
-    ELSE
-        RAISE EXCEPTION 'User not found. Check the email string.';
+        INSERT INTO archive_workspace_members (user_id, workspace_id, role)
+        VALUES (admin1_id, workspace_uid, 'Admin')
+        ON CONFLICT (user_id, workspace_id) DO UPDATE SET role = 'Admin';
+        RAISE NOTICE 'Promoted iamwhoiambook@gmail.com to Workspace Admin.';
     END IF;
+
+    -- Locate Admin 2
+    SELECT id INTO admin2_id FROM auth.users WHERE email = 'admin@truthbtoldhub.com' LIMIT 1;
+    IF admin2_id IS NOT NULL THEN
+        -- Ensure profile exists first to prevent foreign key error
+        INSERT INTO profiles (id, display_name) VALUES (admin2_id, 'Root Admin') ON CONFLICT DO NOTHING;
+        
+        INSERT INTO archive_workspace_members (user_id, workspace_id, role)
+        VALUES (admin2_id, workspace_uid, 'Admin')
+        ON CONFLICT (user_id, workspace_id) DO UPDATE SET role = 'Admin';
+        RAISE NOTICE 'Promoted admin@truthbtoldhub.com to Workspace Admin.';
+    END IF;
+
 END $$;
