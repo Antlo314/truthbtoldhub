@@ -185,6 +185,15 @@ export default function SanctumHub() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <a 
+                        href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-orange-600/10 border border-orange-500/30 rounded-lg text-orange-500 hover:bg-orange-600 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest group shadow-[0_0_15px_rgba(234,88,12,0.1)]"
+                    >
+                        <Flame className="w-3 h-3 group-hover:animate-pulse" />
+                        Fuel The Mission
+                    </a>
                     <button
                         id="tour-profile-btn"
                         onMouseEnter={playHover}
@@ -364,7 +373,6 @@ export default function SanctumHub() {
                                 <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/encrypted_sector.mp4" type="video/mp4" />
                             </video>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-0"></div>
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:bg-green-500/20 transition-colors pointer-events-none z-0"></div>
                             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
                                 <div>
                                     <div className="w-12 h-12 rounded-xl bg-green-950/30 border border-green-500/30 flex items-center justify-center mb-4 text-green-400 group-hover:scale-110 group-hover:rotate-3 transition-transform">
@@ -377,6 +385,53 @@ export default function SanctumHub() {
                                     <span className="text-[10px] font-bold uppercase tracking-widest border border-green-500/30 px-3 py-1 rounded-full text-green-500">Decrypt Signal</span>
                                     <ChevronRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* SUPPORT THE 8K INFRASTRUCTURE - BLUEPRINT BLOCK */}
+                        <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-4">
+                            <div className="group relative bg-[#0a0a0a] border-2 border-orange-500/50 rounded-2xl p-8 overflow-hidden shadow-[0_0_30px_rgba(234,88,12,0.1)] hover:border-orange-500 transition-all">
+                                {/* Technical Blueprint Aesthetic background */}
+                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]"></div>
+                                <div className="absolute top-0 right-0 p-4 font-mono text-[10px] text-orange-500/40 select-none">
+                                    REF_ID: 0x8K_SYNC_PROT
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                                    <div className="flex-1 space-y-4 text-center md:text-left">
+                                        <div className="flex items-center gap-3 justify-center md:justify-start">
+                                            <span className="px-3 py-1 bg-orange-600/20 rounded-md text-orange-500 font-mono text-[10px] font-black border border-orange-500/30">$truufbold</span>
+                                            <span className="text-white/40 font-mono text-[10px] uppercase tracking-widest">Hardware Status: <span className="text-orange-400 font-bold">In Fulfillment</span></span>
+                                        </div>
+                                        <h2 className="font-ritual text-2xl md:text-3xl text-white tracking-widest uppercase leading-tight font-black">
+                                            Help us secure the <span className="text-orange-500">8K Rendering Suite</span>
+                                        </h2>
+                                        <p className="text-gray-400 font-mono text-xs uppercase tracking-widest max-w-xl">
+                                            We are scaling the frequency. Every contribution accelerates the deployment of our AI cinematic synthesis engine.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-4 w-full md:w-auto">
+                                        <a 
+                                            href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={playClick}
+                                            className="w-full md:w-64 py-4 bg-orange-600 hover:bg-white text-white hover:text-orange-600 font-ritual tracking-[0.2em] font-black rounded-xl text-center transition-all duration-300 shadow-[0_0_20px_rgba(234,88,12,0.3)] uppercase text-sm"
+                                        >
+                                            Invest in the Truth
+                                        </a>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <p className="text-[9px] font-mono text-white/50 tracking-widest uppercase">
+                                                Use code <span className="text-orange-500 font-bold">truufbtold</span> during checkout
+                                            </p>
+                                            <p className="text-[8px] font-mono text-orange-500/30 uppercase tracking-[0.2em]">Founding Supporter Protocol v2.1</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Pulse decorative lines */}
+                                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-500/20 to-transparent"></div>
                             </div>
                         </div>
 
@@ -397,17 +452,24 @@ export default function SanctumHub() {
             {/* Quick Nav elements (Mobile Bottom Bar representation) */}
             <div className="fixed bottom-0 left-0 w-full z-50 md:hidden bg-zinc-950/90 backdrop-blur-lg border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
                 <div className="flex justify-around items-center p-4">
-                    <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1"><Flame className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Sanctum</span></button>
-                    <button onClick={() => router.push('/treasury')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors"><Shield className="w-5 h-5" /> <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Treasury</span></button>
+                    <button onClick={() => router.push('/sanctum')} className="text-orange-500 flex flex-col items-center gap-1">
+                        <Flame className="w-5 h-5" /> 
+                    </button>
+                    
+                    {/* TBT Minimalist Logo / Space */}
+                    <div className="flex items-center justify-center opacity-40">
+                        <div className="w-1 h-1 bg-orange-500 rounded-full mx-1"></div>
+                        <span className="text-[10px] font-black tracking-widest font-ritual text-white">TBT</span>
+                        <div className="w-1 h-1 bg-orange-500 rounded-full mx-1"></div>
+                    </div>
+
                     <button onClick={() => router.push('/self')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1 transition-colors">
                         <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-500">
                             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
-                        <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Self</span>
                     </button>
                     <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 flex flex-col items-center gap-1 transition-colors">
                         <LogOut className="w-5 h-5" />
-                        <span className="hidden md:block text-[8px] font-mono tracking-wider uppercase">Exit</span>
                     </button>
                 </div>
             </div>

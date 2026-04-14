@@ -279,10 +279,15 @@ export default function Cineworks() {
                                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase hidden md:inline">Generate Viral Lift</span>
                             </div>
                             
-                            <button disabled={isMinting} onClick={handleMintSP} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-orange-600/20 hover:bg-orange-600/40 border border-orange-500/50 rounded-xl text-xs font-bold tracking-widest text-orange-400 uppercase transition-all shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:opacity-50">
-                                {isMinting ? <Loader2 className="w-4 h-4 animate-spin text-orange-400" /> : <Flame className="w-4 h-4 text-orange-500" />}
-                                {isMinting ? 'Initializing...' : 'Boost Signal (Mint SP)'}
-                            </button>
+                            <div className="flex flex-col items-center gap-2 w-full sm:w-auto">
+                                <button disabled={isMinting} onClick={handleMintSP} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600/20 hover:bg-orange-600/40 border border-orange-500/50 rounded-xl text-xs font-bold tracking-widest text-orange-400 uppercase transition-all shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:opacity-50">
+                                    {isMinting ? <Loader2 className="w-4 h-4 animate-spin text-orange-400" /> : <Flame className="w-4 h-4 text-orange-500" />}
+                                    {isMinting ? 'Initializing...' : 'Boost Signal (Mint SP)'}
+                                </button>
+                                <p className="text-[9px] font-mono text-center text-orange-500/60 uppercase tracking-widest">
+                                    Use code <span className="text-orange-500 font-bold">truufbtold</span>
+                                </p>
+                            </div>
                         </div>
 
                         {/* Lyrics / Transcript Section */}

@@ -744,6 +744,9 @@ export default function Archive() {
                                 <span className="font-bold tracking-widest text-orange-400 text-xs uppercase flex items-center gap-2 group-hover/btn:translate-x-1 transition-transform"><Flame className="w-4 h-4 text-orange-500" /> One-Time Decrypt</span>
                                 <span className="font-mono text-xs text-orange-200/50">500 SP</span>
                             </button>
+                            <p className="text-[9px] font-mono text-center text-orange-500/60 uppercase tracking-widest pt-2">
+                                Use code <span className="text-orange-500 font-bold">truufbtold</span> to register as a Founding Supporter.
+                            </p>
                         </div>
                     </div>
                 ) : (

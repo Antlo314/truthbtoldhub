@@ -24,6 +24,7 @@ export default function Gateway() {
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [showSupportOverlay, setShowSupportOverlay] = useState(false);
 
     useEffect(() => {
         // Check active session on mount
@@ -140,6 +141,16 @@ export default function Gateway() {
         }
     };
 
+    const handleInitiate = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            router.push('/sanctum');
+        } else {
+            setShowSupportOverlay(true);
+            scrollToGate();
+        }
+    };
+
     const scrollToGate = () => {
         document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -181,7 +192,7 @@ export default function Gateway() {
 
                     <div className="flex flex-col items-center gap-4 pt-8 animate-fade-in px-4 w-full" style={{ animationDelay: '0.6s' }}>
                         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                            <button onClick={scrollToGate} className="group relative px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-[0_0_30px_rgba(234,88,12,0.4)] transition-all font-ritual tracking-[0.2em] uppercase text-sm md:text-base flex items-center justify-center gap-3 overflow-hidden">
+                            <button onClick={handleInitiate} className="group relative px-8 py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-xl shadow-[0_0_30px_rgba(234,88,12,0.4)] transition-all font-ritual tracking-[0.2em] uppercase text-sm md:text-base flex items-center justify-center gap-3 overflow-hidden">
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
                                 <span className="relative z-10 font-bold">Initiate Awakening</span>
                                 <ChevronDown className="w-5 h-5 relative z-10 group-hover:translate-y-1 transition-transform" />
@@ -193,13 +204,14 @@ export default function Gateway() {
                                 href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="group relative w-full px-6 py-4 bg-black/60 border-2 border-[#FF4500] text-white hover:bg-[#FF4500]/10 rounded-xl shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_30px_rgba(255,69,0,0.8)] transition-all font-mono font-bold text-sm md:text-base uppercase tracking-widest text-center flex items-center justify-center backdrop-blur-sm"
+                                className="group relative w-full px-6 py-4 bg-black/60 border-2 border-[#FF4500] text-white hover:bg-[#FF4500] hover:text-white rounded-xl shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_40px_rgba(255,69,0,0.8)] transition-all font-mono font-bold text-sm md:text-base uppercase tracking-widest text-center flex items-center justify-center backdrop-blur-sm overflow-hidden"
                             >
+                                <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                                 <span className="relative z-10 group-hover:animate-glitch">FUEL THE 8K INFRASTRUCTURE</span>
-                                <span className="absolute bottom-1 right-2 text-[8px] opacity-40 text-[#FF4500] font-mono pointer-events-none group-hover:opacity-100 transition-opacity">$truufbold</span>
+                                <span className="absolute bottom-1 right-2 text-[8px] opacity-40 text-[#FF4500] group-hover:text-white font-mono pointer-events-none group-hover:opacity-100 transition-opacity">$truufbold</span>
                             </a>
                             <p className="mt-3 text-[10px] md:text-xs text-gray-400 font-mono tracking-widest text-center uppercase">
-                                Directly funds the 8K rendering PC & AI synthesis suite.
+                                Use code <span className="text-orange-500 font-bold">truufbtold</span> to register as a Founding Supporter.
                             </p>
                         </div>
                     </div>
@@ -505,6 +517,43 @@ export default function Gateway() {
                     INITIATED BY LUMEN LABS
                 </p>
             </footer>
+
+            {/* Support Overlay */}
+            {showSupportOverlay && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-zinc-950 border-2 border-orange-500 rounded-2xl w-full max-w-md p-8 relative shadow-[0_0_50px_rgba(234,88,12,0.3)]">
+                        <button onClick={() => setShowSupportOverlay(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+                            <ShieldAlert className="w-6 h-6" />
+                        </button>
+                        <div className="text-center space-y-6">
+                            <div className="w-16 h-16 bg-orange-600/20 rounded-full flex items-center justify-center mx-auto border border-orange-500/50">
+                                <Flame className="w-8 h-8 text-orange-500 animate-pulse" />
+                            </div>
+                            <h2 className="font-ritual text-3xl tracking-widest text-white uppercase">Support the Build</h2>
+                            <p className="text-sm font-mono text-gray-400 leading-relaxed">
+                                Hardware Status: <span className="text-orange-500 font-bold uppercase">In Fulfillment</span>. <br/>
+                                To deliver the full 8K cinematic weight of the TruthBTold mission, we are scaling the frequency. Secure the rendering suite today.
+                            </p>
+                            <div className="py-4 bg-white/5 rounded-xl border border-white/10">
+                                <p className="text-[10px] font-mono text-white/60 tracking-widest uppercase">
+                                    Use code <span className="text-orange-500 font-bold">truufbtold</span> during checkout.
+                                </p>
+                            </div>
+                            <a 
+                                href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full py-4 bg-orange-600 hover:bg-orange-500 text-white font-ritual tracking-[0.2em] font-bold rounded-xl shadow-lg transition-all uppercase"
+                            >
+                                Invest in the Truth
+                            </a>
+                            <button onClick={() => setShowSupportOverlay(false)} className="text-[10px] uppercase font-mono tracking-widest text-gray-600 hover:text-gray-400">
+                                Continue to the Gate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
