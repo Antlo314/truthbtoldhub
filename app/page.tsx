@@ -11,7 +11,7 @@ import {
     ArrowRight,
     Lock,
     Eye,
-    Globe,
+    Globe, 
     Zap,
     Cpu,
     Video,
@@ -303,7 +303,7 @@ export default function Gateway() {
                         </div>
                         <div className="hidden sm:flex flex-col">
                             <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
-                            <span className="text-[7px] font-mono text-zinc-400 uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
+                            <span className="text-[7px] font-mono text-zinc-100 uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
                         </div>
                     </div>
                 </div>
@@ -311,10 +311,10 @@ export default function Gateway() {
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
                     {/* Social Icons */}
                     <div className="hidden md:flex items-center gap-6">
-                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-100 hover:text-white transition-colors">
                             <YoutubeIcon className="w-5 h-5" />
                         </a>
-                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-100 hover:text-white transition-colors">
                             <TikTokIcon className="w-5 h-5" />
                         </a>
                     </div>
@@ -323,7 +323,7 @@ export default function Gateway() {
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-6 md:px-10 py-3 bg-aether-gold text-[#050505] rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.5)] border border-black/20"
+                        className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] border border-white/20"
                     >
                         Support 400 Series
                     </button>
@@ -334,16 +334,16 @@ export default function Gateway() {
             <section className="relative h-[80dvh] flex flex-col items-center justify-center p-6 mt-12 md:mt-0">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.03)_0%,transparent_60%)]"></div>
                 <div className="hero-content relative z-10 text-center space-y-8 md:space-y-12 w-full max-w-[100vw]">
-                    <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-xl">
+                    <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-xl">
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
-                        <span className="text-[8px] font-black tracking-[0.5em] text-zinc-400 uppercase">Restoration Protocol Initialized</span>
+                        <span className="text-[8px] font-black tracking-[0.5em] text-white uppercase">Restoration Protocol Initialized</span>
                     </div>
                     <div className="w-full overflow-hidden flex justify-center">
                         <h1 ref={titleRef} className="kinetic-title font-ritual text-4xl sm:text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4 select-none">
                             TRUTH B TOLD HUB
                         </h1>
                     </div>
-                    <p className="text-[10px] md:text-xl font-light text-zinc-400 max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
+                    <p className="text-[10px] md:text-xl font-light text-zinc-100 max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
                         The Master Bento Ecosystem. Exploring <span className="text-white font-black">Genesis 15:13</span> and the <span className="text-aether-gold font-black">400 Year Echo</span>.
                     </p>
                 </div>
@@ -365,9 +365,9 @@ export default function Gateway() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none group-hover:opacity-40 transition-opacity"></div>
                             <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:left-12 flex justify-between items-end pointer-events-none">
                                 <div className="space-y-4">
-                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-aether-gold/10 border border-aether-gold/20 backdrop-blur-xl">
-                                        <Play className="w-3 h-3 text-aether-gold" />
-                                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Featured Revelation</span>
+                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-xl">
+                                        <Play className="w-3 h-3 text-white" />
+                                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white">Featured Revelation</span>
                                     </div>
                                     <h2 className="font-ritual text-3xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
                                 </div>
@@ -376,26 +376,26 @@ export default function Gateway() {
                     </div>
 
                     {/* Prophetic AI Oracle */}
-                    <div className="bento-card col-span-2 md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[500px]">
+                    <div className="bento-card col-span-2 md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[500px]">
                         <div className="data-glitch" />
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
-                                    <Terminal className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Prophetic Oracle</span>
-                                    <span className="text-[7px] font-mono text-zinc-400 uppercase tracking-widest">AI Decryption Engine</span>
+                                    <span className="text-[7px] font-mono text-white uppercase tracking-widest">AI Decryption Engine</span>
                                 </div>
                             </div>
-                            {isLoading && <div className="w-2 h-2 rounded-full bg-aether-gold animate-ping"></div>}
+                            {isLoading && <div className="w-2 h-2 rounded-full bg-white animate-ping"></div>}
                         </div>
 
                         <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2 min-h-[300px]">
                             {messages.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
-                                    <Sparkles className="w-8 h-8 text-aether-gold mb-2" />
-                                    <p className="text-[9px] uppercase tracking-[0.3em] leading-relaxed max-w-[200px] text-zinc-300">
+                                    <Sparkles className="w-8 h-8 text-white mb-2" />
+                                    <p className="text-[9px] uppercase tracking-[0.3em] leading-relaxed max-w-[200px] text-white font-black">
                                         Input a verse or historical era to begin the decryption protocol.
                                     </p>
                                 </div>
@@ -404,8 +404,8 @@ export default function Gateway() {
                                     <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                                         <div className={`max-w-[90%] px-6 py-4 rounded-3xl text-[11px] leading-relaxed tracking-wide ${
                                             m.role === 'user' 
-                                            ? 'bg-white/5 border border-white/10 text-zinc-300' 
-                                            : 'bg-aether-gold/5 border border-aether-gold/20 text-aether-gold font-medium'
+                                            ? 'bg-white/10 border border-white/20 text-white' 
+                                            : 'bg-aether-gold/10 border border-aether-gold/20 text-aether-gold font-black'
                                         }`}>
                                             {m.parts.map((part, j) => (
                                                 part.type === 'text' ? <span key={j}>{part.text}</span> : null
@@ -421,12 +421,12 @@ export default function Gateway() {
                                 value={input}
                                 onChange={handleInputChange}
                                 placeholder="Query the Oracle..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-aether-gold/50 transition-all placeholder:text-zinc-500 tracking-widest uppercase text-white"
+                                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black"
                             />
                             <button 
                                 type="submit"
                                 disabled={isLoading || !input}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-aether-gold flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20 shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
                             >
                                 <Send className="w-4 h-4 text-black" />
                             </button>
@@ -434,47 +434,47 @@ export default function Gateway() {
                     </div>
 
                     {/* Geopolitical Radar */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/5 perspective-card min-h-[300px]">
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px]">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <Compass className="w-5 md:w-7 h-5 md:h-7 text-white/50" />
+                                    <Compass className="w-5 md:w-7 h-5 md:h-7 text-white" />
                                 </div>
-                                <Activity className="w-5 h-5 text-zinc-600 animate-pulse" />
+                                <Activity className="w-5 h-5 text-white animate-pulse" />
                             </div>
                             <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Radar</h3>
-                            <p className="text-zinc-400 text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
+                            <p className="text-white text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-black">
                                 Tracking alignment of nations with biblical prophecy.
                             </p>
                         </div>
                         <div className="flex items-center gap-2 md:gap-4 pt-4 md:pt-8">
-                            <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full w-2/3 bg-aether-gold/50 animate-pulse"></div>
+                            <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full w-2/3 bg-white animate-pulse"></div>
                             </div>
                         </div>
                     </div>
 
                     {/* AI Film Prod Status */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/5 perspective-card bg-gradient-to-t from-aether-gold/5 to-transparent min-h-[300px]">
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px]">
                         <div className="space-y-6">
-                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
-                                <Cpu className="w-5 md:w-7 h-5 md:h-7 text-aether-gold" />
+                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
+                                <Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" />
                             </div>
                             <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Hardware</h3>
-                            <p className="text-zinc-400 text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
+                            <p className="text-white text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-black">
                                 Securing the 8K cinematic render nodes.
                             </p>
                         </div>
                         <button 
                             onClick={() => setShowSupportOverlay(true)}
-                            className="w-full bg-aether-gold text-[#050505] py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                            className="w-full bg-white text-black py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)]"
                         >
                             Boost Node
                         </button>
                     </div>
 
                     {/* The Prelude */}
-                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/5 p-1 md:p-2">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2">
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
                                 className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000"
@@ -485,27 +485,27 @@ export default function Gateway() {
                          </div>
                          <div className="p-6 md:p-8 space-y-2">
                             <h4 className="font-ritual text-xl font-black uppercase tracking-[0.1em] text-white group-hover:text-aether-gold transition-colors">THE PRELUDE</h4>
-                            <p className="text-zinc-400 text-[9px] uppercase tracking-[0.1em] font-light">Archive View: 400 Year Diaspora</p>
+                            <p className="text-white text-[9px] uppercase tracking-[0.1em] font-black">Archive View: 400 Year Diaspora</p>
                          </div>
                     </div>
 
                     {/* Historical Timeline */}
-                    <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/5 group gap-12">
+                    <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-12">
                         <div className="flex flex-col gap-6 max-w-xl text-center md:text-left">
-                            <div className="flex items-center justify-center md:justify-start gap-4 text-zinc-500">
+                            <div className="flex items-center justify-center md:justify-start gap-4 text-white">
                                 <History className="w-6 h-6" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.5em]">Historical Cycle</span>
                             </div>
                             <h3 className="font-ritual text-3xl md:text-5xl font-black uppercase tracking-[0.1em] text-white gold-shimmer">ABRAHAM TO 2019</h3>
-                            <p className="text-zinc-400 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
+                            <p className="text-white text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-black">
                                 A panoramic investigation into the diaspora of the Hebrew people.
                             </p>
                         </div>
                         <div className="flex items-center gap-6 md:gap-12">
                             {[2019, 1619, 'Genesis'].map((year, i) => (
                                 <div key={i} className="flex flex-col items-center gap-4 text-center">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-aether-gold/30 group-hover:bg-aether-gold transition-colors"></div>
-                                    <span className="font-ritual text-xl md:text-2xl font-black text-white/40 group-hover:text-white transition-colors">{year}</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white group-hover:bg-aether-gold transition-colors"></div>
+                                    <span className="font-ritual text-xl md:text-2xl font-black text-white group-hover:text-aether-gold transition-colors">{year}</span>
                                 </div>
                             ))}
                         </div>
@@ -515,22 +515,22 @@ export default function Gateway() {
             </section>
 
             {/* FOOTER */}
-            <footer className="py-24 md:py-32 border-t border-white/5 text-center space-y-12 bg-void">
-                <div className="flex items-center justify-center gap-8 opacity-20">
-                    <ShieldCheck className="w-10 h-10" />
-                    <Sparkles className="w-10 h-10" />
-                    <Video className="w-10 h-10" />
+            <footer className="py-24 md:py-32 border-t border-white/10 text-center space-y-12 bg-void">
+                <div className="flex items-center justify-center gap-8 opacity-40">
+                    <ShieldCheck className="w-10 h-10 text-white" />
+                    <Sparkles className="w-10 h-10 text-white" />
+                    <Video className="w-10 h-10 text-white" />
                 </div>
                 <div className="flex flex-col items-center gap-6">
                     <div className="flex items-center gap-8 mb-4">
-                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-aether-gold transition-colors">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
                             <YoutubeIcon className="w-6 h-6" />
                         </a>
-                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-aether-gold transition-colors">
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
                             <TikTokIcon className="w-6 h-6" />
                         </a>
                     </div>
-                    <p className="text-[10px] font-black tracking-[0.8em] text-zinc-500 uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
+                    <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
                 </div>
             </footer>
 
@@ -547,11 +547,11 @@ export default function Gateway() {
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-16 max-w-3xl w-full relative space-y-12 border-white/10 shadow-[0_0_150px_rgba(212,175,55,0.15)] my-8"
+                            className="liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-16 max-w-3xl w-full relative space-y-12 border-white/20 shadow-[0_0_150px_rgba(255,255,255,0.1)] my-8"
                         >
                             <button 
                                 onClick={() => setShowSupportOverlay(false)}
-                                className="absolute top-6 md:top-10 right-6 md:right-10 text-zinc-400 hover:text-white transition-colors p-3 bg-white/5 rounded-full border border-white/10"
+                                className="absolute top-6 md:top-10 right-6 md:right-10 text-white hover:text-aether-gold transition-colors p-3 bg-white/5 rounded-full border border-white/20"
                             >
                                 <Lock className="w-6 h-6" />
                             </button>
@@ -561,15 +561,15 @@ export default function Gateway() {
                                     <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center overflow-hidden">
                                         <img src="/logo.png" alt="TBT" className="w-full h-full object-contain" />
                                     </div>
-                                    <div className="px-4 py-1.5 rounded-full bg-aether-gold/10 border border-aether-gold/20">
-                                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Industrial Upgrade Phase</span>
+                                    <div className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20">
+                                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white">Industrial Upgrade Phase</span>
                                     </div>
                                 </div>
                                 
                                 <div className="space-y-4">
-                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-[#f4d03f] gold-shimmer leading-tight drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">Build the Revelation</h2>
-                                    <p className="text-zinc-400 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light max-w-xl mx-auto">
-                                        We are raising <span className="text-white font-black">$2,500</span> to secure a <span className="text-aether-gold font-black">High-End Cinematic Workstation</span> for the 400 Series. This hardware will allow us to render 8K AI-enhanced masterpieces with absolute prophetic clarity.
+                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-white gold-shimmer leading-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">Build the Revelation</h2>
+                                    <p className="text-white text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-black max-w-xl mx-auto">
+                                        We are raising <span className="text-aether-gold font-black">$2,500</span> to secure a <span className="text-white font-black">High-End Cinematic Workstation</span> for the 400 Series.
                                     </p>
                                 </div>
 
@@ -577,13 +577,13 @@ export default function Gateway() {
                                 <div className="space-y-4 max-w-md mx-auto">
                                     <div className="flex justify-between items-end">
                                         <span className="text-[10px] font-black text-white uppercase tracking-widest">Hardware Goal</span>
-                                        <span className="text-[10px] font-mono text-aether-gold font-black">$2,500</span>
+                                        <span className="text-[10px] font-mono text-white font-black">$2,500</span>
                                     </div>
-                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/10">
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: '15%' }} 
-                                            className="h-full bg-aether-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"
+                                            className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
                                         />
                                     </div>
                                 </div>
@@ -595,15 +595,15 @@ export default function Gateway() {
                                         { icon: <Server className="w-5 h-5" />, title: 'Processor', desc: 'High-concurrency logic for Prophetic AI.', price: '$500' },
                                         { icon: <Database className="w-5 h-5" />, title: 'Archive', desc: 'Cold storage for high-fidelity 400 Series assets.', price: '$500' }
                                     ].map((item, i) => (
-                                        <div key={i} className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 text-left space-y-4 hover:bg-white/[0.04] transition-all group">
-                                            <div className="w-10 h-10 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20 text-aether-gold group-hover:scale-110 transition-transform">
+                                        <div key={i} className="p-6 rounded-[2rem] bg-white/[0.05] border border-white/10 text-left space-y-4 hover:bg-white/[0.1] transition-all group">
+                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 text-white group-hover:scale-110 transition-transform">
                                                 {item.icon}
                                             </div>
                                             <div className="space-y-1">
                                                 <h4 className="text-[10px] font-black uppercase text-white tracking-widest">{item.title}</h4>
-                                                <p className="text-[8px] text-zinc-500 uppercase leading-relaxed">{item.desc}</p>
+                                                <p className="text-[8px] text-white uppercase leading-relaxed font-black opacity-60">{item.desc}</p>
                                             </div>
-                                            <div className="text-[10px] font-mono text-aether-gold/70 font-black">{item.price}</div>
+                                            <div className="text-[10px] font-mono text-white font-black">{item.price}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -613,13 +613,13 @@ export default function Gateway() {
                                         href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="block w-full bg-aether-gold text-[#050505] py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(212,175,55,0.4)] hover:scale-105 transition-all border border-black/20"
+                                        className="block w-full bg-white text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-105 transition-all border border-white/20"
                                     >
                                         Initiate Contribution
                                     </a>
                                     <button 
                                         onClick={() => setShowSupportOverlay(false)}
-                                        className="text-[10px] font-black tracking-[0.5em] uppercase text-zinc-600 hover:text-white transition-colors"
+                                        className="text-[10px] font-black tracking-[0.5em] uppercase text-white hover:text-aether-gold transition-colors"
                                     >
                                         Continue Research
                                     </button>
