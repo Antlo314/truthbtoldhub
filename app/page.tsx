@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import { 
     Play, 
+    Pause,
     ShieldCheck, 
     ChevronDown, 
     Sparkles, 
@@ -28,7 +29,10 @@ import {
     Waves,
     Mic2,
     Volume2,
-    Info
+    Info,
+    ScrollText,
+    SkipForward,
+    VolumeX
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -70,6 +74,25 @@ export default function Gateway() {
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     
+    // Audio State
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTrack, setCurrentTrack] = useState(0);
+    const tracks = [
+        { title: 'Prophecy Alpha', file: '/audio/track1.mp3' },
+        { title: 'The Echo 400', file: '/audio/track2.mp3' }
+    ];
+
+    // Scripture Decryptor State
+    const [decryptedText, setDecryptedText] = useState("GENESIS 15:13");
+    const verses = [
+        "GENESIS 15:13",
+        "KNOW FOR CERTAIN",
+        "400 YEARS",
+        "STRANGERS IN A COUNTRY",
+        "THE ECHO REMAINS"
+    ];
+
     // AI Chat Integration
     const { messages, sendMessage, status } = useChat();
     const [input, setInput] = useState('');
@@ -79,6 +102,11 @@ export default function Gateway() {
 
     useEffect(() => {
         setIsMounted(true);
+        // Scripture Decryptor Loop
+        const interval = setInterval(() => {
+            setDecryptedText(verses[Math.floor(Math.random() * verses.length)]);
+        }, 3000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -86,6 +114,21 @@ export default function Gateway() {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const toggleAudio = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play().catch(e => console.log("Audio play blocked: add files to /public/audio/"));
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    const nextTrack = () => {
+        setCurrentTrack((prev) => (prev + 1) % tracks.length);
+        setIsPlaying(false);
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInput(e.target.value);
@@ -185,6 +228,8 @@ export default function Gateway() {
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
+            <audio ref={audioRef} src={tracks[currentTrack].file} loop />
+            
             <style jsx global>{`
                 .liquid-glass {
                     background: rgba(255, 255, 255, 0.02);
@@ -284,6 +329,21 @@ export default function Gateway() {
                     from { transform: translateX(100%); }
                     to { transform: translateX(-100%); }
                 }
+
+                .decrypting-text::before {
+                    content: '010101';
+                    position: absolute;
+                    inset: 0;
+                    color: rgba(255,255,255,0.1);
+                    z-index: -1;
+                    filter: blur(1px);
+                    animation: decryptShuffle 0.5s infinite;
+                }
+                @keyframes decryptShuffle {
+                    0% { transform: translate(2px, 0); }
+                    50% { transform: translate(-2px, 1px); }
+                    100% { transform: translate(0, -1px); }
+                }
             `}</style>
 
             <div className="film-grain" />
@@ -307,7 +367,6 @@ export default function Gateway() {
                 </div>
                 
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
-                    {/* Social Icons */}
                     <div className="hidden md:flex items-center gap-6">
                         <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
                             <YoutubeIcon className="w-5 h-5" />
@@ -431,36 +490,73 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* Aether Audio Symphony */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent">
+                    {/* Aether Player (INTERACTIVE MUSIC) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] bg-gradient-to-br from-white/5 to-transparent">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
-                                <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
                                     <Music className="w-5 md:w-7 h-5 md:h-7 text-white" />
                                 </div>
-                                <div className="flex gap-1 items-end h-4">
-                                    {[0.4, 0.7, 0.5, 0.9, 0.6].map((h, i) => (
-                                        <div key={i} className="w-1 bg-white/30 rounded-full" style={{ height: `${h * 100}%`, animationDelay: `${i * 0.2}s` }}>
-                                            <div className="audio-visualizer-bar" style={{ animationDelay: `${i * 0.2}s` }} />
+                                <div className="flex gap-1 items-end h-6">
+                                    {[0.4, 0.7, 0.5, 0.9, 0.6, 0.4, 0.8].map((h, i) => (
+                                        <div key={i} className="w-1.5 bg-white/20 rounded-full overflow-hidden" style={{ height: `${h * 100}%` }}>
+                                            <div className={`w-full bg-white transition-all duration-300 ${isPlaying ? 'animate-audioPulse' : 'h-[10%]'}`} style={{ animationDelay: `${i * 0.1}s` }} />
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Aether Audio</h3>
-                            <p className="text-white text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-black">
-                                Phase 02: Launching the Prophetic AI Symphony. Solfeggio Tuned.
-                            </p>
+                            <div className="space-y-1">
+                                <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.1em] text-white">Aether Player</h3>
+                                <p className="text-white text-[8px] uppercase tracking-[0.2em] font-black opacity-40">{tracks[currentTrack].title}</p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Volume2 className="w-4 h-4 text-white/50" />
-                            <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full w-1/3 bg-white animate-pulse"></div>
+                        
+                        <div className="flex items-center justify-between gap-4">
+                            <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+                                {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
+                            </button>
+                            <button onClick={nextTrack} className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+                                <SkipForward className="w-4 h-4" />
+                            </button>
+                            <div className="flex-1 h-[1px] bg-white/10 relative">
+                                <motion.div className="absolute top-0 left-0 h-full bg-white" initial={{ width: 0 }} animate={{ width: isPlaying ? '100%' : '0%' }} transition={{ duration: 30, ease: "linear" }} />
                             </div>
                         </div>
                     </div>
 
+                    {/* Scripture Decryptor (INTERACTIVE VERSE) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-black/40 min-h-[350px]">
+                        <div className="space-y-8">
+                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                                <ScrollText className="w-6 h-6 text-white/50" />
+                            </div>
+                            <div className="relative">
+                                <AnimatePresence mode="wait">
+                                    <motion.h4 
+                                        key={decryptedText}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 10 }}
+                                        className="font-ritual text-2xl md:text-3xl font-black uppercase tracking-[0.1em] text-white leading-tight decrypting-text"
+                                    >
+                                        {decryptedText}
+                                    </motion.h4>
+                                </AnimatePresence>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <span className="text-[7px] font-mono text-white/40 uppercase tracking-[0.3em]">Status: Decrypting Source</span>
+                                <div className="flex-1 h-[1px] bg-white/5" />
+                            </div>
+                            <p className="text-[8px] text-white uppercase font-black tracking-widest leading-relaxed">
+                                Linking Diaspora events to biblical timestamps in real-time.
+                            </p>
+                        </div>
+                    </div>
+
                     {/* Hardware Milestone */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px]">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[350px]">
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
                                 <Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" />
@@ -563,7 +659,7 @@ export default function Gateway() {
                             <YoutubeIcon className="w-6 h-6" />
                         </a>
                         <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
-                            <TikTokIcon className="w-6 h-6" />
+                            <TikTokIcon className="w-5 h-5" />
                         </a>
                     </div>
                     <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
