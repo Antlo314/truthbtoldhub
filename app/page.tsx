@@ -27,7 +27,8 @@ import {
     Music,
     Waves,
     Mic2,
-    Volume2
+    Volume2,
+    Info
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -68,8 +69,6 @@ export default function Gateway() {
     const [isMounted, setIsMounted] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
-    const cursorRef = useRef<HTMLDivElement>(null);
-    const cursorFollowerRef = useRef<HTMLDivElement>(null);
     
     // AI Chat Integration
     const { messages, sendMessage, status } = useChat();
@@ -126,23 +125,6 @@ export default function Gateway() {
     useGSAP(() => {
         if (!isMounted) return;
 
-        // Custom Sentinel Cursor Logic
-        const moveCursor = (e: MouseEvent) => {
-            gsap.to(cursorRef.current, {
-                x: e.clientX,
-                y: e.clientY,
-                duration: 0,
-            });
-            gsap.to(cursorFollowerRef.current, {
-                x: e.clientX,
-                y: e.clientY,
-                duration: 0.6,
-                ease: "power2.out"
-            });
-        };
-
-        window.addEventListener('mousemove', moveCursor);
-
         // Hero Reveal
         gsap.from('.hero-content > *', {
             y: 30,
@@ -181,7 +163,6 @@ export default function Gateway() {
             window.addEventListener('mousemove', handleMouseMove);
             return () => {
                 window.removeEventListener('mousemove', handleMouseMove);
-                window.removeEventListener('mousemove', moveCursor);
             };
         }
 
@@ -203,7 +184,7 @@ export default function Gateway() {
     if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden cursor-none">
+        <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
             <style jsx global>{`
                 .liquid-glass {
                     background: rgba(255, 255, 255, 0.02);
@@ -295,16 +276,18 @@ export default function Gateway() {
                     from { height: 10%; opacity: 0.2; }
                     to { height: 100%; opacity: 1; }
                 }
+
+                .honor-ticker {
+                    animation: tickerScroll 40s linear infinite;
+                }
+                @keyframes tickerScroll {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(-100%); }
+                }
             `}</style>
 
             <div className="film-grain" />
             
-            {/* Custom Sentinel Cursor */}
-            <div ref={cursorRef} className="fixed top-0 left-0 w-2 h-2 bg-white rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2" />
-            <div ref={cursorFollowerRef} className="fixed top-0 left-0 w-8 h-8 border border-white/30 rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <div className="w-1 h-1 bg-white/50 rounded-full animate-ping" />
-            </div>
-
             <Suspense fallback={null}>
                 <CipherTracker />
             </Suspense>
@@ -448,7 +431,7 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* Prophetic Audio Symphony (NEW - Replacing Radar with Music focus) */}
+                    {/* Aether Audio Symphony */}
                     <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
@@ -476,7 +459,7 @@ export default function Gateway() {
                         </div>
                     </div>
 
-                    {/* AI Film Prod Status (Hardware Milestone) */}
+                    {/* Hardware Milestone */}
                     <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px]">
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
@@ -512,8 +495,8 @@ export default function Gateway() {
                     </div>
 
                     {/* Historical Timeline */}
-                    <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-12">
-                        <div className="flex flex-col gap-6 max-w-xl text-center md:text-left">
+                    <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-12 relative overflow-hidden">
+                        <div className="flex flex-col gap-6 max-w-xl text-center md:text-left relative z-10">
                             <div className="flex items-center justify-center md:justify-start gap-4 text-white">
                                 <History className="w-6 h-6" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.5em]">Historical Cycle</span>
@@ -523,16 +506,47 @@ export default function Gateway() {
                                 A panoramic investigation into the diaspora of the Hebrew people.
                             </p>
                         </div>
-                        <div className="flex items-center gap-6 md:gap-12">
-                            {[2019, 1619, 'Genesis'].map((year, i) => (
-                                <div key={i} className="flex flex-col items-center gap-4 text-center">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white group-hover:bg-aether-gold transition-colors"></div>
-                                    <span className="font-ritual text-xl md:text-2xl font-black text-white group-hover:text-aether-gold transition-colors">{year}</span>
+                        <div className="flex items-center gap-6 md:gap-12 relative z-10">
+                            {[
+                                { year: 2019, hint: 'End of 400 Year Prophecy' },
+                                { year: 1619, hint: 'Arrival in Virginia' },
+                                { year: 'Gen', hint: 'Abram receiving the Promise' }
+                            ].map((item, i) => (
+                                <div key={i} className="flex flex-col items-center gap-4 text-center group/item cursor-help">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white group-hover/item:bg-aether-gold group-hover/item:scale-150 transition-all"></div>
+                                    <div className="flex flex-col items-center">
+                                        <span className="font-ritual text-xl md:text-2xl font-black text-white group-hover/item:text-aether-gold transition-colors">{item.year}</span>
+                                        <span className="text-[6px] opacity-0 group-hover/item:opacity-100 transition-opacity text-white uppercase tracking-widest mt-1 font-black">{item.hint}</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
+                </div>
+
+                {/* WALL OF HONOR TICKER */}
+                <div className="mt-12 w-full overflow-hidden border-y border-white/5 py-4 whitespace-nowrap group">
+                    <div className="inline-block honor-ticker">
+                        {[
+                            'TRUUTHBTOLD NODE', 'PROPHETIC CORE ACTIVE', 'DIASPORA ARCHIVE UNLOCKED', 
+                            'GENESIS 15:13 VERIFIED', 'AETHER AUDIO SYNCED', 'MASTER BENTO DEPLOYED'
+                        ].map((text, i) => (
+                            <span key={i} className="mx-12 text-[9px] font-black uppercase tracking-[0.5em] text-white/20 hover:text-white transition-colors cursor-default">
+                                {text}
+                            </span>
+                        ))}
+                    </div>
+                    <div className="inline-block honor-ticker">
+                        {[
+                            'TRUUTHBTOLD NODE', 'PROPHETIC CORE ACTIVE', 'DIASPORA ARCHIVE UNLOCKED', 
+                            'GENESIS 15:13 VERIFIED', 'AETHER AUDIO SYNCED', 'MASTER BENTO DEPLOYED'
+                        ].map((text, i) => (
+                            <span key={i} className="mx-12 text-[9px] font-black uppercase tracking-[0.5em] text-white/20 hover:text-white transition-colors cursor-default">
+                                {text}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -556,7 +570,7 @@ export default function Gateway() {
                 </div>
             </footer>
 
-            {/* Support Overlay (REFACTORED FOR 4-PHASE MASTERPIECE ROADMAP) */}
+            {/* Support Overlay */}
             <AnimatePresence>
                 {showSupportOverlay && (
                     <motion.div 
