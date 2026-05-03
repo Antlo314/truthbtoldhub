@@ -23,7 +23,11 @@ import {
     Activity,
     Server,
     Database,
-    Gpu
+    Gpu,
+    Music,
+    Waves,
+    Mic2,
+    Volume2
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -210,7 +214,7 @@ export default function Gateway() {
                     transition: border-color 0.5s ease, background 0.5s ease;
                 }
                 .liquid-glass:hover {
-                    border-color: rgba(212, 175, 55, 0.2);
+                    border-color: rgba(255, 255, 255, 0.3);
                     background: rgba(255, 255, 255, 0.03);
                 }
                 .gold-shimmer {
@@ -280,14 +284,25 @@ export default function Gateway() {
                     pointer-events: none;
                     opacity: 0.1;
                 }
+
+                .audio-visualizer-bar {
+                    background: white;
+                    width: 2px;
+                    border-radius: 1px;
+                    animation: audioPulse 1.5s ease-in-out infinite alternate;
+                }
+                @keyframes audioPulse {
+                    from { height: 10%; opacity: 0.2; }
+                    to { height: 100%; opacity: 1; }
+                }
             `}</style>
 
             <div className="film-grain" />
             
             {/* Custom Sentinel Cursor */}
-            <div ref={cursorRef} className="fixed top-0 left-0 w-2 h-2 bg-aether-gold rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2" />
-            <div ref={cursorFollowerRef} className="fixed top-0 left-0 w-8 h-8 border border-aether-gold/30 rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                <div className="w-1 h-1 bg-aether-gold/50 rounded-full animate-ping" />
+            <div ref={cursorRef} className="fixed top-0 left-0 w-2 h-2 bg-white rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2" />
+            <div ref={cursorFollowerRef} className="fixed top-0 left-0 w-8 h-8 border border-white/30 rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                <div className="w-1 h-1 bg-white/50 rounded-full animate-ping" />
             </div>
 
             <Suspense fallback={null}>
@@ -303,7 +318,7 @@ export default function Gateway() {
                         </div>
                         <div className="hidden sm:flex flex-col">
                             <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
-                            <span className="text-[7px] font-mono text-zinc-100 uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
+                            <span className="text-[7px] font-mono text-white uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
                         </div>
                     </div>
                 </div>
@@ -311,10 +326,10 @@ export default function Gateway() {
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
                     {/* Social Icons */}
                     <div className="hidden md:flex items-center gap-6">
-                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-100 hover:text-white transition-colors">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
                             <YoutubeIcon className="w-5 h-5" />
                         </a>
-                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-100 hover:text-white transition-colors">
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
                             <TikTokIcon className="w-5 h-5" />
                         </a>
                     </div>
@@ -323,7 +338,7 @@ export default function Gateway() {
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] border border-white/20"
+                        className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20"
                     >
                         Support 400 Series
                     </button>
@@ -332,7 +347,7 @@ export default function Gateway() {
 
             {/* HERO */}
             <section className="relative h-[80dvh] flex flex-col items-center justify-center p-6 mt-12 md:mt-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.03)_0%,transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.03)_0%,transparent_60%)]"></div>
                 <div className="hero-content relative z-10 text-center space-y-8 md:space-y-12 w-full max-w-[100vw]">
                     <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-xl">
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
@@ -343,7 +358,7 @@ export default function Gateway() {
                             TRUTH B TOLD HUB
                         </h1>
                     </div>
-                    <p className="text-[10px] md:text-xl font-light text-zinc-100 max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
+                    <p className="text-[10px] md:text-xl font-light text-white max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
                         The Master Bento Ecosystem. Exploring <span className="text-white font-black">Genesis 15:13</span> and the <span className="text-aether-gold font-black">400 Year Echo</span>.
                     </p>
                 </div>
@@ -433,28 +448,35 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* Geopolitical Radar */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px]">
+                    {/* Prophetic Audio Symphony (NEW - Replacing Radar with Music focus) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <Compass className="w-5 md:w-7 h-5 md:h-7 text-white" />
+                                    <Music className="w-5 md:w-7 h-5 md:h-7 text-white" />
                                 </div>
-                                <Activity className="w-5 h-5 text-white animate-pulse" />
+                                <div className="flex gap-1 items-end h-4">
+                                    {[0.4, 0.7, 0.5, 0.9, 0.6].map((h, i) => (
+                                        <div key={i} className="w-1 bg-white/30 rounded-full" style={{ height: `${h * 100}%`, animationDelay: `${i * 0.2}s` }}>
+                                            <div className="audio-visualizer-bar" style={{ animationDelay: `${i * 0.2}s` }} />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Radar</h3>
+                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Aether Audio</h3>
                             <p className="text-white text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-black">
-                                Tracking alignment of nations with biblical prophecy.
+                                Phase 02: Launching the Prophetic AI Symphony. Solfeggio Tuned.
                             </p>
                         </div>
-                        <div className="flex items-center gap-2 md:gap-4 pt-4 md:pt-8">
+                        <div className="flex items-center gap-3">
+                            <Volume2 className="w-4 h-4 text-white/50" />
                             <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full w-2/3 bg-white animate-pulse"></div>
+                                <div className="h-full w-1/3 bg-white animate-pulse"></div>
                             </div>
                         </div>
                     </div>
 
-                    {/* AI Film Prod Status */}
+                    {/* AI Film Prod Status (Hardware Milestone) */}
                     <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px]">
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
@@ -462,14 +484,14 @@ export default function Gateway() {
                             </div>
                             <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Hardware</h3>
                             <p className="text-white text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-black">
-                                Securing the 8K cinematic render nodes.
+                                Milestone 01: Render Node Active. Processing 8K Masterpieces.
                             </p>
                         </div>
                         <button 
                             onClick={() => setShowSupportOverlay(true)}
                             className="w-full bg-white text-black py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)]"
                         >
-                            Boost Node
+                            Boost Phase
                         </button>
                     </div>
 
@@ -534,7 +556,7 @@ export default function Gateway() {
                 </div>
             </footer>
 
-            {/* Support Overlay */}
+            {/* Support Overlay (REFACTORED FOR 4-PHASE MASTERPIECE ROADMAP) */}
             <AnimatePresence>
                 {showSupportOverlay && (
                     <motion.div 
@@ -547,7 +569,7 @@ export default function Gateway() {
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-16 max-w-3xl w-full relative space-y-12 border-white/20 shadow-[0_0_150px_rgba(255,255,255,0.1)] my-8"
+                            className="liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 max-w-4xl w-full relative space-y-12 border-white/20 shadow-[0_0_150px_rgba(255,255,255,0.1)] my-8"
                         >
                             <button 
                                 onClick={() => setShowSupportOverlay(false)}
@@ -556,72 +578,60 @@ export default function Gateway() {
                                 <Lock className="w-6 h-6" />
                             </button>
                             
-                            <div className="text-center space-y-8">
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center overflow-hidden">
-                                        <img src="/logo.png" alt="TBT" className="w-full h-full object-contain" />
+                            <div className="text-center space-y-12">
+                                <div className="space-y-6">
+                                    <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-xl">
+                                        <Sparkles className="w-4 h-4 text-aether-gold animate-pulse" />
+                                        <span className="text-[9px] font-black tracking-[0.5em] text-white uppercase">The Masterpiece Roadmap</span>
                                     </div>
-                                    <div className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20">
-                                        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white">Industrial Upgrade Phase</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-white gold-shimmer leading-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">Build the Revelation</h2>
-                                    <p className="text-white text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-black max-w-xl mx-auto">
-                                        We are raising <span className="text-aether-gold font-black">$2,500</span> to secure a <span className="text-white font-black">High-End Cinematic Workstation</span> for the 400 Series.
-                                    </p>
+                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-white gold-shimmer drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">The 400 Series Journey</h2>
                                 </div>
 
-                                {/* Progress Bar */}
-                                <div className="space-y-4 max-w-md mx-auto">
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Hardware Goal</span>
-                                        <span className="text-[10px] font-mono text-white font-black">$2,500</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/10">
-                                        <motion.div 
-                                            initial={{ width: 0 }}
-                                            animate={{ width: '15%' }} 
-                                            className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Allocation Breakdown */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                                {/* ROADMAP GRID */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     {[
-                                        { icon: <Gpu className="w-5 h-5" />, title: 'GPU Core', desc: 'NVIDIA RTX Workstation for 8K AI Rendering.', price: '$1,500' },
-                                        { icon: <Server className="w-5 h-5" />, title: 'Processor', desc: 'High-concurrency logic for Prophetic AI.', price: '$500' },
-                                        { icon: <Database className="w-5 h-5" />, title: 'Archive', desc: 'Cold storage for high-fidelity 400 Series assets.', price: '$500' }
-                                    ].map((item, i) => (
-                                        <div key={i} className="p-6 rounded-[2rem] bg-white/[0.05] border border-white/10 text-left space-y-4 hover:bg-white/[0.1] transition-all group">
-                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 text-white group-hover:scale-110 transition-transform">
-                                                {item.icon}
+                                        { phase: '01', icon: <Cpu />, title: 'The Engine', desc: 'Secure the 8K AI Render Node. 400 Series foundation.', goal: '$2,500', active: true },
+                                        { phase: '02', icon: <Music />, title: 'Symphony', desc: 'AI-Generated Prophetic Scores & Soundscapes.', goal: '$1,500+', active: false },
+                                        { phase: '03', icon: <Waves />, title: 'The Codex', desc: 'Interactive visualizers & Voice-over narration.', goal: '$5,000', active: false },
+                                        { phase: '04', icon: <Globe />, title: 'Revelation', desc: 'Full-length AI feature film release globally.', goal: '$10,000', active: false }
+                                    ].map((step, i) => (
+                                        <div key={i} className={`p-8 rounded-[2.5rem] border ${step.active ? 'bg-white/10 border-white/30' : 'bg-white/[0.03] border-white/10'} text-left space-y-6 relative group overflow-hidden`}>
+                                            {step.active && <div className="absolute top-0 right-0 p-4"><div className="w-2 h-2 rounded-full bg-white animate-ping" /></div>}
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-mono font-black text-white/50">{step.phase}</span>
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${step.active ? 'bg-white text-black' : 'bg-white/5 text-white/30'}`}>
+                                                    {step.icon}
+                                                </div>
                                             </div>
-                                            <div className="space-y-1">
-                                                <h4 className="text-[10px] font-black uppercase text-white tracking-widest">{item.title}</h4>
-                                                <p className="text-[8px] text-white uppercase leading-relaxed font-black opacity-60">{item.desc}</p>
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs font-black uppercase tracking-widest text-white">{step.title}</h4>
+                                                <p className="text-[9px] text-white/60 uppercase leading-relaxed font-black">{step.desc}</p>
                                             </div>
-                                            <div className="text-[10px] font-mono text-white font-black">{item.price}</div>
+                                            <div className={`text-[10px] font-mono ${step.active ? 'text-white' : 'text-white/20'}`}>{step.goal}</div>
                                         </div>
                                     ))}
                                 </div>
 
                                 <div className="pt-8 space-y-8">
-                                    <a 
-                                        href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block w-full bg-white text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-105 transition-all border border-white/20"
-                                    >
-                                        Initiate Contribution
-                                    </a>
+                                    <div className="p-8 rounded-[3rem] bg-gradient-to-r from-white/5 to-transparent border border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 text-left">
+                                        <div className="space-y-2">
+                                            <h5 className="text-[10px] font-black uppercase text-white tracking-widest">Active Contribution</h5>
+                                            <p className="text-xs text-white opacity-60 font-black">Join the production legacy. Every contribution pushes the roadmap.</p>
+                                        </div>
+                                        <a 
+                                            href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-12 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-105 transition-all whitespace-nowrap"
+                                        >
+                                            Fuel Phase 01
+                                        </a>
+                                    </div>
                                     <button 
                                         onClick={() => setShowSupportOverlay(false)}
-                                        className="text-[10px] font-black tracking-[0.5em] uppercase text-white hover:text-aether-gold transition-colors"
+                                        className="text-[10px] font-black tracking-[0.5em] uppercase text-white/40 hover:text-white transition-colors"
                                     >
-                                        Continue Research
+                                        Return to Sanctum
                                     </button>
                                 </div>
                             </div>
