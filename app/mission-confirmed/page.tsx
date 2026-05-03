@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Send, Globe, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Send, Globe, ChevronRight, X } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 

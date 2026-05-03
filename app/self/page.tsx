@@ -137,15 +137,14 @@ export default function PowerSelf() {
     const uploadAvatar = async (event: any) => {
         try {
             setUploading(true);
-            const { data: { user: userAuth } } = await supabase.auth.getUser();
-            if (!userAuth) throw new Error('Not authenticated');
+            if (!user) throw new Error('Not authenticated');
 
             if (!event.target.files || event.target.files.length === 0) {
                 throw new Error('You must select an image to upload.');
             }
             const file = event.target.files[0];
             const fileExt = file.name.split('.').pop();
-            const fileName = `${userAuth.id}-${Math.random()}.${fileExt}`;
+            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
             let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
@@ -429,12 +428,12 @@ export default function PowerSelf() {
                                             readOnly 
                                             title="Cipher Link"
                                             placeholder="Cipher Link"
-                                            value={`https://truthbtoldhub.com/?cipher=${userAuth?.id?.substring(0,8) || 'INIT...'}`}
+                                            value={`https://truthbtoldhub.com/?cipher=${user?.id?.substring(0,8) || 'INIT...'}`}
                                             className="flex-1 bg-black/60 border border-orange-500/30 rounded-lg px-3 py-2.5 text-xs text-orange-200 font-mono focus:outline-none"
                                         />
                                         <button 
                                             onClick={(e) => {
-                                                navigator.clipboard.writeText(`Begin Initiation: https://truthbtoldhub.com/?cipher=${userAuth?.id?.substring(0,8) || 'INIT...'}`);
+                                                navigator.clipboard.writeText(`Begin Initiation: https://truthbtoldhub.com/?cipher=${user?.id?.substring(0,8) || 'INIT...'}`);
                                                 const btn = e.currentTarget;
                                                 const originalText = btn.innerHTML;
                                                 btn.innerHTML = '<span class="text-[10px] uppercase font-bold tracking-widest text-white">COPIED</span>';
@@ -576,7 +575,7 @@ export default function PowerSelf() {
 
                                         // As an Architect, you can lodge petitions on behalf of the system or yourself
                                         const { error } = await supabase.from('petitions').insert([{
-                                            requester_id: userAuth.id,
+                                            requester_id: user.id,
                                             title, description, amount_requested, status: 'Consensus Building'
                                         }]);
 

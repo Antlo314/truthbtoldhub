@@ -37,7 +37,7 @@ if (typeof window !== 'undefined') {
 
 export default function Treasury() {
     const router = useRouter();
-    const { user, profile, fetchIdentity, updateSP } = useSoulStore();
+    const { user, profile, fetchIdentity, updateSP, signOut: storeSignOut } = useSoulStore();
 
     const [isConfidential, setIsConfidential] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -103,6 +103,11 @@ export default function Treasury() {
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
+
+    const handleSignOut = async () => {
+        await storeSignOut();
+        router.push('/');
+    };
 
     // Ambient Drone
     useEffect(() => {
@@ -256,7 +261,8 @@ export default function Treasury() {
 
     const handleExecutePledge = async () => {
         if (!selectedPetition || !user || pledgeAmount <= 0) return;
-        if (profile?.soul_power < pledgeAmount) {
+        const currentSoulPower = profile?.soul_power ?? 0;
+        if (currentSoulPower < pledgeAmount) {
             alert("Insufficient Sanctum Power for this pledge.");
             return;
         }
@@ -264,7 +270,7 @@ export default function Treasury() {
         setIsPledging(true);
         try {
             // 1. Deduct SP from User via store
-            const newSP = profile.soul_power - pledgeAmount;
+            const newSP = currentSoulPower - pledgeAmount;
             await updateSP(newSP);
 
             // 2. Add SP to Petition
@@ -294,7 +300,6 @@ export default function Treasury() {
             }]);
 
             // Refresh local state
-            setProfile({ ...profile, soul_power: newSP });
             setPetitions(petitions.map(p => {
                 if (p.id === selectedPetition.id) {
                     return { ...p, sp_pledged: newPledged, consensus_percentage: newConsensus, backer_count: newBackerCount, status: newStatus };
@@ -342,14 +347,14 @@ export default function Treasury() {
 
     const handleRequestAid = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!userAuth) return;
+        if (!user) return;
         setIsSubmittingAid(true);
         try {
             const amount = parseFloat(requestAmount);
             if (isNaN(amount) || amount <= 0) throw new Error("Invalid request amount.");
 
             const { data, error } = await supabase.from('petitions').insert([{
-                requester_id: userAuth.id,
+                requester_id: user.id,
                 title: requestTitle,
                 description: requestDescription,
                 amount_requested: amount,
@@ -380,7 +385,7 @@ export default function Treasury() {
     };
 
     const handleAdminAction = async (petitionId: string, newStatus: string) => {
-        if (!userAuth || !isAdmin) return;
+        if (!user || !isAdmin) return;
 
         try {
             const { error } = await supabase.from('petitions')
@@ -401,7 +406,7 @@ export default function Treasury() {
     };
 
     const handleAdminErase = async (petitionId: string) => {
-        if (!userAuth || !isAdmin) return;
+        if (!user || !isAdmin) return;
 
         if (!confirm("Are you sure you want to completely erase this petition from The Pool?")) return;
 

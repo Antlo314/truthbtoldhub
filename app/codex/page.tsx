@@ -423,7 +423,7 @@ export default function Archive() {
 
     const handleLodgeWhisper = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newWhisper.trim() || !userAuth) return;
+        if (!newWhisper.trim() || !user) return;
 
         setIsSubmitting(true);
 
@@ -434,7 +434,7 @@ export default function Archive() {
             id: `w_${Date.now()}`,
             content: newWhisper,
             author: profile?.display_name || 'Anonymous',
-            author_id: userAuth.id,
+            author_id: user.id,
             avatar_url: profile?.avatar_url,
             alignment: 1,
             timestamp: "JUST NOW",
@@ -445,7 +445,7 @@ export default function Archive() {
 
         // Try to insert into DB
         const { error } = await supabase.from('codex_whispers').insert([{
-            author_id: userAuth.id,
+            author_id: user.id,
             content: newWhisper,
             alignment: 1,
             is_encrypted: false
@@ -474,7 +474,7 @@ export default function Archive() {
     };
 
     const handleAlignWhisper = async (id: string, isEncrypted: boolean) => {
-        if (!userAuth) {
+        if (!user) {
             alert("You must be authenticated to align whispers.");
             return;
         }
@@ -546,8 +546,8 @@ export default function Archive() {
     };
 
     const handleDeleteWhisper = async (id: string, authorId?: string) => {
-        if (!userAuth) return;
-        if (userAuth.id !== authorId && !isAdmin) return;
+        if (!user) return;
+        if (user.id !== authorId && !isAdmin) return;
 
         if (!confirm("Erase this whisper from the Archive?")) return;
 
@@ -564,8 +564,8 @@ export default function Archive() {
     };
 
     const handleDeleteReply = async (replyId: string, whisperId: string, authorId: string) => {
-        if (!userAuth) return;
-        if (userAuth.id !== authorId && !isAdmin) return;
+        if (!user) return;
+        if (user.id !== authorId && !isAdmin) return;
 
         if (!confirm("Erase this reply?")) return;
 
@@ -589,7 +589,7 @@ export default function Archive() {
 
     const handleLodgeReply = async (e: React.FormEvent, whisperId: string) => {
         e.preventDefault();
-        if (!replyContent.trim() || !userAuth) return;
+        if (!replyContent.trim() || !user) return;
 
         setIsSubmittingReply(true);
 
@@ -597,7 +597,7 @@ export default function Archive() {
             id: `r_${Date.now()}`,
             whisper_id: whisperId,
             author: profile?.display_name || 'Anonymous',
-            author_id: userAuth.id,
+            author_id: user.id,
             avatar_url: profile?.avatar_url,
             content: replyContent,
             timestamp: "JUST NOW",
@@ -605,7 +605,7 @@ export default function Archive() {
 
         // Try to insert into DB
         const { error } = await supabase.from('codex_replies').insert([{
-            author_id: userAuth.id,
+            author_id: user.id,
             whisper_id: whisperId,
             content: replyContent,
         }]);
@@ -925,7 +925,7 @@ export default function Archive() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            {(userAuth?.id === activeWhisper.author_id || isAdmin) && (
+                                            {(user?.id === activeWhisper.author_id || isAdmin) && (
                                                 <button onClick={() => { setActiveReplyBox(null); handleDeleteWhisper(activeWhisper.id, activeWhisper.author_id); }} className="text-zinc-600 hover:text-red-500 p-2" title="Erase">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -993,7 +993,7 @@ export default function Archive() {
                                                                     <span className="text-[9px] font-mono text-zinc-500">{reply.timestamp}</span>
                                                                 </div>
                                                             </div>
-                                                            {(userAuth?.id === reply.author_id || isAdmin) && (
+                                                            {(user?.id === reply.author_id || isAdmin) && (
                                                                 <button onClick={() => handleDeleteReply(reply.id, activeWhisper.id, reply.author_id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity">
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>

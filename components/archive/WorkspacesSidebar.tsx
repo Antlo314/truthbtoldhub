@@ -23,6 +23,7 @@ export default function WorkspacesSidebar() {
             <div className="w-8 h-[1px] bg-white/10 rounded-full mx-auto my-1" />
 
             {/* Workspaces List */}
+            {workspaces.map((workspace) => (
                 <button 
                     key={workspace.id}
                     onClick={() => setActiveWorkspaceId(workspace.id)}

@@ -96,7 +96,6 @@ export default function MemberListSidebar() {
                                                         className="w-full h-full object-cover" 
                                                     />
                                                 </div>
-                                                </div>
                                                 {/* Status Indicator */}
                                                 <div className="absolute -bottom-0.5 -right-0.5 w-[12px] h-[12px] rounded-full bg-zinc-950 flex items-center justify-center">
                                                     <div className={`w-[8px] h-[8px] rounded-full ${isOnline ? 'bg-orange-500 shadow-[0_0_8px_rgba(234,88,12,0.6)]' : 'bg-zinc-800'}`} />
