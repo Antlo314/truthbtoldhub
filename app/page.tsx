@@ -28,7 +28,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
 
-// Custom Social Icons for consistency
+// Custom Social Icons
 const TikTokIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
         <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2.12h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/>
@@ -61,6 +61,8 @@ export default function Gateway() {
     const [isMounted, setIsMounted] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
+    const cursorRef = useRef<HTMLDivElement>(null);
+    const cursorFollowerRef = useRef<HTMLDivElement>(null);
     
     // AI Chat Integration
     const { messages, sendMessage, status } = useChat();
@@ -117,6 +119,23 @@ export default function Gateway() {
     useGSAP(() => {
         if (!isMounted) return;
 
+        // Custom Sentinel Cursor Logic
+        const moveCursor = (e: MouseEvent) => {
+            gsap.to(cursorRef.current, {
+                x: e.clientX,
+                y: e.clientY,
+                duration: 0,
+            });
+            gsap.to(cursorFollowerRef.current, {
+                x: e.clientX,
+                y: e.clientY,
+                duration: 0.6,
+                ease: "power2.out"
+            });
+        };
+
+        window.addEventListener('mousemove', moveCursor);
+
         // Hero Reveal
         gsap.from('.hero-content > *', {
             y: 30,
@@ -153,7 +172,10 @@ export default function Gateway() {
             };
 
             window.addEventListener('mousemove', handleMouseMove);
-            return () => window.removeEventListener('mousemove', handleMouseMove);
+            return () => {
+                window.removeEventListener('mousemove', handleMouseMove);
+                window.removeEventListener('mousemove', moveCursor);
+            };
         }
 
         // Bento Cards staggered entry
@@ -174,7 +196,7 @@ export default function Gateway() {
     if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
+        <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden cursor-none">
             <style jsx global>{`
                 .liquid-glass {
                     background: rgba(255, 255, 255, 0.02);
@@ -221,7 +243,49 @@ export default function Gateway() {
                     width: 100%;
                     text-align: center;
                 }
+
+                /* Atmospheric Layers */
+                .film-grain {
+                    position: fixed;
+                    inset: 0;
+                    pointer-events: none;
+                    z-index: 999;
+                    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+                    opacity: 0.04;
+                    mix-blend-mode: overlay;
+                    animation: grain 8s steps(10) infinite;
+                }
+                @keyframes grain {
+                    0%, 100% { transform: translate(0, 0) }
+                    10% { transform: translate(-5%, -5%) }
+                    20% { transform: translate(-10%, 5%) }
+                    30% { transform: translate(5%, -10%) }
+                    40% { transform: translate(-5%, 15%) }
+                    50% { transform: translate(-10%, -5%) }
+                    60% { transform: translate(15%, 0) }
+                    70% { transform: translate(0, 10%) }
+                    80% { transform: translate(-15%, 0) }
+                    90% { transform: translate(10%, 5%) }
+                }
+
+                .data-glitch {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+                    z-index: 10;
+                    background-size: 100% 2px, 3px 100%;
+                    pointer-events: none;
+                    opacity: 0.1;
+                }
             `}</style>
+
+            <div className="film-grain" />
+            
+            {/* Custom Sentinel Cursor */}
+            <div ref={cursorRef} className="fixed top-0 left-0 w-2 h-2 bg-aether-gold rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2" />
+            <div ref={cursorFollowerRef} className="fixed top-0 left-0 w-8 h-8 border border-aether-gold/30 rounded-full pointer-events-none z-[1000] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                <div className="w-1 h-1 bg-aether-gold/50 rounded-full animate-ping" />
+            </div>
 
             <Suspense fallback={null}>
                 <CipherTracker />
@@ -242,7 +306,6 @@ export default function Gateway() {
                 </div>
                 
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
-                    {/* Social Icons */}
                     <div className="hidden md:flex items-center gap-6">
                         <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
                             <YoutubeIcon className="w-5 h-5" />
@@ -282,12 +345,12 @@ export default function Gateway() {
                 </div>
             </section>
 
-            {/* MASTER BENTO GRID */}
+            {/* MASTER BENTO GRID (REFACTORED FOR DYNAMIC MOBILE GRID) */}
             <section id="master-bento" className="relative pb-48 px-4 md:px-12 max-w-[100rem] mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-[minmax(300px,_auto)] gap-4 md:gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(200px,_auto)] gap-4 md:gap-8">
                     
-                    {/* Main Cinematic Feature (8 cols, 2 rows) */}
-                    <div className="bento-card md:col-span-8 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2">
+                    {/* Main Cinematic Feature (Full-width on mobile/desktop) */}
+                    <div className="bento-card col-span-2 md:col-span-8 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2 min-h-[400px]">
                         <div className="h-full relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
                                 className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-[1.01]"
@@ -303,16 +366,14 @@ export default function Gateway() {
                                         <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Featured Revelation</span>
                                     </div>
                                     <h2 className="font-ritual text-3xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
-                                    <p className="text-zinc-400 text-[10px] md:text-sm max-w-xl font-light uppercase tracking-widest leading-relaxed">
-                                        Abraham receives the vision. The beginning of the 400-year cycle.
-                                    </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Prophetic AI Oracle (4 cols, 2 rows) */}
-                    <div className="bento-card md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent">
+                    {/* Prophetic AI Oracle (Full-width on mobile, 4 cols on desktop) */}
+                    <div className="bento-card col-span-2 md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[500px]">
+                        <div className="data-glitch" />
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
@@ -368,30 +429,48 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* Geopolitical Radar (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card min-h-[350px]">
+                    {/* Geopolitical Radar (Half-width on mobile, 4 cols on desktop) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/5 perspective-card min-h-[300px]">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
-                                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <Compass className="w-7 h-7 text-white/50" />
+                                <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <Compass className="w-5 md:w-7 h-5 md:h-7 text-white/50" />
                                 </div>
                                 <Activity className="w-5 h-5 text-zinc-800" />
                             </div>
-                            <h3 className="font-ritual text-2xl font-black uppercase tracking-[0.2em] text-white">Geopolitical Radar</h3>
-                            <p className="text-zinc-600 text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
-                                Tracking the alignment of nations with biblical prophecy in real-time. Global frequency shifts detected.
+                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Radar</h3>
+                            <p className="text-zinc-600 text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
+                                Tracking alignment of nations with biblical prophecy.
                             </p>
                         </div>
-                        <div className="flex items-center gap-4 pt-8">
+                        <div className="flex items-center gap-2 md:gap-4 pt-4 md:pt-8">
                             <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
                                 <div className="h-full w-2/3 bg-aether-gold/50 animate-pulse"></div>
                             </div>
-                            <span className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest">Level 04</span>
                         </div>
                     </div>
 
-                    {/* The Prelude (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/5 p-1 md:p-2 min-h-[350px]">
+                    {/* AI Film Prod Status (Half-width on mobile, 4 cols on desktop) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/5 perspective-card bg-gradient-to-t from-aether-gold/5 to-transparent min-h-[300px]">
+                        <div className="space-y-6">
+                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
+                                <Cpu className="w-5 md:w-7 h-5 md:h-7 text-aether-gold" />
+                            </div>
+                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.2em] text-white">Hardware</h3>
+                            <p className="text-zinc-500 text-[8px] md:text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
+                                Securing the 8K cinematic render nodes.
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => setShowSupportOverlay(true)}
+                            className="w-full bg-aether-gold text-black py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                        >
+                            Boost Node
+                        </button>
+                    </div>
+
+                    {/* The Prelude (Full-width on mobile, 4 cols on desktop) */}
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/5 p-1 md:p-2">
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
                                 className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000"
@@ -400,33 +479,14 @@ export default function Gateway() {
                             ></iframe>
                             <div className="absolute inset-0 bg-black/60 opacity-20 group-hover:opacity-0 transition-opacity pointer-events-none"></div>
                          </div>
-                         <div className="p-8 space-y-2">
+                         <div className="p-6 md:p-8 space-y-2">
                             <h4 className="font-ritual text-xl font-black uppercase tracking-[0.1em] text-white group-hover:text-aether-gold transition-colors">THE PRELUDE</h4>
                             <p className="text-zinc-500 text-[9px] uppercase tracking-[0.1em] font-light">Archive View: 400 Year Diaspora</p>
                          </div>
                     </div>
 
-                    {/* AI Film Prod Status (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card bg-gradient-to-t from-aether-gold/5 to-transparent min-h-[350px]">
-                        <div className="space-y-6">
-                            <div className="w-14 h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
-                                <Cpu className="w-7 h-7 text-aether-gold" />
-                            </div>
-                            <h3 className="font-ritual text-2xl font-black uppercase tracking-[0.2em] text-white">AI Prod Hardware</h3>
-                            <p className="text-zinc-500 text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
-                                Industrial GPU nodes securing the 8K cinematic render. Support the build to accelerate generation.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={() => setShowSupportOverlay(true)}
-                            className="w-full bg-aether-gold text-black py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_40px_rgba(212,175,55,0.2)] border border-black/10"
-                        >
-                            Accelerate Node
-                        </button>
-                    </div>
-
-                    {/* Historical Timeline (12 cols) */}
-                    <div className="bento-card md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/5 group gap-12">
+                    {/* Historical Timeline (Full-width on mobile/desktop) */}
+                    <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/5 group gap-12">
                         <div className="flex flex-col gap-6 max-w-xl text-center md:text-left">
                             <div className="flex items-center justify-center md:justify-start gap-4 text-zinc-500">
                                 <History className="w-6 h-6" />
@@ -434,7 +494,7 @@ export default function Gateway() {
                             </div>
                             <h3 className="font-ritual text-3xl md:text-5xl font-black uppercase tracking-[0.1em] text-white gold-shimmer">ABRAHAM TO 2019</h3>
                             <p className="text-zinc-500 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
-                                A panoramic investigation into the diaspora of the Hebrew people and the conclusion of the 400-year cycle.
+                                A panoramic investigation into the diaspora of the Hebrew people.
                             </p>
                         </div>
                         <div className="flex items-center gap-6 md:gap-12">
