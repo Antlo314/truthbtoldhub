@@ -86,6 +86,7 @@ export default function Gateway() {
     const [profile, setProfile] = useState<any>(null);
     const [isAscended, setIsAscended] = useState(false);
     const [expandedCard, setExpandedCard] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     
@@ -130,6 +131,14 @@ export default function Gateway() {
 
     useEffect(() => {
         setIsMounted(true);
+        
+        // Responsive Check
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+
         // Auth Check
         supabase.auth.getUser().then(({ data: { user } }) => {
             setUser(user);
@@ -166,6 +175,7 @@ export default function Gateway() {
             subscription.unsubscribe();
             supabase.removeChannel(channel);
             clearInterval(pulseInterval);
+            window.removeEventListener('resize', handleResize);
         };
     }, []);
 
@@ -195,9 +205,11 @@ export default function Gateway() {
     };
 
     const toggleExpand = (cardId: string) => {
+        if (!isMobile) return; // Expandable ONLY for mobile
         setExpandedCard(expandedCard === cardId ? null : cardId);
     };
 
+    // AI Chat Handler
     const handleAiSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!aiInput.trim() || isLoadingAi) return;
@@ -208,6 +220,7 @@ export default function Gateway() {
         setAiInput('');
     };
 
+    // Community Chat Handler
     const handleCommunitySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!communityInput.trim() || !user) return;
@@ -224,6 +237,7 @@ export default function Gateway() {
         if (error) console.error(error);
     };
 
+    // Audio Handlers
     const toggleAudio = () => {
         setIsPlaying(!isPlaying);
     };
@@ -348,7 +362,7 @@ export default function Gateway() {
                     -webkit-backdrop-filter: blur(40px) saturate(180%);
                     border: 1px solid rgba(255, 255, 255, 0.08);
                     box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.01);
-                    transition: border-color 0.5s ease, background 0.5s ease;
+                    transition: border-color 0.5s ease, background 0.5s ease, transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
                 }
                 .liquid-glass:hover {
                     border-color: rgba(255, 255, 255, 0.3);
@@ -373,7 +387,6 @@ export default function Gateway() {
                 }
                 .perspective-card {
                     transform-style: preserve-3d;
-                    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
                 }
                 .perspective-card:hover {
                     transform: rotateX(1deg) rotateY(1deg) translateZ(5px);
@@ -409,16 +422,6 @@ export default function Gateway() {
                     70% { transform: translate(0, 10%) }
                     80% { transform: translate(-15%, 0) }
                     90% { transform: translate(10%, 5%) }
-                }
-
-                .data-glitch {
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-                    z-index: 10;
-                    background-size: 100% 2px, 3px 100%;
-                    pointer-events: none;
-                    opacity: 0.1;
                 }
 
                 .honor-ticker {
@@ -503,35 +506,35 @@ export default function Gateway() {
             {/* MASTER BENTO GRID */}
             <LayoutGroup>
             <section id="master-bento" className="relative pb-48 px-4 md:px-12 max-w-[100rem] mx-auto">
-                <motion.div layout className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(180px,_auto)] gap-4 md:gap-8">
+                <motion.div layout={isMobile} className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(180px,_auto)] gap-4 md:gap-8">
                     
                     {/* Main Cinematic Feature */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('main')}
-                        className={`bento-card col-span-2 ${expandedCard === 'main' ? 'md:col-span-12 row-span-3' : 'md:col-span-8 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2 min-h-[350px] relative cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'main' ? 'row-span-3' : (isMobile ? 'col-span-2 row-span-1' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2 min-h-[350px] relative cursor-pointer`}
                     >
                         <div className="h-full relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-[1.01]" src="https://www.youtube.com/embed/jXezgcPBqGE?autoplay=0&controls=1&rel=0" allowFullScreen></iframe>
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none group-hover:opacity-40 transition-opacity"></div>
                             <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 flex justify-between items-end pointer-events-none z-30">
                                 <h2 className="font-ritual text-2xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
-                                {expandedCard === 'main' ? <Minimize2 className="w-6 h-6 text-white/40" /> : <Maximize2 className="w-6 h-6 text-white/40" />}
+                                {isMobile && (expandedCard === 'main' ? <Minimize2 className="w-6 h-6 text-white/40" /> : <Maximize2 className="w-6 h-6 text-white/40" />)}
                             </div>
                         </div>
                     </motion.div>
 
                     {/* Global Archive (COMMUNITY CHAT) */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('chat')}
-                        className={`bento-card col-span-2 ${expandedCard === 'chat' ? 'row-span-3 md:col-span-12' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Archive" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
-                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span><span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Community Whispers</span></div>
+                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span><span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Whispers</span></div>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-4 hide-scrollbar mb-8 pr-2">
@@ -543,22 +546,22 @@ export default function Gateway() {
                             ))}
                         </div>
                         <form onSubmit={handleCommunitySubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder={user ? "Inject whisper..." : "Secure link to whisper"} className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
+                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder="Whisper..." className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
                             <button type="submit" disabled={!user || !communityInput.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
                         </form>
                     </motion.div>
 
                     {/* Prophetic AI Oracle (AI CHAT) */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('oracle')}
-                        className={`bento-card col-span-2 ${expandedCard === 'oracle' ? 'row-span-3 md:col-span-12' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'oracle' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Oracle" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
-                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">AI Oracle</span><span className="text-[7px] font-mono text-white uppercase tracking-widest">Decryption Engine</span></div>
+                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">AI Oracle</span><span className="text-[7px] font-mono text-white uppercase tracking-widest">Decryptor</span></div>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
@@ -571,87 +574,68 @@ export default function Gateway() {
                             ))}
                         </div>
                         <form onSubmit={handleAiSubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Query Oracle..." className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black" />
+                            <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Query..." className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black" />
                             <button type="submit" disabled={isLoadingAi || !aiInput} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
                         </form>
                     </motion.div>
 
                     {/* SELF / PROFILE CARD */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('self')}
-                        className={`bento-card col-span-1 ${expandedCard === 'self' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'self' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent cursor-pointer`}
                     >
-                        {!isUnlocked && <LockedOverlay title="Profile Access" />}
+                        {!isUnlocked && <LockedOverlay title="Profile" />}
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
-                                    {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
-                                </div>
-                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
-                                    {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
-                                </div>
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+                                {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
                             </div>
-                            <div className="space-y-2">
-                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
-                                <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
-                                    {profile?.bio || (isAscended ? 'Frequency active but temporary.' : 'Initializing neural-link...')}
-                                </p>
-                            </div>
+                            <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
                         </div>
                     </motion.div>
 
                     {/* THE POOL / TREASURY */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('pool')}
-                        className={`bento-card col-span-1 ${expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Pool" />}
                         <div className="space-y-8">
                             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
                             <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white">The Pool</h3>
                         </div>
-                        <div className="flex justify-between items-end">
-                            <span className="text-2xl font-ritual font-black text-white">$4,821</span>
-                            <button onClick={(e) => { e.stopPropagation(); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white"><ArrowRight className="w-4 h-4" /></button>
-                        </div>
+                        <div className="flex justify-between items-end"><span className="text-2xl font-ritual font-black text-white">$4,821</span></div>
                     </motion.div>
 
                     {/* Aether Player */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('player')}
-                        className={`bento-card col-span-2 ${expandedCard === 'player' ? 'md:col-span-6 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'player' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer`}
                     >
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
                             <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
-                            <div className="flex flex-col">
-                                <p className="text-white text-[10px] uppercase font-black">{tracks[currentTrack].title}</p>
-                                <p className="text-aether-gold text-[7px] uppercase font-black opacity-60">{tracks[currentTrack].genre}</p>
-                            </div>
                         </div>
-                        <div className="flex items-center justify-between gap-4" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipBack className="w-4 h-4" /></button>
+                        <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
                             <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
-                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipForward className="w-4 h-4" /></button>
                         </div>
                     </motion.div>
 
                     {/* Global Pulse Terminal */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('pulse')}
-                        className={`bento-card col-span-1 ${expandedCard === 'pulse' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pulse' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="Global Pulse" />}
                         <div className="flex items-center gap-4 mb-6">
                             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10"><Signal className="w-5 h-5 text-white animate-pulse" /></div>
-                            <span className="text-[10px] font-black uppercase text-white">Global Pulse</span>
+                            <span className="text-[10px] font-black uppercase text-white">Pulse</span>
                         </div>
                         <div className="flex-1 space-y-3 font-mono text-[7px] overflow-hidden">
-                            {pulseLog.map((log, i) => (
+                            {pulseLog.slice(0, 5).map((log, i) => (
                                 <div key={i} className="flex items-center gap-2 text-white/40"><span className="text-aether-gold">{'>'}</span><span className="uppercase truncate">{log}</span></div>
                             ))}
                         </div>
@@ -659,45 +643,33 @@ export default function Gateway() {
 
                     {/* Hardware Milestone */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('hardware')}
-                        className={`bento-card col-span-1 ${expandedCard === 'hardware' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px] cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'hardware' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px] cursor-pointer`}
                     >
-                        <div className="space-y-6">
-                            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
-                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); setShowSupportOverlay(true); }} className="w-full bg-white text-black py-4 rounded-xl text-[8px] font-black uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)]">Boost</button>
+                        <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
+                        <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
                     </motion.div>
 
                     {/* The Prelude */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('prelude')}
-                        className={`bento-card col-span-2 ${expandedCard === 'prelude' ? 'md:col-span-12 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
                     >
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" title="The Prelude"></iframe>
                          </div>
-                         <div className="p-6 md:p-8"><h4 className="font-ritual text-xl font-black text-white">THE PRELUDE</h4></div>
                     </motion.div>
 
                     {/* Historical Timeline */}
                     <motion.div 
-                        layout
+                        layout={isMobile}
                         onClick={() => toggleExpand('timeline')}
-                        className={`bento-card col-span-2 ${expandedCard === 'timeline' ? 'md:col-span-12' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'timeline' ? 'row-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
                     >
-                        {!isUnlocked && <LockedOverlay title="The Timeline" />}
-                        <div className="flex flex-col gap-6 max-w-xl text-center md:text-left relative z-10">
-                            <div className="flex items-center justify-center md:justify-start gap-4 text-white"><History className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-[0.5em]">Historical Cycle</span></div>
-                            <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
-                        </div>
-                        <div className="flex items-center gap-6 md:gap-12 relative z-10">
-                            {[2019, 1619, 'Gen'].map((year, i) => (
-                                <div key={i} className="flex flex-col items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-white"></div><span className="font-ritual text-lg md:text-2xl font-black text-white">{year}</span></div>
-                            ))}
-                        </div>
+                        {!isUnlocked && <LockedOverlay title="Timeline" />}
+                        <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
                     </motion.div>
 
                 </motion.div>
