@@ -216,16 +216,16 @@ export default function Gateway() {
                 .gold-shimmer {
                     background: linear-gradient(
                         to right,
-                        #d4af37 20%,
-                        #fff8e1 40%,
-                        #fff8e1 60%,
-                        #d4af37 80%
+                        #d4af37 0%,
+                        #fff8e1 25%,
+                        #fff8e1 75%,
+                        #d4af37 100%
                     );
                     background-size: 200% auto;
                     color: transparent;
                     -webkit-background-clip: text;
                     background-clip: text;
-                    animation: shine 6s linear infinite;
+                    animation: shine 4s linear infinite;
                 }
                 @keyframes shine {
                     to { background-position: 200% center; }
@@ -309,6 +309,7 @@ export default function Gateway() {
                 </div>
                 
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
+                    {/* Social Icons */}
                     <div className="hidden md:flex items-center gap-6">
                         <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
                             <YoutubeIcon className="w-5 h-5" />
@@ -322,7 +323,7 @@ export default function Gateway() {
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-6 md:px-10 py-3 bg-aether-gold text-black rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.4)] border border-black/10"
+                        className="px-6 md:px-10 py-3 bg-aether-gold text-[#050505] rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.5)] border border-black/20"
                     >
                         Support 400 Series
                     </button>
@@ -466,7 +467,7 @@ export default function Gateway() {
                         </div>
                         <button 
                             onClick={() => setShowSupportOverlay(true)}
-                            className="w-full bg-aether-gold text-black py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                            className="w-full bg-aether-gold text-[#050505] py-4 md:py-5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                         >
                             Boost Node
                         </button>
@@ -533,7 +534,7 @@ export default function Gateway() {
                 </div>
             </footer>
 
-            {/* Support Overlay (REFACTORED FOR $2500 GOAL & ALLOCATION BREAKDOWN) */}
+            {/* Support Overlay */}
             <AnimatePresence>
                 {showSupportOverlay && (
                     <motion.div 
@@ -566,7 +567,7 @@ export default function Gateway() {
                                 </div>
                                 
                                 <div className="space-y-4">
-                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-white gold-shimmer leading-tight">Build the Revelation</h2>
+                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.2em] text-[#f4d03f] gold-shimmer leading-tight drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">Build the Revelation</h2>
                                     <p className="text-zinc-400 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light max-w-xl mx-auto">
                                         We are raising <span className="text-white font-black">$2,500</span> to secure a <span className="text-aether-gold font-black">High-End Cinematic Workstation</span> for the 400 Series. This hardware will allow us to render 8K AI-enhanced masterpieces with absolute prophetic clarity.
                                     </p>
@@ -576,12 +577,12 @@ export default function Gateway() {
                                 <div className="space-y-4 max-w-md mx-auto">
                                     <div className="flex justify-between items-end">
                                         <span className="text-[10px] font-black text-white uppercase tracking-widest">Hardware Goal</span>
-                                        <span className="text-[10px] font-mono text-aether-gold">$2,500</span>
+                                        <span className="text-[10px] font-mono text-aether-gold font-black">$2,500</span>
                                     </div>
                                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                                         <motion.div 
                                             initial={{ width: 0 }}
-                                            animate={{ width: '15%' }} // Placeholder progress
+                                            animate={{ width: '15%' }} 
                                             className="h-full bg-aether-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"
                                         />
                                     </div>
@@ -602,7 +603,7 @@ export default function Gateway() {
                                                 <h4 className="text-[10px] font-black uppercase text-white tracking-widest">{item.title}</h4>
                                                 <p className="text-[8px] text-zinc-500 uppercase leading-relaxed">{item.desc}</p>
                                             </div>
-                                            <div className="text-[10px] font-mono text-aether-gold/50">{item.price}</div>
+                                            <div className="text-[10px] font-mono text-aether-gold/70 font-black">{item.price}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -612,7 +613,7 @@ export default function Gateway() {
                                         href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="block w-full bg-aether-gold text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(212,175,55,0.4)] hover:scale-105 transition-all border border-black/10"
+                                        className="block w-full bg-aether-gold text-[#050505] py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(212,175,55,0.4)] hover:scale-105 transition-all border border-black/20"
                                     >
                                         Initiate Contribution
                                     </a>
