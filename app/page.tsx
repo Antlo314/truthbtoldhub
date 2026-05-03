@@ -38,7 +38,8 @@ import {
     User,
     Wallet,
     LogOut,
-    Key
+    Key,
+    AlertTriangle
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -79,6 +80,7 @@ export default function Gateway() {
     const [isMounted, setIsMounted] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
+    const [isAscended, setIsAscended] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     
@@ -111,16 +113,6 @@ export default function Gateway() {
     // Prophetic Alignment State
     const [alignment, setAlignment] = useState(98.4);
 
-    // Scripture Decryptor State
-    const [decryptedText, setDecryptedText] = useState("GENESIS 15:13");
-    const verses = [
-        "GENESIS 15:13",
-        "KNOW FOR CERTAIN",
-        "400 YEARS",
-        "STRANGERS IN A COUNTRY",
-        "THE ECHO REMAINS"
-    ];
-
     // AI Chat Integration
     const { messages, sendMessage, status } = useChat();
     const [input, setInput] = useState('');
@@ -136,16 +128,15 @@ export default function Gateway() {
             if (user) fetchProfile(user.id);
         });
 
+        // Check for Ascension flag (Signal Stability Model)
+        const ascended = localStorage.getItem('protocol_ascended') === 'true';
+        setIsAscended(ascended);
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
             if (session?.user) fetchProfile(session.user.id);
             else setProfile(null);
         });
-
-        // Scripture Decryptor Loop
-        const interval = setInterval(() => {
-            setDecryptedText(verses[Math.floor(Math.random() * verses.length)]);
-        }, 3000);
 
         // Global Pulse Loop
         const pulseInterval = setInterval(() => {
@@ -155,7 +146,6 @@ export default function Gateway() {
 
         return () => {
             subscription.unsubscribe();
-            clearInterval(interval);
             clearInterval(pulseInterval);
         };
     }, []);
@@ -169,6 +159,9 @@ export default function Gateway() {
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
+        // We keep isAscended true even if they log out of a temporary session? 
+        // Actually if they logout, they might want to clear everything. 
+        // But user said "remains open", so we keep isAscended.
         router.refresh();
     };
 
@@ -303,6 +296,9 @@ export default function Gateway() {
 
     if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
 
+    // Signal Stability Logic: If isAscended is true, they are effectively UNLOCKED.
+    const isUnlocked = user || isAscended;
+
     const LockedOverlay = ({ title }: { title: string }) => (
         <div className="absolute inset-0 bg-[#050505]/90 backdrop-blur-xl z-[40] flex flex-col items-center justify-center p-8 text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/20">
@@ -425,21 +421,6 @@ export default function Gateway() {
                     to { transform: translateX(-100%); }
                 }
 
-                .decrypting-text::before {
-                    content: '010101';
-                    position: absolute;
-                    inset: 0;
-                    color: rgba(255,255,255,0.1);
-                    z-index: -1;
-                    filter: blur(1px);
-                    animation: decryptShuffle 0.5s infinite;
-                }
-                @keyframes decryptShuffle {
-                    0% { transform: translate(2px, 0); }
-                    50% { transform: translate(-2px, 1px); }
-                    100% { transform: translate(0, -1px); }
-                }
-
                 .artifact-glitch {
                     animation: artGlitch 0.2s infinite;
                 }
@@ -489,6 +470,19 @@ export default function Gateway() {
                             </div>
                             <button onClick={handleLogout} className="text-white/40 hover:text-white transition-colors">
                                 <LogOut className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : isAscended ? (
+                        <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 px-6 py-2.5 rounded-full backdrop-blur-xl">
+                            <div className="flex items-center gap-3">
+                                <AlertTriangle className="w-3 h-3 text-red-500 animate-pulse" />
+                                <span className="text-[8px] font-black uppercase tracking-widest text-red-500">Signal Unstable</span>
+                            </div>
+                            <button 
+                                onClick={navigateToTrial}
+                                className="text-[8px] font-black uppercase tracking-widest text-white hover:text-aether-gold transition-colors"
+                            >
+                                Secure Link
                             </button>
                         </div>
                     ) : (
@@ -561,9 +555,9 @@ export default function Gateway() {
                         </div>
                     </div>
 
-                    {/* Prophetic AI Oracle (GATED) */}
+                    {/* Prophetic AI Oracle (GATED / SIGNAL UNSTABLE) */}
                     <div className="bento-card col-span-2 md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[500px] relative overflow-hidden">
-                        {!user && <LockedOverlay title="The Oracle" />}
+                        {!isUnlocked && <LockedOverlay title="The Oracle" />}
                         <div className="data-glitch" />
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
@@ -620,9 +614,9 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* SELF / PROFILE CARD (GATED) */}
+                    {/* SELF / PROFILE CARD (GATED / SIGNAL UNSTABLE) */}
                     <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent">
-                        {!user && <LockedOverlay title="Profile Access" />}
+                        {!isUnlocked && <LockedOverlay title="Profile Access" />}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
@@ -632,28 +626,36 @@ export default function Gateway() {
                                         <User className="w-8 h-8 text-white/20" />
                                     )}
                                 </div>
-                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest border-white/20 text-white/40`}>
-                                    {profile?.aura_color || 'Neutral'} Aura
+                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
+                                    {isAscended && !user ? 'Unstable Signal' : (profile?.aura_color || 'Neutral')}
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <h3 className="font-ritual text-2xl font-black uppercase tracking-[0.1em] text-white">{profile?.username || 'The Prophet'}</h3>
+                                <h3 className="font-ritual text-2xl font-black uppercase tracking-[0.1em] text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
                                 <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
-                                    {profile?.bio || 'Initializing neural-link with the 400 Series archives...'}
+                                    {profile?.bio || (isAscended ? 'Your frequency is active but temporary. Link an email to claim your permanent Aura.' : 'Initializing neural-link with the 400 Series archives...')}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 pt-6 border-t border-white/5">
                             <div className="flex flex-col">
                                 <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Protocol ID</span>
-                                <span className="text-[9px] font-mono text-white/60">TBT-{user?.id?.slice(0, 8).toUpperCase() || 'OFFLINE'}</span>
+                                <span className="text-[9px] font-mono text-white/60">TBT-{user?.id?.slice(0, 8).toUpperCase() || (isAscended ? 'TEMP-SYNC' : 'OFFLINE')}</span>
                             </div>
+                            {isAscended && !user && (
+                                <button 
+                                    onClick={navigateToTrial}
+                                    className="ml-auto px-4 py-1.5 bg-red-500 text-white rounded-lg text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                                >
+                                    Secure Link
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {/* THE POOL / TREASURY (GATED) */}
+                    {/* THE POOL / TREASURY (GATED / SIGNAL UNSTABLE) */}
                     <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent">
-                        {!user && <LockedOverlay title="The Pool" />}
+                        {!isUnlocked && <LockedOverlay title="The Pool" />}
                         <div className="space-y-8">
                             <div className="flex items-center justify-between">
                                 <div className="w-12 h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
@@ -719,9 +721,9 @@ export default function Gateway() {
                         </div>
                     </div>
 
-                    {/* Global Pulse Terminal (GATED) */}
+                    {/* Global Pulse Terminal (GATED / SIGNAL UNSTABLE) */}
                     <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[350px] overflow-hidden relative">
-                        {!user && <LockedOverlay title="The Global Pulse" />}
+                        {!isUnlocked && <LockedOverlay title="The Global Pulse" />}
                         <div className="flex items-center gap-4 mb-6">
                             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
                                 <Signal className="w-5 h-5 text-white animate-pulse" />
@@ -781,9 +783,9 @@ export default function Gateway() {
                          </div>
                     </div>
 
-                    {/* Historical Timeline (GATED) */}
+                    {/* Historical Timeline (GATED / SIGNAL UNSTABLE) */}
                     <div className="bento-card col-span-2 md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-12 relative overflow-hidden">
-                        {!user && <LockedOverlay title="The Timeline" />}
+                        {!isUnlocked && <LockedOverlay title="The Timeline" />}
                         <div className="flex flex-col gap-6 max-w-xl text-center md:text-left relative z-10">
                             <div className="flex items-center justify-center md:justify-start gap-4 text-white">
                                 <History className="w-6 h-6" />

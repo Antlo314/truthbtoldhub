@@ -61,9 +61,15 @@ export default function TheTrial() {
                 accessGrantedSfx?.play();
                 setHistory(prev => [...prev, "[ SYSTEM ] CIPHER ACCEPTED. TIER UPGRADE AUTHORIZED.", "[ SYSTEM ] WELCOME TO THE ARCHITECT CHAMBER."]);
                 setIsGranted(true);
+                
+                // Set the unlock flag in localStorage
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('protocol_ascended', 'true');
+                }
+
                 setTimeout(() => {
-                    router.push('/self'); // Send them to Soul Matrix after ascension
-                }, 3000);
+                    router.push('/'); // Redirect back to the Hub (Home)
+                }, 2000);
             } else if (cmd === 'HELP') {
                 setHistory(prev => [...prev, "Available Commands: HELP, CLEAR, [REDACTED]"]);
             } else if (cmd === 'CLEAR') {
@@ -100,7 +106,7 @@ export default function TheTrial() {
     };
 
     return (
-        <div className="min-h-screen bg-void text-aether-gold font-mono p-4 md:p-8 flex flex-col justify-center items-center selection:bg-aether-gold/30 relative overflow-hidden">
+        <div className="min-h-screen bg-[#050505] text-aether-gold font-mono p-4 md:p-8 flex flex-col justify-center items-center selection:bg-aether-gold/30 relative overflow-hidden">
             {/* Background Texture & Overlays */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.05)_0%,transparent_50%)]" />
@@ -112,7 +118,7 @@ export default function TheTrial() {
 
             <div 
                 ref={containerRef} 
-                className="w-full max-w-4xl glass-panel rounded-[2rem] p-8 flex flex-col h-[75vh] shadow-[0_0_100px_rgba(212,175,55,0.05)] relative overflow-hidden border-white/5"
+                className="w-full max-w-4xl bg-white/[0.02] backdrop-blur-3xl rounded-[2rem] p-8 flex flex-col h-[75vh] shadow-[0_0_100px_rgba(212,175,55,0.05)] relative overflow-hidden border border-white/5"
                 onMouseMove={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -142,7 +148,7 @@ export default function TheTrial() {
                         <Terminal className="w-5 h-5 text-aether-gold" />
                     </div>
                     <div className="flex flex-col">
-                        <h1 className="text-sm tracking-[0.4em] font-black uppercase gold-shimmer">Aetheric Initiation Protocol</h1>
+                        <h1 className="text-sm tracking-[0.4em] font-black uppercase text-white">Aetheric Initiation Protocol</h1>
                         <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-1">Terminal ID: AX-990-VOID | Auth Level: REDACTED</span>
                     </div>
                     <div className="ml-auto flex items-center gap-4">
@@ -153,7 +159,7 @@ export default function TheTrial() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-4 hide-scrollbar">
                     {history.map((line, i) => (
                         <div key={i} className={`text-xs tracking-[0.1em] font-mono leading-relaxed ${
                             line.includes('ERR:') ? 'text-red-500' : 
@@ -173,7 +179,7 @@ export default function TheTrial() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            className="flex-1 bg-transparent border-none outline-none text-white tracking-[0.2em] font-mono text-sm placeholder:text-zinc-700"
+                            className="flex-1 bg-transparent border-none outline-none text-white tracking-[0.2em] font-mono text-sm placeholder:text-zinc-700 uppercase"
                             placeholder="Enter Command..."
                             autoFocus
                         />
@@ -186,10 +192,10 @@ export default function TheTrial() {
             </div>
 
             <button 
-                onClick={() => router.push('/sanctum')} 
+                onClick={() => router.push('/')} 
                 onMouseMove={handleMagneticMove}
                 onMouseLeave={handleMagneticLeave}
-                className="mt-12 text-[10px] text-zinc-500 hover:text-white uppercase tracking-[0.4em] font-black px-10 py-4 glass-panel border-white/5 rounded-full transition-all z-10"
+                className="mt-12 text-[10px] text-zinc-500 hover:text-white uppercase tracking-[0.4em] font-black px-10 py-4 bg-white/5 border border-white/5 rounded-full transition-all z-10"
             >
                 Abort Protocol
             </button>
