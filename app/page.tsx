@@ -33,7 +33,8 @@ import {
     ScrollText,
     SkipForward,
     VolumeX,
-    SkipBack
+    SkipBack,
+    Signal
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -88,6 +89,22 @@ export default function Gateway() {
         { title: 'Wilderness Whispers', genre: 'Spiritual Nature', file: '/audio/Wilderness Whispers.mp3' }
     ];
 
+    // Global Pulse State
+    const [pulseLog, setPulseLog] = useState<string[]>([]);
+    const signals = [
+        "SIGNAL DETECTED: LAGOS, NIGERIA",
+        "PROPHETIC ALIGNMENT: 98.4%",
+        "SIGNAL DETECTED: ATLANTA, GA",
+        "HISTORICAL SYNC: 1619 PROTOCOL ACTIVE",
+        "DECRYPTION COMPLETE: GENESIS 15:13",
+        "AETHERIC FREQUENCY: 432HZ STABLE",
+        "SIGNAL DETECTED: LONDON, UK",
+        "RESTORED ARCHIVE ACCESS: PHASE 01"
+    ];
+
+    // Prophetic Alignment State
+    const [alignment, setAlignment] = useState(98.4);
+
     // Scripture Decryptor State
     const [decryptedText, setDecryptedText] = useState("GENESIS 15:13");
     const verses = [
@@ -111,7 +128,17 @@ export default function Gateway() {
         const interval = setInterval(() => {
             setDecryptedText(verses[Math.floor(Math.random() * verses.length)]);
         }, 3000);
-        return () => clearInterval(interval);
+
+        // Global Pulse Loop
+        const pulseInterval = setInterval(() => {
+            setPulseLog(prev => [signals[Math.floor(Math.random() * signals.length)], ...prev].slice(0, 10));
+            setAlignment(prev => +(prev + (Math.random() * 0.2 - 0.1)).toFixed(1));
+        }, 4000);
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(pulseInterval);
+        };
     }, []);
 
     useEffect(() => {
@@ -120,24 +147,29 @@ export default function Gateway() {
         }
     }, [messages]);
 
-    const toggleAudio = () => {
-        if (!audioRef.current) return;
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.play().catch(e => console.log("Audio play blocked."));
+    // Audio Sync Effect
+    useEffect(() => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.play().catch(() => setIsPlaying(false));
+            } else {
+                audioRef.current.pause();
+            }
         }
+    }, [isPlaying, currentTrack]);
+
+    const toggleAudio = () => {
         setIsPlaying(!isPlaying);
     };
 
     const nextTrack = () => {
         setCurrentTrack((prev) => (prev + 1) % tracks.length);
-        setIsPlaying(false);
+        setIsPlaying(true);
     };
 
     const prevTrack = () => {
         setCurrentTrack((prev) => (prev - 1 + tracks.length) % tracks.length);
-        setIsPlaying(false);
+        setIsPlaying(true);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +270,7 @@ export default function Gateway() {
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
-            <audio ref={audioRef} key={currentTrack} src={tracks[currentTrack].file} loop />
+            <audio ref={audioRef} key={currentTrack} src={tracks[currentTrack].file} onEnded={nextTrack} />
             
             <style jsx global>{`
                 .liquid-glass {
@@ -354,6 +386,15 @@ export default function Gateway() {
                     50% { transform: translate(-2px, 1px); }
                     100% { transform: translate(0, -1px); }
                 }
+
+                .artifact-glitch {
+                    animation: artGlitch 0.2s infinite;
+                }
+                @keyframes artGlitch {
+                    0% { opacity: 0.8; transform: skewX(1deg); }
+                    50% { opacity: 0.2; transform: skewX(-2deg); }
+                    100% { opacity: 0.8; transform: skewX(0); }
+                }
             `}</style>
 
             <div className="film-grain" />
@@ -371,7 +412,11 @@ export default function Gateway() {
                         </div>
                         <div className="hidden sm:flex flex-col">
                             <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
-                            <span className="text-[7px] font-mono text-white uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[7px] font-mono text-white uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
+                                <div className="h-[1px] w-4 bg-white/20"></div>
+                                <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest mt-0.5 animate-pulse">Alignment: {alignment}%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -420,8 +465,8 @@ export default function Gateway() {
             <section id="master-bento" className="relative pb-48 px-4 md:px-12 max-w-[100rem] mx-auto">
                 <div className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(200px,_auto)] gap-4 md:gap-8">
                     
-                    {/* Main Cinematic Feature */}
-                    <div className="bento-card col-span-2 md:col-span-8 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2 min-h-[400px]">
+                    {/* Main Cinematic Feature (WITH ARTIFACT FLASH EFFECT) */}
+                    <div className="bento-card col-span-2 md:col-span-8 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2 min-h-[400px] relative">
                         <div className="h-full relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
                                 className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-[1.01]"
@@ -429,8 +474,14 @@ export default function Gateway() {
                                 title="400 - Genesis 15"
                                 allowFullScreen
                             ></iframe>
+                            {/* Flash Artifact Effect on Hover */}
+                            <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center overflow-hidden">
+                                <div className="absolute inset-0 bg-white/5 backdrop-blur-sm z-10" />
+                                <div className="artifact-glitch relative z-20 text-[10rem] font-ritual text-white/10 mix-blend-overlay">GENESIS</div>
+                            </div>
+                            
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none group-hover:opacity-40 transition-opacity"></div>
-                            <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:left-12 flex justify-between items-end pointer-events-none">
+                            <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:left-12 flex justify-between items-end pointer-events-none z-30">
                                 <div className="space-y-4">
                                     <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-xl">
                                         <Play className="w-3 h-3 text-white" />
@@ -500,7 +551,7 @@ export default function Gateway() {
                         </form>
                     </div>
 
-                    {/* Aether Player (INTERACTIVE MUSIC) */}
+                    {/* Aether Player (INTERACTIVE MUSIC - FIXED) */}
                     <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] bg-gradient-to-br from-white/5 to-transparent">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
@@ -537,34 +588,29 @@ export default function Gateway() {
                         </div>
                     </div>
 
-                    {/* Scripture Decryptor (INTERACTIVE VERSE) */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-black/40 min-h-[350px]">
-                        <div className="space-y-8">
-                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                                <ScrollText className="w-6 h-6 text-white/50" />
+                    {/* Global Pulse Terminal (NEW CARD) */}
+                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[350px] overflow-hidden">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                <Signal className="w-5 h-5 text-white animate-pulse" />
                             </div>
-                            <div className="relative">
-                                <AnimatePresence mode="wait">
-                                    <motion.h4 
-                                        key={decryptedText}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: 10 }}
-                                        className="font-ritual text-2xl md:text-3xl font-black uppercase tracking-[0.1em] text-white leading-tight decrypting-text"
-                                    >
-                                        {decryptedText}
-                                    </motion.h4>
-                                </AnimatePresence>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Pulse</span>
+                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Verification Feed</span>
                             </div>
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <span className="text-[7px] font-mono text-white/40 uppercase tracking-[0.3em]">Status: Decrypting Source</span>
-                                <div className="flex-1 h-[1px] bg-white/5" />
-                            </div>
-                            <p className="text-[8px] text-white uppercase font-black tracking-widest leading-relaxed">
-                                Linking Diaspora events to biblical timestamps in real-time.
-                            </p>
+                        <div className="flex-1 space-y-3 font-mono text-[8px] overflow-hidden">
+                            {pulseLog.map((log, i) => (
+                                <motion.div 
+                                    key={i} 
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-3 text-white/40 hover:text-white transition-colors cursor-default"
+                                >
+                                    <span className="text-aether-gold">{'>'}</span>
+                                    <span className="uppercase tracking-widest">{log}</span>
+                                </motion.div>
+                            ))}
                         </div>
                     </div>
 
