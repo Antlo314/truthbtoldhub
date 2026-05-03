@@ -200,7 +200,7 @@ export default function SanctumHub() {
                 <div className="flex items-center gap-6">
                     <div className="flex flex-col">
                         <span className="font-ritual text-xl font-bold tracking-[0.2em] leading-none text-white gold-shimmer">
-                            SACRED SANCTUM
+                            Truth B Told Hub
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                             <div className="flex items-center h-2 gap-[1px]">

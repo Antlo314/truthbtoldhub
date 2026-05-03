@@ -187,12 +187,8 @@ export default function Gateway() {
     };
 
     const handleInitiate = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            router.push('/sanctum');
-        } else {
-            document.getElementById('portal-section')?.scrollIntoView({ behavior: 'smooth' });
-        }
+        // Site is focused on landing page for now
+        document.getElementById('bento-section')?.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
@@ -203,13 +199,20 @@ export default function Gateway() {
             
             {/* Global Navigation Header - Aetheric */}
             <nav className="fixed top-0 w-full z-[100] px-8 py-8 flex justify-between items-center pointer-events-none">
-                <div className="flex items-center gap-4 pointer-events-auto group cursor-pointer" onClick={() => router.push('/')}>
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-aether-gold/50 transition-colors duration-500">
-                        <Sparkles className="w-6 h-6 text-aether-gold group-hover:scale-110 transition-transform duration-500" />
+                <div className="flex items-center gap-6 pointer-events-auto">
+                    <div className="flex items-center gap-4 pointer-events-auto group cursor-pointer" onClick={() => router.push('/')}>
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-aether-gold/50 transition-colors duration-500 overflow-hidden">
+                            <img src="/logo.png" alt="TBT" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform duration-500" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="font-ritual text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
+                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Sovereign Architecture</span>
+                        </div>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="font-ritual text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Sacred Sanctum</span>
-                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Sovereign Architecture</span>
+
+                    <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-black/60 border border-white/5 rounded-full backdrop-blur-xl">
+                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]"></div>
+                        <span className="text-[7px] font-mono text-zinc-400 uppercase tracking-widest">Encrypted Sectors: Offline</span>
                     </div>
                 </div>
                 
@@ -248,8 +251,8 @@ export default function Gateway() {
                     </div>
 
                     <div className="space-y-6 md:space-y-8">
-                        <h1 className="font-ritual text-5xl sm:text-7xl md:text-[10rem] lg:text-[12rem] font-black leading-[0.9] md:leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4">
-                            SACRED <br className="hidden md:block" /> SANCTUM
+                        <h1 className="font-ritual text-5xl sm:text-7xl md:text-[8rem] lg:text-[10rem] font-black leading-[0.9] md:leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4">
+                            TRUTH B <br className="hidden md:block" /> TOLD HUB
                         </h1>
                         <p className="text-sm md:text-2xl font-light text-zinc-500 max-w-4xl mx-auto tracking-[0.1em] leading-relaxed uppercase px-6">
                             Ascend beyond the veil. A sovereign repository of <span className="text-white font-black">Celestial Prophecy</span> and <span className="text-aether-gold font-black">Global Truth</span>.
@@ -263,7 +266,7 @@ export default function Gateway() {
                             onMouseLeave={handleMagneticLeave}
                             className="px-16 py-6 bg-white text-black rounded-2xl flex items-center gap-4 group shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-105 transition-transform duration-500"
                         >
-                            <span className="text-xs font-black uppercase tracking-[0.2em]">Initiate Ascension</span>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Access Archive</span>
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                         <a 
@@ -611,7 +614,7 @@ export default function Gateway() {
                 </div>
                 <div className="space-y-4">
                     <p className="text-[10px] font-black tracking-[0.8em] text-zinc-600 uppercase">
-                        Protocol A-25 • Sacred Sanctum Sanctuary
+                        Protocol A-25 • Truth B Told Hub
                     </p>
                     <p className="text-[9px] font-black tracking-[0.5em] text-zinc-800 uppercase">
                         Designed for Sovereignty • <span className="text-aether-gold/30">8K Rendered Truth</span>
@@ -642,8 +645,8 @@ export default function Gateway() {
                             </button>
                             
                             <div className="text-center space-y-8">
-                                <div className="w-24 h-24 bg-aether-gold/10 rounded-[2rem] flex items-center justify-center mx-auto border border-aether-gold/20">
-                                    <LayoutGrid className="w-12 h-12 text-aether-gold" />
+                                <div className="w-24 h-24 bg-black/60 rounded-[2rem] flex items-center justify-center mx-auto border border-white/10 overflow-hidden shadow-2xl">
+                                    <img src="/logo.png" alt="TBT" className="w-14 h-14 object-contain" />
                                 </div>
                                 <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Fuel the Mission</h2>
                                 <p className="text-zinc-500 leading-relaxed uppercase tracking-[0.1em] font-light">

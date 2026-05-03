@@ -120,7 +120,7 @@ export default function SentinelGuide({ steps, protocolName, onComplete, isOpen,
                         left: highlightRect.left - 4,
                         width: highlightRect.width + 8,
                         height: highlightRect.height + 8,
-                    }}
+                    } as any}
                 >
                     <div className="absolute inset-0 border border-orange-500 animate-ping opacity-20"></div>
                 </motion.div>

@@ -34,7 +34,7 @@ export default function Cineworks() {
 
     const handleShare = async () => {
         try {
-            await navigator.clipboard.writeText("Awakening initiated. Watch the latest transmission on Sacred Sanctum. https://truthbtoldhub.com/cineworks");
+            await navigator.clipboard.writeText("Awakening initiated. Watch the latest transmission on Truth B Told Hub. https://truthbtoldhub.com/cineworks");
             alert("Coordinates copied to your clipboard. Awaken the masses.");
         } catch (err) {
             console.error("Failed to copy", err);

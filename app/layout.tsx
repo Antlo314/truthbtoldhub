@@ -7,21 +7,21 @@ const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfa
 
 export const metadata: Metadata = {
     title: {
-        template: '%s | Sacred Sanctum',
-        default: 'Sacred Sanctum | The Aetheric Sanctuary',
+        template: '%s | Truth B Told Hub',
+        default: 'Truth B Told Hub | The Sovereign Ledger',
     },
-    description: 'Enter the Aetheric Sanctuary. An elegant repository of prophetic breakdowns, geopolitical radar tracking, and celestial truth. Unlearn everything.',
+    description: 'Enter the Truth B Told Hub. An elegant repository of prophetic breakdowns, geopolitical radar tracking, and celestial truth. Unlearn everything.',
     openGraph: {
-        title: 'Sacred Sanctum | TruthBTold Hub',
+        title: 'Truth B Told Hub | The Sovereign Ledger',
         description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events in an ethereal space.',
         url: 'https://truthbtoldhub.com',
-        siteName: 'Sacred Sanctum',
+        siteName: 'Truth B Told Hub',
         images: [
             {
                 url: 'https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg',
                 width: 1200,
                 height: 630,
-                alt: 'Sacred Sanctum Preview'
+                alt: 'Truth B Told Hub Preview'
             },
         ],
         locale: 'en_US',
@@ -29,12 +29,17 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Sacred Sanctum | Aetheric Sanctuary',
+        title: 'Truth B Told Hub | Aetheric Sanctuary',
         description: 'Explore deep biblical prophecy and end-times geopolitical radar in a premium celestial environment.',
         creator: '@truufbtold',
         images: ['https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg'],
     },
     metadataBase: new URL('https://truthbtoldhub.com'),
+    icons: {
+        icon: '/favicon.png',
+        shortcut: '/favicon.png',
+        apple: '/favicon.png',
+    },
 };
 
 export default function RootLayout({
