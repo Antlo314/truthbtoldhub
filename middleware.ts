@@ -9,7 +9,6 @@ export function middleware(request: NextRequest) {
     '/codex',
     '/self',
     '/treasury',
-    '/trial',
     '/vault',
     '/archive',
     '/cineworks'
@@ -28,7 +27,6 @@ export const config = {
     '/codex/:path*',
     '/self/:path*',
     '/treasury/:path*',
-    '/trial/:path*',
     '/vault/:path*',
     '/archive/:path*',
     '/cineworks/:path*'

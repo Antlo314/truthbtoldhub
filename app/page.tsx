@@ -139,6 +139,7 @@ export default function Gateway() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
             if (session?.user) fetchProfile(session.user.id);
+            else setProfile(null);
         });
 
         // Scripture Decryptor Loop
@@ -166,7 +167,13 @@ export default function Gateway() {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        router.push('/');
+        setUser(null);
+        setProfile(null);
+        router.refresh();
+    };
+
+    const navigateToTrial = () => {
+        router.push('/trial');
     };
 
     useEffect(() => {
@@ -177,14 +184,14 @@ export default function Gateway() {
 
     // Audio Sync Effect
     useEffect(() => {
-        if (audioRef.current) {
+        if (audioRef.current && isMounted) {
             if (isPlaying) {
                 audioRef.current.play().catch(() => setIsPlaying(false));
             } else {
                 audioRef.current.pause();
             }
         }
-    }, [isPlaying, currentTrack]);
+    }, [isPlaying, currentTrack, isMounted]);
 
     const toggleAudio = () => {
         setIsPlaying(!isPlaying);
@@ -306,7 +313,7 @@ export default function Gateway() {
                 <p className="text-[8px] text-white/40 uppercase tracking-[0.2em] max-w-[200px]">Authentication required to decrypt {title}.</p>
             </div>
             <button 
-                onClick={() => router.push('/trial')}
+                onClick={navigateToTrial}
                 className="px-6 py-3 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform"
             >
                 Initialize Profile
@@ -471,8 +478,12 @@ export default function Gateway() {
                     {user ? (
                         <div className="flex items-center gap-6 bg-white/5 border border-white/10 px-6 py-2.5 rounded-full backdrop-blur-xl">
                             <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                                    <User className="w-3 h-3 text-white" />
+                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-3 h-3 text-white" />
+                                    )}
                                 </div>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-white">{profile?.username || 'Prophet'}</span>
                             </div>
@@ -482,7 +493,7 @@ export default function Gateway() {
                         </div>
                     ) : (
                         <button 
-                            onClick={() => router.push('/trial')}
+                            onClick={navigateToTrial}
                             className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all"
                         >
                             Initialize
@@ -610,7 +621,7 @@ export default function Gateway() {
                     </div>
 
                     {/* SELF / PROFILE CARD (GATED) */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent">
                         {!user && <LockedOverlay title="Profile Access" />}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
@@ -621,7 +632,7 @@ export default function Gateway() {
                                         <User className="w-8 h-8 text-white/20" />
                                     )}
                                 </div>
-                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${profile?.aura_color ? `border-${profile.aura_color}/30 text-${profile.aura_color}` : 'border-white/20 text-white/40'}`}>
+                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest border-white/20 text-white/40`}>
                                     {profile?.aura_color || 'Neutral'} Aura
                                 </div>
                             </div>
@@ -635,13 +646,13 @@ export default function Gateway() {
                         <div className="flex items-center gap-4 pt-6 border-t border-white/5">
                             <div className="flex flex-col">
                                 <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Protocol ID</span>
-                                <span className="text-[9px] font-mono text-white/60">TBT-{user?.id?.slice(0, 8).toUpperCase()}</span>
+                                <span className="text-[9px] font-mono text-white/60">TBT-{user?.id?.slice(0, 8).toUpperCase() || 'OFFLINE'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* THE POOL / TREASURY (GATED) */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent">
                         {!user && <LockedOverlay title="The Pool" />}
                         <div className="space-y-8">
                             <div className="flex items-center justify-between">
@@ -672,7 +683,7 @@ export default function Gateway() {
                     </div>
 
                     {/* Aether Player (ALWAYS UNLOCKED) */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] bg-gradient-to-br from-white/5 to-transparent">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[350px] bg-gradient-to-br from-white/5 to-transparent">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
@@ -709,7 +720,7 @@ export default function Gateway() {
                     </div>
 
                     {/* Global Pulse Terminal (GATED) */}
-                    <div className="bento-card col-span-1 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[350px] overflow-hidden relative">
+                    <div className="bento-card col-span-2 md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[350px] overflow-hidden relative">
                         {!user && <LockedOverlay title="The Global Pulse" />}
                         <div className="flex items-center gap-4 mb-6">
                             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
