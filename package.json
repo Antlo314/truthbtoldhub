@@ -9,12 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.67",
+    "@ai-sdk/openai": "^3.0.58",
+    "@ai-sdk/react": "^3.0.176",
     "@google/generative-ai": "^0.24.1",
     "@gsap/react": "^2.1.2",
     "@stripe/stripe-js": "^8.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tailwindcss/postcss": "^4.2.1",
-    "clsx": "latest",
+    "ai": "^6.0.174",
+    "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
     "elevenlabs": "^1.59.0",
     "elevenlabs-node": "^2.0.3",
@@ -22,7 +26,7 @@
     "framer-motion": "^12.34.5",
     "gsap": "^3.14.2",
     "howler": "^2.2.4",
-    "lucide-react": "latest",
+    "lucide-react": "^1.14.0",
     "next": "latest",
     "pg": "^8.20.0",
     "puppeteer": "^24.37.5",
@@ -31,7 +35,7 @@
     "react-draggable": "^4.5.0",
     "rss-parser": "^3.13.0",
     "stripe": "^20.4.0",
-    "tailwind-merge": "latest",
+    "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
