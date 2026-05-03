@@ -198,7 +198,6 @@ export default function Gateway() {
         setExpandedCard(expandedCard === cardId ? null : cardId);
     };
 
-    // AI Chat Handler
     const handleAiSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!aiInput.trim() || isLoadingAi) return;
@@ -209,7 +208,6 @@ export default function Gateway() {
         setAiInput('');
     };
 
-    // Community Chat Handler
     const handleCommunitySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!communityInput.trim() || !user) return;
@@ -220,13 +218,12 @@ export default function Gateway() {
         const { error } = await supabase.from('archive_messages').insert({
             content,
             author_id: user.id,
-            channel_id: 'global-general' // Fallback channel
+            channel_id: 'global-general'
         });
 
         if (error) console.error(error);
     };
 
-    // Audio Handlers
     const toggleAudio = () => {
         setIsPlaying(!isPlaying);
     };
@@ -265,7 +262,6 @@ export default function Gateway() {
     useGSAP(() => {
         if (!isMounted) return;
 
-        // Hero Reveal
         gsap.from('.hero-content > *', {
             y: 30,
             opacity: 0,
@@ -274,7 +270,6 @@ export default function Gateway() {
             ease: "power4.out"
         });
 
-        // Title Mouse Interaction
         const title = titleRef.current;
         if (title) {
             const text = "TRUTH B TOLD HUB";
@@ -306,7 +301,6 @@ export default function Gateway() {
             };
         }
 
-        // Bento Cards staggered entry
         gsap.from('.bento-card', {
             scrollTrigger: {
                 trigger: '#master-bento',
@@ -323,7 +317,6 @@ export default function Gateway() {
 
     if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
 
-    // Signal Stability Logic
     const isUnlocked = user || isAscended;
 
     const LockedOverlay = ({ title }: { title: string }) => (
@@ -428,11 +421,6 @@ export default function Gateway() {
                     opacity: 0.1;
                 }
 
-                @keyframes audioPulse {
-                    from { height: 10%; opacity: 0.2; }
-                    to { height: 100%; opacity: 1; }
-                }
-
                 .honor-ticker {
                     animation: tickerScroll 40s linear infinite;
                 }
@@ -528,11 +516,12 @@ export default function Gateway() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none group-hover:opacity-40 transition-opacity"></div>
                             <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 flex justify-between items-end pointer-events-none z-30">
                                 <h2 className="font-ritual text-2xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
+                                {expandedCard === 'main' ? <Minimize2 className="w-6 h-6 text-white/40" /> : <Maximize2 className="w-6 h-6 text-white/40" />}
                             </div>
                         </div>
                     </motion.div>
 
-                    {/* Global Archive (COMMUNITY CHAT) - NEW */}
+                    {/* Global Archive (COMMUNITY CHAT) */}
                     <motion.div 
                         layout
                         onClick={() => toggleExpand('chat')}
@@ -541,57 +530,35 @@ export default function Gateway() {
                         {!isUnlocked && <LockedOverlay title="The Archive" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span>
-                                    <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Community Whispers</span>
-                                </div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
+                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span><span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Community Whispers</span></div>
                             </div>
-                            {expandedCard === 'chat' ? <Minimize2 onClick={(e) => { e.stopPropagation(); toggleExpand('chat'); }} className="w-5 h-5 text-white/40" /> : <Maximize2 className="w-5 h-5 text-white/40" />}
                         </div>
-
-                        <div ref={communityChatRef} className="flex-1 overflow-y-auto space-y-4 hide-scrollbar mb-8 pr-2">
+                        <div className="flex-1 overflow-y-auto space-y-4 hide-scrollbar mb-8 pr-2">
                             {communityMessages.map((msg, i) => (
                                 <div key={i} className="flex flex-col space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">{msg.author?.username || 'Unknown'}</span>
-                                        <span className="text-[6px] font-mono text-zinc-600">{new Date(msg.created_at).toLocaleTimeString()}</span>
-                                    </div>
+                                    <div className="flex items-center gap-2"><span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">{msg.author?.username || 'Unknown'}</span><span className="text-[6px] font-mono text-zinc-600">{new Date(msg.created_at).toLocaleTimeString()}</span></div>
                                     <p className="text-[10px] text-white/70 font-mono tracking-wide leading-relaxed">{msg.content}</p>
                                 </div>
                             ))}
                         </div>
-
                         <form onSubmit={handleCommunitySubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input 
-                                value={communityInput}
-                                onChange={(e) => setCommunityInput(e.target.value)}
-                                disabled={!user}
-                                placeholder={user ? "Inject whisper..." : "Secure link to whisper"}
-                                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30"
-                            />
-                            <button type="submit" disabled={!user || !communityInput.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20">
-                                <Send className="w-4 h-4 text-black" />
-                            </button>
+                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder={user ? "Inject whisper..." : "Secure link to whisper"} className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
+                            <button type="submit" disabled={!user || !communityInput.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
                         </form>
                     </motion.div>
 
-                    {/* Prophetic AI Oracle */}
+                    {/* Prophetic AI Oracle (AI CHAT) */}
                     <motion.div 
                         layout
-                        onClick={() => !expandedCard && toggleExpand('oracle')}
+                        onClick={() => toggleExpand('oracle')}
                         className={`bento-card col-span-2 ${expandedCard === 'oracle' ? 'row-span-3 md:col-span-12' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Oracle" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">AI Oracle</span>
-                                    <span className="text-[7px] font-mono text-white uppercase tracking-widest">Decryption Engine</span>
-                                </div>
+                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">AI Oracle</span><span className="text-[7px] font-mono text-white uppercase tracking-widest">Decryption Engine</span></div>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
@@ -621,8 +588,16 @@ export default function Gateway() {
                                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
                                     {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
                                 </div>
+                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
+                                    {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
+                                </div>
                             </div>
-                            <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
+                            <div className="space-y-2">
+                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
+                                <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
+                                    {profile?.bio || (isAscended ? 'Frequency active but temporary.' : 'Initializing neural-link...')}
+                                </p>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -637,31 +612,115 @@ export default function Gateway() {
                             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
                             <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white">The Pool</h3>
                         </div>
-                        <div className="flex justify-between items-end"><span className="text-2xl font-ritual font-black text-white">$4,821</span></div>
+                        <div className="flex justify-between items-end">
+                            <span className="text-2xl font-ritual font-black text-white">$4,821</span>
+                            <button onClick={(e) => { e.stopPropagation(); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white"><ArrowRight className="w-4 h-4" /></button>
+                        </div>
                     </motion.div>
 
                     {/* Aether Player */}
                     <motion.div 
                         layout
                         onClick={() => toggleExpand('player')}
-                        className={`bento-card col-span-2 ${expandedCard === 'player' ? 'md:col-span-6 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] cursor-pointer`}
+                        className={`bento-card col-span-2 ${expandedCard === 'player' ? 'md:col-span-6 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer`}
                     >
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
                             <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
+                            <div className="flex flex-col">
+                                <p className="text-white text-[10px] uppercase font-black">{tracks[currentTrack].title}</p>
+                                <p className="text-aether-gold text-[7px] uppercase font-black opacity-60">{tracks[currentTrack].genre}</p>
+                            </div>
                         </div>
                         <div className="flex items-center justify-between gap-4" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipBack className="w-4 h-4" /></button>
                             <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
+                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipForward className="w-4 h-4" /></button>
+                        </div>
+                    </motion.div>
+
+                    {/* Global Pulse Terminal */}
+                    <motion.div 
+                        layout
+                        onClick={() => toggleExpand('pulse')}
+                        className={`bento-card col-span-1 ${expandedCard === 'pulse' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative cursor-pointer`}
+                    >
+                        {!isUnlocked && <LockedOverlay title="Global Pulse" />}
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10"><Signal className="w-5 h-5 text-white animate-pulse" /></div>
+                            <span className="text-[10px] font-black uppercase text-white">Global Pulse</span>
+                        </div>
+                        <div className="flex-1 space-y-3 font-mono text-[7px] overflow-hidden">
+                            {pulseLog.map((log, i) => (
+                                <div key={i} className="flex items-center gap-2 text-white/40"><span className="text-aether-gold">{'>'}</span><span className="uppercase truncate">{log}</span></div>
+                            ))}
+                        </div>
+                    </motion.div>
+
+                    {/* Hardware Milestone */}
+                    <motion.div 
+                        layout
+                        onClick={() => toggleExpand('hardware')}
+                        className={`bento-card col-span-1 ${expandedCard === 'hardware' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px] cursor-pointer`}
+                    >
+                        <div className="space-y-6">
+                            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
+                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setShowSupportOverlay(true); }} className="w-full bg-white text-black py-4 rounded-xl text-[8px] font-black uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)]">Boost</button>
+                    </motion.div>
+
+                    {/* The Prelude */}
+                    <motion.div 
+                        layout
+                        onClick={() => toggleExpand('prelude')}
+                        className={`bento-card col-span-2 ${expandedCard === 'prelude' ? 'md:col-span-12 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
+                    >
+                         <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
+                            <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" title="The Prelude"></iframe>
+                         </div>
+                         <div className="p-6 md:p-8"><h4 className="font-ritual text-xl font-black text-white">THE PRELUDE</h4></div>
+                    </motion.div>
+
+                    {/* Historical Timeline */}
+                    <motion.div 
+                        layout
+                        onClick={() => toggleExpand('timeline')}
+                        className={`bento-card col-span-2 ${expandedCard === 'timeline' ? 'md:col-span-12' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
+                    >
+                        {!isUnlocked && <LockedOverlay title="The Timeline" />}
+                        <div className="flex flex-col gap-6 max-w-xl text-center md:text-left relative z-10">
+                            <div className="flex items-center justify-center md:justify-start gap-4 text-white"><History className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-[0.5em]">Historical Cycle</span></div>
+                            <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
+                        </div>
+                        <div className="flex items-center gap-6 md:gap-12 relative z-10">
+                            {[2019, 1619, 'Gen'].map((year, i) => (
+                                <div key={i} className="flex flex-col items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-white"></div><span className="font-ritual text-lg md:text-2xl font-black text-white">{year}</span></div>
+                            ))}
                         </div>
                     </motion.div>
 
                 </motion.div>
+                
+                {/* WALL OF HONOR TICKER */}
+                <div className="mt-12 w-full overflow-hidden border-y border-white/5 py-4 whitespace-nowrap group">
+                    <div className="inline-block honor-ticker">
+                        {['TRUUTHBTOLD NODE', 'PROPHETIC CORE ACTIVE', 'DIASPORA ARCHIVE UNLOCKED', 'GENESIS 15:13 VERIFIED', 'AETHER AUDIO SYNCED', 'MASTER BENTO DEPLOYED'].map((text, i) => (
+                            <span key={i} className="mx-12 text-[9px] font-black uppercase tracking-[0.5em] text-white/20 hover:text-white transition-colors cursor-default">{text}</span>
+                        ))}
+                    </div>
+                </div>
             </section>
             </LayoutGroup>
 
+            {/* FOOTER */}
             <footer className="py-24 border-t border-white/10 text-center space-y-12 bg-void">
                 <div className="flex flex-col items-center gap-6">
-                    <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
+                    <div className="flex items-center gap-8 mb-4">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors"><YoutubeIcon className="w-6 h-6" /></a>
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors"><TikTokIcon className="w-6 h-6" /></a>
+                    </div>
+                    <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B TOLD HUB • 2026 Edition</p>
                 </div>
             </footer>
 
@@ -671,8 +730,10 @@ export default function Gateway() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto">
                         <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="liquid-glass rounded-[4rem] p-12 max-w-4xl w-full relative space-y-12 border-white/20">
                             <button onClick={() => setShowSupportOverlay(false)} className="absolute top-10 right-10 text-white hover:text-aether-gold p-3 bg-white/5 rounded-full border border-white/20"><Lock className="w-6 h-6" /></button>
-                            <h2 className="font-ritual text-6xl font-black uppercase gold-shimmer">The 400 Series Journey</h2>
-                            <a href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" target="_blank" className="inline-block px-12 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)]">Fuel Phase 01</a>
+                            <h2 className="font-ritual text-6xl font-black uppercase gold-shimmer text-center">The 400 Series Journey</h2>
+                            <div className="text-center">
+                                <a href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" target="_blank" className="inline-block px-12 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)]">Fuel Phase 01</a>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
