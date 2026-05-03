@@ -23,12 +23,47 @@ export default function PowerSelf() {
     const router = useRouter();
     const { user, profile, fetchIdentity, updateProfile, signOut: storeSignOut } = useSoulStore();
 
+    const handleSignOut = async () => {
+        await storeSignOut();
+        router.push('/');
+    };
+
     const [activeTab, setActiveTab] = useState('profile'); // profile | admin
     const [uploading, setUploading] = useState(false);
     const [isRecovery, setIsRecovery] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [globalRank, setGlobalRank] = useState<number | null>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
+
+    const uploadAvatar = async (event: any) => {
+        try {
+            setUploading(true);
+            if (!event.target.files || event.target.files.length === 0) {
+                throw new Error('You must select an image to upload.');
+            }
+
+            const file = event.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            await updateProfile({ avatar_url: publicUrl });
+            playClick();
+        } catch (error: any) {
+            alert(error.message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const SELF_PROTOCOL_STEPS: GuideStep[] = [
         {
@@ -60,6 +95,11 @@ export default function PowerSelf() {
 
     const playHover = () => uiHoverSfx?.play();
     const playClick = () => uiClickSfx?.play();
+
+    const handleGuideComplete = () => {
+        setIsGuideOpen(false);
+        localStorage.setItem('self_guide_complete', 'true');
+    };
 
     // GSAP Parallax Background
     useGSAP(() => {

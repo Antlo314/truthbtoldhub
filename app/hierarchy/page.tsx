@@ -311,9 +311,5 @@ export default function HierarchyPage() {
                 )}
             </main>
         </div>
-                    </>
-                )}
-            </main>
-        </div>
     );
 }

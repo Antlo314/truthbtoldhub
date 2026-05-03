@@ -24,6 +24,8 @@ if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
 }
 
+import { motion, AnimatePresence } from 'framer-motion';
+
 function CipherTracker() {
     const searchParams = useSearchParams();
     useEffect(() => {

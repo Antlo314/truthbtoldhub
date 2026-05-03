@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Compass, Cpu, Trophy, Star, ArrowRight } from 'lucide-react';
+import { Shield, Sparkles, ChevronRight, LogOut, Clapperboard, Compass, Cpu, Trophy, Star, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';

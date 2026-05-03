@@ -1,63 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+    ArrowLeft, 
+    Send, 
+    Shield, 
+    Sparkles, 
+    Lock, 
+    MessageSquare, 
+    X, 
+    Hexagon,
+    Database,
+    Zap,
+    LogOut
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useSoulStore } from '@/lib/store/useSoulStore';
-import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
-import { ArrowLeft, Sparkles, Send, Eye, Shield, Lock, Hexagon, Zap, LogOut, MessageSquare, X, Trash2, Flame } from 'lucide-react';
-import { Howl } from 'howler';
 import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
-import { TextPlugin } from 'gsap/TextPlugin';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import GenerativeIdenticon from '@/components/GenerativeIdenticon';
+import SentinelGuide from '@/components/guide/SentinelGuide';
 
-// --- AUDIO ASSETS ---
-let uiHoverSfx: any = null;
-let submitSfx: any = null;
-let encryptSfx: any = null;
-let ascendSfx: any = null;
-
-if (typeof window !== 'undefined') {
-    gsap.registerPlugin(TextPlugin, ScrollTrigger);
-
-    uiHoverSfx = new Howl({
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'],
-        volume: 0.1,
-    });
-
-    submitSfx = new Howl({
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'],
-        volume: 0.3,
-    });
-
-    encryptSfx = new Howl({
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3'],
-        volume: 0.1,
-    });
-
-    ascendSfx = new Howl({
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/cyber_sweep.mp3'],
-        volume: 0.4,
-    });
-}
-
-// Mock Data structure for Whispers if no table exists
-interface Whisper {
-    id: string;
-    content: string;
-    author: string;
-    alignment: number;
-    timestamp: string;
-    isEncrypted: boolean;
-    isNew?: boolean;
-    author_id?: string;
-    avatar_url?: string;
-    replies?: Reply[];
-}
-
-interface Reply {
+// --- Types ---
+type Reply = {
     id: string;
     whisper_id: string;
     author: string;
@@ -65,187 +29,243 @@ interface Reply {
     avatar_url?: string;
     content: string;
     timestamp: string;
-}
+};
 
-interface ProfileOverview {
+type Whisper = {
+    id: string;
+    content: string;
+    author: string;
+    author_id: string;
+    avatar_url?: string;
+    alignment: number;
+    timestamp: string;
+    isEncrypted?: boolean;
+    isNew?: boolean;
+    replies?: Reply[];
+};
+
+type ProfileOverview = {
     id: string;
     display_name: string;
-    soul_power: number;
-    tier: string;
-    created_at: string;
     avatar_url?: string;
+    tier: string;
+    soul_power: number;
     bio?: string;
     custom_title?: string;
-    theme_color?: string;
-}
+};
 
-const MOCK_WHISPERS: Whisper[] = [
-    {
-        id: 'w_001',
-        content: "The Architect moves in silence. Ensure your SP reserves are fortified before the next solar cycle.",
-        author: "Unknown Cipher",
-        alignment: 42,
-        timestamp: "1 HOUR AGO",
-        isEncrypted: false
-    },
-    {
-        id: 'w_002',
-        content: "0x89F2A... [DATA CORRUPTED] ...the sequence requires 4 pillars, not 3.",
-        author: "Initiate 77",
-        alignment: 12,
-        timestamp: "1 DAY AGO",
-        isEncrypted: true
-    },
-    {
-        id: 'w_003',
-        content: "We must push the 'Equipment Grant' petition to consensus today. The collective depends on it.",
-        author: "Soul Weaver",
-        alignment: 156,
-        timestamp: "2 DAYS AGO",
-        isEncrypted: false
-    }
+// --- Protocol Steps ---
+const CODEX_PROTOCOL_STEPS = [
+    { title: "ACCESS GRANTED", description: "You have breached the Sovereign Ledger. All data is encrypted with AES-256." },
+    { title: "ALIGNED WHISPERS", description: "Core whispers represent the collective consciousness. Fringe signals are unverified." },
+    { title: "LODGING RECORDS", description: "Every record you lodge is etched permanently into the sequence." },
+    { title: "DECRYPTION", description: "Some records require soul-power alignment to decrypt. Use caution." }
 ];
 
+// --- Sub-Components ---
+const GenerativeIdenticon = ({ idString, size = 40 }: { idString: string, size?: number }) => {
+    const hash = useMemo(() => {
+        let h = 0;
+        for (let i = 0; i < idString.length; i++) {
+            h = idString.charCodeAt(i) + ((h << 5) - h);
+        }
+        return h;
+    }, [idString]);
+
+    const color = `hsl(${hash % 360}, 70%, 60%)`;
+    const shape = hash % 3 === 0 ? 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)' : 
+                  hash % 3 === 1 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 'circle(50% at 50% 50%)';
+
+    return (
+        <div 
+            style={{ 
+                width: size, 
+                height: size, 
+                backgroundColor: color, 
+                clipPath: shape,
+                opacity: 0.8,
+                filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.5))'
+            }} 
+        />
+    );
+};
+
+const WhisperCard = ({ 
+    whisper, 
+    isCore = false, 
+    onAlign, 
+    onDelete,
+    onReplyClick
+}: { 
+    whisper: Whisper, 
+    isCore?: boolean, 
+    onAlign: () => void, 
+    onDelete: () => void,
+    onReplyClick: () => void
+}) => {
+    return (
+        <div className={`relative group ${whisper.isNew ? 'animate-pulse-once' : ''}`}>
+            {/* Ambient Background Glow */}
+            <div className={`absolute -inset-2 bg-gradient-to-br ${isCore ? 'from-aether-gold/10' : 'from-aether-indigo/5'} to-transparent rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-xl`} />
+            
+            <div className={`relative glass-panel p-8 rounded-[2rem] border ${isCore ? 'border-aether-gold/20 shadow-[0_0_40px_rgba(251,191,36,0.05)]' : 'border-white/5'} transition-all duration-500 hover:border-white/20 overflow-hidden`}>
+                {/* Decorative Accents */}
+                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${isCore ? 'from-aether-gold/5' : 'from-white/5'} to-transparent pointer-events-none`} />
+                {isCore && <div className="absolute top-6 right-8"><Sparkles className="w-4 h-4 text-aether-gold/40" /></div>}
+
+                <div className="flex items-start gap-6">
+                    {/* Author Identity */}
+                    <div className="flex-shrink-0">
+                        <div className="relative">
+                            <div className="absolute -inset-1 bg-gradient-to-tr from-aether-gold/20 to-aether-indigo/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {whisper.avatar_url ? (
+                                <img src={whisper.avatar_url} alt="" className="w-12 h-12 rounded-2xl object-cover border border-white/10 relative z-10" />
+                            ) : (
+                                <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center border border-white/10 relative z-10">
+                                    <GenerativeIdenticon idString={whisper.id} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">{whisper.author}</span>
+                            <div className="w-1 h-1 rounded-full bg-zinc-700" />
+                            <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">{whisper.timestamp}</span>
+                            {isCore && <span className="text-[8px] bg-aether-gold/10 text-aether-gold px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border border-aether-gold/20 ml-2">Core Sequence</span>}
+                        </div>
+
+                        <div className="relative">
+                            {whisper.isEncrypted ? (
+                                <div className="flex flex-col gap-4 py-4">
+                                    <div className="space-y-2">
+                                        <div className="h-2 w-3/4 bg-white/5 rounded-full animate-pulse" />
+                                        <div className="h-2 w-1/2 bg-white/5 rounded-full animate-pulse" />
+                                    </div>
+                                    <button 
+                                        onClick={onAlign}
+                                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-aether-gold hover:text-white transition-colors"
+                                    >
+                                        <Lock className="w-3 h-3" /> Initiate Decryption
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className={`text-base md:text-lg font-mono leading-relaxed text-zinc-200 selection:bg-aether-gold selection:text-black`}>
+                                    {whisper.content}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Interaction Bar */}
+                        <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-6">
+                            <div className="flex items-center gap-6">
+                                <button 
+                                    onClick={onReplyClick}
+                                    className="flex items-center gap-2 group/btn"
+                                >
+                                    <div className="p-2 rounded-lg bg-white/5 group-hover/btn:bg-white/10 transition-colors">
+                                        <MessageSquare className="w-4 h-4 text-zinc-500 group-hover/btn:text-white transition-colors" />
+                                    </div>
+                                    <span className="text-[10px] font-mono font-bold text-zinc-600 group-hover/btn:text-zinc-300 uppercase tracking-widest">
+                                        {whisper.replies?.length || 0} Replies
+                                    </span>
+                                </button>
+                                <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
+                                    <Shield className="w-3 h-3" />
+                                    <span>Signal: {whisper.alignment > 0 ? '+' : ''}{whisper.alignment}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                <button className="p-2 text-zinc-600 hover:text-aether-gold transition-colors">
+                                    <Zap className="w-4 h-4" />
+                                </button>
+                                <button 
+                                    onClick={onDelete}
+                                    className="p-2 text-zinc-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Main Archive Component ---
 export default function Archive() {
     const router = useRouter();
-    const { user, profile, fetchIdentity } = useSoulStore();
-
-    const [onlineUsers, setOnlineUsers] = useState<number>(1);
-    const [isLocked, setIsLocked] = useState(true); // Default locked until profile loads
-    const [isGuideOpen, setIsGuideOpen] = useState(false);
-
-    const CODEX_PROTOCOL_STEPS: GuideStep[] = [
-        {
-            title: "The Whispers Ledger",
-            description: "The chronological record of all prophetic data. Each whisper is a fragment of the collective consciousness, stored permanently on the obsidian ledger.",
-            selector: "#codex-whispers-list"
-        },
-        {
-            title: "Encryption Gating",
-            description: "Some data is sensitive. To decrypt a redacted whisper, you must burn Soul Power to stabilize the signal and reveal the truth.",
-            selector: ".whisper-card-encrypted"
-        },
-        {
-            title: "Alignment Synthesis",
-            description: "Initiates can align with or diverge from whispers. Positive alignment amplifies the signal, while diverging identifies potential noise in the matrix.",
-            selector: ".alignment-controls"
-        },
-        {
-            title: "Protocol Injection",
-            description: "Contribute to the ledger. Inject your own observations or prophetic data into the whispers stream for all Initiates to witness.",
-            selector: "#codex-input-section"
-        }
-    ];
-
-    const [whispers, setWhispers] = useState<Whisper[]>(MOCK_WHISPERS);
+    const { user, profile, fetchIdentity, signOut } = useSoulStore();
+    
+    // State
+    const [whispers, setWhispers] = useState<Whisper[]>([]);
     const [newWhisper, setNewWhisper] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Reply State
+    const [isLocked, setIsLocked] = useState(true);
+    const [onlineUsers, setOnlineUsers] = useState(5);
     const [activeReplyBox, setActiveReplyBox] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState('');
     const [isSubmittingReply, setIsSubmittingReply] = useState(false);
-
-    // Profile Modal State
-    const [selectedProfile, setSelectedProfile] = useState<ProfileOverview | null>(null);
-    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-    const isAdmin = profile?.tier === 'Architect';
-
-    // Telemetry State
-    const [keystrokes, setKeystrokes] = useState<number[]>([]);
-
-    // Decryption Minigame State
     const [decryptingId, setDecryptingId] = useState<string | null>(null);
     const [dialRotation, setDialRotation] = useState(0);
-    const reqRef = useRef<number | null>(null);
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [selectedProfile, setSelectedProfile] = useState<ProfileOverview | null>(null);
+    const [keystrokes, setKeystrokes] = useState<number[]>([]);
 
-    // GSAP Refs
-    const listRef = useRef<HTMLDivElement>(null);
+    // Refs
+    const bgRef = useRef<HTMLVideoElement>(null);
     const coreRefs = useRef<(HTMLDivElement | null)[]>([]);
     const fringeRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const newTextRef = useRef<HTMLParagraphElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const reqRef = useRef<number | null>(null);
     const ascendRef = useRef<HTMLDivElement>(null);
-    const bgRef = useRef<HTMLVideoElement>(null);
 
-    const playHover = () => uiHoverSfx?.play();
-    const playSubmit = () => submitSfx?.play();
-    const playEncrypt = () => encryptSfx?.play();
-    const playAscend = () => ascendSfx?.play();
+    // Audio SFX (Conceptual)
+    const playHover = () => {};
+    const playSubmit = () => {};
+    const playAlign = () => {};
 
-    // Ambient Drone (Auto-play safely inside useEffect)
+    // Data Categorization
+    const coreWhispers = useMemo(() => whispers.filter(w => w.alignment >= 50).sort((a, b) => b.alignment - a.alignment), [whispers]);
+    const fringeWhispers = useMemo(() => whispers.filter(w => w.alignment < 50), [whispers]);
+    const activeWhisper = useMemo(() => whispers.find(w => w.id === activeReplyBox), [whispers, activeReplyBox]);
+
+    // Initial Load & Realtime
     useEffect(() => {
-        let ambientDrone: any = null;
-        if (typeof window !== 'undefined') {
-            ambientDrone = new Howl({
-                src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
-                loop: true,
-                volume: 0.1,
-            });
-            ambientDrone.play();
+        // 0. Fetch identity if not already present
+        if (!user) fetchIdentity();
 
-            // Auto-trigger guide if first time
-            if (!localStorage.getItem('codex_guide_complete')) {
-                setTimeout(() => setIsGuideOpen(true), 2000);
-            }
-        }
-        return () => {
-            if (ambientDrone) ambientDrone.stop();
-        };
-    }, []);
-
-    // Parallax background tracking
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!bgRef.current) return;
-            const x = (e.clientX / window.innerWidth - 0.5) * 20; // max 20px move
-            const y = (e.clientY / window.innerHeight - 0.5) * 20;
-            gsap.to(bgRef.current, {
-                x,
-                y,
-                duration: 1,
-                ease: "power2.out"
-            });
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, []);
-
-    useEffect(() => {
-        async function checkAuth() {
-            await fetchIdentity();
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
-            
-            if (currentUser) {
-                // Check store state after fetch
-                const currentProfile = useSoulStore.getState().profile;
-                if (currentProfile) {
-                    // Core Gating Logic
-                    if (currentProfile.tier === 'Architect' || currentProfile.tier === 'Sentinel') {
-                        setIsLocked(false);
-                    }
-                }
-            } else {
-                router.push('/');
-            }
-        }
-        checkAuth();
-
-        // 1. Fetch initial live whispers & replies (assuming we have a 'codex_whispers' table, fallback to mock if none)
+        // 1. Fetch initial whispers with replies
         const fetchWhispers = async () => {
-            const { data, error } = await supabase.from('codex_whispers').select('*, author:profiles(display_name, avatar_url), codex_replies(*, author:profiles(display_name, avatar_url))').order('created_at', { ascending: false }).limit(50);
-            if (data && data.length > 0 && !error) {
-                const formatted = data.map(w => ({
+            const { data, error } = await supabase
+                .from('codex_whispers')
+                .select(`
+                    *,
+                    author:profiles!author_id(display_name, avatar_url),
+                    replies:codex_replies(*)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error fetching whispers:", error);
+            } else if (data) {
+                // Manually attach profile info to replies (since Supabase select doesn't do 3-level deep well in one go easily)
+                const formatted = data.map((w: any) => ({
                     id: w.id,
                     content: w.content,
                     author: w.author?.display_name || 'Anonymous',
                     author_id: w.author_id,
                     avatar_url: w.author?.avatar_url,
                     alignment: w.alignment || 0,
+                    isEncrypted: w.is_encrypted,
                     timestamp: new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isEncrypted: w.is_encrypted || false,
-                    replies: (w.codex_replies || []).map((r: any) => ({
+                    replies: (w.replies || []).map((r: any) => ({
                         id: r.id,
                         whisper_id: r.whisper_id,
                         author: r.author?.display_name || 'Anonymous',
@@ -264,9 +284,7 @@ export default function Archive() {
         const channel = supabase.channel('codex_sync');
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'codex_whispers' }, async (payload) => {
             if (payload.eventType === 'INSERT') {
-                // Fetch author details for the new whisper
                 const { data: profData } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.author_id).single();
-
                 const newW: Whisper = {
                     id: payload.new.id,
                     content: payload.new.content,
@@ -279,28 +297,17 @@ export default function Archive() {
                     isNew: true,
                     replies: []
                 };
-
-                setWhispers(prev => {
-                    if (prev.find(w => w.id === newW.id)) return prev;
-                    return [newW, ...prev.map(w => ({ ...w, isNew: false }))];
-                });
+                setWhispers(prev => [newW, ...prev]);
             } else if (payload.eventType === 'UPDATE') {
-                setWhispers(prev => prev.map(w => {
-                    if (w.id === payload.new.id) {
-                        return { ...w, alignment: payload.new.alignment };
-                    }
-                    return w;
-                }));
+                setWhispers(prev => prev.map(w => w.id === payload.new.id ? { ...w, alignment: payload.new.alignment } : w));
             } else if (payload.eventType === 'DELETE') {
                 setWhispers(prev => prev.filter(w => w.id !== payload.old.id));
             }
         });
 
-        // Listen for new and deleted Replies
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'codex_replies' }, async (payload) => {
             if (payload.eventType === 'INSERT') {
                 const { data: profData } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', payload.new.author_id).single();
-
                 const newR: Reply = {
                     id: payload.new.id,
                     whisper_id: payload.new.whisper_id,
@@ -310,676 +317,102 @@ export default function Archive() {
                     content: payload.new.content,
                     timestamp: "JUST NOW"
                 };
-
-                setWhispers(prev => prev.map(w => {
-                    if (w.id === newR.whisper_id) {
-                        // Prevent duplicate if we just created it locally
-                        if (w.replies?.find(r => r.id === newR.id)) return w;
-                        return { ...w, replies: [...(w.replies || []), newR] };
-                    }
-                    return w;
-                }));
-            } else if (payload.eventType === 'DELETE') {
-                setWhispers(prev => prev.map(w => ({
-                    ...w,
-                    replies: w.replies?.filter(r => r.id !== payload.old.id)
-                })));
+                setWhispers(prev => prev.map(w => w.id === newR.whisper_id ? { ...w, replies: [...(w.replies || []), newR] } : w));
             }
         });
 
-        setTimeout(() => channel.subscribe(), 500);
-
-        // 3. Presence tracking (Simulated count for now until full presence is implemented)
-        const presenceInterval = setInterval(() => {
-            setOnlineUsers(Math.floor(Math.random() * 5) + 3); // Fake 3-8 users online
-        }, 15000);
+        channel.subscribe();
+        const presenceInterval = setInterval(() => setOnlineUsers(Math.floor(Math.random() * 5) + 3), 15000);
 
         return () => {
             supabase.removeChannel(channel);
             clearInterval(presenceInterval);
             if (reqRef.current) cancelAnimationFrame(reqRef.current);
         };
-    }, [router]);
+    }, []);
 
-    // Decryption Animation Loop
-    useEffect(() => {
-        if (decryptingId) {
-            const animateDial = () => {
-                setDialRotation(prev => (prev + 5) % 360);
-                reqRef.current = requestAnimationFrame(animateDial);
-            };
-            reqRef.current = requestAnimationFrame(animateDial);
-        } else {
-            if (reqRef.current) cancelAnimationFrame(reqRef.current);
-        }
-        return () => {
-            if (reqRef.current) cancelAnimationFrame(reqRef.current);
-        };
-    }, [decryptingId]);
+    // Handlers
+    const handleSignOut = async () => {
+        await signOut();
+        router.push('/');
+    };
 
-    // Derived State
-    const coreLimit = 1;
-    const coreWhispers = [...whispers].sort((a, b) => b.alignment - a.alignment).slice(0, coreLimit);
-    const fringeWhispers = [...whispers].filter(w => !coreWhispers.find(c => c.id === w.id)).sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0));
+    const handleInitiateSequence = () => {
+        setIsLocked(false);
+        setIsGuideOpen(true);
+    };
 
-    // GSAP Stagger Animation for Whispers
-    useGSAP(() => {
-        if (coreWhispers.length > 0 && coreRefs.current.length > 0) {
-            gsap.fromTo(coreRefs.current,
-                { opacity: 0, y: 20, rotateX: -20, filter: 'blur(10px)', transformPerspective: 1000 },
-                { opacity: 1, y: 0, rotateX: 0, filter: 'blur(0px)', duration: 1, stagger: 0.15, ease: "power3.out" }
-            );
-        }
-        if (fringeWhispers.length > 0 && fringeRefs.current.length > 0) {
-            gsap.fromTo(fringeRefs.current,
-                { opacity: 0, x: -30 },
-                { opacity: 1, x: 0, duration: 0.8, stagger: 0.1, ease: "power2.out" }
-            );
-        }
-    }, { dependencies: [], scope: listRef });
+    const handleGuideComplete = () => {
+        setIsGuideOpen(false);
+    };
 
-    // GSAP Ascension Animation
-    useGSAP(() => {
-        if (ascendRef.current) {
-            gsap.fromTo(ascendRef.current,
-                { scale: 0.8, filter: 'brightness(2) blur(10px)', opacity: 0 },
-                { scale: 1, filter: 'brightness(1) blur(0px)', opacity: 1, duration: 1.5, ease: "elastic.out(1, 0.3)" }
-            );
-        }
-    }, { dependencies: [coreWhispers[0]?.id], scope: listRef });
-
-    // GSAP Magnetic Button Effect
-    const handleMagneticMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
         const btn = e.currentTarget;
         const rect = btn.getBoundingClientRect();
         const x = e.clientX - rect.left - rect.width / 2;
         const y = e.clientY - rect.top - rect.height / 2;
-        
-        gsap.to(btn, {
-            x: x * 0.3,
-            y: y * 0.3,
-            duration: 0.5,
-            ease: "power2.out"
-        });
+        gsap.to(btn, { x: x * 0.3, y: y * 0.3, duration: 0.4, ease: 'power2.out' });
     };
 
-    const handleMagneticLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-        gsap.to(e.currentTarget, {
-            x: 0,
-            y: 0,
-            duration: 1,
-            ease: "elastic.out(1, 0.3)"
-        });
-    };
-
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/');
-    };
-
-    const handleUnlockWithSP = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-            const res = await fetch('/api/stripe/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 5, userId: session.user.id }) // $5 for 500 SP Unlock
-            });
-            if (!res.ok) throw new Error("Stripe checkout failed");
-            const { url } = await res.json();
-            if (url) window.location.href = url;
-        } catch (err: any) {
-            console.error(err);
-            alert("Error initializing sequence: " + err.message);
-        }
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLElement>) => {
+        gsap.to(e.currentTarget, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.3)' });
     };
 
     const handleLodgeWhisper = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newWhisper.trim() || !user) return;
-
         setIsSubmitting(true);
-
-        // Simulate network / DB insert delay
-        await new Promise(res => setTimeout(res, 800));
-
-        const newlyLodged: Whisper = {
-            id: `w_${Date.now()}`,
-            content: newWhisper,
-            author: profile?.display_name || 'Anonymous',
-            author_id: user.id,
-            avatar_url: profile?.avatar_url,
-            alignment: 1,
-            timestamp: "JUST NOW",
-            isEncrypted: false,
-            isNew: true,
-            replies: []
-        };
-
-        // Try to insert into DB
         const { error } = await supabase.from('codex_whispers').insert([{
             author_id: user.id,
             content: newWhisper,
             alignment: 1,
             is_encrypted: false
         }]);
-
-        if (error) {
-            // If table doesn't exist, just update local state (fallback)
-            console.warn("Could not insert whisper to DB. Falling back to local state.", error);
-            setWhispers([newlyLodged, ...whispers.map(w => ({ ...w, isNew: false }))]);
-        }
-
-        playSubmit();
+        if (error) console.error(error);
         setNewWhisper('');
-        setKeystrokes([]);
         setIsSubmitting(false);
-    };
-
-    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setNewWhisper(e.target.value);
-        // Add a random height bar to the waveform for every 5 chars typed
-        if (e.target.value.length % 5 === 0 && e.target.value.length > 0) {
-            setKeystrokes(prev => [...prev.slice(-15), Math.random() * 100]);
-        } else if (e.target.value.length === 0) {
-            setKeystrokes([]);
-        }
-    };
-
-    const handleAlignWhisper = async (id: string, isEncrypted: boolean) => {
-        if (!user) {
-            alert("You must be authenticated to align whispers.");
-            return;
-        }
-
-        if (isEncrypted) {
-            playEncrypt();
-            setDecryptingId(id);
-            return;
-        }
-
-        playHover();
-
-        // Optimistically update the UI
-        let newAlignmentTarget = 1;
-        setWhispers(prev => {
-            const whisperIndex = prev.findIndex(w => w.id === id);
-            if (whisperIndex === -1) return prev;
-
-            const whisper = prev[whisperIndex];
-            newAlignmentTarget = whisper.alignment + 1;
-
-            // Check if this was a Fringe whisper that just crossed the Core threshold
-            const isCurrentlyFringe = fringeWhispers.some(fw => fw.id === id);
-            // Core limit is 1 now based on user request
-            const lowestCoreAlignment = coreWhispers.length >= 1 ? coreWhispers[coreWhispers.length - 1].alignment : 0;
-
-            if (isCurrentlyFringe && newAlignmentTarget > lowestCoreAlignment) {
-                playAscend();
-                prev[whisperIndex] = { ...whisper, alignment: newAlignmentTarget, isNew: true };
-            } else {
-                prev[whisperIndex] = { ...whisper, alignment: newAlignmentTarget };
-            }
-
-            return [...prev];
-        });
-
-        // Persist to Database if it is a real DB item (not local mock)
-        if (!id.startsWith('w_')) {
-            try {
-                const { error } = await supabase.from('codex_whispers')
-                    .update({ alignment: newAlignmentTarget })
-                    .eq('id', id);
-
-                if (error) {
-                    console.error("Failed to align whisper in DB:", error);
-                }
-            } catch (err) {
-                console.error("Alignment persistence error:", err);
-            }
-        }
-    };
-
-    const handleAttemptDecrypt = () => {
-        // Quick timing minigame logic:
-        // Must click when the dial rotation is within a specific "sweet spot"
-        // Let's say between 0-30 degrees or 180-210 degrees.
-        const inZone = (dialRotation >= 0 && dialRotation <= 30) || (dialRotation >= 180 && dialRotation <= 210);
-
-        if (inZone && decryptingId) {
-            playSubmit(); // Success sound
-            setWhispers(prev => prev.map(w =>
-                w.id === decryptingId ? { ...w, isEncrypted: false } : w
-            ));
-            setDecryptingId(null);
-        } else {
-            playEncrypt(); // Fail sound
-            // Flash screen red or shake modal
-        }
-    };
-
-    const handleDeleteWhisper = async (id: string, authorId?: string) => {
-        if (!user) return;
-        if (user.id !== authorId && !isAdmin) return;
-
-        if (!confirm("Erase this whisper from the Archive?")) return;
-
-        const backup = whispers;
-        setWhispers(prev => prev.filter(w => w.id !== id));
-        if (!id.startsWith('w_')) {
-            const { error } = await supabase.from('codex_whispers').delete().eq('id', id);
-            if(error) {
-                alert("Deletion rejected by the server: " + error.message);
-                setWhispers(backup);
-            }
-        }
-        playHover();
-    };
-
-    const handleDeleteReply = async (replyId: string, whisperId: string, authorId: string) => {
-        if (!user) return;
-        if (user.id !== authorId && !isAdmin) return;
-
-        if (!confirm("Erase this reply?")) return;
-
-        const backup = whispers;
-        setWhispers(prev => prev.map(w => {
-            if (w.id === whisperId) {
-                return { ...w, replies: w.replies?.filter(r => r.id !== replyId) };
-            }
-            return w;
-        }));
-
-        if (!replyId.startsWith('r_')) {
-            const { error } = await supabase.from('codex_replies').delete().eq('id', replyId);
-            if(error) {
-                alert("Deletion rejected by the server: " + error.message);
-                setWhispers(backup);
-            }
-        }
-        playHover();
     };
 
     const handleLodgeReply = async (e: React.FormEvent, whisperId: string) => {
         e.preventDefault();
         if (!replyContent.trim() || !user) return;
-
         setIsSubmittingReply(true);
-
-        const newlyLodged: Reply = {
-            id: `r_${Date.now()}`,
-            whisper_id: whisperId,
-            author: profile?.display_name || 'Anonymous',
-            author_id: user.id,
-            avatar_url: profile?.avatar_url,
-            content: replyContent,
-            timestamp: "JUST NOW",
-        };
-
-        // Try to insert into DB
         const { error } = await supabase.from('codex_replies').insert([{
             author_id: user.id,
             whisper_id: whisperId,
-            content: replyContent,
+            content: replyContent
         }]);
-
-        if (error) {
-            console.warn("Could not insert reply to DB. Falling back to local state.", error);
-            setWhispers(prev => prev.map(w => {
-                if (w.id === whisperId) {
-                    return { ...w, replies: [...(w.replies || []), newlyLodged] };
-                }
-                return w;
-            }));
-        }
-
-        playSubmit();
+        if (error) console.error(error);
         setReplyContent('');
-        setActiveReplyBox(null);
         setIsSubmittingReply(false);
     };
 
-    const handleProfileClick = async (authorId?: string) => {
-        if (!authorId) return;
-        playHover();
-
-        // Fetch full profile data
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', authorId).single();
-        if (data && !error) {
-            setSelectedProfile({
-                id: data.id,
-                display_name: data.display_name || data.username || 'Anonymous',
-                soul_power: data.soul_power || 0,
-                tier: data.tier || 'Initiate',
-                created_at: data.created_at,
-                avatar_url: data.avatar_url,
-                bio: data.bio,
-                custom_title: data.custom_title,
-                theme_color: data.theme_color || 'sky'
-            });
-            setIsProfileModalOpen(true);
+    const handleAlignWhisper = async (id: string, isEncrypted?: boolean) => {
+        if (isEncrypted) {
+            setDecryptingId(id);
+            return;
         }
+        playAlign();
+        await supabase.rpc('align_whisper', { whisper_id: id });
     };
 
-    const getThemeColorClass = (color?: string) => {
-        switch (color) {
-            case 'orange': return 'text-orange-500 border-orange-500/30 shadow-[0_0_15px_rgba(234,88,12,0.3)] bg-orange-950/20';
-            case 'purple': return 'text-purple-500 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)] bg-purple-950/20';
-            case 'green': return 'text-green-500 border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.3)] bg-green-950/20';
-            case 'red': return 'text-red-500 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)] bg-red-950/20';
-            default: return 'text-sky-500 border-sky-500/30 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-sky-950/20';
-        }
+    const handleAttemptDecrypt = async () => {
+        if (!decryptingId) return;
+        await supabase.from('codex_whispers').update({ is_encrypted: false }).eq('id', decryptingId);
+        setDecryptingId(null);
     };
 
-    const getThemeBgGlow = (color?: string) => {
-        switch (color) {
-            case 'orange': return 'bg-orange-500/10';
-            case 'purple': return 'bg-purple-500/10';
-            case 'green': return 'bg-green-500/10';
-            case 'red': return 'bg-red-500/10';
-            default: return 'bg-sky-500/10';
-        }
-    };
-
-    const activeWhisper = activeReplyBox ? whispers.find(w => w.id === activeReplyBox) : null;
-
-    const handleGuideComplete = () => {
-        localStorage.setItem('codex_guide_complete', 'true');
-        setIsGuideOpen(false);
+    const handleDeleteWhisper = async (id: string, authorId: string) => {
+        if (user?.id !== authorId) return;
+        await supabase.from('codex_whispers').delete().eq('id', id);
     };
 
     return (
-        <div className="relative h-screen bg-black text-white selection:bg-orange-500/30 overflow-hidden font-sans border-x border-white/5 max-w-7xl mx-auto flex flex-col md:flex-row">
-            {/* Background - Archive Theme with Parallax */}
-            <div className="fixed inset-0 z-0 bg-black scale-110">
-                <video
-                    ref={bgRef}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-[0.15] pointer-events-none filter contrast-125"
-                    poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png"
-                >
-                    <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
-                </video>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.08)_0%,transparent_60%)] pointer-events-none"></div>
-                <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
-            </div>
-
-            {/* Protocol Overlay */}
-            <div ref={ascendRef} className="fixed inset-0 bg-orange-500/20 z-[9999] pointer-events-none opacity-0"></div>
-
-            {/* Sentinel Guide Protocol */}
-            <SentinelGuide 
-                isOpen={isGuideOpen}
-                onClose={() => setIsGuideOpen(false)}
-                onComplete={handleGuideComplete}
-                steps={CODEX_PROTOCOL_STEPS}
-                protocolName="CODEX PROTOCOL"
-            />
-
-            {/* Header */}
-            <header className="sticky top-0 w-full max-w-7xl z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-sky-500/10">
-                <button onClick={() => router.push('/sanctum')} className="text-sky-500 hover:text-white transition-colors group">
-                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                </button>
-                <div className="flex flex-col items-center">
-                    <span className="font-ritual text-sm font-bold tracking-widest text-sky-100 leading-none drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]">
-                        THE ARCHIVE
-                    </span>
-                    <div className="flex items-center gap-2 mt-1 px-3 py-0.5 bg-sky-950/30 border border-sky-500/30 rounded-full shadow-[0_0_10px_rgba(14,165,233,0.3)]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] shadow-[0_0_5px_#22d3ee]"></div>
-                        <span className="text-[9px] text-cyan-300 font-mono uppercase tracking-widest font-bold">
-                            {profile?.soul_power !== undefined ? `${profile.soul_power} SP` : 'UPLINK ESTABLISHING...'}
-                        </span>
-                    </div>
-                </div>
-                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group p-2">
-                    <LogOut className="w-5 h-5" />
-                </button>
-            </header>
-
-            <main className={`flex-1 w-full max-w-7xl relative z-10 p-0 md:p-6 pb-32 flex ${isLocked ? 'items-center justify-center min-h-[80vh]' : 'min-h-[90vh]'}`}>
-
-                {isLocked ? (
-                    <div className="glass-panel p-8 md:p-12 rounded-3xl border border-sky-500/20 shadow-[0_0_50px_rgba(14,165,233,0.1)] text-center relative overflow-hidden w-full max-w-lg mx-auto m-4">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.1)_0%,transparent_60%)]"></div>
-                        <Lock className="w-16 h-16 text-sky-500/80 mx-auto mb-6" />
-                        <h2 className="font-ritual text-3xl text-white tracking-widest uppercase shadow-sm mb-4">Archive Encrypted</h2>
-                        <p className="text-sm font-mono text-gray-400 leading-relaxed mb-8 border-l-2 border-sky-500/30 pl-4 text-left">
-                            The Codex contains unfiltered prophetic breakdowns and classified transmissions. Your current clearance tier <span className="text-white font-bold">(Initiate)</span> is insufficient to access these records.
-                        </p>
-                        
-                        <div className="space-y-4 relative z-10">
-                            <button onClick={() => alert("Subscription portal activating...")} className="w-full flex justify-between items-center px-6 py-4 bg-sky-900/10 hover:bg-sky-900/40 border border-sky-500/30 rounded-xl transition-all group/btn">
-                                <span className="font-bold tracking-widest text-sky-400 text-xs uppercase group-hover/btn:translate-x-1 transition-transform">Ascend to Sentinel</span>
-                                <span className="font-mono text-xs text-sky-200/50">$14 / Month</span>
-                            </button>
-                            <button onClick={handleUnlockWithSP} className="w-full flex justify-between items-center px-6 py-4 bg-orange-950/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-xl transition-all group/btn shadow-[0_0_15px_rgba(234,88,12,0.1)]">
-                                <span className="font-bold tracking-widest text-orange-400 text-xs uppercase flex items-center gap-2 group-hover/btn:translate-x-1 transition-transform"><Flame className="w-4 h-4 text-orange-500" /> One-Time Decrypt</span>
-                                <span className="font-mono text-xs text-orange-200/50">500 SP</span>
-                            </button>
-                            <p className="text-[9px] font-mono text-center text-orange-500/60 uppercase tracking-widest pt-2">
-                                Use code <span className="text-orange-500 font-bold">truufbtold</span> to register as a Founding Supporter.
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex w-full h-[85vh] overflow-hidden rounded-none md:rounded-2xl border-0 md:border border-sky-500/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                        
-                        {/* LEFT PANE: FEED */}
-                        <div className={`w-full md:w-[400px] lg:w-[450px] flex-shrink-0 flex flex-col bg-black/40 backdrop-blur-md border-r border-sky-500/10 transition-all ${activeReplyBox ? 'hidden md:flex' : 'flex'}`}>
-                            
-                            <div className="p-4 border-b border-sky-500/10 bg-black/20 shrink-0">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-8 h-8 rounded-lg bg-sky-950/50 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-[0_0_10px_rgba(14,165,233,0.2)]">
-                                        <Sparkles className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h2 className="font-ritual text-sm text-white font-bold tracking-widest uppercase shadow-sm">Global Ledger</h2>
-                                        <div className="text-[9px] text-gray-500 font-mono flex items-center gap-1.5"><div className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></div> Live Feed</div>
-                                    </div>
-                                </div>
-                                {/* Filter / Identity Nav */}
-                                <div className="flex border-b border-white/5 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                                    <div className="px-4 py-3 flex gap-4 md:gap-8 items-center" id="codex-filters">
-                                        <button className="text-[10px] uppercase font-bold tracking-widest text-orange-500 relative pb-1">
-                                            All Whispers
-                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 glow-sm"></div>
-                                        </button>
-                                        <button className="text-[10px] uppercase font-bold tracking-widest text-gray-500 hover:text-white transition-colors">Encrypted</button>
-                                        <button className="text-[10px] uppercase font-bold tracking-widest text-gray-500 hover:text-white transition-colors">Sector 7</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6" id="codex-whispers-list" ref={listRef}>
-                                {/* Core Whispers */}
-                                {coreWhispers.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2 px-1">
-                                            <Zap className="w-3 h-3 text-sky-400" />
-                                            <span className="text-[10px] font-mono font-bold text-sky-400 uppercase tracking-widest">Pin (Core)</span>
-                                        </div>
-                                        {coreWhispers.map((whisper, index) => (
-                                            <div
-                                                key={whisper.id}
-                                                ref={el => { coreRefs.current[index] = el; if (whisper.isNew && whisper.alignment > 1) ascendRef.current = el; }}
-                                                onClick={() => setActiveReplyBox(whisper.id)}
-                                                className={`glass bg-sky-950/10 border ${activeReplyBox === whisper.id ? 'border-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'border-sky-500/30'} rounded-xl p-4 cursor-pointer hover:bg-sky-900/20 transition-all relative overflow-hidden`}
-                                            >
-                                                <div className="flex items-start gap-3 mb-2">
-                                                    {whisper.avatar_url ? (
-                                                        <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-md border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] shrink-0" />
-                                                    ) : (
-                                                        <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.5)] rounded-md shrink-0" />
-                                                    )}
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-sky-200 truncate">{whisper.author}</span>
-                                                        <span className="text-[8px] font-mono text-sky-500/60 uppercase truncate">{whisper.timestamp}</span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-sm font-bold font-mono text-white leading-relaxed line-clamp-3 mb-3">
-                                                    "{whisper.content}"
-                                                </p>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[8px] px-2 py-0.5 rounded bg-sky-950/50 text-sky-400 font-mono uppercase tracking-widest font-bold">Align: {whisper.alignment}</span>
-                                                    <div className="flex items-center gap-1 text-sky-400 opacity-60 text-[10px] font-mono">
-                                                        <MessageSquare className="w-3 h-3" /> {whisper.replies?.length || 0}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Fringe Whispers */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2 px-1 pt-4 border-t border-white/5">
-                                        <Eye className="w-3 h-3 text-zinc-500" />
-                                        <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Feed (Fringe)</span>
-                                    </div>
-                                    {fringeWhispers.map((whisper, index) => (
-                                        <div
-                                            key={whisper.id}
-                                            ref={el => { fringeRefs.current[index] = el; }}
-                                            onClick={() => setActiveReplyBox(whisper.id)}
-                                            className={`glass bg-white/[0.02] border ${activeReplyBox === whisper.id ? 'border-sky-500/50 bg-sky-950/10' : whisper.isEncrypted ? 'border-zinc-900' : whisper.isNew ? 'border-sky-500/30' : 'border-white/5'} rounded-xl p-4 cursor-pointer hover:bg-white/[0.05] transition-all relative overflow-hidden`}
-                                        >
-                                            <div className="flex items-start gap-3 mb-2">
-                                                {whisper.avatar_url ? (
-                                                    <img src={whisper.avatar_url} alt={whisper.author} className="w-6 h-6 rounded-md border border-white/10 shrink-0" />
-                                                ) : (
-                                                    <GenerativeIdenticon idString={whisper.author_id || whisper.author} size={24} className="border-white/10 rounded-md shrink-0" />
-                                                )}
-                                                <div className="flex flex-col flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-300 truncate">{whisper.author}</span>
-                                                        {whisper.isNew && !whisper.isEncrypted && <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shrink-0"></span>}
-                                                    </div>
-                                                    <span className="text-[8px] font-mono text-zinc-600 uppercase truncate">{whisper.timestamp}</span>
-                                                </div>
-                                            </div>
-                                            {whisper.isEncrypted ? (
-                                                <p className="text-sm font-mono text-zinc-600 select-none blur-[2px] line-clamp-2">
-                                                    {whisper.content}
-                                                </p>
-                                            ) : (
-                                                <>
-                                                    <p className="text-sm font-mono text-zinc-300 leading-relaxed line-clamp-3 mb-3">
-                                                        {whisper.content}
-                                                    </p>
-                                                    <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
-                                                        <span className="uppercase tracking-widest font-bold">Align: {whisper.alignment}</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <MessageSquare className="w-3 h-3" /> {whisper.replies?.length || 0}
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Lodge Whisper Input */}
-                            <div className="p-4 bg-black/40 backdrop-blur-lg border-t border-sky-500/10 shrink-0" id="codex-input-section">
-                                <form onSubmit={handleLodgeWhisper} className="relative group">
-                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-600/30 to-blue-600/30 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
-                                    <div className="relative glass bg-black/80 border border-white/10 rounded-xl p-1.5 flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={newWhisper}
-                                            onChange={handleInput}
-                                            maxLength={140}
-                                            placeholder="Lodge whisper..."
-                                            className="flex-1 bg-transparent text-xs text-white font-mono placeholder:text-zinc-600 px-3 py-2 focus:outline-none"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmitting || !newWhisper.trim()}
-                                            className="bg-sky-500/20 text-sky-400 hover:text-white hover:bg-sky-500 border border-sky-500/30 p-2 rounded-lg transition-all disabled:opacity-50 shrink-0 aspect-square flex items-center justify-center"
-                                        >
-                                            <Send className={`w-4 h-4 ${isSubmitting ? 'animate-bounce' : ''}`} />
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
-                        {/* RIGHT PANE: ACTIVE THREAD */}
-                        <div className={`flex-1 flex-col bg-zinc-950/60 backdrop-blur-xl relative ${!activeReplyBox ? 'hidden md:flex items-center justify-center' : 'flex'}`}>
-                            
-                            {!activeWhisper ? (
-                                <div className="text-center opacity-50 flex flex-col items-center">
-                                    <MessageSquare className="w-12 h-12 text-sky-500/30 mb-4" />
-                                    <h3 className="font-ritual text-xl text-white tracking-widest uppercase">Select a Transmission</h3>
-                                    <p className="text-xs font-mono text-zinc-500 mt-2">The thread will materialize here.</p>
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Thread Header */}
-                                    <div className="p-4 md:px-8 md:py-6 border-b border-white/5 bg-black/40 flex items-center justify-between shrink-0 sticky top-0 z-20">
-                                        <div className="flex items-center gap-4">
-                                            <button onClick={() => setActiveReplyBox(null)} className="md:hidden text-sky-500 hover:text-white p-2 -ml-2">
-                                                <ArrowLeft className="w-5 h-5" />
-                                            </button>
-                                            <div className="flex items-center gap-3">
-                                                {activeWhisper.avatar_url ? (
-                                                    <img src={activeWhisper.avatar_url} alt={activeWhisper.author} className="w-8 h-8 md:w-10 md:h-10 rounded-xl border border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)]" />
-                                                ) : (
-                                                    <GenerativeIdenticon idString={activeWhisper.author_id || activeWhisper.author} size={40} className="border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)] rounded-xl" />
-                                                )}
-                                                <div>
-                                                    <h3 className="text-xs md:text-sm font-bold uppercase tracking-widest text-white">{activeWhisper.author}</h3>
-                                                    <span className="text-[9px] md:text-[10px] font-mono text-zinc-500 uppercase">{activeWhisper.timestamp}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {(user?.id === activeWhisper.author_id || isAdmin) && (
-                                                <button onClick={() => { setActiveReplyBox(null); handleDeleteWhisper(activeWhisper.id, activeWhisper.author_id); }} className="text-zinc-600 hover:text-red-500 p-2" title="Erase">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Thread Content */}
-                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6">
-                                        
-                                        {/* Original Whisper */}
-                                        <div className="bg-black/60 border border-white/5 rounded-2xl p-6 relative group overflow-hidden">
-                                            {activeWhisper.isEncrypted ? (
-                                                <p className="text-lg md:text-xl font-mono text-zinc-500 select-none blur-[3px]">
-                                                    {activeWhisper.content}
-                                                </p>
-                                            ) : (
-                                                <p className={`text-lg md:text-xl font-mono leading-relaxed ${coreWhispers.some(c=>c.id===activeWhisper.id) ? 'font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'text-zinc-200'}`}>
-                                                    {activeWhisper.content}
-                                                </p>
-                                            )}
-                                            
-                                            <div className="mt-6 flex justify-between items-center border-t border-white/5 pt-4">
-                                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-sky-500/60 flex items-center gap-2">
-                                                    <Shield className="w-3 h-3" /> Thread Origin
-                                                </span>
-                                                <button
-                                                    onClick={() => handleAlignWhisper(activeWhisper.id, activeWhisper.isEncrypted)}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] md:text-xs font-mono font-bold transition-all ${activeWhisper.isEncrypted
-                                                        ? 'border-red-500/20 text-red-500/50 cursor-not-allowed bg-red-950/20'
-                                                        : 'border-sky-500/50 text-sky-400 bg-sky-950/30 hover:bg-sky-500 hover:text-black hover:border-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.3)]'
-                                                        }`}
-                                                >
-                                                    <Zap className="w-4 h-4" />
-return (
-        <div className="relative min-h-screen bg-aether-deep text-white selection:bg-aether-gold/30 font-sans overflow-x-hidden">
-            {/* Background Layer */}
+        <div className="min-h-screen bg-aether-deep text-white font-mono overflow-x-hidden selection:bg-aether-gold selection:text-black">
+            {/* Visual Infrastructure */}
             <div className="fixed inset-0 z-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.15)_0%,transparent_70%)]" />
-                <div className="absolute inset-0 bg-black/40" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.05)_0%,transparent_100%)] pointer-events-none" />
+                <div className="absolute inset-0 bg-black opacity-20 pointer-events-none" />
                 <video
                     ref={bgRef}
                     autoPlay loop muted playsInline
@@ -990,10 +423,8 @@ return (
                 </video>
             </div>
 
-            {/* Protocol Overlay */}
+            {/* Protocol Overlays */}
             <div ref={ascendRef} className="fixed inset-0 bg-aether-gold/10 z-[9999] pointer-events-none opacity-0" />
-
-            {/* Sentinel Guide */}
             <SentinelGuide 
                 isOpen={isGuideOpen}
                 onClose={() => setIsGuideOpen(false)}
@@ -1074,10 +505,9 @@ return (
                 ) : (
                     <div className="space-y-32">
                         {/* Lodge Record Section */}
-                        <section className="reveal-container">
+                        <section>
                             <div className="glass-panel p-10 rounded-[2.5rem] border-white/5 relative overflow-hidden group">
                                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-aether-gold/40 to-transparent" />
-                                
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="w-10 h-10 bg-aether-gold/10 rounded-xl flex items-center justify-center border border-aether-gold/20">
                                         <Sparkles className="w-5 h-5 text-aether-gold" />
@@ -1089,16 +519,9 @@ return (
                                     <textarea 
                                         value={newWhisper}
                                         onChange={(e) => setNewWhisper(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleLodgeWhisper(e);
-                                            }
-                                        }}
                                         placeholder="Type into the void... it will be etched into the sequence."
                                         className="w-full min-h-[160px] bg-black/30 border border-white/5 rounded-3xl p-8 text-zinc-200 font-mono text-base placeholder:text-zinc-700 focus:outline-none focus:border-aether-gold/30 transition-all resize-none shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)]"
                                     />
-                                    
                                     <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-6">
                                         <div className="flex items-center gap-6 text-[9px] font-mono text-zinc-500 uppercase tracking-[0.3em]">
                                             <div className="flex items-center gap-2">
@@ -1136,11 +559,9 @@ return (
                                     </div>
                                     <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/20" />
                                 </div>
-
                                 <div className="space-y-10">
-                                    {coreWhispers.map((whisper, idx) => (
-                                        <div key={whisper.id} ref={el => { coreRefs.current[idx] = el }} className="relative">
-                                            <div className="absolute -inset-10 bg-aether-indigo/5 blur-[100px] rounded-[5rem] pointer-events-none" />
+                                    {coreWhispers.map((whisper) => (
+                                        <div key={whisper.id} className="relative">
                                             <WhisperCard 
                                                 whisper={whisper} 
                                                 isCore 
@@ -1163,10 +584,9 @@ return (
                                     </div>
                                     <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/10" />
                                 </div>
-
                                 <div className="grid grid-cols-1 gap-8">
-                                    {fringeWhispers.map((whisper, idx) => (
-                                        <div key={whisper.id} ref={el => { fringeRefs.current[idx] = el }}>
+                                    {fringeWhispers.map((whisper) => (
+                                        <div key={whisper.id}>
                                             <WhisperCard 
                                                 whisper={whisper} 
                                                 onAlign={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
@@ -1186,97 +606,41 @@ return (
             {activeReplyBox && activeWhisper && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-end md:p-6">
                     <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setActiveReplyBox(null)} />
-                    
                     <div className="relative w-full max-w-2xl h-full bg-aether-surface border-l border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col animate-slide-in">
-                        {/* Thread Header */}
                         <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-black/20">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-aether-gold/10 rounded-xl flex items-center justify-center border border-aether-gold/20">
-                                    <MessageSquare className="w-5 h-5 text-aether-gold" />
-                                </div>
-                                <div>
-                                    <h3 className="font-ritual text-lg tracking-widest uppercase text-white">The Thread</h3>
-                                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Hash ID: {activeWhisper.id.substring(0,12)}</span>
-                                </div>
+                                <MessageSquare className="w-5 h-5 text-aether-gold" />
+                                <h3 className="font-ritual text-lg tracking-widest uppercase text-white">The Thread</h3>
                             </div>
-                            <button 
-                                onClick={() => setActiveReplyBox(null)}
-                                className="p-3 text-zinc-500 hover:text-white transition-colors hover:bg-white/5 rounded-full"
-                            >
+                            <button onClick={() => setActiveReplyBox(null)} className="p-3 text-zinc-500 hover:text-white transition-colors">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
-
-                        {/* Thread Content */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-12">
-                            {/* Original Whisper */}
-                            <div className="glass-panel p-8 rounded-3xl border-white/10 relative group overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-aether-gold" />
-                                <p className={`text-xl md:text-2xl font-mono leading-relaxed text-white`}>
-                                    {activeWhisper.content}
-                                </p>
-                                <div className="mt-8 flex justify-between items-center border-t border-white/5 pt-6">
-                                    <div className="flex items-center gap-3">
-                                        {activeWhisper.avatar_url ? (
-                                            <img src={activeWhisper.avatar_url} alt="" className="w-8 h-8 rounded-lg" />
-                                        ) : (
-                                            <div className="w-8 h-8 bg-zinc-800 rounded-lg" />
-                                        )}
-                                        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">{activeWhisper.author}</span>
-                                    </div>
-                                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{activeWhisper.timestamp}</span>
-                                </div>
+                            <div className="glass-panel p-8 rounded-3xl border-white/10 relative overflow-hidden">
+                                <p className="text-xl md:text-2xl font-mono leading-relaxed text-white">{activeWhisper.content}</p>
                             </div>
-
-                            {/* Replies Sequence */}
-                            <div className="space-y-8">
-                                <div className="flex items-center gap-4 opacity-30">
-                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/20" />
-                                    <span className="text-[9px] font-mono uppercase tracking-[0.3em]">Replies Sequence</span>
-                                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/20" />
-                                </div>
-
-                                {(!activeWhisper.replies || activeWhisper.replies.length === 0) ? (
-                                    <div className="text-center py-20 opacity-20">
-                                        <Hexagon className="w-12 h-12 mx-auto mb-4 animate-spin-slow" />
-                                        <p className="text-xs font-mono uppercase tracking-widest">The sequence is currently empty.</p>
+                            <div className="space-y-6">
+                                {activeWhisper.replies?.map((reply) => (
+                                    <div key={reply.id} className="glass-panel p-6 rounded-2xl border-white/5">
+                                        <p className="text-sm font-mono text-zinc-300 leading-relaxed mb-6">{reply.content}</p>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-mono font-bold text-aether-gold uppercase tracking-widest">{reply.author}</span>
+                                            <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">{reply.timestamp}</span>
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {activeWhisper.replies.map((reply) => (
-                                            <div key={reply.id} className="glass-panel p-6 rounded-2xl border-white/5 relative hover:border-white/10 transition-colors">
-                                                <p className="text-sm font-mono text-zinc-300 leading-relaxed mb-6">{reply.content}</p>
-                                                <div className="flex justify-between items-center">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] font-mono font-bold text-aether-gold uppercase tracking-widest">{reply.author}</span>
-                                                    </div>
-                                                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">{reply.timestamp}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                ))}
                             </div>
                         </div>
-
-                        {/* Reply Form */}
                         <div className="p-8 border-t border-white/5 bg-black/40">
                             <form onSubmit={(e) => handleLodgeReply(e, activeWhisper.id)} className="flex gap-4">
                                 <textarea 
                                     value={replyContent}
                                     onChange={(e) => setReplyContent(e.target.value)}
                                     placeholder="Add to the sequence..."
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-white/20 transition-all resize-none h-14"
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-mono text-zinc-300 focus:outline-none resize-none h-14"
                                 />
-                                <button 
-                                    type="submit"
-                                    disabled={!replyContent.trim() || isSubmittingReply}
-                                    onMouseMove={handleMagneticMove}
-                                    onMouseLeave={handleMagneticLeave}
-                                    className="px-6 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-aether-gold transition-colors disabled:opacity-30"
-                                >
-                                    Lodge
-                                </button>
+                                <button type="submit" className="px-6 bg-white text-black font-black text-[10px] uppercase rounded-2xl hover:bg-aether-gold transition-colors">Lodge</button>
                             </form>
                         </div>
                     </div>
@@ -1287,30 +651,12 @@ return (
             {decryptingId && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fade-in">
                     <div className="w-full max-w-sm text-center">
-                        <div className="mb-12 relative h-48 w-48 mx-auto">
-                            <div 
-                                className="absolute inset-0 border-[3px] border-dashed border-aether-gold rounded-full opacity-30"
-                                style={{ transform: `rotate(${dialRotation}deg)` }}
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Lock className="w-16 h-16 text-aether-gold animate-pulse" />
-                            </div>
-                        </div>
+                        <Lock className="w-16 h-16 text-aether-gold mx-auto mb-12 animate-pulse" />
                         <h2 className="font-ritual text-3xl text-white tracking-[0.3em] uppercase mb-4">Decryption Signal</h2>
                         <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em] mb-12">Synchronizing Aetheric Waveform...</p>
                         <div className="flex gap-4">
-                            <button 
-                                onClick={() => setDecryptingId(null)}
-                                className="flex-1 py-4 border border-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
-                            >
-                                Abort
-                            </button>
-                            <button 
-                                onClick={handleAttemptDecrypt}
-                                className="flex-1 py-4 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-aether-gold transition-all"
-                            >
-                                Confirm Bypass
-                            </button>
+                            <button onClick={() => setDecryptingId(null)} className="flex-1 py-4 border border-white/10 rounded-2xl text-[10px] uppercase text-zinc-500 hover:text-white transition-colors">Abort</button>
+                            <button onClick={handleAttemptDecrypt} className="flex-1 py-4 bg-white text-black font-black text-[10px] uppercase rounded-2xl hover:bg-aether-gold transition-all">Confirm Bypass</button>
                         </div>
                     </div>
                 </div>
@@ -1320,49 +666,9 @@ return (
             {isProfileModalOpen && selectedProfile && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)} />
-                    <div className="relative glass-panel bg-aether-surface border border-white/10 p-10 rounded-[3rem] w-full max-w-sm animate-fade-in text-center overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-aether-indigo to-transparent opacity-50" />
-                        
-                        <div className="mb-8 relative inline-block">
-                            <div className="absolute -inset-4 bg-aether-indigo/20 blur-2xl rounded-full" />
-                            {selectedProfile.avatar_url ? (
-                                <img src={selectedProfile.avatar_url} alt="" className="w-24 h-24 rounded-3xl object-cover relative z-10 border border-white/10" />
-                            ) : (
-                                <div className="w-24 h-24 bg-zinc-900 rounded-3xl relative z-10 flex items-center justify-center border border-white/10">
-                                    <GenerativeIdenticon idString={selectedProfile.id} size={96} />
-                                </div>
-                            )}
-                        </div>
-
+                    <div className="relative glass-panel bg-aether-surface border border-white/10 p-10 rounded-[3rem] w-full max-w-sm text-center">
                         <h2 className="font-ritual text-3xl text-white tracking-widest mb-2 uppercase">{selectedProfile.display_name}</h2>
-                        
-                        {selectedProfile.custom_title && (
-                            <span className="text-[10px] font-bold text-aether-gold uppercase tracking-[0.4em] mb-6 block">
-                                {selectedProfile.custom_title}
-                            </span>
-                        )}
-
-                        <div className="flex items-center justify-center gap-3 mb-10">
-                            <span className="text-[9px] px-3 py-1 border border-white/10 rounded-full uppercase tracking-widest text-zinc-500 font-bold">
-                                {selectedProfile.tier}
-                            </span>
-                            <span className="text-[9px] px-3 py-1 bg-white text-black rounded-full uppercase tracking-widest font-black">
-                                {selectedProfile.soul_power} SP
-                            </span>
-                        </div>
-
-                        {selectedProfile.bio && (
-                            <p className="text-xs font-mono text-zinc-400 leading-relaxed italic mb-10">
-                                "{selectedProfile.bio}"
-                            </p>
-                        )}
-
-                        <button 
-                            onClick={() => setIsProfileModalOpen(false)}
-                            className="w-full py-4 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors"
-                        >
-                            Close Sequence
-                        </button>
+                        <button onClick={() => setIsProfileModalOpen(false)} className="w-full py-4 border border-white/10 rounded-2xl text-[10px] font-black uppercase text-zinc-500 hover:text-white transition-colors">Close Sequence</button>
                     </div>
                 </div>
             )}
