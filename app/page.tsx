@@ -201,8 +201,8 @@ export default function Gateway() {
             <nav className="fixed top-0 w-full z-[100] px-8 py-8 flex justify-between items-center pointer-events-none">
                 <div className="flex items-center gap-6 pointer-events-auto">
                     <div className="flex items-center gap-4 pointer-events-auto group cursor-pointer" onClick={() => router.push('/')}>
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-aether-gold/50 transition-colors duration-500 overflow-hidden">
-                            <img src="/logo.png" alt="TBT" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform duration-500" />
+                        <div className="w-12 h-12 flex items-center justify-center transition-colors duration-500 overflow-hidden">
+                            <img src="/logo.png" alt="TBT" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                         </div>
                         <div className="flex flex-col">
                             <span className="font-ritual text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
@@ -645,8 +645,8 @@ export default function Gateway() {
                             </button>
                             
                             <div className="text-center space-y-8">
-                                <div className="w-24 h-24 bg-black/60 rounded-[2rem] flex items-center justify-center mx-auto border border-white/10 overflow-hidden shadow-2xl">
-                                    <img src="/logo.png" alt="TBT" className="w-14 h-14 object-contain" />
+                                <div className="w-24 h-24 flex items-center justify-center mx-auto overflow-hidden">
+                                    <img src="/logo.png" alt="TBT" className="w-full h-full object-contain" />
                                 </div>
                                 <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Fuel the Mission</h2>
                                 <p className="text-zinc-500 leading-relaxed uppercase tracking-[0.1em] font-light">
