@@ -210,9 +210,9 @@ export default function Gateway() {
                         </div>
                     </div>
 
-                    <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-black/60 border border-white/5 rounded-full backdrop-blur-xl">
-                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]"></div>
-                        <span className="text-[7px] font-mono text-zinc-400 uppercase tracking-widest">Encrypted Sectors: Offline</span>
+                    <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-aether-gold/10 border border-aether-gold/20 rounded-full backdrop-blur-xl">
+                        <div className="w-1.5 h-1.5 rounded-full bg-aether-gold animate-pulse shadow-[0_0_8px_#d4af37]"></div>
+                        <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest">Prophetic Production: 400 Series</span>
                     </div>
                 </div>
                 
@@ -229,9 +229,9 @@ export default function Gateway() {
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-8 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white/10 hover:border-aether-gold/30 transition-all shadow-2xl"
+                        className="px-8 py-3 bg-aether-gold/10 backdrop-blur-xl border border-aether-gold/20 rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-aether-gold/20 hover:border-aether-gold/40 transition-all shadow-2xl text-aether-gold"
                     >
-                        Support
+                        Support 400 Series
                     </button>
                 </div>
             </nav>
@@ -255,18 +255,18 @@ export default function Gateway() {
                             TRUTH B <br className="hidden md:block" /> TOLD HUB
                         </h1>
                         <p className="text-sm md:text-2xl font-light text-zinc-500 max-w-4xl mx-auto tracking-[0.1em] leading-relaxed uppercase px-6">
-                            Ascend beyond the veil. A sovereign repository of <span className="text-white font-black">Celestial Prophecy</span> and <span className="text-aether-gold font-black">Global Truth</span>.
+                            The 400-Year Prophecy is complete. A cinematic investigation into <span className="text-white font-black">Genesis 15:13</span> and the <span className="text-aether-gold font-black">Restoration of Israel</span>.
                         </p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-8 justify-center pt-12">
                         <button 
-                            onClick={handleInitiate}
+                            onClick={() => setShowSupportOverlay(true)}
                             onMouseMove={handleMagneticMove}
                             onMouseLeave={handleMagneticLeave}
-                            className="px-16 py-6 bg-white text-black rounded-2xl flex items-center gap-4 group shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-105 transition-transform duration-500"
+                            className="px-16 py-6 bg-aether-gold text-black rounded-2xl flex items-center gap-4 group shadow-[0_0_50px_rgba(212,175,55,0.2)] hover:scale-105 transition-transform duration-500"
                         >
-                            <span className="text-xs font-black uppercase tracking-[0.2em]">Access Archive</span>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Support The 400 Series</span>
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                         <a 
@@ -384,31 +384,29 @@ export default function Gateway() {
                             <div className="w-14 h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
                                 <ShieldCheck className="w-8 h-8 text-aether-gold" />
                             </div>
-                            <h3 className="font-ritual text-3xl font-black uppercase tracking-[0.2em] text-white">8K Infra</h3>
+                            <h3 className="font-ritual text-3xl font-black uppercase tracking-[0.2em] text-white">AI Film Prod</h3>
                             <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
-                                We are scaling the frequency. Support the hardware transition to 8K rendering and AI-synthesized prophetic analysis.
+                                We are scaling our production capacity for the 400 Series. Support the acquisition of industrial-grade GPUs and AI synthesis hardware.
                             </p>
                         </div>
                         
                         <div className="pt-16" style={{ transform: 'translateZ(20px)' }}>
-                            <a 
-                                href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button 
+                                onClick={() => setShowSupportOverlay(true)}
                                 onMouseMove={handleMagneticMove}
                                 onMouseLeave={handleMagneticLeave}
-                                className="w-full bg-white text-black py-5 rounded-2xl flex items-center justify-center gap-3 group shadow-2xl hover:scale-105 transition-all duration-500"
+                                className="w-full bg-aether-gold text-black py-5 rounded-2xl flex items-center justify-center gap-3 group shadow-[0_0_30px_rgba(212,175,55,0.2)] hover:scale-105 transition-all duration-500"
                             >
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Secure the Build</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Fund Production</span>
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </a>
+                            </button>
                         </div>
                     </div>
 
                     {/* Video Card 1 */}
                     <div 
                         className="bento-card md:col-span-6 glass-panel rounded-[3rem] overflow-hidden group cursor-pointer border-white/5"
-                        onClick={() => document.getElementById('portal-section')?.scrollIntoView({ behavior: 'smooth' })}
+                        onClick={() => setShowSupportOverlay(true)}
                     >
                         <div className="aspect-video relative overflow-hidden">
                             <img 
@@ -440,7 +438,7 @@ export default function Gateway() {
                     {/* Video Card 2 */}
                     <div 
                         className="bento-card md:col-span-6 glass-panel rounded-[3rem] overflow-hidden group cursor-pointer border-white/5"
-                        onClick={() => document.getElementById('portal-section')?.scrollIntoView({ behavior: 'smooth' })}
+                        onClick={() => setShowSupportOverlay(true)}
                     >
                         <div className="aspect-video relative overflow-hidden">
                             <img 
@@ -472,138 +470,12 @@ export default function Gateway() {
                 </div>
             </section>
 
-            {/* AUTH PORTAL SECTION */}
+            {/* AUTH PORTAL SECTION - FROZEN FOR 400 SERIES FOCUS */}
+            {/* 
             <section id="portal-section" className="relative py-48 px-6">
-                <div className="max-w-xl mx-auto space-y-16">
-                    <div className="text-center space-y-6">
-                        <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mx-auto shadow-2xl group">
-                            <Lock className="w-10 h-10 text-aether-gold group-hover:scale-110 transition-transform duration-500" />
-                        </div>
-                        <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Portal to Sector</h2>
-                        <p className="text-zinc-500 text-[10px] tracking-[0.5em] font-black uppercase">Identification Protocol Required</p>
-                    </div>
-
-                    <div className="perspective-2000">
-                        <div className={`auth-card-inner ${isFlipped ? 'is-flipped' : ''}`}>
-                            
-                            {/* Sign In Face */}
-                            <div className="auth-face glass-panel rounded-[3rem] p-12 flex flex-col justify-between border-white/5">
-                                <form onSubmit={authMode === 'signin' ? handleSignIn : handleResetPassword} className="space-y-8">
-                                    <div className="space-y-6">
-                                        <div className="relative group">
-                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-aether-gold/40 group-focus-within:text-aether-gold transition-colors" />
-                                            <input
-                                                type="email"
-                                                required
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full bg-black/40 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.1em]"
-                                                placeholder="Identity Soul (Email)"
-                                            />
-                                        </div>
-                                        {authMode === 'signin' && (
-                                            <div className="relative group">
-                                                <Key className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-aether-gold/40 group-focus-within:text-aether-gold transition-colors" />
-                                                <input
-                                                    type="password"
-                                                    required
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
-                                                    placeholder="Cipher (Password)"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {errorMsg && !isFlipped && <p className="text-[10px] text-red-500 font-black tracking-widest uppercase text-center">{errorMsg}</p>}
-                                    {successMsg && !isFlipped && <p className="text-[10px] text-green-500 font-black tracking-widest uppercase text-center">{successMsg}</p>}
-
-                                    <button 
-                                        type="submit" 
-                                        disabled={loading}
-                                        onMouseMove={handleMagneticMove}
-                                        onMouseLeave={handleMagneticLeave}
-                                        className="w-full bg-white text-black py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl hover:bg-zinc-200 transition-colors"
-                                    >
-                                        {loading ? 'Transmitting...' : authMode === 'signin' ? 'Enter Sanctuary' : 'Send Recovery'}
-                                    </button>
-
-                                    <div className="flex justify-between items-center px-4">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setIsFlipped(true)}
-                                            className="text-[9px] font-black tracking-[0.3em] uppercase text-zinc-600 hover:text-white transition-colors"
-                                        >
-                                            Initiate
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setAuthMode(authMode === 'signin' ? 'reset' : 'signin')}
-                                            className="text-[9px] font-black tracking-[0.3em] uppercase text-aether-gold/60 hover:text-aether-gold transition-colors"
-                                        >
-                                            {authMode === 'signin' ? 'Lost Cipher?' : 'Back to Gate'}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            {/* Sign Up Face */}
-                            <div className="auth-face auth-face-back glass-panel rounded-[3rem] p-12 flex flex-col justify-between border-aether-gold/20 bg-gradient-to-br from-void to-black">
-                                <form onSubmit={handleSignUp} className="space-y-6">
-                                    <h3 className="text-center font-ritual text-3xl font-black uppercase tracking-[0.2em] mb-6 gold-shimmer">New Soul Initiation</h3>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.1em]"
-                                        placeholder="Email Address"
-                                    />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
-                                        placeholder="Define Cipher"
-                                    />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
-                                        placeholder="Confirm Cipher"
-                                    />
-
-                                    {errorMsg && isFlipped && <p className="text-[10px] text-red-500 font-black tracking-widest uppercase text-center">{errorMsg}</p>}
-                                    {successMsg && isFlipped && <p className="text-[10px] text-green-500 font-black tracking-widest uppercase text-center">{successMsg}</p>}
-
-                                    <button 
-                                        type="submit" 
-                                        disabled={loading}
-                                        onMouseMove={handleMagneticMove}
-                                        onMouseLeave={handleMagneticLeave}
-                                        className="w-full bg-white text-black py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] mt-4"
-                                    >
-                                        {loading ? 'Awakening...' : 'Awaken Soul'}
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setIsFlipped(false)}
-                                        className="w-full text-[9px] font-black tracking-[0.3em] uppercase text-zinc-600 hover:text-white transition-colors pt-4"
-                                    >
-                                        Return to Gate
-                                    </button>
-                                </form>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
+                ... (contents frozen)
             </section>
+            */}
 
             {/* FOOTER */}
             <footer className="py-32 border-t border-white/5 text-center space-y-10">
@@ -648,9 +520,12 @@ export default function Gateway() {
                                 <div className="w-24 h-24 flex items-center justify-center mx-auto overflow-hidden">
                                     <img src="/logo.png" alt="TBT" className="w-full h-full object-contain" />
                                 </div>
-                                <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Fuel the Mission</h2>
-                                <p className="text-zinc-500 leading-relaxed uppercase tracking-[0.1em] font-light">
-                                    Our mission requires high-fidelity hardware and AI-synthesis capabilities. Support the build to ensure the truth is rendered with absolute clarity.
+                                <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Support the 400 Series</h2>
+                                <p className="text-zinc-400 text-xs leading-relaxed uppercase tracking-[0.1em] font-mono italic">
+                                    "Know for certain that for four hundred years your descendants will be strangers in a country not their own..." — Genesis 15:13
+                                </p>
+                                <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
+                                    We are producing a cinematic AI-driven series revealing the 400-year cycle of the biblical Israelites. Your support fuels <span className="text-white">high-fidelity AI generations</span> and <span className="text-aether-gold">industrial equipment</span> for full-length feature film production.
                                 </p>
                                 
                                 <div className="p-8 bg-aether-gold/5 border border-aether-gold/10 rounded-[2.5rem]">
@@ -665,16 +540,16 @@ export default function Gateway() {
                                     rel="noopener noreferrer"
                                     onMouseMove={handleMagneticMove}
                                     onMouseLeave={handleMagneticLeave}
-                                    className="block w-full bg-white text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl"
+                                    className="block w-full bg-aether-gold text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_40px_rgba(212,175,55,0.3)] hover:scale-105 transition-all"
                                 >
-                                    Invest in the Sanctuary
+                                    Fund the Revelation
                                 </a>
                                 
                                 <button 
                                     onClick={() => setShowSupportOverlay(false)}
                                     className="text-[10px] font-black tracking-[0.5em] uppercase text-zinc-700 hover:text-zinc-500 transition-colors"
                                 >
-                                    Return to the Gate
+                                    Return to Archive
                                 </button>
                             </div>
                         </motion.div>
