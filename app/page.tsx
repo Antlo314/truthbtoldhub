@@ -28,6 +28,20 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
 
+// Custom Social Icons for consistency
+const TikTokIcon = ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2.12h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/>
+    </svg>
+);
+
+const YoutubeIcon = ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.11 1 12 1 12s0 3.89.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.89 23 12 23 12s0-3.89-.46-5.58z" />
+        <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor" />
+    </svg>
+);
+
 if (typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
 }
@@ -44,15 +58,20 @@ function CipherTracker() {
 export default function Gateway() {
     const router = useRouter();
     const [showSupportOverlay, setShowSupportOverlay] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     
-    // AI Chat Integration (v6 Manual Implementation)
+    // AI Chat Integration
     const { messages, sendMessage, status } = useChat();
     const [input, setInput] = useState('');
     const isLoading = status !== 'ready';
     
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -96,6 +115,8 @@ export default function Gateway() {
     };
 
     useGSAP(() => {
+        if (!isMounted) return;
+
         // Hero Reveal
         gsap.from('.hero-content > *', {
             y: 30,
@@ -109,7 +130,7 @@ export default function Gateway() {
         const title = titleRef.current;
         if (title) {
             const text = "TRUTH B TOLD HUB";
-            title.innerHTML = text.split('').map(char => `<span class="char inline-block">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+            title.innerHTML = text.split('').map(char => `<span class="char inline-block select-none">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
             
             const handleMouseMove = (e: MouseEvent) => {
                 const { clientX, clientY } = e;
@@ -148,7 +169,9 @@ export default function Gateway() {
             stagger: 0.1,
             ease: "expo.out"
         });
-    }, { scope: containerRef });
+    }, { scope: containerRef, dependencies: [isMounted] });
+
+    if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
@@ -191,6 +214,13 @@ export default function Gateway() {
                 }
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                
+                .kinetic-title {
+                    white-space: nowrap;
+                    display: inline-block;
+                    width: 100%;
+                    text-align: center;
+                }
             `}</style>
 
             <Suspense fallback={null}>
@@ -198,29 +228,35 @@ export default function Gateway() {
             </Suspense>
             
             {/* Global Nav */}
-            <nav className="fixed top-0 w-full z-[100] px-8 py-8 flex justify-between items-center pointer-events-none">
+            <nav className="fixed top-0 w-full z-[100] px-4 md:px-12 py-8 flex justify-between items-center pointer-events-none">
                 <div className="flex items-center gap-6 pointer-events-auto">
                     <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push('/')}>
-                        <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
+                        <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center overflow-hidden">
                             <img src="/logo.png" alt="TBT" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
                         </div>
-                        <div className="flex flex-col">
-                            <span className="font-ritual text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
+                        <div className="hidden sm:flex flex-col">
+                            <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
                             <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
                         </div>
                     </div>
-                    <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-aether-gold/10 border border-aether-gold/20 rounded-full backdrop-blur-xl">
-                        <div className="w-1.5 h-1.5 rounded-full bg-aether-gold animate-pulse"></div>
-                        <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest">Master Bento Protocol: Active</span>
-                    </div>
                 </div>
                 
-                <div className="flex items-center gap-6 pointer-events-auto">
+                <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
+                    {/* Social Icons */}
+                    <div className="hidden md:flex items-center gap-6">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
+                            <YoutubeIcon className="w-5 h-5" />
+                        </a>
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-500 hover:text-white transition-colors">
+                            <TikTokIcon className="w-5 h-5" />
+                        </a>
+                    </div>
+
                     <button 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-8 py-3 bg-aether-gold text-black rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                        className="px-6 md:px-10 py-3 bg-aether-gold text-black rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(212,175,55,0.4)] border border-black/10"
                     >
                         Support 400 Series
                     </button>
@@ -228,45 +264,47 @@ export default function Gateway() {
             </nav>
 
             {/* HERO */}
-            <section className="relative h-[80dvh] flex flex-col items-center justify-center p-6">
+            <section className="relative h-[80dvh] flex flex-col items-center justify-center p-6 mt-12 md:mt-0">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.03)_0%,transparent_60%)]"></div>
-                <div className="hero-content relative z-10 text-center space-y-12">
+                <div className="hero-content relative z-10 text-center space-y-8 md:space-y-12 w-full max-w-[100vw]">
                     <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-xl">
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
                         <span className="text-[8px] font-black tracking-[0.5em] text-zinc-500 uppercase">Restoration Protocol Initialized</span>
                     </div>
-                    <h1 ref={titleRef} className="font-ritual text-6xl sm:text-8xl md:text-[10rem] font-black leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4 select-none">
-                        TRUTH B TOLD HUB
-                    </h1>
-                    <p className="text-sm md:text-xl font-light text-zinc-500 max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
+                    <div className="w-full overflow-hidden flex justify-center">
+                        <h1 ref={titleRef} className="kinetic-title font-ritual text-4xl sm:text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4 select-none">
+                            TRUTH B TOLD HUB
+                        </h1>
+                    </div>
+                    <p className="text-[10px] md:text-xl font-light text-zinc-500 max-w-4xl mx-auto tracking-[0.2em] leading-relaxed uppercase px-6">
                         The Master Bento Ecosystem. Exploring <span className="text-white font-black">Genesis 15:13</span> and the <span className="text-aether-gold font-black">400 Year Echo</span>.
                     </p>
                 </div>
             </section>
 
             {/* MASTER BENTO GRID */}
-            <section id="master-bento" className="relative pb-48 px-6 max-w-[100rem] mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-[minmax(300px,_auto)] gap-8">
+            <section id="master-bento" className="relative pb-48 px-4 md:px-12 max-w-[100rem] mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-[minmax(300px,_auto)] gap-4 md:gap-8">
                     
                     {/* Main Cinematic Feature (8 cols, 2 rows) */}
-                    <div className="bento-card md:col-span-8 md:row-span-2 liquid-glass rounded-[4rem] overflow-hidden group p-2">
-                        <div className="h-full relative rounded-[3.5rem] overflow-hidden">
+                    <div className="bento-card md:col-span-8 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group p-1 md:p-2">
+                        <div className="h-full relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
-                                className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000"
+                                className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-[1.01]"
                                 src="https://www.youtube.com/embed/jXezgcPBqGE?autoplay=0&controls=1&rel=0" 
                                 title="400 - Genesis 15"
                                 allowFullScreen
                             ></iframe>
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none group-hover:opacity-40 transition-opacity"></div>
-                            <div className="absolute bottom-12 left-12 right-12 flex justify-between items-end pointer-events-none">
+                            <div className="absolute bottom-6 md:bottom-12 left-6 md:left-12 right-6 md:right-12 flex justify-between items-end pointer-events-none">
                                 <div className="space-y-4">
                                     <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-aether-gold/10 border border-aether-gold/20 backdrop-blur-xl">
                                         <Play className="w-3 h-3 text-aether-gold" />
                                         <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Featured Revelation</span>
                                     </div>
-                                    <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
-                                    <p className="text-zinc-400 text-sm max-w-xl font-light uppercase tracking-widest leading-relaxed">
-                                        Abraham receives the vision. The beginning of the 400-year cycle of the biblical Israelites.
+                                    <h2 className="font-ritual text-3xl md:text-6xl font-black uppercase tracking-[0.1em] text-white">GENESIS 15:13</h2>
+                                    <p className="text-zinc-400 text-[10px] md:text-sm max-w-xl font-light uppercase tracking-widest leading-relaxed">
+                                        Abraham receives the vision. The beginning of the 400-year cycle.
                                     </p>
                                 </div>
                             </div>
@@ -274,11 +312,11 @@ export default function Gateway() {
                     </div>
 
                     {/* Prophetic AI Oracle (4 cols, 2 rows) */}
-                    <div className="bento-card md:col-span-4 md:row-span-2 liquid-glass rounded-[4rem] p-10 flex flex-col border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent">
+                    <div className="bento-card md:col-span-4 md:row-span-2 liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent">
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
-                                    <Terminal className="w-6 h-6 text-aether-gold" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
+                                    <Terminal className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Prophetic Oracle</span>
@@ -288,7 +326,7 @@ export default function Gateway() {
                             {isLoading && <div className="w-2 h-2 rounded-full bg-aether-gold animate-ping"></div>}
                         </div>
 
-                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
+                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2 min-h-[300px]">
                             {messages.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
                                     <Sparkles className="w-8 h-8 text-aether-gold mb-2" />
@@ -318,12 +356,12 @@ export default function Gateway() {
                                 value={input}
                                 onChange={handleInputChange}
                                 placeholder="Query the Oracle..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-aether-gold/50 transition-all placeholder:text-zinc-700 tracking-widest uppercase"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-aether-gold/50 transition-all placeholder:text-zinc-500 tracking-widest uppercase"
                             />
                             <button 
                                 type="submit"
                                 disabled={isLoading || !input}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-aether-gold flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-aether-gold flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20 shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                             >
                                 <Send className="w-4 h-4 text-black" />
                             </button>
@@ -331,7 +369,7 @@ export default function Gateway() {
                     </div>
 
                     {/* Geopolitical Radar (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card">
+                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card min-h-[350px]">
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
@@ -353,8 +391,8 @@ export default function Gateway() {
                     </div>
 
                     {/* The Prelude (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[4rem] overflow-hidden group border-white/5 p-2">
-                         <div className="aspect-video relative rounded-[3.5rem] overflow-hidden">
+                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/5 p-1 md:p-2 min-h-[350px]">
+                         <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe 
                                 className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000"
                                 src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" 
@@ -369,41 +407,41 @@ export default function Gateway() {
                     </div>
 
                     {/* AI Film Prod Status (4 cols) */}
-                    <div className="bento-card md:col-span-4 liquid-glass rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card bg-gradient-to-t from-aether-gold/5 to-transparent">
+                    <div className="bento-card md:col-span-4 liquid-glass rounded-[2rem] md:rounded-[4rem] p-10 flex flex-col justify-between border-white/5 perspective-card bg-gradient-to-t from-aether-gold/5 to-transparent min-h-[350px]">
                         <div className="space-y-6">
                             <div className="w-14 h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
                                 <Cpu className="w-7 h-7 text-aether-gold" />
                             </div>
                             <h3 className="font-ritual text-2xl font-black uppercase tracking-[0.2em] text-white">AI Prod Hardware</h3>
                             <p className="text-zinc-500 text-[10px] leading-relaxed uppercase tracking-[0.1em] font-light">
-                                Industrial GPU nodes securing the 8K cinematic render of the 400 Series. Support the build to accelerate generation.
+                                Industrial GPU nodes securing the 8K cinematic render. Support the build to accelerate generation.
                             </p>
                         </div>
                         <button 
                             onClick={() => setShowSupportOverlay(true)}
-                            className="w-full bg-aether-gold text-black py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_40px_rgba(212,175,55,0.2)]"
+                            className="w-full bg-aether-gold text-black py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-[0_0_40px_rgba(212,175,55,0.2)] border border-black/10"
                         >
                             Accelerate Node
                         </button>
                     </div>
 
                     {/* Historical Timeline (12 cols) */}
-                    <div className="bento-card md:col-span-12 liquid-glass rounded-[4rem] p-12 flex items-center justify-between border-white/5 group">
-                        <div className="flex flex-col gap-6 max-w-xl">
-                            <div className="flex items-center gap-4 text-zinc-500">
+                    <div className="bento-card md:col-span-12 liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/5 group gap-12">
+                        <div className="flex flex-col gap-6 max-w-xl text-center md:text-left">
+                            <div className="flex items-center justify-center md:justify-start gap-4 text-zinc-500">
                                 <History className="w-6 h-6" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.5em]">Historical Cycle</span>
                             </div>
-                            <h3 className="font-ritual text-4xl md:text-5xl font-black uppercase tracking-[0.1em] text-white gold-shimmer">ABRAHAM TO 2019</h3>
-                            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
-                                A panoramic investigation into the diaspora of the Hebrew people and the conclusion of the 400-year cycle. Every frame rendered with absolute prophetic clarity.
+                            <h3 className="font-ritual text-3xl md:text-5xl font-black uppercase tracking-[0.1em] text-white gold-shimmer">ABRAHAM TO 2019</h3>
+                            <p className="text-zinc-500 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
+                                A panoramic investigation into the diaspora of the Hebrew people and the conclusion of the 400-year cycle.
                             </p>
                         </div>
-                        <div className="hidden lg:flex items-center gap-12">
+                        <div className="flex items-center gap-6 md:gap-12">
                             {[2019, 1619, 'Genesis'].map((year, i) => (
                                 <div key={i} className="flex flex-col items-center gap-4 text-center">
                                     <div className="w-1.5 h-1.5 rounded-full bg-aether-gold/30 group-hover:bg-aether-gold transition-colors"></div>
-                                    <span className="font-ritual text-2xl font-black text-white/20 group-hover:text-white transition-colors">{year}</span>
+                                    <span className="font-ritual text-xl md:text-2xl font-black text-white/20 group-hover:text-white transition-colors">{year}</span>
                                 </div>
                             ))}
                         </div>
@@ -413,13 +451,23 @@ export default function Gateway() {
             </section>
 
             {/* FOOTER */}
-            <footer className="py-32 border-t border-white/5 text-center space-y-12">
+            <footer className="py-24 md:py-32 border-t border-white/5 text-center space-y-12 bg-void">
                 <div className="flex items-center justify-center gap-8 opacity-20">
                     <ShieldCheck className="w-10 h-10" />
                     <Sparkles className="w-10 h-10" />
                     <Video className="w-10 h-10" />
                 </div>
-                <p className="text-[10px] font-black tracking-[0.8em] text-zinc-600 uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
+                <div className="flex flex-col items-center gap-6">
+                    <div className="flex items-center gap-8 mb-4">
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-zinc-700 hover:text-aether-gold transition-colors">
+                            <YoutubeIcon className="w-6 h-6" />
+                        </a>
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-zinc-700 hover:text-aether-gold transition-colors">
+                            <TikTokIcon className="w-6 h-6" />
+                        </a>
+                    </div>
+                    <p className="text-[10px] font-black tracking-[0.8em] text-zinc-700 uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
+                </div>
             </footer>
 
             {/* Support Overlay */}
@@ -429,36 +477,36 @@ export default function Gateway() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-void/95 backdrop-blur-2xl"
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6 bg-[#050505]/95 backdrop-blur-2xl"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="liquid-glass rounded-[4rem] p-16 max-w-2xl w-full relative space-y-10 border-white/5 shadow-[0_0_100px_rgba(212,175,55,0.1)]"
+                            className="liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-16 max-w-2xl w-full relative space-y-10 border-white/5 shadow-[0_0_100px_rgba(212,175,55,0.1)]"
                         >
                             <button 
                                 onClick={() => setShowSupportOverlay(false)}
-                                className="absolute top-10 right-10 text-zinc-500 hover:text-white transition-colors p-3 bg-white/5 rounded-full"
+                                className="absolute top-6 md:top-10 right-6 md:right-10 text-zinc-500 hover:text-white transition-colors p-3 bg-white/5 rounded-full"
                             >
                                 <Lock className="w-6 h-6" />
                             </button>
                             <div className="text-center space-y-8">
-                                <div className="w-24 h-24 flex items-center justify-center mx-auto overflow-hidden">
+                                <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto overflow-hidden">
                                     <img src="/logo.png" alt="TBT" className="w-full h-full object-contain" />
                                 </div>
-                                <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Support the 400 Series</h2>
-                                <p className="text-zinc-400 text-xs leading-relaxed uppercase tracking-[0.1em] font-mono italic">
+                                <h2 className="font-ritual text-3xl md:text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Support the 400 Series</h2>
+                                <p className="text-zinc-400 text-[10px] leading-relaxed uppercase tracking-[0.1em] font-mono italic">
                                     "Know for certain that for four hundred years your descendants will be strangers in a country not their own..." — Genesis 15:13
                                 </p>
-                                <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
+                                <p className="text-zinc-500 text-xs md:text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
                                     Your support fuels <span className="text-white">high-fidelity AI generations</span> and <span className="text-aether-gold">industrial equipment</span> for full-length feature film production.
                                 </p>
                                 <a 
                                     href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block w-full bg-aether-gold text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_40px_rgba(212,175,55,0.3)] hover:scale-105 transition-all"
+                                    className="block w-full bg-aether-gold text-black py-6 md:py-7 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_40px_rgba(212,175,55,0.3)] hover:scale-105 transition-all border border-black/10"
                                 >
                                     Fund the Revelation
                                 </a>
