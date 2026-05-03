@@ -1,24 +1,24 @@
 import type { Metadata } from 'next';
-import { Cinzel, Inter } from 'next/font/google';
+import { Playfair_Display, Inter } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const cinzel = Cinzel({ subsets: ['latin'], variable: '--font-cinzel', weight: ['400', '700', '900'] });
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 
 export const metadata: Metadata = {
     title: {
         template: '%s | Sacred Sanctum',
-        default: 'Sacred Sanctum | TruthBTold Hub',
+        default: 'Sacred Sanctum | The Aetheric Sanctuary',
     },
-    description: 'Enter the Obsidian Void. Watch uncensored prophetic breakdowns, track live geopolitical radar events, and unlearn everything. The truth shall make you free.',
+    description: 'Enter the Aetheric Sanctuary. An elegant repository of prophetic breakdowns, geopolitical radar tracking, and celestial truth. Unlearn everything.',
     openGraph: {
         title: 'Sacred Sanctum | TruthBTold Hub',
-        description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events before the world shakes.',
+        description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events in an ethereal space.',
         url: 'https://truthbtoldhub.com',
         siteName: 'Sacred Sanctum',
         images: [
             {
-                url: 'https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg', // Epic 14 video thumbnail as the default share image!
+                url: 'https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg',
                 width: 1200,
                 height: 630,
                 alt: 'Sacred Sanctum Preview'
@@ -29,13 +29,14 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Sacred Sanctum | The Obsidian Void',
-        description: 'Explore deep biblical prophecy, end-times geopolitical radar, and unfiltered truth.',
+        title: 'Sacred Sanctum | Aetheric Sanctuary',
+        description: 'Explore deep biblical prophecy and end-times geopolitical radar in a premium celestial environment.',
         creator: '@truufbtold',
         images: ['https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg'],
     },
     metadataBase: new URL('https://truthbtoldhub.com'),
 };
+
 export default function RootLayout({
     children,
 }: {
@@ -43,7 +44,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={`${inter.variable} ${cinzel.variable} font-sans bg-[#050505] text-white min-h-screen antialiased`}>
+            <body className={`${inter.variable} ${playfair.variable} font-sans bg-[#020617] text-white min-h-screen antialiased`}>
                 {children}
             </body>
         </html>
