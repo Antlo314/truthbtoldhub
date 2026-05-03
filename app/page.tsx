@@ -132,7 +132,6 @@ export default function Gateway() {
     useEffect(() => {
         setIsMounted(true);
         
-        // Responsive Check
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768);
         };
@@ -205,11 +204,10 @@ export default function Gateway() {
     };
 
     const toggleExpand = (cardId: string) => {
-        if (!isMobile) return; // Expandable ONLY for mobile
+        if (!isMobile) return;
         setExpandedCard(expandedCard === cardId ? null : cardId);
     };
 
-    // AI Chat Handler
     const handleAiSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!aiInput.trim() || isLoadingAi) return;
@@ -220,7 +218,6 @@ export default function Gateway() {
         setAiInput('');
     };
 
-    // Community Chat Handler
     const handleCommunitySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!communityInput.trim() || !user) return;
@@ -237,7 +234,6 @@ export default function Gateway() {
         if (error) console.error(error);
     };
 
-    // Audio Handlers
     const toggleAudio = () => {
         setIsPlaying(!isPlaying);
     };
@@ -385,12 +381,8 @@ export default function Gateway() {
                 @keyframes shine {
                     to { background-position: 200% center; }
                 }
-                .perspective-card {
-                    transform-style: preserve-3d;
-                }
-                .perspective-card:hover {
-                    transform: rotateX(1deg) rotateY(1deg) translateZ(5px);
-                }
+                .perspective-card { transform-style: preserve-3d; }
+                .perspective-card:hover { transform: rotateX(1deg) rotateY(1deg) translateZ(5px); }
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
                 
@@ -424,9 +416,7 @@ export default function Gateway() {
                     90% { transform: translate(10%, 5%) }
                 }
 
-                .honor-ticker {
-                    animation: tickerScroll 40s linear infinite;
-                }
+                .honor-ticker { animation: tickerScroll 40s linear infinite; }
                 @keyframes tickerScroll {
                     from { transform: translateX(100%); }
                     to { transform: translateX(-100%); }
@@ -462,17 +452,11 @@ export default function Gateway() {
                         <div className="flex items-center gap-6 bg-white/5 border border-white/10 px-6 py-2.5 rounded-full backdrop-blur-xl">
                             <div className="flex items-center gap-3">
                                 <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
-                                    {profile?.avatar_url ? (
-                                        <img src={profile.avatar_url} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-3 h-3 text-white" />
-                                    )}
+                                    {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-3 h-3 text-white" />}
                                 </div>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-white">{profile?.username || 'Prophet'}</span>
                             </div>
-                            <button onClick={handleLogout} className="text-white/40 hover:text-white transition-colors">
-                                <LogOut className="w-4 h-4" />
-                            </button>
+                            <button onClick={handleLogout} className="text-white/40 hover:text-white transition-colors"><LogOut className="w-4 h-4" /></button>
                         </div>
                     ) : isAscended ? (
                         <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 px-6 py-2.5 rounded-full backdrop-blur-xl">
@@ -587,10 +571,20 @@ export default function Gateway() {
                     >
                         {!isUnlocked && <LockedOverlay title="Profile" />}
                         <div className="space-y-6">
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
-                                {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
+                            <div className="flex items-center justify-between">
+                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+                                    {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
+                                </div>
+                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
+                                    {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
+                                </div>
                             </div>
-                            <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
+                            <div className="space-y-2">
+                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
+                                <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
+                                    {profile?.bio || (isAscended ? 'Frequency active but temporary. Secure Link to claim Aura.' : 'Initializing neural-link...')}
+                                </p>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -605,7 +599,10 @@ export default function Gateway() {
                             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
                             <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white">The Pool</h3>
                         </div>
-                        <div className="flex justify-between items-end"><span className="text-2xl font-ritual font-black text-white">$4,821</span></div>
+                        <div className="flex justify-between items-end">
+                            <span className="text-2xl font-ritual font-black text-white">$4,821</span>
+                            <button onClick={(e) => { e.stopPropagation(); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white"><ArrowRight className="w-4 h-4" /></button>
+                        </div>
                     </motion.div>
 
                     {/* Aether Player */}
@@ -616,10 +613,15 @@ export default function Gateway() {
                     >
                         <div className="space-y-6">
                             <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
-                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
+                            <div className="space-y-1">
+                                <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
+                                <p className="text-white text-[10px] uppercase font-black">{tracks[currentTrack].title}</p>
+                            </div>
                         </div>
                         <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipBack className="w-4 h-4" /></button>
                             <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
+                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipForward className="w-4 h-4" /></button>
                         </div>
                     </motion.div>
 
@@ -635,7 +637,7 @@ export default function Gateway() {
                             <span className="text-[10px] font-black uppercase text-white">Pulse</span>
                         </div>
                         <div className="flex-1 space-y-3 font-mono text-[7px] overflow-hidden">
-                            {pulseLog.slice(0, 5).map((log, i) => (
+                            {pulseLog.slice(0, 8).map((log, i) => (
                                 <div key={i} className="flex items-center gap-2 text-white/40"><span className="text-aether-gold">{'>'}</span><span className="uppercase truncate">{log}</span></div>
                             ))}
                         </div>
@@ -647,19 +649,24 @@ export default function Gateway() {
                         onClick={() => toggleExpand('hardware')}
                         className={`bento-card col-span-1 ${isMobile && expandedCard === 'hardware' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px] cursor-pointer`}
                     >
-                        <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
-                        <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
+                        <div className="space-y-6">
+                            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
+                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
+                            <p className="text-[8px] text-white/40 uppercase tracking-widest font-black">Milestone 01: Render Node Active</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setShowSupportOverlay(true); }} className="w-full bg-white text-black py-4 rounded-xl text-[8px] font-black uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)]">Boost</button>
                     </motion.div>
 
                     {/* The Prelude */}
                     <motion.div 
                         layout={isMobile}
                         onClick={() => toggleExpand('prelude')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : (isMobile ? 'col-span-2' : 'md:col-span-4')} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
                     >
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" title="The Prelude"></iframe>
                          </div>
+                         <div className="p-6 md:p-8"><h4 className="font-ritual text-xl font-black text-white">THE PRELUDE</h4></div>
                     </motion.div>
 
                     {/* Historical Timeline */}
@@ -669,12 +676,19 @@ export default function Gateway() {
                         className={`bento-card col-span-2 ${isMobile && expandedCard === 'timeline' ? 'row-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="Timeline" />}
-                        <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
+                        <div className="flex flex-col gap-4 text-center md:text-left relative z-10">
+                            <div className="flex items-center justify-center md:justify-start gap-4 text-white"><History className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-[0.5em]">Cycle Protocol</span></div>
+                            <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
+                        </div>
+                        <div className="flex items-center gap-6 md:gap-12 relative z-10">
+                            {[2019, 1619, 'Gen'].map((year, i) => (
+                                <div key={i} className="flex flex-col items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-white"></div><span className="font-ritual text-lg md:text-2xl font-black text-white">{year}</span></div>
+                            ))}
+                        </div>
                     </motion.div>
 
                 </motion.div>
                 
-                {/* WALL OF HONOR TICKER */}
                 <div className="mt-12 w-full overflow-hidden border-y border-white/5 py-4 whitespace-nowrap group">
                     <div className="inline-block honor-ticker">
                         {['TRUUTHBTOLD NODE', 'PROPHETIC CORE ACTIVE', 'DIASPORA ARCHIVE UNLOCKED', 'GENESIS 15:13 VERIFIED', 'AETHER AUDIO SYNCED', 'MASTER BENTO DEPLOYED'].map((text, i) => (
@@ -685,7 +699,6 @@ export default function Gateway() {
             </section>
             </LayoutGroup>
 
-            {/* FOOTER */}
             <footer className="py-24 border-t border-white/10 text-center space-y-12 bg-void">
                 <div className="flex flex-col items-center gap-6">
                     <div className="flex items-center gap-8 mb-4">
