@@ -32,7 +32,8 @@ import {
     Info,
     ScrollText,
     SkipForward,
-    VolumeX
+    VolumeX,
+    SkipBack
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -79,8 +80,12 @@ export default function Gateway() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTrack, setCurrentTrack] = useState(0);
     const tracks = [
-        { title: 'Prophecy Alpha', file: '/audio/track1.mp3' },
-        { title: 'The Echo 400', file: '/audio/track2.mp3' }
+        { title: '400 Years Prophesy', genre: 'Cinematic Theme', file: '/audio/400 Years Prophesy.mp3' },
+        { title: '400-Year Crown', genre: 'Royal Prophecy', file: '/audio/400-Year Crown.mp3' },
+        { title: 'Ascension at Dusk', genre: 'Ethereal Ambient', file: '/audio/Ascension at Dusk.mp3' },
+        { title: 'Ashen Covenant', genre: 'Dark Soundscape', file: '/audio/Ashen Covenant.mp3' },
+        { title: 'Ur Chaldees', genre: 'Ancient Middle-Eastern', file: '/audio/Ur Chaldees.mp3' },
+        { title: 'Wilderness Whispers', genre: 'Spiritual Nature', file: '/audio/Wilderness Whispers.mp3' }
     ];
 
     // Scripture Decryptor State
@@ -120,13 +125,18 @@ export default function Gateway() {
         if (isPlaying) {
             audioRef.current.pause();
         } else {
-            audioRef.current.play().catch(e => console.log("Audio play blocked: add files to /public/audio/"));
+            audioRef.current.play().catch(e => console.log("Audio play blocked."));
         }
         setIsPlaying(!isPlaying);
     };
 
     const nextTrack = () => {
         setCurrentTrack((prev) => (prev + 1) % tracks.length);
+        setIsPlaying(false);
+    };
+
+    const prevTrack = () => {
+        setCurrentTrack((prev) => (prev - 1 + tracks.length) % tracks.length);
         setIsPlaying(false);
     };
 
@@ -228,7 +238,7 @@ export default function Gateway() {
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
-            <audio ref={audioRef} src={tracks[currentTrack].file} loop />
+            <audio ref={audioRef} key={currentTrack} src={tracks[currentTrack].file} loop />
             
             <style jsx global>{`
                 .liquid-glass {
@@ -507,20 +517,23 @@ export default function Gateway() {
                             </div>
                             <div className="space-y-1">
                                 <h3 className="font-ritual text-lg md:text-2xl font-black uppercase tracking-[0.1em] text-white">Aether Player</h3>
-                                <p className="text-white text-[8px] uppercase tracking-[0.2em] font-black opacity-40">{tracks[currentTrack].title}</p>
+                                <div className="flex flex-col">
+                                    <p className="text-white text-[10px] uppercase tracking-[0.1em] font-black">{tracks[currentTrack].title}</p>
+                                    <p className="text-aether-gold text-[7px] uppercase tracking-[0.2em] font-black opacity-60">{tracks[currentTrack].genre}</p>
+                                </div>
                             </div>
                         </div>
                         
                         <div className="flex items-center justify-between gap-4">
+                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors">
+                                <SkipBack className="w-4 h-4" />
+                            </button>
                             <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]">
                                 {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}
                             </button>
-                            <button onClick={nextTrack} className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors">
                                 <SkipForward className="w-4 h-4" />
                             </button>
-                            <div className="flex-1 h-[1px] bg-white/10 relative">
-                                <motion.div className="absolute top-0 left-0 h-full bg-white" initial={{ width: 0 }} animate={{ width: isPlaying ? '100%' : '0%' }} transition={{ duration: 30, ease: "linear" }} />
-                            </div>
                         </div>
                     </div>
 
@@ -659,7 +672,7 @@ export default function Gateway() {
                             <YoutubeIcon className="w-6 h-6" />
                         </a>
                         <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors">
-                            <TikTokIcon className="w-5 h-5" />
+                            <TikTokIcon className="w-6 h-6" />
                         </a>
                     </div>
                     <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B Told Hub • 2026 Edition</p>
