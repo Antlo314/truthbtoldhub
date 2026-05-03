@@ -665,6 +665,9 @@ export default function Archive() {
             case 'green': return 'bg-green-500/10';
             case 'red': return 'bg-red-500/10';
             default: return 'bg-sky-500/10';
+        }
+    };
+
     const activeWhisper = activeReplyBox ? whispers.find(w => w.id === activeReplyBox) : null;
 
     const handleGuideComplete = () => {

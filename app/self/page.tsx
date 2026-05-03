@@ -134,16 +134,12 @@ export default function PowerSelf() {
         router.push('/');
     };
 
-    };
-
-    const handleGuideComplete = () => {
-        localStorage.setItem('self_guide_complete', 'true');
-        setIsGuideOpen(false);
-    };
-
-    return (
+    const uploadAvatar = async (event: any) => {
         try {
             setUploading(true);
+            const { data: { user: userAuth } } = await supabase.auth.getUser();
+            if (!userAuth) throw new Error('Not authenticated');
+
             if (!event.target.files || event.target.files.length === 0) {
                 throw new Error('You must select an image to upload.');
             }
@@ -166,6 +162,10 @@ export default function PowerSelf() {
         }
     };
 
+    const handleGuideComplete = () => {
+        localStorage.setItem('self_guide_complete', 'true');
+        setIsGuideOpen(false);
+    };
 
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col overflow-x-hidden">

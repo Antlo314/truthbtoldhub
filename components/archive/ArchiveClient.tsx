@@ -8,9 +8,18 @@ import ChannelsSidebar from './ChannelsSidebar';
 import ChatArea from './ChatArea';
 import MemberListSidebar from './MemberListSidebar';
 import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
-
+export default function ArchiveClient() {
+    const {
+        activeWorkspaceId,
+        activeChannelId,
+        setWorkspaces,
+        setActiveWorkspaceId,
+        setIsMobileMenuOpen,
+        isMobileMenuOpen,
+        setOnlineStatus
     } = useArchiveStore();
     const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const ARCHIVE_PROTOCOL_STEPS: GuideStep[] = [
         {
