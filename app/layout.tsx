@@ -44,7 +44,8 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={`${inter.variable} ${playfair.variable} font-sans bg-[#020617] text-white min-h-screen antialiased`}>
+            <body className={`${inter.variable} ${playfair.variable} font-sans bg-void text-white min-h-screen antialiased`}>
+                <div className="grain-overlay" />
                 {children}
             </body>
         </html>

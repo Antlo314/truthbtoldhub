@@ -16,7 +16,13 @@ import {
     Mail,
     Key
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+if (typeof window !== 'undefined') {
+    gsap.registerPlugin(ScrollTrigger);
+}
 
 function CipherTracker() {
     const searchParams = useSearchParams();
@@ -127,6 +133,57 @@ export default function Gateway() {
         }
     };
 
+    // GSAP Parallax & Magnetic
+    useGSAP(() => {
+        // Hero Parallax
+        gsap.to('.hero-content', {
+            scrollTrigger: {
+                trigger: '.hero-section',
+                start: 'top top',
+                end: 'bottom top',
+                scrub: true
+            },
+            y: 100,
+            opacity: 0
+        });
+
+        // Bento Card Reveals
+        gsap.from('.bento-card', {
+            scrollTrigger: {
+                trigger: '#bento-section',
+                start: 'top 80%',
+            },
+            y: 50,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.2,
+            ease: "power3.out"
+        });
+    }, []);
+
+    const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        gsap.to(btn, {
+            x: x * 0.3,
+            y: y * 0.3,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLElement>) => {
+        gsap.to(e.currentTarget, {
+            x: 0,
+            y: 0,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
+
     const handleInitiate = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -137,30 +194,37 @@ export default function Gateway() {
     };
 
     return (
-        <div className="min-h-screen bg-[#020617] text-white font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-void text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
             <Suspense fallback={null}>
                 <CipherTracker />
             </Suspense>
             
-            {/* NAVIGATION */}
-            <nav className="fixed top-0 w-full z-[100] px-6 py-8 flex justify-between items-center pointer-events-none">
-                <div className="flex items-center gap-2 pointer-events-auto">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <Sparkles className="w-5 h-5 text-white" />
+            {/* Global Navigation Header - Aetheric */}
+            <nav className="fixed top-0 w-full z-[100] px-8 py-8 flex justify-between items-center pointer-events-none">
+                <div className="flex items-center gap-4 pointer-events-auto group cursor-pointer" onClick={() => router.push('/')}>
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-aether-gold/50 transition-colors duration-500">
+                        <Sparkles className="w-6 h-6 text-aether-gold group-hover:scale-110 transition-transform duration-500" />
                     </div>
-                    <span className="font-sanctum text-xl tracking-[0.2em] font-bold uppercase hidden md:block">Sacred Sanctum</span>
+                    <div className="flex flex-col">
+                        <span className="font-ritual text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Sacred Sanctum</span>
+                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5">Sovereign Architecture</span>
+                    </div>
                 </div>
                 
-                <div className="flex items-center gap-4 pointer-events-auto">
+                <div className="flex items-center gap-6 pointer-events-auto">
                     <button 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
                         onClick={() => document.getElementById('bento-section')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="px-4 py-2 text-xs font-bold tracking-widest uppercase text-white/60 hover:text-white transition-colors"
+                        className="px-6 py-2 text-[9px] font-black tracking-[0.3em] uppercase text-zinc-500 hover:text-white transition-colors"
                     >
                         Radar
                     </button>
                     <button 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
                         onClick={() => setShowSupportOverlay(true)}
-                        className="px-6 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-all"
+                        className="px-8 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white/10 hover:border-aether-gold/30 transition-all shadow-2xl"
                     >
                         Support
                     </button>
@@ -168,273 +232,310 @@ export default function Gateway() {
             </nav>
 
             {/* HERO SECTION */}
-            <section className="relative min-h-[100dvh] flex flex-col items-center justify-center p-6 overflow-hidden">
+            <section className="hero-section relative min-h-[100dvh] flex flex-col items-center justify-center p-6 overflow-hidden">
                 {/* Celestial Background */}
                 <div className="absolute inset-0 z-0">
-                    <img 
-                        src="/images/aether_bg.png" 
-                        alt="Aetheric Background" 
-                        className="absolute w-full h-full object-cover opacity-40 scale-105 animate-celestial" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020617]/50 to-[#020617]"></div>
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1)_0%,transparent_70%)]"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.05)_0%,transparent_60%)]"></div>
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-mamba.png')] opacity-[0.03]"></div>
                 </div>
 
-                <motion.div 
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className="relative z-10 text-center space-y-10 max-w-5xl mx-auto"
-                >
-                    <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl shadow-inner">
-                        <Star className="w-4 h-4 text-indigo-400 animate-pulse" />
-                        <span className="text-[10px] font-bold tracking-[0.3em] text-indigo-200 uppercase">Celestial Transmission Active</span>
+                <div className="hero-content relative z-10 text-center space-y-12 max-w-6xl mx-auto">
+                    <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-aether-gold/20 bg-aether-gold/5 backdrop-blur-xl shadow-2xl">
+                        <Star className="w-4 h-4 text-aether-gold animate-pulse" />
+                        <span className="text-[9px] font-black tracking-[0.4em] text-aether-gold/80 uppercase">Celestial Protocol Active</span>
                     </div>
 
-                    <div className="space-y-6">
-                        <h1 className="font-sanctum text-6xl md:text-[10rem] font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-indigo-500/30">
-                            SACRED <br /> SANCTUM
+                    <div className="space-y-6 md:space-y-8">
+                        <h1 className="font-ritual text-5xl sm:text-7xl md:text-[10rem] lg:text-[12rem] font-black leading-[0.9] md:leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4">
+                            SACRED <br className="hidden md:block" /> SANCTUM
                         </h1>
-                        <p className="text-xl md:text-3xl font-light text-slate-400 max-w-3xl mx-auto tracking-wide leading-relaxed">
-                            Ascend beyond the veil. A repository of <span className="text-white font-medium">Celestial Prophecy</span> and <span className="text-indigo-400 font-medium">Global Truth</span>.
+                        <p className="text-sm md:text-2xl font-light text-zinc-500 max-w-4xl mx-auto tracking-[0.1em] leading-relaxed uppercase px-6">
+                            Ascend beyond the veil. A sovereign repository of <span className="text-white font-black">Celestial Prophecy</span> and <span className="text-aether-gold font-black">Global Truth</span>.
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
+                    <div className="flex flex-col sm:flex-row gap-8 justify-center pt-12">
                         <button 
                             onClick={handleInitiate}
-                            className="btn-gold px-12 py-5 rounded-2xl flex items-center gap-3 group"
+                            onMouseMove={handleMagneticMove}
+                            onMouseLeave={handleMagneticLeave}
+                            className="px-16 py-6 bg-white text-black rounded-2xl flex items-center gap-4 group shadow-[0_0_50px_rgba(255,255,255,0.1)] hover:scale-105 transition-transform duration-500"
                         >
-                            <span className="text-sm">Initiate Ascension</span>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Initiate Ascension</span>
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                         <a 
                             href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn-outline-gold px-12 py-5 rounded-2xl text-sm"
+                            onMouseMove={handleMagneticMove}
+                            onMouseLeave={handleMagneticLeave}
+                            className="px-16 py-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:border-aether-gold/30 transition-all shadow-2xl"
                         >
                             Support Infrastructure
                         </a>
                     </div>
-                </motion.div>
+                </div>
 
-                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40 animate-bounce cursor-pointer" onClick={() => document.getElementById('bento-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                    <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Discover</span>
-                    <ChevronDown className="w-6 h-6 text-indigo-400" />
+                <div 
+                    className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-40 animate-bounce cursor-pointer group" 
+                    onClick={() => document.getElementById('bento-section')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                    <span className="text-[8px] uppercase tracking-[0.5em] font-black text-zinc-500 group-hover:text-aether-gold transition-colors">Discover</span>
+                    <ChevronDown className="w-5 h-5 text-aether-gold" />
                 </div>
             </section>
 
             {/* BENTO GRID CONTENT */}
-            <section id="bento-section" className="relative py-32 px-6 max-w-7xl mx-auto space-y-24">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <section id="bento-section" className="relative py-24 md:py-48 px-4 md:px-6 max-w-[90rem] mx-auto space-y-16 md:space-y-32">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
                     
                     {/* Geopolitical Radar (Large Card) */}
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        className="md:col-span-8 glass-sanctuary rounded-[2.5rem] p-10 relative overflow-hidden group min-h-[500px]"
+                    <div 
+                        className="bento-card md:col-span-8 glass-panel rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 relative overflow-hidden group min-h-[500px] md:min-h-[600px] border-white/5"
+                        onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = (e.clientX - rect.left) / rect.width - 0.5;
+                            const y = (e.clientY - rect.top) / rect.height - 0.5;
+                            gsap.to(e.currentTarget, {
+                                rotationY: x * 2,
+                                rotationX: -y * 2,
+                                duration: 1,
+                                ease: "power2.out"
+                            });
+                        }}
+                        onMouseLeave={(e) => {
+                            gsap.to(e.currentTarget, {
+                                rotationY: 0,
+                                rotationX: 0,
+                                duration: 1,
+                                ease: "power2.out"
+                            });
+                        }}
+                        style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
                     >
-                        <div className="absolute top-0 right-0 p-8">
-                            <div className="w-16 h-16 rounded-full border border-indigo-500/20 flex items-center justify-center animate-rotate-slow">
-                                <Compass className="w-6 h-6 text-indigo-400" />
+                        <div className="absolute top-0 right-0 p-12">
+                            <div className="w-20 h-20 rounded-full border border-aether-gold/20 flex items-center justify-center animate-spin-slow">
+                                <Compass className="w-8 h-8 text-aether-gold" />
                             </div>
                         </div>
                         
-                        <div className="relative z-10 h-full flex flex-col justify-between max-w-xl">
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-ping"></div>
-                                    <span className="text-xs font-bold tracking-widest text-indigo-400 uppercase">Live Geopolitical Radar</span>
+                        <div className="relative z-10 h-full flex flex-col justify-between max-w-2xl" style={{ transform: 'translateZ(50px)' }}>
+                            <div className="space-y-6 md:space-y-8">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-red-500 animate-ping"></div>
+                                    <span className="text-[8px] md:text-[10px] font-black tracking-[0.4em] text-aether-gold uppercase">Sovereign Radar: Active</span>
                                 </div>
-                                <h2 className="font-sanctum text-4xl md:text-5xl font-bold leading-tight">
-                                    WATCH THE <span className="gold-text-shimmer">NATIONS</span> ALIGN
+                                <h2 className="font-ritual text-4xl md:text-7xl font-black leading-[1] md:leading-[0.9] uppercase text-white gold-shimmer">
+                                    WATCH THE <br /> NATIONS ALIGN
                                 </h2>
-                                <p className="text-slate-400 leading-relaxed text-lg">
+                                <p className="text-zinc-500 leading-relaxed text-base md:text-xl uppercase tracking-[0.05em] font-light">
                                     Our proprietary mapping engine synchronizes ancient biblical scrolls with real-time global events. Decipher the unseen movements of the world before they manifest.
                                 </p>
                             </div>
                             
-                            <div className="pt-10 flex gap-4">
-                                <div className="px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold tracking-widest uppercase">Medes Awakening: Active</div>
-                                <div className="px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold tracking-widest uppercase">Babylon Decay: 84%</div>
+                            <div className="pt-12 md:pt-16 flex flex-wrap gap-3 md:gap-4">
+                                <div className="px-4 md:px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[7px] md:text-[9px] font-black tracking-[0.3em] uppercase text-zinc-400">Medes Awakening: Active</div>
+                                <div className="px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[7px] md:text-[9px] font-black tracking-[0.3em] uppercase text-zinc-400">Babylon Decay: 84%</div>
                             </div>
                         </div>
 
                         {/* Visual Radar Mock */}
-                        <div className="absolute -bottom-20 -right-20 w-[400px] h-[400px] opacity-20 pointer-events-none">
-                            <div className="w-full h-full rounded-full border border-indigo-500/50 flex items-center justify-center">
-                                <div className="w-3/4 h-3/4 rounded-full border border-indigo-500/30 flex items-center justify-center">
-                                    <div className="w-1/2 h-1/2 rounded-full border border-indigo-500/20"></div>
+                        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] opacity-[0.05] pointer-events-none">
+                            <div className="w-full h-full rounded-full border-2 border-aether-gold/30 flex items-center justify-center">
+                                <div className="w-3/4 h-3/4 rounded-full border border-aether-gold/20 flex items-center justify-center">
+                                    <div className="w-1/2 h-1/2 rounded-full border border-aether-gold/10"></div>
                                 </div>
-                                <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent animate-rotate-slow"></div>
+                                <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-aether-gold to-transparent animate-spin-slow"></div>
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Infrastructure Card */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        className="md:col-span-4 glass-sanctuary rounded-[2.5rem] p-10 bg-gradient-to-br from-indigo-900/20 to-transparent flex flex-col justify-between"
+                    <div 
+                        className="bento-card md:col-span-4 glass-panel rounded-[3rem] p-12 flex flex-col justify-between border-white/5"
+                        onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = (e.clientX - rect.left) / rect.width - 0.5;
+                            const y = (e.clientY - rect.top) / rect.height - 0.5;
+                            gsap.to(e.currentTarget, {
+                                rotationY: x * 4,
+                                rotationX: -y * 4,
+                                duration: 1,
+                                ease: "power2.out"
+                            });
+                        }}
+                        onMouseLeave={(e) => {
+                            gsap.to(e.currentTarget, {
+                                rotationY: 0,
+                                rotationX: 0,
+                                duration: 1,
+                                ease: "power2.out"
+                            });
+                        }}
+                        style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
                     >
-                        <div className="space-y-6">
-                            <ShieldCheck className="w-10 h-10 text-indigo-400" />
-                            <h3 className="font-sanctum text-3xl font-bold uppercase tracking-wider">8K Infrastructure</h3>
-                            <p className="text-slate-400 text-sm leading-relaxed">
+                        <div className="space-y-8" style={{ transform: 'translateZ(30px)' }}>
+                            <div className="w-14 h-14 rounded-2xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
+                                <ShieldCheck className="w-8 h-8 text-aether-gold" />
+                            </div>
+                            <h3 className="font-ritual text-3xl font-black uppercase tracking-[0.2em] text-white">8K Infra</h3>
+                            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
                                 We are scaling the frequency. Support the hardware transition to 8K rendering and AI-synthesized prophetic analysis.
                             </p>
                         </div>
                         
-                        <div className="pt-10">
+                        <div className="pt-16" style={{ transform: 'translateZ(20px)' }}>
                             <a 
                                 href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-full btn-gold py-4 rounded-xl flex items-center justify-center gap-2 group"
+                                onMouseMove={handleMagneticMove}
+                                onMouseLeave={handleMagneticLeave}
+                                className="w-full bg-white text-black py-5 rounded-2xl flex items-center justify-center gap-3 group shadow-2xl hover:scale-105 transition-all duration-500"
                             >
-                                <span className="text-xs">Secure the Build</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Secure the Build</span>
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </a>
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Video Card 1 */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="md:col-span-6 glass-card rounded-[2.5rem] overflow-hidden group cursor-pointer"
+                    <div 
+                        className="bento-card md:col-span-6 glass-panel rounded-[3rem] overflow-hidden group cursor-pointer border-white/5"
                         onClick={() => document.getElementById('portal-section')?.scrollIntoView({ behavior: 'smooth' })}
                     >
                         <div className="aspect-video relative overflow-hidden">
                             <img 
                                 src="https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg" 
                                 alt="14" 
-                                className="absolute w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                className="absolute w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"
                             />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
-                                    <Play className="w-8 h-8 text-white fill-white ml-1" />
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-white text-black flex items-center justify-center shadow-2xl transform scale-75 group-hover:scale-100 transition-transform duration-500">
+                                    <Play className="w-8 h-8 fill-black ml-1" />
                                 </div>
                             </div>
-                        </div>
-                        <div className="p-8 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h4 className="font-sanctum text-2xl font-bold uppercase tracking-widest text-indigo-100">14 (ODE' TO IRAN)</h4>
-                                <span className="text-[10px] font-bold tracking-[0.2em] text-indigo-400 uppercase">Transmission v14</span>
+                            <div className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white">Encrypted Transmission</span>
                             </div>
-                            <p className="text-slate-400 text-sm leading-relaxed">
+                        </div>
+                        <div className="p-10 space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h4 className="font-ritual text-2xl font-black uppercase tracking-[0.2em] text-white group-hover:text-aether-gold transition-colors">14 (ODE' TO IRAN)</h4>
+                                <span className="text-[8px] font-black tracking-[0.3em] text-zinc-600 uppercase">v14.5.2</span>
+                            </div>
+                            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
                                 A powerful prophetic breakdown regarding the 14th Amendment and the awakening of the Medes. Explore the spiritual foundations of modern geopolitical shifts.
                             </p>
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Video Card 2 */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.1 }}
-                        className="md:col-span-6 glass-card rounded-[2.5rem] overflow-hidden group cursor-pointer"
+                    <div 
+                        className="bento-card md:col-span-6 glass-panel rounded-[3rem] overflow-hidden group cursor-pointer border-white/5"
                         onClick={() => document.getElementById('portal-section')?.scrollIntoView({ behavior: 'smooth' })}
                     >
                         <div className="aspect-video relative overflow-hidden">
                             <img 
                                 src="https://img.youtube.com/vi/fVqAox73uCE/maxresdefault.jpg" 
                                 alt="Codex" 
-                                className="absolute w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                className="absolute w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"
                             />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
-                                    <Play className="w-8 h-8 text-white fill-white ml-1" />
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-white text-black flex items-center justify-center shadow-2xl transform scale-75 group-hover:scale-100 transition-transform duration-500">
+                                    <Play className="w-8 h-8 fill-black ml-1" />
                                 </div>
                             </div>
-                        </div>
-                        <div className="p-8 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h4 className="font-sanctum text-2xl font-bold uppercase tracking-widest text-indigo-100">PRELUDE TO THE DESTROYER</h4>
-                                <span className="text-[10px] font-bold tracking-[0.2em] text-indigo-400 uppercase">Codex X-1</span>
+                            <div className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white">Vault Stream X-1</span>
                             </div>
-                            <p className="text-slate-400 text-sm leading-relaxed">
+                        </div>
+                        <div className="p-10 space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h4 className="font-ritual text-2xl font-black uppercase tracking-[0.2em] text-white group-hover:text-aether-gold transition-colors">PRELUDE TO DESTROYER</h4>
+                                <span className="text-[8px] font-black tracking-[0.3em] text-zinc-600 uppercase">Archive 88</span>
+                            </div>
+                            <p className="text-zinc-500 text-sm leading-relaxed uppercase tracking-[0.1em] font-light">
                                 Exploring the ancient warnings of the Kolbrin Bible and the signs of collapse. A deep dive into the stone we built upon and its fragility.
                             </p>
                         </div>
-                    </motion.div>
+                    </div>
 
                 </div>
             </section>
 
             {/* AUTH PORTAL SECTION */}
-            <section id="portal-section" className="relative py-32 px-6 bg-gradient-to-b from-[#020617] to-black">
-                <div className="max-w-md mx-auto space-y-12">
-                    <div className="text-center space-y-4">
-                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
-                            <Lock className="w-8 h-8 text-indigo-400" />
+            <section id="portal-section" className="relative py-48 px-6">
+                <div className="max-w-xl mx-auto space-y-16">
+                    <div className="text-center space-y-6">
+                        <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mx-auto shadow-2xl group">
+                            <Lock className="w-10 h-10 text-aether-gold group-hover:scale-110 transition-transform duration-500" />
                         </div>
-                        <h2 className="font-sanctum text-4xl font-bold uppercase tracking-widest">Portal to Sector</h2>
-                        <p className="text-slate-500 text-xs tracking-[0.3em] font-bold uppercase">Identification Required</p>
+                        <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Portal to Sector</h2>
+                        <p className="text-zinc-500 text-[10px] tracking-[0.5em] font-black uppercase">Identification Protocol Required</p>
                     </div>
 
-                    <div className="perspective-1000">
+                    <div className="perspective-2000">
                         <div className={`auth-card-inner ${isFlipped ? 'is-flipped' : ''}`}>
                             
                             {/* Sign In Face */}
-                            <div className="auth-face glass-sanctuary rounded-[2.5rem] p-10 flex flex-col justify-between">
-                                <form onSubmit={authMode === 'signin' ? handleSignIn : handleResetPassword} className="space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="relative">
-                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/50" />
+                            <div className="auth-face glass-panel rounded-[3rem] p-12 flex flex-col justify-between border-white/5">
+                                <form onSubmit={authMode === 'signin' ? handleSignIn : handleResetPassword} className="space-y-8">
+                                    <div className="space-y-6">
+                                        <div className="relative group">
+                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-aether-gold/40 group-focus-within:text-aether-gold transition-colors" />
                                             <input
                                                 type="email"
                                                 required
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-indigo-500 transition-all placeholder:text-white/20"
+                                                className="w-full bg-black/40 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.1em]"
                                                 placeholder="Identity Soul (Email)"
                                             />
                                         </div>
                                         {authMode === 'signin' && (
-                                            <div className="relative">
-                                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400/50" />
+                                            <div className="relative group">
+                                                <Key className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-aether-gold/40 group-focus-within:text-aether-gold transition-colors" />
                                                 <input
                                                     type="password"
                                                     required
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm focus:outline-none focus:border-indigo-500 transition-all placeholder:text-white/20"
+                                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
                                                     placeholder="Cipher (Password)"
                                                 />
                                             </div>
                                         )}
                                     </div>
 
-                                    {errorMsg && !isFlipped && <p className="text-[10px] text-red-400 font-bold tracking-widest uppercase text-center">{errorMsg}</p>}
-                                    {successMsg && !isFlipped && <p className="text-[10px] text-green-400 font-bold tracking-widest uppercase text-center">{successMsg}</p>}
+                                    {errorMsg && !isFlipped && <p className="text-[10px] text-red-500 font-black tracking-widest uppercase text-center">{errorMsg}</p>}
+                                    {successMsg && !isFlipped && <p className="text-[10px] text-green-500 font-black tracking-widest uppercase text-center">{successMsg}</p>}
 
                                     <button 
                                         type="submit" 
                                         disabled={loading}
-                                        className="w-full btn-gold py-5 rounded-2xl text-xs flex items-center justify-center gap-2"
+                                        onMouseMove={handleMagneticMove}
+                                        onMouseLeave={handleMagneticLeave}
+                                        className="w-full bg-white text-black py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl hover:bg-zinc-200 transition-colors"
                                     >
                                         {loading ? 'Transmitting...' : authMode === 'signin' ? 'Enter Sanctuary' : 'Send Recovery'}
                                     </button>
 
-                                    <div className="flex justify-between items-center px-2">
+                                    <div className="flex justify-between items-center px-4">
                                         <button 
                                             type="button" 
                                             onClick={() => setIsFlipped(true)}
-                                            className="text-[10px] font-bold tracking-widest uppercase text-slate-500 hover:text-white transition-colors"
+                                            className="text-[9px] font-black tracking-[0.3em] uppercase text-zinc-600 hover:text-white transition-colors"
                                         >
                                             Initiate
                                         </button>
                                         <button 
                                             type="button" 
                                             onClick={() => setAuthMode(authMode === 'signin' ? 'reset' : 'signin')}
-                                            className="text-[10px] font-bold tracking-widest uppercase text-indigo-400 hover:text-indigo-300 transition-colors"
+                                            className="text-[9px] font-black tracking-[0.3em] uppercase text-aether-gold/60 hover:text-aether-gold transition-colors"
                                         >
                                             {authMode === 'signin' ? 'Lost Cipher?' : 'Back to Gate'}
                                         </button>
@@ -443,15 +544,15 @@ export default function Gateway() {
                             </div>
 
                             {/* Sign Up Face */}
-                            <div className="auth-face auth-face-back glass-sanctuary rounded-[2.5rem] p-10 flex flex-col justify-between border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 to-[#020617]">
-                                <form onSubmit={handleSignUp} className="space-y-4">
-                                    <h3 className="text-center font-sanctum text-2xl font-bold uppercase tracking-widest mb-4">New Soul Initiation</h3>
+                            <div className="auth-face auth-face-back glass-panel rounded-[3rem] p-12 flex flex-col justify-between border-aether-gold/20 bg-gradient-to-br from-void to-black">
+                                <form onSubmit={handleSignUp} className="space-y-6">
+                                    <h3 className="text-center font-ritual text-3xl font-black uppercase tracking-[0.2em] mb-6 gold-shimmer">New Soul Initiation</h3>
                                     <input
                                         type="email"
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:border-indigo-500 transition-all placeholder:text-white/20"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.1em]"
                                         placeholder="Email Address"
                                     />
                                     <input
@@ -459,7 +560,7 @@ export default function Gateway() {
                                         required
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:border-indigo-500 transition-all placeholder:text-white/20"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
                                         placeholder="Define Cipher"
                                     />
                                     <input
@@ -467,17 +568,19 @@ export default function Gateway() {
                                         required
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:border-indigo-500 transition-all placeholder:text-white/20"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:border-aether-gold transition-all placeholder:text-zinc-700 tracking-[0.2em]"
                                         placeholder="Confirm Cipher"
                                     />
 
-                                    {errorMsg && isFlipped && <p className="text-[10px] text-red-400 font-bold tracking-widest uppercase text-center">{errorMsg}</p>}
-                                    {successMsg && isFlipped && <p className="text-[10px] text-green-400 font-bold tracking-widest uppercase text-center">{successMsg}</p>}
+                                    {errorMsg && isFlipped && <p className="text-[10px] text-red-500 font-black tracking-widest uppercase text-center">{errorMsg}</p>}
+                                    {successMsg && isFlipped && <p className="text-[10px] text-green-500 font-black tracking-widest uppercase text-center">{successMsg}</p>}
 
                                     <button 
                                         type="submit" 
                                         disabled={loading}
-                                        className="w-full btn-gold py-5 rounded-2xl text-xs mt-4"
+                                        onMouseMove={handleMagneticMove}
+                                        onMouseLeave={handleMagneticLeave}
+                                        className="w-full bg-white text-black py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] mt-4"
                                     >
                                         {loading ? 'Awakening...' : 'Awaken Soul'}
                                     </button>
@@ -485,7 +588,7 @@ export default function Gateway() {
                                     <button 
                                         type="button" 
                                         onClick={() => setIsFlipped(false)}
-                                        className="w-full text-[10px] font-bold tracking-widest uppercase text-slate-500 hover:text-white transition-colors pt-4"
+                                        className="w-full text-[9px] font-black tracking-[0.3em] uppercase text-zinc-600 hover:text-white transition-colors pt-4"
                                     >
                                         Return to Gate
                                     </button>
@@ -498,18 +601,18 @@ export default function Gateway() {
             </section>
 
             {/* FOOTER */}
-            <footer className="py-20 border-t border-white/5 text-center space-y-6">
-                <div className="flex justify-center gap-6 text-slate-600">
-                    <Compass className="w-5 h-5" />
-                    <Sparkles className="w-5 h-5" />
-                    <Star className="w-5 h-5" />
+            <footer className="py-32 border-t border-white/5 text-center space-y-10">
+                <div className="flex justify-center gap-8 text-zinc-700">
+                    <Compass className="w-6 h-6 hover:text-aether-gold transition-colors cursor-pointer" />
+                    <Sparkles className="w-6 h-6 hover:text-aether-gold transition-colors cursor-pointer" />
+                    <Star className="w-6 h-6 hover:text-aether-gold transition-colors cursor-pointer" />
                 </div>
-                <div className="space-y-2">
-                    <p className="text-[10px] font-bold tracking-[0.5em] text-slate-500 uppercase">
+                <div className="space-y-4">
+                    <p className="text-[10px] font-black tracking-[0.8em] text-zinc-600 uppercase">
                         Protocol A-25 • Sacred Sanctum Sanctuary
                     </p>
-                    <p className="text-[8px] font-bold tracking-[0.4em] text-slate-700 uppercase">
-                        Developed by Lumen Labs • <span className="text-indigo-500/50">8K Rendered Truth</span>
+                    <p className="text-[9px] font-black tracking-[0.5em] text-zinc-800 uppercase">
+                        Designed for Sovereignty • <span className="text-aether-gold/30">8K Rendered Truth</span>
                     </p>
                 </div>
             </footer>
@@ -521,33 +624,33 @@ export default function Gateway() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#020617]/90 backdrop-blur-2xl"
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-void/95 backdrop-blur-2xl"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="glass-sanctuary rounded-[3rem] p-12 max-w-xl w-full relative space-y-8"
+                            className="glass-panel rounded-[4rem] p-16 max-w-2xl w-full relative space-y-10 border-white/5 shadow-[0_0_100px_rgba(212,175,55,0.1)]"
                         >
                             <button 
                                 onClick={() => setShowSupportOverlay(false)}
-                                className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"
+                                className="absolute top-10 right-10 text-zinc-500 hover:text-white transition-colors p-3 bg-white/5 rounded-full"
                             >
                                 <Lock className="w-6 h-6" />
                             </button>
                             
-                            <div className="text-center space-y-6">
-                                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto border border-indigo-500/20">
-                                    <LayoutGrid className="w-10 h-10 text-indigo-400" />
+                            <div className="text-center space-y-8">
+                                <div className="w-24 h-24 bg-aether-gold/10 rounded-[2rem] flex items-center justify-center mx-auto border border-aether-gold/20">
+                                    <LayoutGrid className="w-12 h-12 text-aether-gold" />
                                 </div>
-                                <h2 className="font-sanctum text-4xl font-bold uppercase tracking-widest">Fuel the Infrastructure</h2>
-                                <p className="text-slate-400 leading-relaxed">
+                                <h2 className="font-ritual text-5xl font-black uppercase tracking-[0.2em] text-white gold-shimmer">Fuel the Mission</h2>
+                                <p className="text-zinc-500 leading-relaxed uppercase tracking-[0.1em] font-light">
                                     Our mission requires high-fidelity hardware and AI-synthesis capabilities. Support the build to ensure the truth is rendered with absolute clarity.
                                 </p>
                                 
-                                <div className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-[2rem]">
-                                    <p className="text-[11px] font-bold tracking-widest uppercase text-indigo-200">
-                                        Use Code <span className="text-white bg-indigo-500/20 px-3 py-1 rounded border border-indigo-500/30">truufbtold</span> during checkout
+                                <div className="p-8 bg-aether-gold/5 border border-aether-gold/10 rounded-[2.5rem]">
+                                    <p className="text-[11px] font-black tracking-[0.4em] uppercase text-aether-gold">
+                                        Use Code <span className="text-white bg-aether-gold/20 px-4 py-1.5 rounded-lg border border-aether-gold/30">truufbtold</span> during checkout
                                     </p>
                                 </div>
 
@@ -555,14 +658,16 @@ export default function Gateway() {
                                     href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block w-full btn-gold py-6 rounded-2xl text-sm"
+                                    onMouseMove={handleMagneticMove}
+                                    onMouseLeave={handleMagneticLeave}
+                                    className="block w-full bg-white text-black py-7 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl"
                                 >
                                     Invest in the Sanctuary
                                 </a>
                                 
                                 <button 
                                     onClick={() => setShowSupportOverlay(false)}
-                                    className="text-[10px] font-bold tracking-widest uppercase text-slate-600 hover:text-slate-400 transition-colors"
+                                    className="text-[10px] font-black tracking-[0.5em] uppercase text-zinc-700 hover:text-zinc-500 transition-colors"
                                 >
                                     Return to the Gate
                                 </button>

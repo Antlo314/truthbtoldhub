@@ -130,6 +130,59 @@ export default function SanctumHub() {
         router.push('/');
     };
 
+    // GSAP Magnetic Button Effect
+    const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        gsap.to(btn, {
+            x: x * 0.3,
+            y: y * 0.3,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLElement>) => {
+        gsap.to(e.currentTarget, {
+            x: 0,
+            y: 0,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
+
+    const handleTilt = (e: React.MouseEvent<HTMLDivElement>) => {
+        const card = e.currentTarget;
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = (y - centerY) / 10;
+        const rotateY = (centerX - x) / 10;
+
+        gsap.to(card, {
+            rotateX,
+            rotateY,
+            scale: 1.02,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const resetTilt = (e: React.MouseEvent<HTMLDivElement>) => {
+        gsap.to(e.currentTarget, {
+            rotateX: 0,
+            rotateY: 0,
+            scale: 1,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
+
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const currentPower = profile?.soul_power || 100;
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
@@ -143,18 +196,20 @@ export default function SanctumHub() {
             </div>
 
             {/* Global Navigation Header - Aetheric */}
-            <header className="sticky top-0 z-50 glass-sanctuary px-6 py-4 flex justify-between items-center border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <Sparkles className="w-5 h-5 text-white" />
-                    </div>
+            <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center gap-6">
                     <div className="flex flex-col">
-                        <span className="font-sanctum text-xl font-bold tracking-widest leading-none text-white">
+                        <span className="font-ritual text-xl font-bold tracking-[0.2em] leading-none text-white gold-shimmer">
                             SACRED SANCTUM
                         </span>
-                        <span className="text-[9px] text-indigo-400 font-bold tracking-widest uppercase">
-                            The Aetheric Sanctuary
-                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center h-2 gap-[1px]">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.1}s`, width: '1.5px' }} />
+                                ))}
+                            </div>
+                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Aetheric Uplink: Active</span>
+                        </div>
                     </div>
                 </div>
 
@@ -163,31 +218,44 @@ export default function SanctumHub() {
                         href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hidden md:flex items-center gap-2 px-6 py-2 btn-gold rounded-full text-[10px] font-bold uppercase tracking-widest group"
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="hidden lg:flex items-center gap-3 px-8 py-2.5 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-[0.2em] group shadow-[0_10px_30px_rgba(255,255,255,0.1)] hover:bg-aether-gold transition-all"
                     >
-                        <Compass className="w-3 h-3 group-hover:rotate-45 transition-transform" />
+                        <Compass className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform" />
                         Fuel The Mission
                     </a>
+                    
+                    <div className="h-10 w-px bg-white/5 mx-2 hidden md:block" />
+
                     <button
                         id="tour-profile-btn"
                         onMouseEnter={playHover}
                         onClick={() => { playClick(); router.push('/self'); }}
-                        className="flex items-center gap-3 group relative perspective-1000 outline-none"
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="flex items-center gap-4 group transition-all"
                     >
                         <div className="text-right hidden sm:block">
-                            <span className="block text-xs font-bold text-white group-hover:text-indigo-400 transition-colors uppercase tracking-widest">
+                            <span className="block text-[10px] font-black text-white group-hover:text-aether-gold transition-colors uppercase tracking-[0.2em]">
                                 {displayName}
                             </span>
-                            <span className="block text-[9px] text-slate-500 font-bold">
-                                SOUL POWER: {currentPower}
+                            <span className="block text-[8px] text-zinc-500 font-bold uppercase tracking-widest">
+                                Soul Power: {currentPower}
                             </span>
                         </div>
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 border border-white/10 flex items-center justify-center overflow-hidden group-hover:border-indigo-400 transition-colors shadow-lg">
-                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 p-0.5 group-hover:border-aether-gold transition-colors">
+                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-[10px]" />
                         </div>
                     </button>
-                    <button onClick={handleSignOut} className="text-slate-500 hover:text-indigo-400 transition-colors group p-2 rounded-xl hover:bg-white/5" title="Sign Out">
-                        <LogOut className="w-5 h-5" />
+
+                    <button 
+                        onClick={handleSignOut} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="text-zinc-500 hover:text-red-500 transition-colors p-3 bg-white/5 rounded-full border border-white/5"
+                    >
+                        <LogOut className="w-4 h-4" />
                     </button>
                 </div>
             </header>
@@ -228,40 +296,52 @@ export default function SanctumHub() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
                         {/* Sector 1: The Pool */}
                         <div
                             id="sanctum-pool"
-                            className="glass-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px] opacity-40 grayscale cursor-not-allowed border-white/5"
+                            onMouseMove={handleTilt}
+                            onMouseLeave={resetTilt}
+                            className="glass-panel rounded-[3rem] p-10 flex flex-col justify-between min-h-[340px] opacity-30 cursor-not-allowed border-white/5 relative group"
                         >
-                            <div className="space-y-6">
-                                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-600">
-                                    <Sparkles className="w-7 h-7" />
+                            <div className="space-y-8">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-700">
+                                    <Sparkles className="w-8 h-8" />
                                 </div>
-                                <h3 className="font-sanctum text-2xl text-slate-500 tracking-widest uppercase">THE POOL</h3>
-                                <p className="text-xs text-slate-600 leading-relaxed font-medium uppercase tracking-wider">Collective Treasury</p>
+                                <div>
+                                    <h3 className="font-ritual text-2xl text-zinc-500 tracking-[0.2em] uppercase">The Pool</h3>
+                                    <p className="text-[10px] text-zinc-600 leading-relaxed font-bold uppercase tracking-[0.2em] mt-2">Collective Treasury</p>
+                                </div>
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full w-fit text-slate-600 border border-white/5">Sector Offline</span>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/5 rounded-full w-fit">
+                                <Lock className="w-3 h-3 text-zinc-700" />
+                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-700">Sector Offline</span>
+                            </div>
                         </div>
 
                         {/* Sector 2: The Archive */}
                         <div
                             onClick={() => { playClick(); router.push('/codex'); }}
                             onMouseEnter={playHover}
+                            onMouseMove={handleTilt}
+                            onMouseLeave={resetTilt}
                             id="sanctum-archive"
-                            className="glass-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px] cursor-pointer group hover:bg-indigo-500/5"
+                            className="glass-panel rounded-[3rem] p-10 flex flex-col justify-between min-h-[340px] cursor-pointer group hover:border-aether-gold/30 transition-all shadow-2xl relative"
                         >
-                            <div className="space-y-6">
-                                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-                                    <Compass className="w-7 h-7" />
+                            <div className="absolute inset-0 bg-aether-indigo/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[3rem]" />
+                            <div className="space-y-8 relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-aether-gold group-hover:bg-aether-gold group-hover:text-black transition-all duration-500">
+                                    <Compass className="w-8 h-8" />
                                 </div>
-                                <h3 className="font-sanctum text-2xl text-white tracking-widest uppercase">THE ARCHIVE</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed font-medium uppercase tracking-wider">Aetheric Whispers</p>
+                                <div>
+                                    <h3 className="font-ritual text-2xl text-white tracking-[0.2em] uppercase">The Codex</h3>
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed font-bold uppercase tracking-[0.2em] mt-2">Sovereign Ledger</p>
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between text-indigo-400">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Enter Sector</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                            <div className="flex items-center justify-between text-aether-gold relative z-10">
+                                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Access Uplink</span>
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-3 transition-transform duration-500" />
                             </div>
                         </div>
 
@@ -269,19 +349,24 @@ export default function SanctumHub() {
                         <div
                             onClick={() => { playClick(); router.push('/cineworks'); }}
                             onMouseEnter={playHover}
+                            onMouseMove={handleTilt}
+                            onMouseLeave={resetTilt}
                             id="sanctum-gallery"
-                            className="glass-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px] cursor-pointer group hover:bg-violet-500/5"
+                            className="glass-panel rounded-[3rem] p-10 flex flex-col justify-between min-h-[340px] cursor-pointer group hover:border-aether-violet/30 transition-all shadow-2xl relative"
                         >
-                            <div className="space-y-6">
-                                <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
-                                    <Clapperboard className="w-7 h-7" />
+                            <div className="absolute inset-0 bg-aether-violet/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[3rem]" />
+                            <div className="space-y-8 relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-aether-violet group-hover:bg-aether-violet group-hover:text-white transition-all duration-500">
+                                    <Clapperboard className="w-8 h-8" />
                                 </div>
-                                <h3 className="font-sanctum text-2xl text-white tracking-widest uppercase">THE GALLERY</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed font-medium uppercase tracking-wider">Cinematic Fragments</p>
+                                <div>
+                                    <h3 className="font-ritual text-2xl text-white tracking-[0.2em] uppercase">The Gallery</h3>
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed font-bold uppercase tracking-[0.2em] mt-2">Prophetic Vision</p>
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between text-violet-400">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Open Archive</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                            <div className="flex items-center justify-between text-aether-violet relative z-10">
+                                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Open Stream</span>
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-3 transition-transform duration-500" />
                             </div>
                         </div>
 
@@ -289,58 +374,62 @@ export default function SanctumHub() {
                         <div
                             onClick={() => { playClick(); router.push('/trial'); }}
                             onMouseEnter={playHover}
+                            onMouseMove={handleTilt}
+                            onMouseLeave={resetTilt}
                             id="sanctum-trial"
-                            className="glass-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px] cursor-pointer group hover:bg-emerald-500/5"
+                            className="glass-panel rounded-[3rem] p-10 flex flex-col justify-between min-h-[340px] cursor-pointer group hover:border-emerald-500/30 transition-all shadow-2xl relative"
                         >
-                            <div className="space-y-6">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-                                    <Cpu className="w-7 h-7" />
+                            <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[3rem]" />
+                            <div className="space-y-8 relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-400 group-hover:text-black transition-all duration-500">
+                                    <Cpu className="w-8 h-8" />
                                 </div>
-                                <h3 className="font-sanctum text-2xl text-white tracking-widest uppercase">THE TRIAL</h3>
-                                <p className="text-xs text-slate-400 leading-relaxed font-medium uppercase tracking-wider">Encrypted Synthesis</p>
+                                <div>
+                                    <h3 className="font-ritual text-2xl text-white tracking-[0.2em] uppercase">The Trial</h3>
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed font-bold uppercase tracking-[0.2em] mt-2">Alignment Test</p>
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between text-emerald-400">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Decrypt Signal</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                            <div className="flex items-center justify-between text-emerald-400 relative z-10">
+                                <span className="text-[9px] font-black uppercase tracking-[0.3em]">Begin Protocol</span>
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-3 transition-transform duration-500" />
                             </div>
                         </div>
 
                         {/* 8K Infrastructure Upgrade Banner */}
-                        <div className="col-span-1 md:col-span-2 lg:col-span-4 glass-sanctuary rounded-[3rem] p-10 overflow-hidden relative group">
-                            <div className="absolute top-0 right-0 p-8 opacity-20">
-                                <LayoutGrid className="w-32 h-32 text-indigo-500 animate-rotate-slow" />
-                            </div>
+                        <div className="col-span-1 md:col-span-2 lg:col-span-4 glass-panel rounded-[4rem] p-12 overflow-hidden relative group border-white/5">
+                            <div className="absolute -top-24 -right-24 w-96 h-96 bg-aether-indigo/20 blur-[120px] rounded-full pointer-events-none" />
                             
-                            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-                                <div className="flex-1 space-y-6 text-center lg:text-left">
+                            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+                                <div className="flex-1 space-y-8 text-center lg:text-left">
                                     <div className="flex items-center gap-4 justify-center lg:justify-start">
-                                        <span className="px-4 py-1 bg-indigo-500/20 rounded-full text-indigo-400 font-bold text-[10px] uppercase tracking-widest border border-indigo-500/30">Infrastructure Update</span>
-                                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Status: <span className="text-indigo-300">Scaling Frequency</span></span>
+                                        <div className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-zinc-400 font-bold text-[9px] uppercase tracking-[0.2em]">Infrastructure Phase 2.5</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-aether-gold animate-pulse" />
+                                            <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest">Active Scaling</span>
+                                        </div>
                                     </div>
-                                    <h2 className="font-sanctum text-3xl md:text-4xl text-white tracking-widest uppercase leading-tight font-black">
-                                        Support the <span className="gold-text-shimmer">Aetheric rendering</span> suite
+                                    <h2 className="font-ritual text-4xl md:text-5xl text-white tracking-widest uppercase leading-tight font-black">
+                                        Fortify the <span className="gold-shimmer">Aetheric rendering</span> suite
                                     </h2>
-                                    <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
-                                        Every contribution fuels the hardware transition to 8K prophetic visualization and advanced AI analysis. Help us secure the future of the sanctuary.
+                                    <p className="text-zinc-400 text-sm max-w-2xl leading-relaxed font-mono uppercase tracking-widest opacity-60">
+                                        Fueling the transition to 8K prophetic visualization and advanced geopolitical neural mapping.
                                     </p>
                                 </div>
 
-                                <div className="flex flex-col items-center gap-4">
+                                <div className="flex flex-col items-center gap-6">
                                     <a 
                                         href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        onClick={playClick}
-                                        className="btn-gold px-12 py-5 rounded-2xl text-xs font-bold uppercase tracking-widest shadow-2xl flex items-center gap-3 group"
+                                        onMouseMove={handleMagneticMove}
+                                        onMouseLeave={handleMagneticLeave}
+                                        className="px-12 py-5 bg-white text-black font-black text-xs uppercase tracking-[0.3em] rounded-full shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-aether-gold transition-all flex items-center gap-4"
                                     >
-                                        Invest in the Truth
-                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                        Invest in Truth
+                                        <ArrowRight className="w-4 h-4" />
                                     </a>
-                                    <div className="flex flex-col items-center gap-1 opacity-60">
-                                        <p className="text-[10px] font-bold text-white tracking-widest uppercase">
-                                            Code: <span className="text-indigo-400">truufbtold</span>
-                                        </p>
-                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Protocol v2.5 Deployment</p>
+                                    <div className="text-center opacity-40">
+                                        <p className="text-[8px] font-mono uppercase tracking-[0.5em] text-white">Protocol Deploy v2.5.4</p>
                                     </div>
                                 </div>
                             </div>

@@ -109,6 +109,30 @@ export default function Treasury() {
         router.push('/');
     };
 
+    // GSAP Magnetic Button Effect
+    const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        gsap.to(btn, {
+            x: x * 0.3,
+            y: y * 0.3,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLElement>) => {
+        gsap.to(e.currentTarget, {
+            x: 0,
+            y: 0,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
+
     // Ambient Drone
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -455,84 +479,120 @@ export default function Treasury() {
             {/* Background - The Treasury uses the custom pool void asset with Parallax */}
             <div ref={bgRef} className="fixed inset-0 z-0 bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png')] bg-cover bg-center brightness-50 contrast-125 scale-110 pointer-events-none"></div>
 
-            {/* Header */}
-            <header className="sticky top-0 w-full max-w-lg z-50 glass bg-zinc-950/80 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-orange-500/10">
-                <button onClick={() => router.push('/sanctum')} className="text-orange-500 hover:text-white transition-colors group">
-                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                </button>
-                <div className="flex flex-col items-center">
-                    <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none drop-shadow-md">
-                        THE POOL
-                    </span>
-                    <div className="flex items-center gap-2 mt-1 px-3 py-0.5 bg-black/50 border border-orange-500/30 rounded-full shadow-[0_0_10px_rgba(234,88,12,0.2)]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_#22c55e]"></div>
-                        <span className="text-[9px] text-green-400 font-mono uppercase tracking-widest font-bold">
-                            {profile?.soul_power !== undefined ? `${profile.soul_power} SP` : 'SYNCING MATRIX...'}
+            {/* Global Navigation Header - Aetheric */}
+            <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center w-full">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => router.push('/sanctum')} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex flex-col">
+                        <span className="font-ritual text-xl font-bold tracking-[0.2em] leading-none text-white gold-shimmer">
+                            SOVEREIGN ESCROW
                         </span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center h-2 gap-[1px]">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.1}s`, width: '1.5px' }} />
+                                ))}
+                            </div>
+                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Treasury Uplink: Secure</span>
+                        </div>
                     </div>
                 </div>
-                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
-                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
-                    <LogOut className="w-5 h-5" />
-                </button>
+
+                <div className="flex items-center gap-4">
+                    <div className="px-4 py-1.5 bg-black/40 border border-aether-gold/20 rounded-full flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-aether-gold" />
+                        <span className="text-[9px] font-black text-aether-gold uppercase tracking-[0.2em]">
+                            {profile?.soul_power !== undefined ? `${profile.soul_power} SP` : 'SYNCING...'}
+                        </span>
+                    </div>
+
+                    <button 
+                        onClick={handleSignOut} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="text-zinc-500 hover:text-red-500 transition-colors p-3 bg-white/5 rounded-full border border-white/5"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </button>
+                </div>
             </header>
 
             <main className="flex-1 w-full max-w-lg relative z-10 p-4 md:p-6 pb-32 space-y-8 animate-fade-in">
 
                 {/* Treasury Escrow Status block */}
-                <div className="glass-panel p-6 rounded-3xl border-orange-500/20 shadow-[0_0_40px_rgba(234,88,12,0.1)] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-orange-600/10 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
+                <div className="glass-panel p-10 rounded-[3rem] border-white/5 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-aether-gold/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-aether-gold/10 transition-colors duration-1000"></div>
 
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+                        <div className="flex items-center gap-6">
                             {/* Geometric 3D Escrow Node */}
-                            <div className="w-12 h-12 relative [perspective:1000px] shrink-0 mr-2" id="treasury-escrow-node">
+                            <div className="w-20 h-20 relative [perspective:1000px] shrink-0" id="treasury-escrow-node">
                                 <div ref={escrowObjRef} className="w-full h-full relative [transform-style:preserve-3d]">
-                                    {/* 3D Wireframe Cube Faces */}
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateZ(24px)] flex items-center justify-center shadow-[0_0_15px_rgba(234,88,12,0.4)]"></div>
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateZ(-24px)] flex items-center justify-center"></div>
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateY(24px)_rotateX(90deg)] flex items-center justify-center"></div>
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateY(-24px)_rotateX(-90deg)] flex items-center justify-center"></div>
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateX(24px)_rotateY(90deg)] flex items-center justify-center"></div>
-                                    <div className="absolute inset-0 border border-orange-500/50 bg-orange-500/10 [transform:translateX(-24px)_rotateY(-90deg)] flex items-center justify-center"></div>
+                                    {/* 3D Wireframe Faces */}
+                                    {[...Array(6)].map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="absolute inset-0 border border-aether-gold/40 bg-aether-gold/5 backdrop-blur-sm shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                                            style={{
+                                                transform: i === 0 ? 'translateZ(40px)' : 
+                                                           i === 1 ? 'translateZ(-40px)' :
+                                                           i === 2 ? 'translateY(40px) rotateX(90deg)' :
+                                                           i === 3 ? 'translateY(-40px) rotateX(-90deg)' :
+                                                           i === 4 ? 'translateX(40px) rotateY(90deg)' :
+                                                           'translateX(-40px) rotateY(-90deg)'
+                                            }}
+                                        />
+                                    ))}
                                     {/* Core Flame */}
                                     <div className="absolute inset-0 flex items-center justify-center [transform:translateZ(0px)]">
-                                        <Flame className="w-6 h-6 text-orange-400 drop-shadow-[0_0_10px_#f97316] animate-pulse" />
+                                        <div className="w-3 h-3 bg-white rounded-full shadow-[0_0_30px_#fff] animate-pulse" />
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <h2 className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Global Escrow</h2>
-                                <h3 ref={escrowDisplayRef} className="font-ritual text-2xl text-white tracking-widest leading-none mt-1">$0.00</h3>
+                            <div className="text-center md:text-left">
+                                <h2 className="text-[10px] text-zinc-500 font-mono uppercase tracking-[0.4em]">Liquid Reserves</h2>
+                                <h3 ref={escrowDisplayRef} className="font-ritual text-5xl text-white tracking-widest leading-none mt-2 gold-shimmer">$0.00</h3>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <span className="block text-[8px] text-green-500/80 font-mono uppercase tracking-widest px-2 py-1 bg-green-500/10 rounded border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                                SECURE
+                        <div className="flex flex-col items-end gap-2">
+                            <span className="px-4 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-[8px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                Protocol: Verified
                             </span>
                         </div>
                     </div>
 
-                    <p className="text-xs text-gray-400 font-mono leading-relaxed mt-4">
-                        The Pool sustains the Obsidian Void. Funds are held in escrow and distributed via sovereign consensus.
+                    <p className="text-xs text-zinc-500 font-mono leading-relaxed mt-4 max-w-md uppercase tracking-wider opacity-60">
+                        The Sovereign Escrow sustains the Aetheric Grid. All liquidity is held in trust and governed by consensus.
                     </p>
 
-                    <div className="mt-6 flex gap-3">
+                    <div className="mt-10 flex flex-col sm:flex-row gap-4">
                         <button
                             id="treasury-make-offering"
                             onMouseEnter={playHover}
                             onClick={() => setIsMakingOffering(true)}
-                            className="flex-1 bg-gradient-to-r from-orange-600 to-orange-800 text-white font-bold py-3 rounded-xl text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-orange-900/40 hover:scale-[1.02] transition-transform"
+                            onMouseMove={handleMagneticMove}
+                            onMouseLeave={handleMagneticLeave}
+                            className="flex-1 bg-white text-black font-black py-5 rounded-2xl text-[10px] uppercase tracking-[0.3em] shadow-[0_10px_30px_rgba(255,255,255,0.1)] hover:bg-aether-gold transition-all"
                         >
-                            Make Offering
+                            Execute Offering
                         </button>
                         <button
                             id="treasury-request-aid"
                             onMouseEnter={playHover}
                             onClick={() => setIsRequestingAid(true)}
-                            className="flex-1 glass bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl text-[10px] uppercase tracking-[0.2em] hover:bg-white/10 transition-colors"
+                            onMouseMove={handleMagneticMove}
+                            onMouseLeave={handleMagneticLeave}
+                            className="flex-1 glass-panel text-white font-black py-5 rounded-2xl text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all border-white/5"
                         >
-                            Request Aid
+                            Petition for Aid
                         </button>
                     </div>
                 </div>

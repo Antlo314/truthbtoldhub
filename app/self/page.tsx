@@ -122,6 +122,30 @@ export default function PowerSelf() {
         initSelf();
     }, [fetchIdentity]);
 
+    // GSAP Magnetic Button Effect
+    const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        gsap.to(btn, {
+            x: x * 0.3,
+            y: y * 0.3,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLElement>) => {
+        gsap.to(e.currentTarget, {
+            x: 0,
+            y: 0,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
+
     const userEmail = user?.email || 'guest@obsidianvoid.net';
     const isAdmin = profile?.tier === 'Architect';
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
@@ -129,72 +153,51 @@ export default function PowerSelf() {
     const currentPower = profile?.soul_power || 100;
     const avatarUrl = profile?.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=soul";
 
-    const handleSignOut = async () => {
-        await storeSignOut();
-        router.push('/');
-    };
-
-    const uploadAvatar = async (event: any) => {
-        try {
-            setUploading(true);
-            if (!user) throw new Error('Not authenticated');
-
-            if (!event.target.files || event.target.files.length === 0) {
-                throw new Error('You must select an image to upload.');
-            }
-            const file = event.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
-
-            let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-            if (uploadError) throw uploadError;
-
-            const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-            const newAvatarUrl = publicUrlData.publicUrl;
-
-            await updateProfile({ avatar_url: newAvatarUrl });
-        } catch (error: any) {
-            alert('Error uploading avatar: ' + error.message);
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleGuideComplete = () => {
-        localStorage.setItem('self_guide_complete', 'true');
-        setIsGuideOpen(false);
-    };
-
     return (
-        <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col overflow-x-hidden">
-            {/* Background Parallax - Inner Sanctum */}
-            <div ref={bgRef} className="fixed inset-0 z-0 scale-110 pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a0a00_0%,#000_100%)]"></div>
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(234,88,12,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(234,88,12,0.015)_1px,transparent_1px)] bg-[size:30px_30px]"></div>
-            </div>
-
-            {/* Header */}
-            <header className="sticky top-0 z-50 glass bg-black/60 backdrop-blur-xl px-4 py-4 md:px-6 flex justify-between items-center border-b border-orange-500/10">
-                <button
-                    onMouseEnter={playHover}
-                    onClick={() => { playClick(); router.push('/sanctum'); }}
-                    className="text-orange-500 hover:text-white transition-colors group"
-                >
-                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                </button>
-                <div className="flex flex-col items-center pl-8">
-                    <span className="font-ritual text-sm font-bold tracking-widest text-white leading-none">
-                        SOUL MATRIX
-                    </span>
-                    <span className="text-[9px] text-orange-500/80 font-mono uppercase tracking-[0.2em]">
-                        Identity & Authority
-                    </span>
+        <div className="relative min-h-screen bg-void text-white selection:bg-aether-gold/30 font-sans flex flex-col overflow-x-hidden">
+            {/* Global Navigation Header - Aetheric */}
+            <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-4 md:px-6 py-4 flex justify-between items-center w-full">
+                <div className="flex items-center gap-4 md:gap-6">
+                    <button 
+                        onClick={() => router.push('/sanctum')} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="p-2 md:p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex flex-col">
+                        <span className="font-ritual text-lg md:text-xl font-bold tracking-[0.2em] leading-none text-white gold-shimmer uppercase">
+                            Identity Core
+                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="hidden sm:flex items-center h-2 gap-[1px]">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.1}s`, width: '1.5px' }} />
+                                ))}
+                            </div>
+                            <span className="text-[6px] md:text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Aetheric Signature: Verified</span>
+                        </div>
+                    </div>
                 </div>
-                <button onClick={handleSignOut} className="text-gray-500 hover:text-red-500 transition-colors group flex items-center gap-2" title="Sign Out">
-                    <span className="text-[9px] uppercase font-bold tracking-widest hidden md:inline">Disconnect</span>
-                    <LogOut className="w-5 h-5" />
-                </button>
+
+                <div className="flex items-center gap-3 md:gap-4">
+                    <div className="px-3 md:px-4 py-1 md:py-1.5 bg-black/40 border border-aether-gold/20 rounded-full flex items-center gap-2">
+                        <Zap className="w-2.5 h-2.5 md:w-3 h-3 text-aether-gold" />
+                        <span className="text-[8px] md:text-[9px] font-black text-aether-gold uppercase tracking-[0.2em]">
+                            {currentPower} SP
+                        </span>
+                    </div>
+
+                    <button 
+                        onClick={handleSignOut} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="text-zinc-500 hover:text-red-500 transition-colors p-2 md:p-3 bg-white/5 rounded-full border border-white/5"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </button>
+                </div>
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32 max-w-4xl mx-auto w-full animate-fade-in space-y-8">
@@ -215,72 +218,67 @@ export default function PowerSelf() {
                 <div
                     ref={idCardRef}
                     id="self-profile-card"
-                    onMouseEnter={(e) => {
-                        playHover();
-                        gsap.to(e.currentTarget, { scale: 1.01, rotationX: 1, rotationY: -1, duration: 0.5, ease: "power2.out", filter: "brightness(1.1)" });
-                    }}
-                    onMouseLeave={(e) => {
-                        gsap.to(e.currentTarget, { scale: 1, rotationX: 0, rotationY: 0, duration: 0.5, ease: "power2.out", filter: "brightness(1)" });
-                    }}
-                    style={{ perspective: '1000px' }}
-                    className="glass-panel rounded-3xl p-6 relative overflow-hidden border-orange-500/20 transition-all cursor-default"
+                    className="glass-panel rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative overflow-hidden border-white/5 transition-all cursor-default group"
                 >
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-600/10 rounded-full blur-3xl mix-blend-screen -z-10"></div>
+                    <div className="absolute top-0 right-0 w-64 md:w-80 h-64 md:h-80 bg-aether-gold/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-aether-gold/10 transition-colors duration-1000"></div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex flex-col lg:flex-row items-center gap-8 md:gap-12 relative z-10">
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={uploadAvatar} />
-                        <div onClick={() => !uploading && fileInputRef.current?.click()} className="w-24 h-24 rounded-2xl bg-zinc-900 border border-orange-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(234,88,12,0.15)] relative group cursor-pointer overflow-hidden p-1 shrink-0">
-                            <img src={avatarUrl} alt="Avatar" className={`w-full h-full object-cover rounded-xl ${uploading ? 'opacity-50 grayscale' : ''}`} />
+                        <div onClick={() => !uploading && fileInputRef.current?.click()} className="w-24 md:w-32 h-24 md:h-32 rounded-[1.5rem] md:rounded-[2rem] bg-zinc-900 border border-white/10 flex items-center justify-center relative group cursor-pointer overflow-hidden p-1 shrink-0">
+                            <img src={avatarUrl} alt="Avatar" className={`w-full h-full object-cover rounded-[1.3rem] md:rounded-[1.8rem] ${uploading ? 'opacity-50 grayscale' : ''}`} />
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 {uploading ? (
-                                    <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="w-5 h-5 border-2 border-aether-gold border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-1">
-                                        <Upload className="w-4 h-4 text-white" />
-                                        <span className="text-[8px] font-mono text-white uppercase tracking-widest">Update</span>
+                                        <Upload className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                                        <span className="text-[8px] md:text-[9px] font-black text-white uppercase tracking-widest">Update</span>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex-1 text-center md:text-left space-y-2">
-                            <div className="flex flex-col md:flex-row items-center gap-3">
-                                <h1 className="font-ritual text-3xl font-bold tracking-widest text-white">{displayName}</h1>
-                                {isAdmin && (
-                                    <span className="text-[9px] px-2 py-0.5 rounded bg-red-950/40 text-red-400 border border-red-500/30 uppercase tracking-[0.2em] font-bold">
-                                        Architect
-                                    </span>
-                                )}
-                                {!isAdmin && (
-                                    <span className="text-[9px] px-2 py-0.5 rounded bg-orange-950/40 text-orange-400 border border-orange-500/30 uppercase tracking-[0.2em] font-bold">
+                        <div className="flex-1 text-center lg:text-left space-y-4">
+                            <div className="flex flex-col lg:flex-row items-center gap-3 md:gap-4">
+                                <h1 className="font-ritual text-3xl md:text-4xl font-black tracking-widest text-white uppercase gold-shimmer">{displayName}</h1>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 md:px-4 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] border ${isAdmin ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-aether-gold/10 text-aether-gold border-aether-gold/20'}`}>
                                         {currentTier}
                                     </span>
-                                )}
+                                </div>
                             </div>
-                            <p className="text-xs text-gray-400 font-mono tracking-widest leading-relaxed">
-                                {profile?.custom_title && <span className="block text-orange-500 mb-1">{profile.custom_title}</span>}
+                            <p className="text-[10px] md:text-xs text-zinc-500 font-mono tracking-[0.2em] leading-relaxed uppercase opacity-80 max-w-lg">
+                                {profile?.custom_title && <span className="block text-aether-gold font-black mb-1">{profile.custom_title}</span>}
                                 {profile?.bio || userEmail}
                             </p>
 
-                            <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4 pt-4 border-t border-white/5">
-                                <div className="flex items-center gap-2">
-                                    <Zap className="w-4 h-4 text-orange-500" />
-                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Sanctum Power: <strong className="text-white">{currentPower} SP</strong></span>
+                            <div className="flex flex-wrap justify-center lg:justify-start gap-4 md:gap-6 mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20">
+                                        <Zap className="w-4 h-4 text-aether-gold" />
+                                    </div>
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-[6px] md:text-[7px] font-black text-zinc-500 uppercase tracking-widest">Soul Power</span>
+                                        <span className="text-xs md:text-sm font-black text-white tracking-widest uppercase">{currentPower} SP</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Key className="w-4 h-4 text-orange-500" />
-                                    <span className="text-[10px] uppercase font-mono tracking-widest text-gray-400">Tier: <strong className="text-white">{currentTier}</strong></span>
-                                </div>
+                                
                                 {globalRank !== null && globalRank > 0 && (
-                                    <button onClick={() => router.push('/hierarchy')} className="flex items-center gap-2 bg-orange-950/20 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg border border-orange-500/30 transition-all group">
-                                        <Trophy className="w-3.5 h-3.5 text-orange-500 group-hover:scale-110 transition-transform" />
-                                        <span className="text-[10px] uppercase font-mono tracking-widest text-orange-200">Global Rank: <strong className="text-orange-500 font-bold ml-1">#{globalRank}</strong></span>
+                                    <button 
+                                        onClick={() => router.push('/hierarchy')} 
+                                        onMouseMove={handleMagneticMove}
+                                        onMouseLeave={handleMagneticLeave}
+                                        className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-4 md:px-6 py-2 rounded-xl md:rounded-2xl border border-white/10 transition-all group"
+                                    >
+                                        <Trophy className="w-4 h-4 text-aether-gold group-hover:scale-110 transition-transform" />
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-[6px] md:text-[7px] font-black text-zinc-500 uppercase tracking-widest">Global Rank</span>
+                                            <span className="text-xs md:text-sm font-black text-aether-gold tracking-widest uppercase">#{globalRank}</span>
+                                        </div>
                                     </button>
                                 )}
                             </div>
                         </div>
-
-                        {/* Modify Protocol Removed per protocol */}
                     </div>
                 </div>
 

@@ -10,6 +10,7 @@ import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { TextPlugin } from 'gsap/TextPlugin';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import GenerativeIdenticon from '@/components/GenerativeIdenticon';
 
 // --- AUDIO ASSETS ---
@@ -19,7 +20,7 @@ let encryptSfx: any = null;
 let ascendSfx: any = null;
 
 if (typeof window !== 'undefined') {
-    gsap.registerPlugin(TextPlugin);
+    gsap.registerPlugin(TextPlugin, ScrollTrigger);
 
     uiHoverSfx = new Howl({
         src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'],
@@ -387,16 +388,29 @@ export default function Archive() {
         }
     }, { dependencies: [coreWhispers[0]?.id], scope: listRef });
 
-    // GSAP TextPlugin Typewriter Effect for New Whispers
-    useGSAP(() => {
-        if (newTextRef.current) {
-            const originalText = newTextRef.current.innerText;
-            gsap.fromTo(newTextRef.current,
-                { text: "" },
-                { text: originalText, duration: 2.5, ease: "none", delay: 0.5 }
-            );
-        }
-    }, { dependencies: [whispers], scope: listRef });
+    // GSAP Magnetic Button Effect
+    const handleMagneticMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        gsap.to(btn, {
+            x: x * 0.3,
+            y: y * 0.3,
+            duration: 0.5,
+            ease: "power2.out"
+        });
+    };
+
+    const handleMagneticLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+        gsap.to(e.currentTarget, {
+            x: 0,
+            y: 0,
+            duration: 1,
+            ease: "elastic.out(1, 0.3)"
+        });
+    };
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
@@ -960,132 +974,395 @@ export default function Archive() {
                                                         }`}
                                                 >
                                                     <Zap className="w-4 h-4" />
-                                                    <span>Align ({activeWhisper.alignment})</span>
-                                                </button>
+return (
+        <div className="relative min-h-screen bg-aether-deep text-white selection:bg-aether-gold/30 font-sans overflow-x-hidden">
+            {/* Background Layer */}
+            <div className="fixed inset-0 z-0">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.15)_0%,transparent_70%)]" />
+                <div className="absolute inset-0 bg-black/40" />
+                <video
+                    ref={bgRef}
+                    autoPlay loop muted playsInline
+                    className="absolute inset-0 w-full h-full object-cover opacity-[0.08] mix-blend-screen pointer-events-none"
+                    poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png"
+                >
+                    <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
+                </video>
+            </div>
+
+            {/* Protocol Overlay */}
+            <div ref={ascendRef} className="fixed inset-0 bg-aether-gold/10 z-[9999] pointer-events-none opacity-0" />
+
+            {/* Sentinel Guide */}
+            <SentinelGuide 
+                isOpen={isGuideOpen}
+                onClose={() => setIsGuideOpen(false)}
+                onComplete={handleGuideComplete}
+                steps={CODEX_PROTOCOL_STEPS}
+                protocolName="CODEX PROTOCOL"
+            />
+
+            {/* Enterprise Header */}
+            <header className="sticky top-0 w-full z-[60] glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => router.push('/sanctum')} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="text-zinc-500 hover:text-white transition-colors p-2"
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <div className="hidden md:flex flex-col">
+                        <h1 className="font-ritual text-xl tracking-[0.2em] text-white uppercase gold-shimmer">The Sovereign Ledger</h1>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center h-2 gap-[1.5px]">
+                                {[...Array(12)].map((_, i) => (
+                                    <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.08}s`, width: '2px' }} />
+                                ))}
+                            </div>
+                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest ml-1">Frequency: 432Hz | Matrix-Sync: OK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 px-5 py-2 bg-black/60 border border-white/10 rounded-full shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+                        <div className="relative">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping absolute inset-0" />
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 relative shadow-[0_0_10px_#10b981]" />
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] font-bold">
+                            <span className="text-emerald-400">{onlineUsers}</span> Souls Live
+                        </span>
+                    </div>
+                    <button 
+                        onClick={handleSignOut}
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="p-3 text-zinc-500 hover:text-red-500 transition-colors bg-white/5 rounded-full hover:bg-white/10 border border-white/5"
+                    >
+                        <LogOut className="w-4 h-4" />
+                    </button>
+                </div>
+            </header>
+
+            <main className="relative z-10 w-full max-w-5xl mx-auto px-6 py-16">
+                {isLocked ? (
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                        <div className="glass-panel p-12 rounded-[3rem] border-white/5 shadow-2xl relative overflow-hidden max-w-md w-full group">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.1)_0%,transparent_70%)]" />
+                            <div className="relative z-10">
+                                <div className="w-20 h-20 mx-auto bg-aether-surface border border-white/10 rounded-3xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-700">
+                                    <Lock className="w-8 h-8 text-aether-gold animate-pulse" />
+                                </div>
+                                <h2 className="font-ritual text-3xl text-white tracking-[0.3em] uppercase mb-4">Ledger Locked</h2>
+                                <p className="text-xs font-mono text-zinc-500 leading-relaxed uppercase tracking-widest mb-10">
+                                    This archive requires identity verification. Align your soul to establish a secure uplink.
+                                </p>
+                                <button 
+                                    onClick={handleInitiateSequence}
+                                    onMouseMove={handleMagneticMove}
+                                    onMouseLeave={handleMagneticLeave}
+                                    className="w-full py-4 bg-white text-black font-black text-xs uppercase tracking-[0.3em] rounded-2xl hover:bg-aether-gold transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                                >
+                                    Initiate Sequence
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-32">
+                        {/* Lodge Record Section */}
+                        <section className="reveal-container">
+                            <div className="glass-panel p-10 rounded-[2.5rem] border-white/5 relative overflow-hidden group">
+                                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-aether-gold/40 to-transparent" />
+                                
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="w-10 h-10 bg-aether-gold/10 rounded-xl flex items-center justify-center border border-aether-gold/20">
+                                        <Sparkles className="w-5 h-5 text-aether-gold" />
+                                    </div>
+                                    <h2 className="font-ritual text-xl tracking-[0.2em] uppercase text-white/90">Lodge New Record</h2>
+                                </div>
+
+                                <form onSubmit={handleLodgeWhisper} className="relative">
+                                    <textarea 
+                                        value={newWhisper}
+                                        onChange={(e) => setNewWhisper(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleLodgeWhisper(e);
+                                            }
+                                        }}
+                                        placeholder="Type into the void... it will be etched into the sequence."
+                                        className="w-full min-h-[160px] bg-black/30 border border-white/5 rounded-3xl p-8 text-zinc-200 font-mono text-base placeholder:text-zinc-700 focus:outline-none focus:border-aether-gold/30 transition-all resize-none shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)]"
+                                    />
+                                    
+                                    <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-6">
+                                        <div className="flex items-center gap-6 text-[9px] font-mono text-zinc-500 uppercase tracking-[0.3em]">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${newWhisper.length > 0 ? 'bg-aether-gold animate-pulse shadow-[0_0_8px_#fbbf24]' : 'bg-zinc-800'}`} />
+                                                <span>AES-256 Active</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Database className="w-3 h-3" />
+                                                <span>Payload: {newWhisper.length} Bytes</span>
                                             </div>
                                         </div>
-
-                                        {/* Divider */}
-                                        <div className="flex items-center gap-4 py-2 opacity-30">
-                                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-sky-500/50"></div>
-                                            <span className="text-[10px] font-mono tracking-widest text-sky-500 uppercase font-bold">Replies</span>
-                                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-sky-500/50"></div>
-                                        </div>
-
-                                        {/* Replies */}
-                                        <div className="space-y-4">
-                                            {(!activeWhisper.replies || activeWhisper.replies.length === 0) ? (
-                                                <p className="text-center text-xs font-mono text-zinc-600 py-8 uppercase tracking-widest">No signals intercepted. Be the first.</p>
-                                            ) : (
-                                                activeWhisper.replies.map(reply => (
-                                                    <div key={reply.id} className="flex flex-col gap-2 relative group/reply bg-white/[0.02] p-4 md:p-5 rounded-2xl border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all">
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <div className="flex items-center gap-3">
-                                                                <button onClick={() => handleProfileClick(reply.author_id)} className="hover:scale-105 transition-transform shrink-0">
-                                                                    {reply.avatar_url ? (
-                                                                        <img src={reply.avatar_url} alt={reply.author} className="w-6 h-6 md:w-8 md:h-8 rounded-lg border border-sky-500/20" />
-                                                                    ) : (
-                                                                        <GenerativeIdenticon idString={reply.author_id || reply.author} size={32} className="border-sky-500/20 rounded-lg" />
-                                                                    )}
-                                                                </button>
-                                                                <div>
-                                                                    <span className="text-xs font-bold text-sky-100 uppercase tracking-widest block">{reply.author}</span>
-                                                                    <span className="text-[9px] font-mono text-zinc-500">{reply.timestamp}</span>
-                                                                </div>
-                                                            </div>
-                                                            {(user?.id === reply.author_id || isAdmin) && (
-                                                                <button onClick={() => handleDeleteReply(reply.id, activeWhisper.id, reply.author_id)} className="text-zinc-600 hover:text-red-500 opacity-0 group-hover/reply:opacity-100 transition-opacity">
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm md:text-base font-mono text-zinc-300 w-full pl-[44px] leading-relaxed">
-                                                            {reply.content}
-                                                        </p>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
+                                        <button 
+                                            type="submit"
+                                            disabled={!newWhisper.trim() || isSubmitting}
+                                            onMouseMove={handleMagneticMove}
+                                            onMouseLeave={handleMagneticLeave}
+                                            className="w-full md:w-auto px-10 py-4 bg-white text-black font-black text-[11px] uppercase tracking-[0.3em] rounded-full hover:bg-aether-gold transition-all disabled:opacity-30 flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+                                        >
+                                            {isSubmitting ? 'ETCHING SEQUENCE...' : 'Lodge Record'}
+                                            <Send className="w-4 h-4" />
+                                        </button>
                                     </div>
+                                </form>
+                            </div>
+                        </section>
 
-                                    {/* Lodge Reply Input */}
-                                    <div className="p-4 md:p-6 bg-black/60 backdrop-blur-xl border-t border-sky-500/10 shrink-0">
-                                        <form onSubmit={(e) => handleLodgeReply(e, activeWhisper.id)} className="flex gap-3 items-end">
-                                            <div className="flex-1 bg-black/50 border border-white/10 rounded-xl overflow-hidden focus-within:border-sky-500/50 transition-colors">
-                                                <textarea
-                                                    value={replyContent}
-                                                    onChange={(e) => setReplyContent(e.target.value)}
-                                                    placeholder="Transmit reply..."
-                                                    maxLength={280}
-                                                    rows={1}
-                                                    className="w-full bg-transparent px-4 py-3 text-sm md:text-base text-white font-mono placeholder:text-zinc-600 focus:outline-none min-h-[48px] resize-none custom-scrollbar"
-                                                />
-                                            </div>
-                                            <button
-                                                type="submit"
-                                                disabled={isSubmittingReply || !replyContent.trim()}
-                                                className="bg-sky-500 text-black hover:bg-white min-h-[48px] px-6 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-500 shrink-0 shadow-[0_0_15px_rgba(14,165,233,0.3)] disabled:shadow-none"
-                                            >
-                                                Send
-                                            </button>
-                                        </form>
+                        <div className="space-y-32" ref={listRef}>
+                            {/* Core Alignment */}
+                            <section>
+                                <div className="flex items-center gap-6 mb-12 opacity-30">
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/20" />
+                                    <div className="flex items-center gap-3 px-6 py-2 border border-white/10 rounded-full">
+                                        <Shield className="w-4 h-4 text-aether-gold" />
+                                        <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] font-bold">The Core Sequence</h3>
                                     </div>
-                                </>
-                            )}
+                                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                                </div>
+
+                                <div className="space-y-10">
+                                    {coreWhispers.map((whisper, idx) => (
+                                        <div key={whisper.id} ref={el => { coreRefs.current[idx] = el }} className="relative">
+                                            <div className="absolute -inset-10 bg-aether-indigo/5 blur-[100px] rounded-[5rem] pointer-events-none" />
+                                            <WhisperCard 
+                                                whisper={whisper} 
+                                                isCore 
+                                                onAlign={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
+                                                onDelete={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
+                                                onReplyClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                            {/* Fringe Whispers */}
+                            <section>
+                                <div className="flex items-center gap-6 mb-12 opacity-30">
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                                    <div className="flex items-center gap-3 px-6 py-2 border border-white/10 rounded-full">
+                                        <Hexagon className="w-4 h-4 text-zinc-500" />
+                                        <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] font-bold">Fringe Signals</h3>
+                                    </div>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/10" />
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-8">
+                                    {fringeWhispers.map((whisper, idx) => (
+                                        <div key={whisper.id} ref={el => { fringeRefs.current[idx] = el }}>
+                                            <WhisperCard 
+                                                whisper={whisper} 
+                                                onAlign={() => handleAlignWhisper(whisper.id, whisper.isEncrypted)}
+                                                onDelete={() => handleDeleteWhisper(whisper.id, whisper.author_id)}
+                                                onReplyClick={() => setActiveReplyBox(activeReplyBox === whisper.id ? null : whisper.id)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         </div>
                     </div>
                 )}
             </main>
 
-            {/* Profile Overview Modal */}
-            {isProfileModalOpen && selectedProfile && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}></div>
-                    <div className="relative glass-panel bg-zinc-950/90 border border-white/10 p-6 md:p-8 rounded-3xl w-full max-w-sm animate-fade-in shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-                        <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl mix-blend-screen pointer-events-none opacity-50 ${getThemeBgGlow(selectedProfile.theme_color)}`}></div>
+            {/* Thread Navigation Overlay (Modal) */}
+            {activeReplyBox && activeWhisper && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-end md:p-6">
+                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setActiveReplyBox(null)} />
+                    
+                    <div className="relative w-full max-w-2xl h-full bg-aether-surface border-l border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col animate-slide-in">
+                        {/* Thread Header */}
+                        <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-black/20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-aether-gold/10 rounded-xl flex items-center justify-center border border-aether-gold/20">
+                                    <MessageSquare className="w-5 h-5 text-aether-gold" />
+                                </div>
+                                <div>
+                                    <h3 className="font-ritual text-lg tracking-widest uppercase text-white">The Thread</h3>
+                                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Hash ID: {activeWhisper.id.substring(0,12)}</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setActiveReplyBox(null)}
+                                className="p-3 text-zinc-500 hover:text-white transition-colors hover:bg-white/5 rounded-full"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
 
-                        <button onClick={() => setIsProfileModalOpen(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
+                        {/* Thread Content */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-12">
+                            {/* Original Whisper */}
+                            <div className="glass-panel p-8 rounded-3xl border-white/10 relative group overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-aether-gold" />
+                                <p className={`text-xl md:text-2xl font-mono leading-relaxed text-white`}>
+                                    {activeWhisper.content}
+                                </p>
+                                <div className="mt-8 flex justify-between items-center border-t border-white/5 pt-6">
+                                    <div className="flex items-center gap-3">
+                                        {activeWhisper.avatar_url ? (
+                                            <img src={activeWhisper.avatar_url} alt="" className="w-8 h-8 rounded-lg" />
+                                        ) : (
+                                            <div className="w-8 h-8 bg-zinc-800 rounded-lg" />
+                                        )}
+                                        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest">{activeWhisper.author}</span>
+                                    </div>
+                                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{activeWhisper.timestamp}</span>
+                                </div>
+                            </div>
 
-                        <div className="flex flex-col items-center text-center">
-                            <div className="mb-4 relative group">
-                                {selectedProfile.avatar_url ? (
-                                    <img src={selectedProfile.avatar_url} alt={selectedProfile.display_name} className={`w-20 h-20 rounded-2xl object-cover ${getThemeColorClass(selectedProfile.theme_color)}`} />
+                            {/* Replies Sequence */}
+                            <div className="space-y-8">
+                                <div className="flex items-center gap-4 opacity-30">
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-white/20" />
+                                    <span className="text-[9px] font-mono uppercase tracking-[0.3em]">Replies Sequence</span>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/20" />
+                                </div>
+
+                                {(!activeWhisper.replies || activeWhisper.replies.length === 0) ? (
+                                    <div className="text-center py-20 opacity-20">
+                                        <Hexagon className="w-12 h-12 mx-auto mb-4 animate-spin-slow" />
+                                        <p className="text-xs font-mono uppercase tracking-widest">The sequence is currently empty.</p>
+                                    </div>
                                 ) : (
-                                    <GenerativeIdenticon idString={selectedProfile.id || selectedProfile.display_name} size={80} className={`rounded-2xl ${getThemeColorClass(selectedProfile.theme_color)}`} />
+                                    <div className="space-y-6">
+                                        {activeWhisper.replies.map((reply) => (
+                                            <div key={reply.id} className="glass-panel p-6 rounded-2xl border-white/5 relative hover:border-white/10 transition-colors">
+                                                <p className="text-sm font-mono text-zinc-300 leading-relaxed mb-6">{reply.content}</p>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] font-mono font-bold text-aether-gold uppercase tracking-widest">{reply.author}</span>
+                                                    </div>
+                                                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">{reply.timestamp}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
+                        </div>
 
-                            <h2 className="font-ritual text-2xl font-bold tracking-widest text-white">{selectedProfile.display_name}</h2>
+                        {/* Reply Form */}
+                        <div className="p-8 border-t border-white/5 bg-black/40">
+                            <form onSubmit={(e) => handleLodgeReply(e, activeWhisper.id)} className="flex gap-4">
+                                <textarea 
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    placeholder="Add to the sequence..."
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-white/20 transition-all resize-none h-14"
+                                />
+                                <button 
+                                    type="submit"
+                                    disabled={!replyContent.trim() || isSubmittingReply}
+                                    onMouseMove={handleMagneticMove}
+                                    onMouseLeave={handleMagneticLeave}
+                                    className="px-6 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-aether-gold transition-colors disabled:opacity-30"
+                                >
+                                    Lodge
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-                            {selectedProfile.custom_title && (
-                                <span className={`text-[10px] uppercase tracking-widest font-bold mt-1 ${getThemeColorClass(selectedProfile.theme_color).split(' ')[0]}`}>
-                                    {selectedProfile.custom_title}
-                                </span>
-                            )}
-
-                            <div className="flex items-center gap-2 mt-2">
-                                <span className="text-[9px] px-2 py-0.5 rounded border border-white/10 uppercase tracking-[0.2em] font-bold text-zinc-400">
-                                    {selectedProfile.tier}
-                                </span>
-                                <span className="text-[9px] px-2 py-0.5 rounded border border-sky-500/30 uppercase tracking-[0.2em] font-bold bg-sky-950/30 text-sky-400 flex items-center gap-1">
-                                    <Zap className="w-3 h-3" /> {selectedProfile.soul_power} SP
-                                </span>
-                            </div>
-
-                            {selectedProfile.bio && (
-                                <p className="mt-4 text-xs font-mono text-zinc-400 leading-relaxed max-w-[250px] mx-auto border-t border-white/5 pt-4">
-                                    "{selectedProfile.bio}"
-                                </p>
-                            )}
-
-                            <div className="mt-6 w-full text-center">
-                                <span className="text-[8px] font-mono text-zinc-600 uppercase tracking-widest block">
-                                    Initiated on {new Date(selectedProfile.created_at).toLocaleDateString()}
-                                </span>
+            {/* Decryption Protocol Overlay */}
+            {decryptingId && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-fade-in">
+                    <div className="w-full max-w-sm text-center">
+                        <div className="mb-12 relative h-48 w-48 mx-auto">
+                            <div 
+                                className="absolute inset-0 border-[3px] border-dashed border-aether-gold rounded-full opacity-30"
+                                style={{ transform: `rotate(${dialRotation}deg)` }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Lock className="w-16 h-16 text-aether-gold animate-pulse" />
                             </div>
                         </div>
+                        <h2 className="font-ritual text-3xl text-white tracking-[0.3em] uppercase mb-4">Decryption Signal</h2>
+                        <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em] mb-12">Synchronizing Aetheric Waveform...</p>
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={() => setDecryptingId(null)}
+                                className="flex-1 py-4 border border-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
+                            >
+                                Abort
+                            </button>
+                            <button 
+                                onClick={handleAttemptDecrypt}
+                                className="flex-1 py-4 bg-white text-black font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-aether-gold transition-all"
+                            >
+                                Confirm Bypass
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Profile Modal */}
+            {isProfileModalOpen && selectedProfile && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)} />
+                    <div className="relative glass-panel bg-aether-surface border border-white/10 p-10 rounded-[3rem] w-full max-w-sm animate-fade-in text-center overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-aether-indigo to-transparent opacity-50" />
+                        
+                        <div className="mb-8 relative inline-block">
+                            <div className="absolute -inset-4 bg-aether-indigo/20 blur-2xl rounded-full" />
+                            {selectedProfile.avatar_url ? (
+                                <img src={selectedProfile.avatar_url} alt="" className="w-24 h-24 rounded-3xl object-cover relative z-10 border border-white/10" />
+                            ) : (
+                                <div className="w-24 h-24 bg-zinc-900 rounded-3xl relative z-10 flex items-center justify-center border border-white/10">
+                                    <GenerativeIdenticon idString={selectedProfile.id} size={96} />
+                                </div>
+                            )}
+                        </div>
+
+                        <h2 className="font-ritual text-3xl text-white tracking-widest mb-2 uppercase">{selectedProfile.display_name}</h2>
+                        
+                        {selectedProfile.custom_title && (
+                            <span className="text-[10px] font-bold text-aether-gold uppercase tracking-[0.4em] mb-6 block">
+                                {selectedProfile.custom_title}
+                            </span>
+                        )}
+
+                        <div className="flex items-center justify-center gap-3 mb-10">
+                            <span className="text-[9px] px-3 py-1 border border-white/10 rounded-full uppercase tracking-widest text-zinc-500 font-bold">
+                                {selectedProfile.tier}
+                            </span>
+                            <span className="text-[9px] px-3 py-1 bg-white text-black rounded-full uppercase tracking-widest font-black">
+                                {selectedProfile.soul_power} SP
+                            </span>
+                        </div>
+
+                        {selectedProfile.bio && (
+                            <p className="text-xs font-mono text-zinc-400 leading-relaxed italic mb-10">
+                                "{selectedProfile.bio}"
+                            </p>
+                        )}
+
+                        <button 
+                            onClick={() => setIsProfileModalOpen(false)}
+                            className="w-full py-4 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors"
+                        >
+                            Close Sequence
+                        </button>
                     </div>
                 </div>
             )}
