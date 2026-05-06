@@ -728,8 +728,8 @@ export default function Gateway() {
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
                         <span className="text-[8px] font-black tracking-[0.5em] text-white uppercase">Restoration Protocol Initialized</span>
                     </div>
-                    <div className="w-full overflow-hidden flex justify-center cursor-none">
-                        <h1 ref={titleRef} className="kinetic-title font-ritual text-4xl sm:text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4 select-none">TRUTH B TOLD HUB</h1>
+                    <div className="w-full overflow-hidden flex justify-center cursor-none px-4">
+                        <h1 ref={titleRef} className="kinetic-title font-ritual text-[2.5rem] sm:text-6xl md:text-[10rem] font-black leading-[0.9] tracking-tighter text-white gold-shimmer uppercase select-none text-center break-words">TRUTH B TOLD HUB</h1>
                     </div>
                 </div>
             </section>
@@ -737,7 +737,7 @@ export default function Gateway() {
             {/* MASTER BENTO GRID */}
             <LayoutGroup>
             <section id="master-bento" className="relative pb-48 px-4 md:px-12 max-w-[100rem] mx-auto">
-                <motion.div layout={isMobile} className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(180px,_auto)] gap-4 md:gap-8">
+                <motion.div layout={isMobile} className="grid grid-cols-2 md:grid-cols-12 auto-rows-[minmax(180px,_auto)] gap-6 md:gap-8">
                     
                     {/* Main Cinematic Feature */}
                     <motion.div 
@@ -777,12 +777,9 @@ export default function Gateway() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="hidden md:flex -space-x-2">
-                                    {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border border-black bg-white/10 flex items-center justify-center text-[6px] font-black">P</div>)}
-                                </div>
-                            <div className="flex items-center gap-2 relative z-10">
-                                <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 mr-2">
+                            
+                            <div className="flex items-center gap-4">
+                                <div className="hidden md:flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); playSfx('click'); setArchiveMode('chat'); }}
                                         className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${archiveMode === 'chat' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
@@ -903,7 +900,7 @@ export default function Gateway() {
                         
                         {/* Mobile Background Elements */}
                         {isMobile && expandedCard === 'chat' && (
-                            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+                            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
                                 <div className="absolute top-[20%] left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-aether-gold/50 to-transparent rotate-12"></div>
                                 <div className="absolute top-[40%] left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent -rotate-6"></div>
                             </div>

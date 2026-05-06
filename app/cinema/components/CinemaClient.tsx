@@ -133,13 +133,13 @@ export default function CinemaClient() {
                 </section>
 
                 {/* Sub-Features / Transmissions */}
-                <section className="space-y-8">
-                    <div className="flex items-center justify-between">
+                <section className="space-y-8 px-2 md:px-0">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <Clapperboard className="w-6 h-6 text-aether-gold" />
-                            <h3 className="font-ritual text-2xl font-black uppercase tracking-widest text-white">Transmission Archive</h3>
+                            <h3 className="font-ritual text-2xl md:text-3xl font-black uppercase tracking-widest text-white">Transmission Archive</h3>
                         </div>
-                        <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Live Syncing Alpha</span>
+                        <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest pl-10 md:pl-0">Live Syncing Alpha</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
