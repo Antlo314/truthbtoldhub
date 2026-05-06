@@ -833,16 +833,25 @@ export default function Gateway() {
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
                             {aiMessages.length === 0 ? (
-                                <div className="h-full flex items-center justify-center text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">Awaiting query...</div>
+                                <div className="h-full flex flex-col items-center justify-center space-y-4">
+                                    <Terminal className="w-12 h-12 text-zinc-800 animate-pulse" />
+                                    <div className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">Awaiting query...</div>
+                                </div>
                             ) : aiMessages.map((m: any, i: number) => (
                                 <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-fade-in`}>
-                                    <div className={`max-w-[90%] px-6 py-4 rounded-3xl text-[11px] leading-relaxed tracking-wide ${m.role === 'user' ? 'bg-white/10 border border-white/20 text-white' : 'bg-aether-gold/10 border border-aether-gold/20 text-aether-gold font-black'}`}>
+                                    <div className={`max-w-[90%] px-6 py-4 rounded-3xl text-[11px] leading-relaxed tracking-wide ${m.role === 'user' ? 'bg-white/10 border border-white/20 text-white' : 'bg-aether-gold/10 border border-aether-gold/20 text-aether-gold font-black shadow-[0_0_20px_rgba(212,175,55,0.05)]'}`}>
                                         {m.content}
                                     </div>
                                 </div>
                             ))}
                         </div>
                         <div className="relative" onClick={(e) => e.stopPropagation()}>
+                            {oracleError && (
+                                <div className="absolute -top-12 left-0 right-0 p-2 bg-red-500/20 border border-red-500/30 rounded-xl text-[8px] font-mono text-red-500 uppercase tracking-widest text-center animate-fade-in flex items-center justify-center gap-2">
+                                    <ShieldAlert className="w-3 h-3" />
+                                    {oracleError}
+                                </div>
+                            )}
                             <input 
                                 value={aiInput} 
                                 onChange={handleAiInputChange} 
@@ -852,8 +861,9 @@ export default function Gateway() {
                                         handleAiSubmit(e as any);
                                     }
                                 }}
-                                placeholder="Query..." 
-                                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black" 
+                                placeholder={isUnlocked ? "Query the Oracle..." : "Access Denied"}
+                                disabled={!isUnlocked}
+                                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-500 tracking-widest uppercase text-white font-black disabled:opacity-20" 
                             />
                             <button 
                                 onClick={(e) => {
@@ -861,10 +871,10 @@ export default function Gateway() {
                                     e.stopPropagation();
                                     handleAiSubmit(e as any);
                                 }}
-                                disabled={isLoadingAi || !aiInput?.trim()} 
-                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-20 active:scale-95 z-10"
+                                disabled={isLoadingAi || !aiInput?.trim() || !isUnlocked} 
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-20 active:scale-95 z-10 shadow-lg"
                             >
-                                <Send className="w-4 h-4 text-black" />
+                                {isLoadingAi ? <Loader2 className="w-4 h-4 text-black animate-spin" /> : <Send className="w-4 h-4 text-black" />}
                             </button>
                         </div>
                     </motion.div>
@@ -1377,7 +1387,7 @@ export default function Gateway() {
                                         </div>
                                         <h3 className="text-xl font-ritual font-black text-white uppercase tracking-widest">Verify Contribution</h3>
                                         <p className="text-[9px] text-white/40 uppercase tracking-[0.2em] leading-loose">
-                                            To be recognized for your contribution and unlock your privileges, please type <span className="text-white font-black text-[12px] bg-white/10 px-2 py-1 rounded">"400"</span> in the Stripe payout message/box.
+                                            To be recognized for your contribution and unlock your privileges, please type <span className="text-white font-black text-[12px] bg-white/10 px-2 py-1 rounded">"400"</span> in the <span className="text-white font-black">Referral / Support Code</span> section on Stripe.
                                         </p>
                                     </div>
 
@@ -1403,6 +1413,22 @@ export default function Gateway() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* Floating Community Chat FAB */}
+            <div className="fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4">
+                <AnimatePresence>
+                    {isMobile && !expandedCard && (
+                        <motion.button
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            onClick={() => { playSfx('click'); toggleExpand('pulse'); }}
+                            className="w-14 h-14 rounded-full bg-aether-gold text-black flex items-center justify-center shadow-[0_0_30px_#d4af37] hover:scale-110 active:scale-95 transition-transform"
+                        >
+                            <MessageSquare className="w-6 h-6" />
+                        </motion.button>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 }

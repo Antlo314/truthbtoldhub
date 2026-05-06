@@ -5,8 +5,19 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    
+    if (!apiKey) {
+        console.error("CRITICAL: GOOGLE_GENERATIVE_AI_API_KEY is not defined in environment.");
+        return new Response(JSON.stringify({ error: 'Oracle offline: Neural link not established.' }), { status: 500 });
+    }
+
     const { messages } = await req.json();
-    console.log('AI Oracle received messages:', messages.length);
+    console.log('AI Oracle received messages:', messages?.length);
+
+    if (!messages || messages.length === 0) {
+        return new Response(JSON.stringify({ error: 'Query required for decryption.' }), { status: 400 });
+    }
 
     // Normalize messages for Zod validation
     const normalizedMessages = messages.map((m: any) => {

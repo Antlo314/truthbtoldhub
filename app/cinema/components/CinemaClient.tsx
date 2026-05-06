@@ -231,7 +231,7 @@ export default function CinemaClient() {
                                     </div>
                                     <h3 className="text-xl font-ritual font-black text-white uppercase tracking-widest">Initialize Access</h3>
                                     <p className="text-[9px] text-white/40 uppercase tracking-[0.2em] leading-loose">
-                                        Click below to initialize your energy contribution via Stripe. After completion, your access will be synthesized into your Soul Profile.
+                                        Click below to initialize your energy contribution via Stripe. To be recognized for your contribution, please type <span className="text-white font-black text-[11px] bg-white/10 px-2 py-1 rounded">"400"</span> in the <span className="text-white font-black">Referral / Support Code</span> section.
                                     </p>
                                     <a 
                                         href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
