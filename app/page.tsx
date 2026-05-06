@@ -217,10 +217,23 @@ export default function Gateway() {
         // Fetch Community Messages
         fetchCommunityMessages();
         
+        // Real-time Chat Subscription
         const channel = supabase.channel('global_chat')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'archive_messages' }, async (payload) => {
-                const { data: profile } = await supabase.from('profiles').select('username, avatar_url').eq('id', payload.new.author_id).single();
-                setCommunityMessages(prev => [...prev, { ...payload.new, author: profile }].slice(-20));
+                const { data: profileData } = await supabase.from('profiles').select('username, avatar_url, aura_color').eq('id', payload.new.author_id).single();
+                setCommunityMessages(prev => {
+                    const exists = prev.find(m => m.id === payload.new.id);
+                    if (exists) return prev;
+                    return [...prev, { ...payload.new, author: profileData }].slice(-30);
+                });
+                
+                // Auto-scroll logic if at bottom
+                if (communityChatRef.current) {
+                    const { scrollTop, scrollHeight, clientHeight } = communityChatRef.current;
+                    if (scrollHeight - scrollTop - clientHeight < 100) {
+                        communityChatRef.current.scrollTo({ top: scrollHeight, behavior: 'smooth' });
+                    }
+                }
             })
             .subscribe();
 
@@ -664,37 +677,108 @@ export default function Gateway() {
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'fixed inset-0 z-[150] rounded-none p-4 pb-24' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group transition-all duration-500`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Archive" />}
-                        <div className="flex items-center justify-between mb-8">
+                        
+                        <div className="flex items-center justify-between mb-8 relative z-10">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all"><MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
-                                <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span><span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Whispers</span></div>
-                            </div>
-                            {isMobile && (
-                                <button 
-                                    onClick={() => { playSfx('click'); toggleExpand('chat'); }}
-                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white/40 hover:text-white"
-                                >
-                                    {expandedCard === 'chat' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto space-y-4 hide-scrollbar mb-8 pr-2">
-                            {communityMessages.length === 0 ? (
-                                <div className="h-full flex items-center justify-center text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">No echoes found...</div>
-                            ) : communityMessages.map((msg, i) => (
-                                <div key={i} className="flex flex-col space-y-1 animate-fade-in">
-                                    <div className="flex items-center gap-2"><span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">{msg.author?.username || 'Unknown'}</span><span className="text-[6px] font-mono text-zinc-600">{new Date(msg.created_at).toLocaleTimeString()}</span></div>
-                                    <p className="text-[10px] text-white/70 font-mono tracking-wide leading-relaxed">{msg.content}</p>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all relative">
+                                    <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-aether-gold rounded-full border-2 border-black animate-pulse"></div>
                                 </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-aether-gold animate-ping"></span>
+                                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Real-time Link Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="hidden md:flex -space-x-2">
+                                    {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border border-black bg-white/10 flex items-center justify-center text-[6px] font-black">P</div>)}
+                                </div>
+                                {isMobile && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); playSfx('click'); toggleExpand('chat'); }}
+                                        className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 text-white"
+                                    >
+                                        {expandedCard === 'chat' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div 
+                            ref={communityChatRef}
+                            className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-6 pr-2 relative z-10"
+                        >
+                            {communityMessages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-20">
+                                    <Waves className="w-12 h-12 text-white animate-pulse" />
+                                    <span className="text-[8px] font-mono uppercase tracking-[0.3em]">Awaiting Transmissions...</span>
+                                </div>
+                            ) : communityMessages.map((msg, i) => (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    key={msg.id || i} 
+                                    className="flex gap-4 group/msg"
+                                >
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover/msg:border-white/30 transition-all">
+                                        {msg.author?.avatar_url ? <img src={msg.author.avatar_url} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/20" />}
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-black uppercase tracking-widest ${msg.author?.aura_color === 'Architect' ? 'text-aether-gold' : 'text-white'}`}>
+                                                {msg.author?.username || 'Prophet'}
+                                            </span>
+                                            <span className="text-[6px] font-mono text-zinc-600 uppercase tracking-tighter">
+                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <div className="relative group/bubble max-w-[95%]">
+                                            <p className="text-[11px] text-white/80 font-mono tracking-wide leading-relaxed bg-white/[0.03] border border-white/5 px-4 py-3 rounded-2xl rounded-tl-none group-hover/bubble:border-white/20 transition-all shadow-sm">
+                                                {msg.content}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </motion.div>
                             ))}
                         </div>
-                        <form onSubmit={handleCommunitySubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder={user ? "Whisper..." : "Signal Blocked..."} className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
-                            <button type="submit" disabled={!user || !communityInput?.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
+
+                        <form 
+                            onSubmit={handleCommunitySubmit} 
+                            className={`relative z-20 ${isMobile && expandedCard === 'chat' ? 'fixed bottom-4 left-4 right-4' : ''}`} 
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="relative group">
+                                <input 
+                                    value={communityInput} 
+                                    onChange={(e) => setCommunityInput(e.target.value)} 
+                                    disabled={!user} 
+                                    placeholder={user ? "Transmit Echo..." : "Initialize Profile to Transmit"} 
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl px-6 py-5 md:py-6 text-[12px] focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30 shadow-2xl" 
+                                />
+                                <div className="absolute inset-0 rounded-2xl md:rounded-3xl bg-aether-gold/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity"></div>
+                                <button 
+                                    type="submit" 
+                                    disabled={!user || !communityInput?.trim()} 
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20 active:scale-95 shadow-xl"
+                                >
+                                    <Send className="w-4 h-4 md:w-5 md:h-5 text-black" />
+                                </button>
+                            </div>
                         </form>
+                        
+                        {/* Mobile Background Elements */}
+                        {isMobile && expandedCard === 'chat' && (
+                            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+                                <div className="absolute top-[20%] left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-aether-gold/50 to-transparent rotate-12"></div>
+                                <div className="absolute top-[40%] left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent -rotate-6"></div>
+                            </div>
+                        )}
                     </motion.div>
 
                     {/* Prophetic AI Oracle (AI CHAT) */}
