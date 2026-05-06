@@ -46,7 +46,8 @@ import {
     MessageSquare,
     Hash,
     ShoppingBag,
-    ExternalLink
+    ExternalLink,
+    Loader2
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
