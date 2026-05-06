@@ -52,6 +52,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='theme_color') THEN
         ALTER TABLE profiles ADD COLUMN theme_color TEXT DEFAULT 'sky';
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='is_supporter') THEN
+        ALTER TABLE profiles ADD COLUMN is_supporter BOOLEAN DEFAULT false;
+    END IF;
 END $$;
 
 -- THE POOL: ESCROW BALANCE (Treasury)

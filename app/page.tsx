@@ -1329,41 +1329,57 @@ export default function Gateway() {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Viral Cartel</span>
-                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest">Artifact Collection</span>
+                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest">Sovereign Supply</span>
                                 </div>
                             </div>
-                            <div className="px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-[6px] font-black uppercase tracking-widest text-red-500 animate-pulse">
-                                Ultra Rare
+                            <div className="px-3 py-1 rounded-full border border-orange-500/30 bg-orange-500/10 text-[6px] font-black uppercase tracking-widest text-orange-500 animate-pulse">
+                                Phase 01 Asset
                             </div>
                         </div>
 
                         <div className="flex-1 space-y-6 relative z-10">
-                            <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 relative group-hover:border-white/30 transition-all shadow-2xl">
-                                <img 
-                                    src="/viral_cartel_merch_mockup_1778035641022.png" 
-                                    alt="400 Series Hoodie" 
-                                    className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" 
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                    <div className="space-y-1">
-                                        <span className="block text-[10px] font-black uppercase text-white">"400" Heavyweight Hoodie</span>
-                                        <span className="block text-[7px] font-mono text-white/40 uppercase tracking-tighter">Hand-Stitched Gold Embroidery</span>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 relative group-hover:border-white/30 transition-all shadow-2xl bg-white/5">
+                                    <img 
+                                        src="/viralcartel/400_manga_logo.jpg" 
+                                        alt="400 Ancestral Odyssey" 
+                                        className="w-full h-full object-contain scale-110 group-hover:scale-100 transition-transform duration-1000 p-3" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                                    <div className="absolute bottom-3 left-3">
+                                        <span className="block text-[7px] font-black uppercase text-white tracking-widest">400 Odyssey</span>
                                     </div>
-                                    <span className="text-xl font-ritual font-black text-white">$149</span>
+                                </div>
+                                <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 relative group-hover:border-white/30 transition-all shadow-2xl bg-white/5">
+                                    <img 
+                                        src="/viralcartel/crown_of_sorrows.png" 
+                                        alt="Crown of Sorrows" 
+                                        className="w-full h-full object-contain scale-110 group-hover:scale-100 transition-transform duration-1000 p-3" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                                    <div className="absolute bottom-3 left-3">
+                                        <span className="block text-[7px] font-black uppercase text-white tracking-widest">Cotton Crown</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <div className="space-y-1">
+                                        <span className="block text-[10px] font-black uppercase text-white">400 Series Archival Supply</span>
+                                        <span className="block text-[7px] font-mono text-white/40 uppercase tracking-tighter">Sovereign Artifacts</span>
+                                    </div>
+                                    <span className="text-xl font-ritual font-black text-white">$45</span>
+                                </div>
                                 <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-white/40">
-                                    <span>Limited Availability</span>
-                                    <span className="text-aether-gold">12 / 20 Remaining</span>
+                                    <span>Protocol Status</span>
+                                    <span className="text-aether-gold">Active Supply</span>
                                 </div>
                                 <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-aether-gold w-[60%] shadow-[0_0_10px_#d4af37]"></div>
+                                    <div className="h-full bg-aether-gold w-[85%] shadow-[0_0_10px_#d4af37]"></div>
                                 </div>
                                 <p className="text-[8px] text-white/40 uppercase leading-relaxed tracking-wide">
-                                    All proceeds from the Viral Cartel Artifact line directly fuel the Phase 01 Infrastructure and 4K Neural Rendering.
+                                    Proceeds fuel Phase 01 Infrastructure, 4K Neural Rendering, and the permanent historical preservation of the 400 Series.
                                 </p>
                             </div>
                         </div>
@@ -1373,7 +1389,7 @@ export default function Gateway() {
                                 href="https://viralcartel.net" 
                                 target="_blank"
                                 onClick={() => playSfx('click')}
-                                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center gap-3 group/btn hover:bg-white hover:text-black transition-all"
+                                className="w-full py-4 rounded-2xl bg-white text-black flex items-center justify-center gap-3 group/btn hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
                             >
                                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">Acquire Artifact</span>
                                 <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
