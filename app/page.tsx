@@ -261,6 +261,19 @@ export default function Gateway() {
         };
     }, []);
 
+        // Audio Sync Logic
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.play().catch(err => {
+                    console.error("Playback failed:", err);
+                    setIsPlaying(false);
+                });
+            } else {
+                audioRef.current.pause();
+            }
+        }
+    }, [isPlaying, currentTrack]);
+
     const playSfx = (key: string) => {
         if (sfxRef.current[key] && sfxRef.current[key].state() === 'loaded') {
             sfxRef.current[key].play();
@@ -331,13 +344,7 @@ export default function Gateway() {
 
     const toggleAudio = () => {
         playSfx('click');
-        if (isPlaying) {
-            audioRef.current?.pause();
-            setIsPlaying(false);
-        } else {
-            audioRef.current?.play().catch(err => console.error("Playback failed:", err));
-            setIsPlaying(true);
-        }
+        setIsPlaying(!isPlaying);
     };
 
     const nextTrack = () => {
@@ -353,12 +360,6 @@ export default function Gateway() {
         setCurrentTrack(prev);
         setIsPlaying(true);
     };
-
-    useEffect(() => {
-        if (isPlaying && audioRef.current) {
-            audioRef.current.play().catch(err => console.error("Auto-play failed:", err));
-        }
-    }, [currentTrack]);
 
     const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -1278,35 +1279,29 @@ export default function Gateway() {
 
                             <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
                                 {supportMode === 'series' ? (
-                                    <div className="space-y-10">
-                                        <div className="space-y-4">
-                                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/10">
-                                                <Sparkles className="w-3 h-3 text-aether-gold" />
-                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-aether-gold">The 400 Series Protocol</span>
-                                            </div>
-                                            <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase gold-shimmer leading-none glitch-text" data-text="THE 400 SERIES">THE 400<br/>SERIES</h2>
-                                            <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
-                                                A cinematic journey into the prophetic timeline. The series officially begins dropping <span className="text-white font-black underline decoration-aether-gold underline-offset-4">June 1st</span>, exclusively behind the Truth B Told paywall.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Supporter Privileges</h4>
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {[
-                                                    { icon: <Eye className="w-4 h-4" />, title: "Free Viewership", desc: "Permanent access to the entire series." },
-                                                    { icon: <Star className="w-4 h-4" />, title: "Early Access", desc: "View chapters 72 hours before global release." },
-                                                    { icon: <ScrollText className="w-4 h-4" />, title: "Digital Credits", desc: "Name immortalized in the Global Archive." }
-                                                ].map((benefit, i) => (
-                                                    <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-colors">
-                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-aether-gold">{benefit.icon}</div>
-                                                        <div className="space-y-1">
-                                                            <span className="block text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
-                                                            <span className="block text-[8px] text-white/40 uppercase tracking-widest">{benefit.desc}</span>
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Tier Selection</h4>
+                                        <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[40vh] md:max-h-none pr-2 hide-scrollbar">
+                                            {[
+                                                { tier: "$5", title: "The Echo Ticket", desc: "Single Premiere Access to Chapter 01 + Global Archive Access.", icon: <Eye className="w-4 h-4" /> },
+                                                { tier: "$10", title: "The Frequency Bundle", desc: "Full '400' Digital Album + Permanent Chapter 01 Access.", icon: <Music className="w-4 h-4" />, best: true },
+                                                { tier: "$25", title: "The Chronicle Pass", desc: "Digital Artifacts (Storyboards/Stills) + 72-Hour Early Access.", icon: <ScrollText className="w-4 h-4" /> },
+                                                { tier: "$50", title: "The Oracle Status", desc: "Name in Credits + Oracle Chat Aura + Behind the Scenes Vault.", icon: <Star className="w-4 h-4" /> },
+                                                { tier: "$100", title: "Founding Architect", desc: "Immortalization on Founding Wall + 20% Viral Cartel Discount.", icon: <ShieldCheck className="w-4 h-4" /> },
+                                                { tier: "$400", title: "Prophetic Ancestor", desc: "Executive Producer Credit + Custom Cinematic Avatar Synthesis.", icon: <Sparkles className="w-4 h-4" /> }
+                                            ].map((benefit, i) => (
+                                                <div key={i} className={`flex gap-5 items-start p-5 rounded-3xl bg-white/5 border ${benefit.best ? 'border-aether-gold/40 shadow-[0_0_20px_rgba(212,175,55,0.1)]' : 'border-white/5'} hover:border-white/20 transition-all group/tier relative`}>
+                                                    {benefit.best && <span className="absolute -top-2 -right-2 px-3 py-1 bg-aether-gold text-black text-[6px] font-black uppercase rounded-full">Best Value</span>}
+                                                    <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 ${benefit.best ? 'text-aether-gold' : 'text-white/40'} group-hover/tier:scale-110 transition-transform`}>{benefit.icon}</div>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xl font-ritual font-black text-white">{benefit.tier}</span>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
                                                         </div>
+                                                        <span className="block text-[8px] text-white/40 uppercase tracking-widest leading-relaxed">{benefit.desc}</span>
                                                     </div>
-                                                ))}
-                                            </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ) : (
