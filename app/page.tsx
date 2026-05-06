@@ -1139,6 +1139,73 @@ export default function Gateway() {
                         </div>
                     </motion.div>
 
+                    {/* Viral Cartel Artifact Collection */}
+                    <motion.div 
+                        layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-2' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 relative overflow-hidden group`}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50"></div>
+                        
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
+                                    <ShoppingBag className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Viral Cartel</span>
+                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest">Artifact Collection</span>
+                                </div>
+                            </div>
+                            <div className="px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-[6px] font-black uppercase tracking-widest text-red-500 animate-pulse">
+                                Ultra Rare
+                            </div>
+                        </div>
+
+                        <div className="flex-1 space-y-6 relative z-10">
+                            <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 relative group-hover:border-white/30 transition-all shadow-2xl">
+                                <img 
+                                    src="/viral_cartel_merch_mockup_1778035641022.png" 
+                                    alt="400 Series Hoodie" 
+                                    className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000" 
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                    <div className="space-y-1">
+                                        <span className="block text-[10px] font-black uppercase text-white">"400" Heavyweight Hoodie</span>
+                                        <span className="block text-[7px] font-mono text-white/40 uppercase tracking-tighter">Hand-Stitched Gold Embroidery</span>
+                                    </div>
+                                    <span className="text-xl font-ritual font-black text-white">$149</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-white/40">
+                                    <span>Limited Availability</span>
+                                    <span className="text-aether-gold">12 / 20 Remaining</span>
+                                </div>
+                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-aether-gold w-[60%] shadow-[0_0_10px_#d4af37]"></div>
+                                </div>
+                                <p className="text-[8px] text-white/40 uppercase leading-relaxed tracking-wide">
+                                    All proceeds from the Viral Cartel Artifact line directly fuel the Phase 01 Infrastructure and 4K Neural Rendering.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            <a 
+                                href="https://viralcartel.net" 
+                                target="_blank"
+                                onClick={() => playSfx('click')}
+                                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center gap-3 group/btn hover:bg-white hover:text-black transition-all"
+                            >
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Acquire Artifact</span>
+                                <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                            </a>
+                        </div>
+                    </motion.div>
+
                     {/* Historical Timeline */}
                     <motion.div 
                         layout={isMobile}
