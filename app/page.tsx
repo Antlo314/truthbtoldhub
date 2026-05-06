@@ -6,8 +6,10 @@ import { supabase } from '../lib/supabase';
 import { 
     Play, 
     Pause,
-    ShieldCheck, 
-    ChevronDown, 
+    ShieldCheck,
+    ShieldAlert,
+    MessageSquare,
+    ChevronDown,
     Sparkles, 
     ArrowRight,
     Lock,
