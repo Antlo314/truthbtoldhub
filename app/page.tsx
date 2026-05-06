@@ -8,7 +8,6 @@ import {
     Pause,
     ShieldCheck,
     ShieldAlert,
-    MessageSquare,
     ChevronDown,
     Sparkles, 
     ArrowRight,
