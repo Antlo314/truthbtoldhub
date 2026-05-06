@@ -43,7 +43,9 @@ import {
     Maximize2,
     Minimize2,
     MessageSquare,
-    Hash
+    Hash,
+    ShoppingBag,
+    ExternalLink
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
