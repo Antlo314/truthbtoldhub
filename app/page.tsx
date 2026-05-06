@@ -16,6 +16,7 @@ import {
     Globe, 
     Zap,
     Cpu,
+    Clapperboard,
     Video,
     Compass,
     Star,
@@ -118,6 +119,7 @@ export default function Gateway() {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(0.5);
+    const [archiveMode, setArchiveMode] = useState<'chat' | 'vault'>('chat');
 
     // SFX
     const sfxRef = useRef<{ [key: string]: Howl }>({});
@@ -768,16 +770,31 @@ export default function Gateway() {
                                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-aether-gold rounded-full border-2 border-black animate-pulse"></div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Transmission Archive</span>
                                     <div className="flex items-center gap-1.5">
                                         <span className="w-1 h-1 rounded-full bg-aether-gold animate-ping"></span>
-                                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Real-time Link Active</span>
+                                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Vault Online</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="hidden md:flex -space-x-2">
                                     {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border border-black bg-white/10 flex items-center justify-center text-[6px] font-black">P</div>)}
+                                </div>
+                            <div className="flex items-center gap-2 relative z-10">
+                                <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 mr-2">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); playSfx('click'); setArchiveMode('chat'); }}
+                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${archiveMode === 'chat' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    >
+                                        Frequency
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); playSfx('click'); setArchiveMode('vault'); }}
+                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${archiveMode === 'vault' ? 'bg-white text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    >
+                                        Vault
+                                    </button>
                                 </div>
                                 {isMobile && (
                                     <button 
@@ -794,38 +811,70 @@ export default function Gateway() {
                             ref={communityChatRef}
                             className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-6 pr-2 relative z-10"
                         >
-                            {communityMessages.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-20">
-                                    <Waves className="w-12 h-12 text-white animate-pulse" />
-                                    <span className="text-[8px] font-mono uppercase tracking-[0.3em]">Awaiting Transmissions...</span>
+                            {archiveMode === 'chat' ? (
+                                communityMessages.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-20">
+                                        <Waves className="w-12 h-12 text-white animate-pulse" />
+                                        <span className="text-[8px] font-mono uppercase tracking-[0.3em]">Awaiting Transmissions...</span>
+                                    </div>
+                                ) : communityMessages.map((msg, i) => (
+                                    <motion.div 
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        key={msg.id || i} 
+                                        className="flex gap-4 group/msg"
+                                    >
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover/msg:border-white/30 transition-all">
+                                            {msg.author?.avatar_url ? <img src={msg.author.avatar_url} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/20" />}
+                                        </div>
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[9px] font-black uppercase tracking-widest ${msg.author?.aura_color === 'Architect' ? 'text-aether-gold' : 'text-white'}`}>
+                                                    {msg.author?.username || 'Prophet'}
+                                                </span>
+                                                <span className="text-[6px] font-mono text-zinc-600 uppercase tracking-tighter">
+                                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <div className="relative group/bubble max-w-[95%]">
+                                                <p className="text-[11px] text-white/80 font-mono tracking-wide leading-relaxed bg-white/[0.03] border border-white/5 px-4 py-3 rounded-2xl rounded-tl-none group-hover/bubble:border-white/20 transition-all shadow-sm">
+                                                    {msg.content}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="grid grid-cols-1 gap-4 animate-fade-in">
+                                    {[
+                                        { title: "The 400 Prelude", type: "Transmission", dur: "12:45", id: "XnWdy_B7PgA" },
+                                        { title: "Genesis Decryption", type: "Historical", dur: "08:12", id: "jXezgcPBqGE" },
+                                        { title: "The Sabean War", type: "Prophetic", dur: "15:30", id: "msKxh1gInMU" }
+                                    ].map((v, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={() => window.open(`https://youtu.be/${v.id}`, '_blank')}
+                                            className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all cursor-pointer group/video flex items-center gap-4"
+                                        >
+                                            <div className="w-20 aspect-video rounded-lg overflow-hidden relative">
+                                                <img src={`https://img.youtube.com/vi/${v.id}/default.jpg`} className="w-full h-full object-cover grayscale group-hover/video:grayscale-0 transition-all" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <Play className="w-4 h-4 text-white opacity-0 group-hover/video:opacity-100 transition-opacity" />
+                                                </div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-[10px] font-black uppercase text-white group-hover/video:text-aether-gold transition-colors">{v.title}</h4>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[7px] font-mono text-white/40 uppercase">{v.type}</span>
+                                                    <span className="w-1 h-1 rounded-full bg-white/20"></span>
+                                                    <span className="text-[7px] font-mono text-white/40 uppercase">{v.dur}</span>
+                                                </div>
+                                            </div>
+                                            <ArrowRight className="w-4 h-4 text-white/10 group-hover/video:text-white transition-all group-hover/video:translate-x-1" />
+                                        </div>
+                                    ))}
                                 </div>
-                            ) : communityMessages.map((msg, i) => (
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    key={msg.id || i} 
-                                    className="flex gap-4 group/msg"
-                                >
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden group-hover/msg:border-white/30 transition-all">
-                                        {msg.author?.avatar_url ? <img src={msg.author.avatar_url} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/20" />}
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-black uppercase tracking-widest ${msg.author?.aura_color === 'Architect' ? 'text-aether-gold' : 'text-white'}`}>
-                                                {msg.author?.username || 'Prophet'}
-                                            </span>
-                                            <span className="text-[6px] font-mono text-zinc-600 uppercase tracking-tighter">
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                        <div className="relative group/bubble max-w-[95%]">
-                                            <p className="text-[11px] text-white/80 font-mono tracking-wide leading-relaxed bg-white/[0.03] border border-white/5 px-4 py-3 rounded-2xl rounded-tl-none group-hover/bubble:border-white/20 transition-all shadow-sm">
-                                                {msg.content}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                            )}
                         </div>
 
                         <form 
@@ -1032,14 +1081,14 @@ export default function Gateway() {
                         <div className="space-y-8 relative z-10">
                             {/* Seek Bar */}
                             <div className="space-y-3">
-                                <div className="relative group/seek">
+                                <div className="relative group/seek" onClick={(e) => e.stopPropagation()}>
                                     <input 
                                         type="range"
                                         min={0}
                                         max={duration || 0}
                                         value={currentTime}
                                         onChange={handleSeek}
-                                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white hover:accent-aether-gold transition-all"
+                                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white hover:accent-aether-gold transition-all relative z-30"
                                     />
                                     <div 
                                         className="absolute top-0 left-0 h-1 bg-white rounded-full pointer-events-none" 
@@ -1059,7 +1108,7 @@ export default function Gateway() {
                                     <button onClick={nextTrack} className="w-12 h-12 rounded-full border border-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"><SkipForward className="w-5 h-5" /></button>
                                 </div>
 
-                                <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl group/volume">
+                                <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl group/volume" onClick={(e) => e.stopPropagation()}>
                                     <Volume2 className="w-4 h-4 text-white/40" />
                                     <input 
                                         type="range"
