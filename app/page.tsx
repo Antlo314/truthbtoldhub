@@ -721,7 +721,7 @@ export default function Gateway() {
                         <div className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
                             {aiMessages.length === 0 ? (
                                 <div className="h-full flex items-center justify-center text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">Awaiting query...</div>
-                            ) : aiMessages.map((m, i) => (
+                            ) : aiMessages.map((m: any, i: number) => (
                                 <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-fade-in`}>
                                     <div className={`max-w-[90%] px-6 py-4 rounded-3xl text-[11px] leading-relaxed tracking-wide ${m.role === 'user' ? 'bg-white/10 border border-white/20 text-white' : 'bg-aether-gold/10 border border-aether-gold/20 text-aether-gold font-black'}`}>
                                         {m.content}
