@@ -602,29 +602,6 @@ export default function Gateway() {
                     to { transform: translateX(-100%); }
                 }
 
-                .glitch-text {
-                    position: relative;
-                }
-                .glitch-text::before,
-                .glitch-text::after {
-                    content: attr(data-text);
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    opacity: 0.8;
-                }
-                .glitch-text::before {
-                    color: #0ff;
-                    z-index: -1;
-                    animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
-                }
-                .glitch-text::after {
-                    color: #f0f;
-                    z-index: -2;
-                    animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse both infinite;
-                }
                 @keyframes glitch {
                     0% { transform: translate(0); }
                     20% { transform: translate(-2px, 2px); }
@@ -634,22 +611,10 @@ export default function Gateway() {
                     100% { transform: translate(0); }
                 }
 
-                .char:hover::before {
-                    content: attr(data-text);
-                    position: absolute;
-                    left: 2px;
-                    text-shadow: -1px 0 #ff00c1;
-                    background: #050505;
-                    overflow: hidden;
-                    animation: noise-anim 2s infinite linear alternate-reverse;
-                }
-                @keyframes noise-anim {
-                    0% { clip-path: inset(40% 0 61% 0); }
-                    20% { clip-path: inset(92% 0 1% 0); }
-                    40% { clip-path: inset(43% 0 1% 0); }
-                    60% { clip-path: inset(25% 0 58% 0); }
-                    80% { clip-path: inset(54% 0 7% 0); }
-                    100% { clip-path: inset(58% 0 43% 0); }
+                .char:hover {
+                    color: var(--aether-gold);
+                    text-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+                    transition: all 0.3s ease;
                 }
 
                 .screen-glitch {
@@ -705,16 +670,8 @@ export default function Gateway() {
                             </div>
                             <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="text-white/40 hover:text-white transition-colors"><LogOut className="w-4 h-4" /></button>
                         </div>
-                    ) : isAscended ? (
-                        <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 px-6 py-2.5 rounded-full backdrop-blur-xl">
-                            <div className="flex items-center gap-3">
-                                <AlertTriangle className="w-3 h-3 text-red-500 animate-pulse" />
-                                <span className="text-[8px] font-black uppercase tracking-widest text-red-500">Signal Unstable</span>
-                            </div>
-                            <button onClick={navigateToTrial} className="text-[8px] font-black uppercase tracking-widest text-white hover:text-aether-gold transition-colors">Secure Link</button>
-                        </div>
                     ) : (
-                        <button onClick={navigateToTrial} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95">Initialize</button>
+                        <button onClick={navigateToTrial} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95 shadow-xl">Initialize Protocol</button>
                     )}
                     <button onClick={() => openSupport('series')} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
                 </div>
@@ -983,7 +940,6 @@ export default function Gateway() {
                         onClick={() => { playSfx('click'); router.push('/self'); }}
                         className={`bento-card col-span-1 ${isMobile && expandedCard === 'self' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent cursor-pointer group`}
                     >
-                        {!isUnlocked && <LockedOverlay title="Profile" />}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden group-hover:scale-110 transition-transform duration-500 relative">
@@ -993,8 +949,8 @@ export default function Gateway() {
                                     )}
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
-                                        {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
+                                    <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${profile?.aura_color === 'Architect' ? 'border-aether-gold/30 text-aether-gold' : 'border-white/20 text-white/40'}`}>
+                                        {profile?.aura_color || 'Neutral'}
                                     </div>
                                     {profile?.is_supporter && (
                                         <span className="text-[7px] font-black text-aether-gold uppercase tracking-[0.2em] flex items-center gap-1">
@@ -1004,15 +960,38 @@ export default function Gateway() {
                                     )}
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white group-hover:gold-shimmer transition-all">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
-                                <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
-                                    {profile?.bio || (isAscended ? 'Frequency active but temporary. Secure Link to claim Aura.' : 'Initializing neural-link...')}
-                                </p>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white group-hover:gold-shimmer transition-all">{profile?.username || (user ? 'Authenticated Prophet' : 'Unknown Entity')}</h3>
+                                    <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
+                                        {profile?.bio || 'Initialize your soul profile to record your prophetic footprint.'}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3 pt-2">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-[7px] font-black uppercase tracking-widest text-zinc-500">
+                                            <span>Prophetic Alignment</span>
+                                            <span className="text-white">{alignment}%</span>
+                                        </div>
+                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div initial={{ width: 0 }} animate={{ width: `${alignment}%` }} className="h-full bg-aether-gold shadow-[0_0_10px_rgba(212,175,55,0.4)]" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-[7px] font-black uppercase tracking-widest text-zinc-500">
+                                            <span>Soul Power</span>
+                                            <span className="text-white">{profile?.is_supporter ? '400' : '0'} SP</span>
+                                        </div>
+                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div initial={{ width: 0 }} animate={{ width: profile?.is_supporter ? '100%' : '5%' }} className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-500">
-                            <span className="text-[7px] font-black uppercase tracking-[0.4em] text-aether-gold">Access Identity Core</span>
+                        <div className="flex items-center gap-2 mt-6 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-500">
+                            <span className="text-[7px] font-black uppercase tracking-[0.4em] text-aether-gold">{user ? 'Refine Identity' : 'Initialize Profile'}</span>
                             <ArrowRight className="w-3 h-3 text-aether-gold" />
                         </div>
                     </motion.div>
