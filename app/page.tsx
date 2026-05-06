@@ -170,21 +170,30 @@ export default function Gateway() {
 
     // AI Chat Integration
     const { messages: aiMessages, input: aiInput, handleInputChange: handleAiInputChange, handleSubmit, isLoading: isLoadingAi, append, setInput: setAiInput } = useChat() as any;
+    const [oracleError, setOracleError] = useState<string | null>(null);
     
     const handleAiSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('AI Oracle Submit Triggered:', aiInput);
         if (!aiInput?.trim() || isLoadingAi) return;
         
+        setOracleError(null);
         try {
-            await append({
+            const result = await append({
                 role: 'user',
                 content: aiInput
             });
+            
+            if (!result) {
+                throw new Error("Neural link unstable. Retry connection.");
+            }
+            
             setAiInput(''); // Manual clear
-        } catch (err) {
+        } catch (err: any) {
             console.error('AI Oracle Submit Error:', err);
+            setOracleError(err.message || "Failed to reach the Oracle.");
             playSfx('error');
+            setTimeout(() => setOracleError(null), 5000);
         }
     };
     // Community Chat State
