@@ -148,7 +148,7 @@ export default function Gateway() {
     }, []);
 
     // AI Chat Integration
-    const { messages: aiMessages, input: aiInput, handleInputChange: handleAiInputChange, handleSubmit, isLoading: isLoadingAi, append, setInput: setAiInput } = useChat();
+    const { messages: aiMessages, input: aiInput, handleInputChange: handleAiInputChange, handleSubmit, isLoading: isLoadingAi, append, setInput: setAiInput } = useChat() as any;
     
     const handleAiSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
