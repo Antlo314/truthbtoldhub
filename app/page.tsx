@@ -903,20 +903,25 @@ export default function Gateway() {
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        onClick={() => toggleExpand('pool')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent cursor-pointer group`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-white/5 to-transparent cursor-not-allowed group grayscale opacity-60`}
                     >
-                        {!isUnlocked && <LockedOverlay title="The Pool" />}
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-6 text-center">
+                            <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-4">
+                                <Lock className="w-5 h-5 text-white/40" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">The Pool</span>
+                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-widest">Protocol Offline</span>
+                        </div>
                         <div className="space-y-8">
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20 group-hover:scale-110 transition-transform"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
-                            <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white">The Pool</h3>
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-white/20" /></div>
+                            <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white/40">The Pool</h3>
                         </div>
                         <div className="flex justify-between items-end">
                             <div className="flex flex-col">
-                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Mutual Aid Balance</span>
-                                <span className="text-2xl font-ritual font-black text-white">$4,821</span>
+                                <span className="text-[7px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Mutual Aid Balance</span>
+                                <span className="text-2xl font-ritual font-black text-white/20">$4,821</span>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); playSfx('click'); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all"><ArrowRight className="w-4 h-4" /></button>
+                            <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20"><ArrowRight className="w-4 h-4" /></div>
                         </div>
                     </motion.div>
 
