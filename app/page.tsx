@@ -261,6 +261,7 @@ export default function Gateway() {
         };
     }, []);
 
+    useEffect(() => {
         // Audio Sync Logic
         if (audioRef.current) {
             if (isPlaying) {
