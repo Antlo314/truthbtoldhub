@@ -82,7 +82,15 @@ function CipherTracker() {
 export default function Gateway() {
     const router = useRouter();
     const [showSupportOverlay, setShowSupportOverlay] = useState(false);
+    const [supportMode, setSupportMode] = useState<'series' | 'hardware'>('series');
+    const overlayScrollRef = useRef<HTMLDivElement>(null);
     const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        if (showSupportOverlay && overlayScrollRef.current) {
+            overlayScrollRef.current.scrollTo(0, 0);
+        }
+    }, [showSupportOverlay]);
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [isAscended, setIsAscended] = useState(false);
@@ -279,9 +287,10 @@ export default function Gateway() {
         router.refresh();
     };
 
-    const navigateToTrial = () => {
+    const openSupport = (mode: 'series' | 'hardware' = 'series') => {
         playSfx('click');
-        router.push('/trial');
+        setSupportMode(mode);
+        setShowSupportOverlay(true);
     };
 
     const toggleExpand = (cardId: string) => {
@@ -634,7 +643,7 @@ export default function Gateway() {
                     ) : (
                         <button onClick={navigateToTrial} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95">Initialize</button>
                     )}
-                    <button onClick={() => { playSfx('click'); setShowSupportOverlay(true); }} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
+                    <button onClick={() => openSupport('series')} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
                 </div>
             </nav>
 
@@ -997,7 +1006,7 @@ export default function Gateway() {
 
                         <div className="mt-auto pt-6">
                             <button 
-                                onClick={(e) => { e.stopPropagation(); playSfx('click'); setShowSupportOverlay(true); }} 
+                                onClick={(e) => { e.stopPropagation(); openSupport('hardware'); }} 
                                 className="w-full bg-white text-black py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
                             >
                                 <Zap className="w-3 h-3 fill-current" />
@@ -1010,7 +1019,7 @@ export default function Gateway() {
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        onClick={() => { playSfx('click'); setShowSupportOverlay(true); }}
+                        onClick={() => openSupport('series')}
                         className={`bento-card col-span-2 ${isMobile && expandedCard === 'series' ? 'col-span-2 row-span-3' : (isMobile ? 'col-span-2' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-white/10 group cursor-pointer relative overflow-hidden bg-gradient-to-br from-aether-gold/10 to-transparent min-h-[350px]`}
                     >
                         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 group-hover:opacity-30 transition-all duration-1000 scale-110 group-hover:scale-100 pointer-events-none">
@@ -1174,56 +1183,92 @@ export default function Gateway() {
             <AnimatePresence>
                 {showSupportOverlay && (
                     <motion.div 
+                        ref={overlayScrollRef}
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-12 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto"
+                        className="fixed inset-0 z-[200] flex items-start justify-center p-4 md:p-12 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto scroll-smooth"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, y: 40 }} 
                             animate={{ scale: 1, y: 0 }} 
                             exit={{ scale: 0.9, y: 40 }} 
-                            className="liquid-glass rounded-[3rem] md:rounded-[5rem] p-8 md:p-20 max-w-6xl w-full relative border-white/20 shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                            className="liquid-glass rounded-[3rem] md:rounded-[5rem] p-8 md:p-20 max-w-6xl w-full relative border-white/20 shadow-[0_0_100px_rgba(0,0,0,0.5)] my-auto"
                         >
                             <button 
                                 onClick={() => { playSfx('click'); setShowSupportOverlay(false); }} 
-                                className="absolute top-8 right-8 md:top-12 md:right-12 text-white/40 hover:text-white p-4 bg-white/5 rounded-full border border-white/10 transition-all active:scale-90 group"
+                                className="absolute top-8 right-8 md:top-12 md:right-12 text-white/40 hover:text-white p-4 bg-white/5 rounded-full border border-white/10 transition-all active:scale-90 group z-50"
                             >
                                 <Lock className="w-6 h-6 group-hover:rotate-12 transition-transform" />
                             </button>
 
                             <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
-                                <div className="space-y-10">
-                                    <div className="space-y-4">
-                                        <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/10">
-                                            <Sparkles className="w-3 h-3 text-aether-gold" />
-                                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-aether-gold">The 400 Series Protocol</span>
+                                {supportMode === 'series' ? (
+                                    <div className="space-y-10">
+                                        <div className="space-y-4">
+                                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/10">
+                                                <Sparkles className="w-3 h-3 text-aether-gold" />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-aether-gold">The 400 Series Protocol</span>
+                                            </div>
+                                            <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase gold-shimmer leading-none glitch-text" data-text="THE 400 SERIES">THE 400<br/>SERIES</h2>
+                                            <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
+                                                A cinematic journey into the prophetic timeline. The series officially begins dropping <span className="text-white font-black underline decoration-aether-gold underline-offset-4">June 1st</span>, exclusively behind the Truth B Told paywall.
+                                            </p>
                                         </div>
-                                        <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase gold-shimmer leading-none glitch-text" data-text="THE 400 SERIES">THE 400<br/>SERIES</h2>
-                                        <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
-                                            A cinematic journey into the prophetic timeline. The series officially begins dropping <span className="text-white font-black underline decoration-aether-gold underline-offset-4">June 1st</span>, exclusively behind the Truth B Told paywall.
-                                        </p>
-                                    </div>
 
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Supporter Privileges</h4>
-                                        <div className="grid grid-cols-1 gap-4">
-                                            {[
-                                                { icon: <Eye className="w-4 h-4" />, title: "Free Viewership", desc: "Permanent access to the entire series." },
-                                                { icon: <Star className="w-4 h-4" />, title: "Early Access", desc: "View chapters 72 hours before global release." },
-                                                { icon: <ScrollText className="w-4 h-4" />, title: "Digital Credits", desc: "Name immortalized in the Global Archive." }
-                                            ].map((benefit, i) => (
-                                                <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-colors">
-                                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-aether-gold">{benefit.icon}</div>
-                                                    <div className="space-y-1">
-                                                        <span className="block text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
-                                                        <span className="block text-[8px] text-white/40 uppercase tracking-widest">{benefit.desc}</span>
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Supporter Privileges</h4>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {[
+                                                    { icon: <Eye className="w-4 h-4" />, title: "Free Viewership", desc: "Permanent access to the entire series." },
+                                                    { icon: <Star className="w-4 h-4" />, title: "Early Access", desc: "View chapters 72 hours before global release." },
+                                                    { icon: <ScrollText className="w-4 h-4" />, title: "Digital Credits", desc: "Name immortalized in the Global Archive." }
+                                                ].map((benefit, i) => (
+                                                    <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-colors">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-aether-gold">{benefit.icon}</div>
+                                                        <div className="space-y-1">
+                                                            <span className="block text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
+                                                            <span className="block text-[8px] text-white/40 uppercase tracking-widest">{benefit.desc}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-10">
+                                        <div className="space-y-4">
+                                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/20 bg-white/5">
+                                                <Cpu className="w-3 h-3 text-white" />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white">Hardware Requirements</span>
+                                            </div>
+                                            <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase text-white leading-none">INFRA-<br/>STRUCTURE</h2>
+                                            <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
+                                                To produce the "400 Series" at institutional cinematic quality, we must scale our physical and neural processing nodes.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Cost Justification</h4>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {[
+                                                    { icon: <User className="w-4 h-4" />, title: "Production & Labor ($4,500)", desc: "Covers historical research, narrative scripting, and high-fidelity voice orchestration." },
+                                                    { icon: <Server className="w-4 h-4" />, title: "AI Workstation ($3,200)", desc: "Next-gen processing for real-time generative upscaling and 4K neural rendering." },
+                                                    { icon: <Gpu className="w-4 h-4" />, title: "RTX 4090 Core ($1,800)", desc: "The essential hardware engine for parallel cinematic rendering of complex environments." },
+                                                    { icon: <Volume2 className="w-4 h-4" />, title: "Studio Audio ($500)", desc: "Precision spatial monitoring for the Prophetic Frequency audio experience." }
+                                                ].map((item, i) => (
+                                                    <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5">
+                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-white">{item.icon}</div>
+                                                        <div className="space-y-1">
+                                                            <span className="block text-[10px] font-black uppercase tracking-widest text-white">{item.title}</span>
+                                                            <span className="block text-[8px] text-white/40 uppercase tracking-widest leading-relaxed">{item.desc}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-10 p-8 md:p-12 rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent border border-white/10 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
