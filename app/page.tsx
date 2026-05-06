@@ -873,36 +873,40 @@ export default function Gateway() {
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Cpu className="w-6 h-6 text-white" /></div>
                                 <div className="flex flex-col">
-                                    <h3 className="font-ritual text-xl font-black uppercase text-white">Hardware</h3>
-                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Node 01: Active</span>
+                                    <h3 className="font-ritual text-xl font-black uppercase text-white">Infrastructure Fueling</h3>
+                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Goal: $10,000</span>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
                                     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
-                                        <span className="text-white/40">Render Capacity</span>
-                                        <span className="text-white">84%</span>
+                                        <span className="text-white/40">Total Fueling Progress</span>
+                                        <span className="text-white">$4,821 / $10,000</span>
                                     </div>
-                                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                                         <motion.div 
                                             initial={{ width: 0 }}
-                                            whileInView={{ width: '84%' }}
+                                            whileInView={{ width: '48.2%' }}
                                             transition={{ duration: 2, ease: "easeOut" }}
-                                            className="h-full bg-white shadow-[0_0_10px_#fff]"
+                                            className="h-full bg-aether-gold shadow-[0_0_15px_#d4af37]"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                                        <span className="block text-[6px] text-white/40 uppercase mb-1">Cores</span>
-                                        <span className="text-[10px] font-black text-white">128 vCPU</span>
-                                    </div>
-                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
-                                        <span className="block text-[6px] text-white/40 uppercase mb-1">Latency</span>
-                                        <span className="text-[10px] font-black text-white">12ms</span>
-                                    </div>
+                                <div className="space-y-2">
+                                    <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 mb-3">Required Hardware & Labor</h4>
+                                    {[
+                                        { label: 'Producer & Production Costs', val: '$4,500' },
+                                        { label: 'High-End AI Workstation', val: '$3,200' },
+                                        { label: 'RTX 4090 Render Core', val: '$1,800' },
+                                        { label: 'Studio Audio Monitoring', val: '$500' }
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                            <span className="text-[7px] font-mono text-white/60 uppercase">{item.label}</span>
+                                            <span className="text-[9px] font-black text-white">{item.val}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -913,7 +917,7 @@ export default function Gateway() {
                                 className="w-full bg-white text-black py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
                             >
                                 <Zap className="w-3 h-3 fill-current" />
-                                Boost Core
+                                Initiate Funding
                             </button>
                         </div>
                     </motion.div>
@@ -939,6 +943,25 @@ export default function Gateway() {
                                 <p className="text-white/40 text-[9px] md:text-xs uppercase tracking-[0.2em] font-black max-w-md leading-relaxed">
                                     The global premiere begins <span className="text-white">June 1st</span>. Exclusively behind the Truth B Told paywall. Secure Early Supporter privileges now.
                                 </p>
+                            </div>
+                            
+                            {/* Latest Transmissions Section */}
+                            <div className="space-y-4 bg-white/5 p-6 rounded-3xl border border-white/10">
+                                <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">Latest Transmissions (YouTube)</h4>
+                                <div className="space-y-3">
+                                    {[
+                                        { title: "400 - Genesis 15 | Opening Scene Preview", url: "https://www.youtube.com/watch?v=jXezgcPBqGE", date: "2 days ago" },
+                                        { title: "400 Years Series: The Prelude", url: "https://www.youtube.com/watch?v=XnWdy_B7PgA", date: "4 days ago" }
+                                    ].map((vid, i) => (
+                                        <a key={i} href={vid.url} target="_blank" className="flex items-center justify-between group/vid p-3 rounded-xl hover:bg-white/10 transition-colors">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-[10px] font-black text-white group-hover/vid:text-aether-gold transition-colors">{vid.title}</span>
+                                                <span className="text-[7px] font-mono text-white/20 uppercase">{vid.date}</span>
+                                            </div>
+                                            <ArrowRight className="w-3 h-3 text-white/20 group-hover/vid:translate-x-1 group-hover/vid:text-white transition-all" />
+                                        </a>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
