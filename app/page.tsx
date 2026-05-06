@@ -1006,6 +1006,41 @@ export default function Gateway() {
                          </div>
                     </motion.div>
 
+                    {/* Vision Roadmap */}
+                    <motion.div 
+                        layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 border-white/10 group relative overflow-hidden`}
+                    >
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-12 relative z-10">
+                            <div className="space-y-4 text-center md:text-left">
+                                <h3 className="font-ritual text-2xl md:text-4xl font-black uppercase text-white gold-shimmer">Vision Roadmap</h3>
+                                <p className="text-[9px] text-white/40 uppercase tracking-[0.4em] font-black">Phase 01: The Restoration</p>
+                            </div>
+                            
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
+                                {[
+                                    { step: '01', title: 'Fueling', status: 'In Progress', desc: 'Hardware & Production Funding' },
+                                    { step: '02', title: 'Synthesis', status: 'Upcoming', desc: 'Episode 01 Rendering & SFX' },
+                                    { step: '03', title: 'Early Access', status: 'May 25', desc: 'Beta Screening for Donors' },
+                                    { step: '04', title: 'Premiere', status: 'June 01', desc: 'Global Drop behind Paywall' }
+                                ].map((milestone, i) => (
+                                    <div key={i} className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group/step">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[10px] font-ritual font-black text-aether-gold">{milestone.step}</span>
+                                            <span className={`text-[6px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${milestone.status === 'In Progress' ? 'bg-aether-gold text-black' : 'bg-white/10 text-white/40'}`}>
+                                                {milestone.status}
+                                            </span>
+                                        </div>
+                                        <h4 className="text-[11px] font-black text-white uppercase tracking-widest mb-2">{milestone.title}</h4>
+                                        <p className="text-[8px] text-white/40 uppercase leading-relaxed tracking-wide">{milestone.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+
                     {/* Historical Timeline */}
                     <motion.div 
                         layout={isMobile}
