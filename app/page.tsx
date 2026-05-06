@@ -1134,7 +1134,7 @@ export default function Gateway() {
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Cpu className="w-6 h-6 text-white" /></div>
                                 <div className="flex flex-col">
-                                    <h3 className="font-ritual text-xl font-black uppercase text-white">Infrastructure Fueling</h3>
+                                    <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white leading-tight">Infrastructure Fueling</h3>
                                     <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Goal: $10,000</span>
                                 </div>
                             </div>
@@ -1384,11 +1384,12 @@ export default function Gateway() {
                             </div>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mt-6 relative z-50">
                             <a 
                                 href="https://viralcartel.net" 
                                 target="_blank"
-                                onClick={() => playSfx('click')}
+                                rel="noopener noreferrer"
+                                onClick={(e) => { e.stopPropagation(); playSfx('click'); }}
                                 className="w-full py-4 rounded-2xl bg-white text-black flex items-center justify-center gap-3 group/btn hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
                             >
                                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">Acquire Artifact</span>
