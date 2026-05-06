@@ -12,6 +12,7 @@ interface SoulProfile {
     custom_title?: string;
     bio?: string;
     theme_color?: string;
+    is_supporter?: boolean;
 }
 
 interface SoulState {

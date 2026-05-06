@@ -135,24 +135,35 @@ export default function Gateway() {
 
     // Countdown State
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+    const [juneteenthLeft, setJuneteenthLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
     useEffect(() => {
         const target = new Date('2026-06-01T00:00:00');
+        const juneteenth = new Date('2026-06-19T00:00:00');
+        
         const timer = setInterval(() => {
             const now = new Date();
-            const diff = target.getTime() - now.getTime();
             
-            if (diff <= 0) {
-                clearInterval(timer);
-                return;
+            const diff = target.getTime() - now.getTime();
+            const jDiff = juneteenth.getTime() - now.getTime();
+            
+            if (diff > 0) {
+                setTimeLeft({
+                    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+                    mins: Math.floor((diff / 1000 / 60) % 60),
+                    secs: Math.floor((diff / 1000) % 60)
+                });
             }
 
-            setTimeLeft({
-                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-                hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-                mins: Math.floor((diff / 1000 / 60) % 60),
-                secs: Math.floor((diff / 1000) % 60)
-            });
+            if (jDiff > 0) {
+                setJuneteenthLeft({
+                    days: Math.floor(jDiff / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((jDiff / (1000 * 60 * 60)) % 24),
+                    mins: Math.floor((jDiff / 1000 / 60) % 60),
+                    secs: Math.floor((jDiff / 1000) % 60)
+                });
+            }
         }, 1000);
         return () => clearInterval(timer);
     }, []);
@@ -1033,7 +1044,7 @@ export default function Gateway() {
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        onClick={() => openSupport('series')}
+                        onClick={() => { playSfx('click'); router.push('/cinema'); }}
                         className={`bento-card col-span-2 ${isMobile && expandedCard === 'series' ? 'col-span-2 row-span-3' : (isMobile ? 'col-span-2' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-white/10 group cursor-pointer relative overflow-hidden bg-gradient-to-br from-aether-gold/10 to-transparent min-h-[350px]`}
                     >
                         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 group-hover:opacity-30 transition-all duration-1000 scale-110 group-hover:scale-100 pointer-events-none">
@@ -1072,9 +1083,9 @@ export default function Gateway() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-8 relative z-10">
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-8 relative z-10">
                             <div className="flex flex-col">
-                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Time to Premiere</span>
+                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">June 01 Premiere</span>
                                 <div className="flex gap-4">
                                     {[
                                         { label: 'D', val: timeLeft.days },
@@ -1089,10 +1100,22 @@ export default function Gateway() {
                                     ))}
                                 </div>
                             </div>
-                            <div className="h-10 w-[1px] bg-white/10"></div>
+                            <div className="h-10 w-[1px] bg-white/10 hidden md:block"></div>
                             <div className="flex flex-col">
-                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Contribution Recognition</span>
-                                <span className="text-[10px] font-black text-aether-gold uppercase tracking-[0.2em]">"400" PROTOCOL ACTIVE</span>
+                                <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest mb-1">Juneteenth Community Premiere</span>
+                                <div className="flex gap-4 opacity-60">
+                                    {[
+                                        { label: 'D', val: juneteenthLeft.days },
+                                        { label: 'H', val: juneteenthLeft.hours },
+                                        { label: 'M', val: juneteenthLeft.mins },
+                                        { label: 'S', val: juneteenthLeft.secs }
+                                    ].map((t, i) => (
+                                        <div key={i} className="flex flex-col items-center">
+                                            <span className="text-lg font-ritual font-black text-white leading-none">{String(t.val).padStart(2, '0')}</span>
+                                            <span className="text-[5px] font-mono text-white/40 uppercase tracking-tighter">{t.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </motion.div>
