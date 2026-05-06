@@ -50,6 +50,7 @@ import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
+import { Howl } from 'howler';
 
 // Custom Social Icons
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -103,6 +104,9 @@ export default function Gateway() {
         { title: 'Wilderness Whispers', genre: 'Spiritual Nature', file: '/audio/Wilderness Whispers.mp3' }
     ];
 
+    // SFX
+    const sfxRef = useRef<{ [key: string]: Howl }>({});
+
     // Global Pulse State
     const [pulseLog, setPulseLog] = useState<string[]>([]);
     const signals = [
@@ -119,11 +123,49 @@ export default function Gateway() {
     // Prophetic Alignment State
     const [alignment, setAlignment] = useState(98.4);
 
+    // Countdown State
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+
+    useEffect(() => {
+        const target = new Date('2026-06-01T00:00:00');
+        const timer = setInterval(() => {
+            const now = new Date();
+            const diff = target.getTime() - now.getTime();
+            
+            if (diff <= 0) {
+                clearInterval(timer);
+                return;
+            }
+
+            setTimeLeft({
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+                mins: Math.floor((diff / 1000 / 60) % 60),
+                secs: Math.floor((diff / 1000) % 60)
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     // AI Chat Integration
-    const { messages: aiMessages, sendMessage: sendAiMessage, status } = useChat();
-    const [aiInput, setAiInput] = useState('');
-    const isLoadingAi = status !== 'ready';
+    const { messages: aiMessages, input: aiInput, handleInputChange: handleAiInputChange, handleSubmit, isLoading: isLoadingAi, append, setInput: setAiInput } = useChat();
     
+    const handleAiSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log('AI Oracle Submit Triggered:', aiInput);
+        if (!aiInput?.trim() || isLoadingAi) return;
+        
+        try {
+            await append({
+                role: 'user',
+                content: aiInput
+            });
+            setAiInput(''); // Manual clear
+        } catch (err) {
+            console.error('AI Oracle Submit Error:', err);
+            playSfx('error');
+        }
+    };
     // Community Chat State
     const [communityMessages, setCommunityMessages] = useState<any[]>([]);
     const [communityInput, setCommunityInput] = useState('');
@@ -154,12 +196,30 @@ export default function Gateway() {
             else setProfile(null);
         });
 
+        // Initialize SFX
+        if (typeof window !== 'undefined') {
+            const sounds = {
+                hover: 'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3',
+                click: 'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3',
+                error: 'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/error_buzz.mp3',
+                glitch: 'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/glitch_static.mp3'
+            };
+
+            Object.entries(sounds).forEach(([key, src]) => {
+                sfxRef.current[key] = new Howl({ 
+                    src: [src], 
+                    volume: 0.2,
+                    onloaderror: () => console.warn(`SFX ${key} failed to load. Silencing.`),
+                });
+            });
+        }
+
         // Fetch Community Messages
         fetchCommunityMessages();
         
         const channel = supabase.channel('global_chat')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'archive_messages' }, async (payload) => {
-                const { data: profile } = await supabase.from('soul_profiles').select('username, avatar_url').eq('id', payload.new.author_id).single();
+                const { data: profile } = await supabase.from('profiles').select('username, avatar_url').eq('id', payload.new.author_id).single();
                 setCommunityMessages(prev => [...prev, { ...payload.new, author: profile }].slice(-20));
             })
             .subscribe();
@@ -178,21 +238,28 @@ export default function Gateway() {
         };
     }, []);
 
+    const playSfx = (key: string) => {
+        if (sfxRef.current[key] && sfxRef.current[key].state() === 'loaded') {
+            sfxRef.current[key].play();
+        }
+    };
+
     async function fetchProfile(uid: string) {
-        const { data } = await supabase.from('soul_profiles').select('*').eq('id', uid).single();
+        const { data } = await supabase.from('profiles').select('*').eq('id', uid).single();
         if (data) setProfile(data);
     }
 
     async function fetchCommunityMessages() {
         const { data } = await supabase
             .from('archive_messages')
-            .select('*, author:soul_profiles(username, avatar_url)')
+            .select('*, author:profiles(username, avatar_url)')
             .order('created_at', { ascending: false })
             .limit(20);
         if (data) setCommunityMessages(data.reverse());
     }
 
     const handleLogout = async () => {
+        playSfx('click');
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
@@ -200,28 +267,24 @@ export default function Gateway() {
     };
 
     const navigateToTrial = () => {
+        playSfx('click');
         router.push('/trial');
     };
 
     const toggleExpand = (cardId: string) => {
         if (!isMobile) return;
+        playSfx('hover');
         setExpandedCard(expandedCard === cardId ? null : cardId);
-    };
-
-    const handleAiSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!aiInput.trim() || isLoadingAi) return;
-        sendAiMessage({ 
-            role: 'user', 
-            parts: [{ type: 'text', text: aiInput }] 
-        });
-        setAiInput('');
     };
 
     const handleCommunitySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!communityInput.trim() || !user) return;
+        if (!communityInput?.trim() || !user) {
+            if (!user) playSfx('error');
+            return;
+        }
         
+        playSfx('click');
         const content = communityInput;
         setCommunityInput('');
 
@@ -231,22 +294,42 @@ export default function Gateway() {
             channel_id: 'global-general'
         });
 
-        if (error) console.error(error);
+        if (error) {
+            console.error(error);
+            playSfx('error');
+        }
     };
 
     const toggleAudio = () => {
-        setIsPlaying(!isPlaying);
+        playSfx('click');
+        if (isPlaying) {
+            audioRef.current?.pause();
+            setIsPlaying(false);
+        } else {
+            audioRef.current?.play().catch(err => console.error("Playback failed:", err));
+            setIsPlaying(true);
+        }
     };
 
     const nextTrack = () => {
-        setCurrentTrack((prev) => (prev + 1) % tracks.length);
+        playSfx('hover');
+        const next = (currentTrack + 1) % tracks.length;
+        setCurrentTrack(next);
         setIsPlaying(true);
     };
 
     const prevTrack = () => {
-        setCurrentTrack((prev) => (prev - 1 + tracks.length) % tracks.length);
+        playSfx('hover');
+        const prev = (currentTrack - 1 + tracks.length) % tracks.length;
+        setCurrentTrack(prev);
         setIsPlaying(true);
     };
+
+    useEffect(() => {
+        if (isPlaying && audioRef.current) {
+            audioRef.current.play().catch(err => console.error("Auto-play failed:", err));
+        }
+    }, [currentTrack]);
 
     const handleMagneticMove = (e: React.MouseEvent<HTMLElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -283,7 +366,7 @@ export default function Gateway() {
         const title = titleRef.current;
         if (title) {
             const text = "TRUTH B TOLD HUB";
-            title.innerHTML = text.split('').map(char => `<span class="char inline-block select-none">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+            title.innerHTML = text.split('').map(char => `<span class="char inline-block select-none relative" data-text="${char === ' ' ? '&nbsp;' : char}">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
             
             const handleMouseMove = (e: MouseEvent) => {
                 const { clientX, clientY } = e;
@@ -330,17 +413,19 @@ export default function Gateway() {
     const isUnlocked = user || isAscended;
 
     const LockedOverlay = ({ title }: { title: string }) => (
-        <div className="absolute inset-0 bg-[#050505]/90 backdrop-blur-xl z-[40] flex flex-col items-center justify-center p-8 text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/20">
-                <Lock className="w-6 h-6 text-white/40" />
+        <div className="absolute inset-0 bg-[#050505]/95 backdrop-blur-3xl z-[40] flex flex-col items-center justify-center p-8 text-center space-y-6 animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/20 relative group">
+                <div className="absolute inset-0 bg-white/5 rounded-full animate-ping opacity-20"></div>
+                <Lock className="w-6 h-6 text-white/40 group-hover:text-white transition-colors" />
             </div>
             <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">PROTOCOL BREACH</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white glitch-text" data-text="PROTOCOL BREACH">PROTOCOL BREACH</h4>
                 <p className="text-[8px] text-white/40 uppercase tracking-[0.2em] max-w-[200px]">Authentication required to decrypt {title}.</p>
             </div>
             <button 
                 onClick={navigateToTrial}
-                className="px-6 py-3 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform"
+                onMouseEnter={() => playSfx('hover')}
+                className="px-6 py-3 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform active:scale-95"
             >
                 Initialize Profile
             </button>
@@ -421,7 +506,74 @@ export default function Gateway() {
                     from { transform: translateX(100%); }
                     to { transform: translateX(-100%); }
                 }
+
+                .glitch-text {
+                    position: relative;
+                }
+                .glitch-text::before,
+                .glitch-text::after {
+                    content: attr(data-text);
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    opacity: 0.8;
+                }
+                .glitch-text::before {
+                    color: #0ff;
+                    z-index: -1;
+                    animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+                }
+                .glitch-text::after {
+                    color: #f0f;
+                    z-index: -2;
+                    animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse both infinite;
+                }
+                @keyframes glitch {
+                    0% { transform: translate(0); }
+                    20% { transform: translate(-2px, 2px); }
+                    40% { transform: translate(-2px, -2px); }
+                    60% { transform: translate(2px, 2px); }
+                    80% { transform: translate(2px, -2px); }
+                    100% { transform: translate(0); }
+                }
+
+                .char:hover::before {
+                    content: attr(data-text);
+                    position: absolute;
+                    left: 2px;
+                    text-shadow: -1px 0 #ff00c1;
+                    background: #050505;
+                    overflow: hidden;
+                    animation: noise-anim 2s infinite linear alternate-reverse;
+                }
+                @keyframes noise-anim {
+                    0% { clip-path: inset(40% 0 61% 0); }
+                    20% { clip-path: inset(92% 0 1% 0); }
+                    40% { clip-path: inset(43% 0 1% 0); }
+                    60% { clip-path: inset(25% 0 58% 0); }
+                    80% { clip-path: inset(54% 0 7% 0); }
+                    100% { clip-path: inset(58% 0 43% 0); }
+                }
+
+                .screen-glitch {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 255, 255, 0.05);
+                    z-index: 1000;
+                    pointer-events: none;
+                    animation: flash 0.1s steps(2) infinite;
+                }
+                @keyframes flash {
+                    0% { opacity: 0; }
+                    50% { opacity: 1; }
+                }
             `}</style>
+            
+            <AnimatePresence>
+                {isLoadingAi && <div className="screen-glitch opacity-20" />}
+            </AnimatePresence>
 
             <div className="film-grain" />
             
@@ -432,14 +584,14 @@ export default function Gateway() {
             {/* Global Nav */}
             <nav className="fixed top-0 w-full z-[100] px-4 md:px-12 py-8 flex justify-between items-center pointer-events-none">
                 <div className="flex items-center gap-6 pointer-events-auto">
-                    <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push('/')}>
+                    <div className="flex items-center gap-4 group cursor-pointer" onClick={() => { playSfx('click'); router.push('/'); }}>
                         <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center overflow-hidden">
-                            <img src="/logo.png" alt="TBT" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+                            <img src="/logo.png" alt="TBT" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 ease-out" />
                         </div>
                         <div className="hidden sm:flex flex-col">
-                            <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer">Truth B Told Hub</span>
+                            <span className="font-ritual text-lg md:text-xl tracking-[0.2em] font-black uppercase gold-shimmer group-hover:glitch-text" data-text="Truth B Told Hub">Truth B Told Hub</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-[7px] font-mono text-white uppercase tracking-widest mt-0.5">Prophetic OS v1.0</span>
+                                <span className="text-[7px] font-mono text-white uppercase tracking-widest mt-0.5">Prophetic OS v1.1</span>
                                 <div className="h-[1px] w-4 bg-white/20"></div>
                                 <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest mt-0.5 animate-pulse">Alignment: {alignment}%</span>
                             </div>
@@ -449,14 +601,14 @@ export default function Gateway() {
                 
                 <div className="flex items-center gap-4 md:gap-8 pointer-events-auto">
                     {user ? (
-                        <div className="flex items-center gap-6 bg-white/5 border border-white/10 px-6 py-2.5 rounded-full backdrop-blur-xl">
+                        <div className="flex items-center gap-6 bg-white/5 border border-white/10 px-6 py-2.5 rounded-full backdrop-blur-xl hover:border-white/20 transition-all cursor-pointer" onClick={() => router.push('/self')}>
                             <div className="flex items-center gap-3">
                                 <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
                                     {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-3 h-3 text-white" />}
                                 </div>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-white">{profile?.username || 'Prophet'}</span>
                             </div>
-                            <button onClick={handleLogout} className="text-white/40 hover:text-white transition-colors"><LogOut className="w-4 h-4" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="text-white/40 hover:text-white transition-colors"><LogOut className="w-4 h-4" /></button>
                         </div>
                     ) : isAscended ? (
                         <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 px-6 py-2.5 rounded-full backdrop-blur-xl">
@@ -467,9 +619,9 @@ export default function Gateway() {
                             <button onClick={navigateToTrial} className="text-[8px] font-black uppercase tracking-widest text-white hover:text-aether-gold transition-colors">Secure Link</button>
                         </div>
                     ) : (
-                        <button onClick={navigateToTrial} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all">Initialize</button>
+                        <button onClick={navigateToTrial} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95">Initialize</button>
                     )}
-                    <button onClick={() => setShowSupportOverlay(true)} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20">Support 400 Series</button>
+                    <button onClick={() => { playSfx('click'); setShowSupportOverlay(true); }} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
                 </div>
             </nav>
 
@@ -481,7 +633,7 @@ export default function Gateway() {
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
                         <span className="text-[8px] font-black tracking-[0.5em] text-white uppercase">Restoration Protocol Initialized</span>
                     </div>
-                    <div className="w-full overflow-hidden flex justify-center">
+                    <div className="w-full overflow-hidden flex justify-center cursor-none">
                         <h1 ref={titleRef} className="kinetic-title font-ritual text-4xl sm:text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter text-white gold-shimmer uppercase px-4 select-none">TRUTH B TOLD HUB</h1>
                     </div>
                 </div>
@@ -511,123 +663,186 @@ export default function Gateway() {
                     {/* Global Archive (COMMUNITY CHAT) */}
                     <motion.div 
                         layout={isMobile}
-                        onClick={() => toggleExpand('chat')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
+                        onMouseEnter={() => playSfx('hover')}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Archive" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all"><MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
                                 <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Global Archive</span><span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest">Whispers</span></div>
                             </div>
+                            {isMobile && (
+                                <button 
+                                    onClick={() => { playSfx('click'); toggleExpand('chat'); }}
+                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white/40 hover:text-white"
+                                >
+                                    {expandedCard === 'chat' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-4 hide-scrollbar mb-8 pr-2">
-                            {communityMessages.map((msg, i) => (
-                                <div key={i} className="flex flex-col space-y-1">
+                            {communityMessages.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">No echoes found...</div>
+                            ) : communityMessages.map((msg, i) => (
+                                <div key={i} className="flex flex-col space-y-1 animate-fade-in">
                                     <div className="flex items-center gap-2"><span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">{msg.author?.username || 'Unknown'}</span><span className="text-[6px] font-mono text-zinc-600">{new Date(msg.created_at).toLocaleTimeString()}</span></div>
                                     <p className="text-[10px] text-white/70 font-mono tracking-wide leading-relaxed">{msg.content}</p>
                                 </div>
                             ))}
                         </div>
                         <form onSubmit={handleCommunitySubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder="Whisper..." className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
-                            <button type="submit" disabled={!user || !communityInput.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
+                            <input value={communityInput} onChange={(e) => setCommunityInput(e.target.value)} disabled={!user} placeholder={user ? "Whisper..." : "Signal Blocked..."} className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-600 tracking-widest uppercase text-white font-black disabled:opacity-30" />
+                            <button type="submit" disabled={!user || !communityInput?.trim()} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
                         </form>
                     </motion.div>
 
                     {/* Prophetic AI Oracle (AI CHAT) */}
                     <motion.div 
                         layout={isMobile}
-                        onClick={() => toggleExpand('oracle')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'oracle' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden cursor-pointer`}
+                        onMouseEnter={() => playSfx('hover')}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'oracle' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Oracle" />}
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"><Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all"><Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
                                 <div className="flex flex-col"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">AI Oracle</span><span className="text-[7px] font-mono text-white uppercase tracking-widest">Decryptor</span></div>
                             </div>
+                            {isMobile && (
+                                <button 
+                                    onClick={() => { playSfx('click'); toggleExpand('oracle'); }}
+                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white/40 hover:text-white"
+                                >
+                                    {expandedCard === 'oracle' ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-6 hide-scrollbar mb-8 pr-2">
-                            {aiMessages.map((m, i) => (
-                                <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            {aiMessages.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">Awaiting query...</div>
+                            ) : aiMessages.map((m, i) => (
+                                <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-fade-in`}>
                                     <div className={`max-w-[90%] px-6 py-4 rounded-3xl text-[11px] leading-relaxed tracking-wide ${m.role === 'user' ? 'bg-white/10 border border-white/20 text-white' : 'bg-aether-gold/10 border border-aether-gold/20 text-aether-gold font-black'}`}>
-                                        {m.parts.map((p, j) => p.type === 'text' ? <span key={j}>{p.text}</span> : null)}
+                                        {m.content}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <form onSubmit={handleAiSubmit} className="relative" onClick={(e) => e.stopPropagation()}>
-                            <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Query..." className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black" />
-                            <button type="submit" disabled={isLoadingAi || !aiInput} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-20"><Send className="w-4 h-4 text-black" /></button>
-                        </form>
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                value={aiInput} 
+                                onChange={handleAiInputChange} 
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleAiSubmit(e as any);
+                                    }
+                                }}
+                                placeholder="Query..." 
+                                className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-[11px] focus:outline-none focus:border-white transition-all placeholder:text-zinc-300 tracking-widest uppercase text-white font-black" 
+                            />
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleAiSubmit(e as any);
+                                }}
+                                disabled={isLoadingAi || !aiInput?.trim()} 
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-20 active:scale-95 z-10"
+                            >
+                                <Send className="w-4 h-4 text-black" />
+                            </button>
+                        </div>
                     </motion.div>
 
                     {/* SELF / PROFILE CARD */}
                     <motion.div 
                         layout={isMobile}
-                        onClick={() => toggleExpand('self')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'self' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent cursor-pointer`}
+                        onMouseEnter={() => playSfx('hover')}
+                        onClick={() => { playSfx('click'); router.push('/self'); }}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'self' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-br from-white/10 to-transparent cursor-pointer group`}
                     >
                         {!isUnlocked && <LockedOverlay title="Profile" />}
                         <div className="space-y-6">
                             <div className="flex items-center justify-between">
-                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden group-hover:scale-110 transition-transform duration-500 relative">
                                     {profile?.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-6 h-6 md:w-8 md:h-8 text-white/20" />}
+                                    {profile?.is_supporter && (
+                                        <div className="absolute inset-0 border-2 border-aether-gold animate-pulse rounded-2xl pointer-events-none"></div>
+                                    )}
                                 </div>
-                                <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
-                                    {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
+                                <div className="flex flex-col items-end gap-2">
+                                    <div className={`px-4 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${isAscended && !user ? 'border-red-500/30 text-red-500' : 'border-white/20 text-white/40'}`}>
+                                        {isAscended && !user ? 'Unstable' : (profile?.aura_color || 'Neutral')}
+                                    </div>
+                                    {profile?.is_supporter && (
+                                        <span className="text-[7px] font-black text-aether-gold uppercase tracking-[0.2em] flex items-center gap-1">
+                                            <ShieldCheck className="w-2 h-2" />
+                                            Legacy Supporter
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
+                                <h3 className="font-ritual text-xl md:text-2xl font-black uppercase text-white group-hover:gold-shimmer transition-all">{profile?.username || (isAscended ? 'Guest Prophet' : 'The Prophet')}</h3>
                                 <p className="text-white/40 text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">
                                     {profile?.bio || (isAscended ? 'Frequency active but temporary. Secure Link to claim Aura.' : 'Initializing neural-link...')}
                                 </p>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-500">
+                            <span className="text-[7px] font-black uppercase tracking-[0.4em] text-aether-gold">Access Identity Core</span>
+                            <ArrowRight className="w-3 h-3 text-aether-gold" />
                         </div>
                     </motion.div>
 
                     {/* THE POOL / TREASURY */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('pool')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-aether-gold/5 to-transparent cursor-pointer group`}
                     >
                         {!isUnlocked && <LockedOverlay title="The Pool" />}
                         <div className="space-y-8">
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-aether-gold/10 flex items-center justify-center border border-aether-gold/20 group-hover:scale-110 transition-transform"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-aether-gold" /></div>
                             <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white">The Pool</h3>
                         </div>
                         <div className="flex justify-between items-end">
-                            <span className="text-2xl font-ritual font-black text-white">$4,821</span>
-                            <button onClick={(e) => { e.stopPropagation(); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white"><ArrowRight className="w-4 h-4" /></button>
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Mutual Aid Balance</span>
+                                <span className="text-2xl font-ritual font-black text-white">$4,821</span>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); playSfx('click'); router.push('/treasury'); }} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all"><ArrowRight className="w-4 h-4" /></button>
                         </div>
                     </motion.div>
 
                     {/* Aether Player */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('player')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'player' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'player' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer group`}
                     >
                         <div className="space-y-6">
-                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
+                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
                             <div className="space-y-1">
                                 <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
                                 <p className="text-white text-[10px] uppercase font-black">{tracks[currentTrack].title}</p>
                             </div>
                         </div>
                         <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipBack className="w-4 h-4" /></button>
-                            <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
-                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40"><SkipForward className="w-4 h-4" /></button>
+                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white transition-colors"><SkipBack className="w-4 h-4" /></button>
+                            <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-110 transition-transform active:scale-95">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
+                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white transition-colors"><SkipForward className="w-4 h-4" /></button>
                         </div>
                     </motion.div>
 
                     {/* Global Pulse Terminal */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('pulse')}
                         className={`bento-card col-span-1 ${isMobile && expandedCard === 'pulse' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative cursor-pointer`}
                     >
@@ -638,7 +853,7 @@ export default function Gateway() {
                         </div>
                         <div className="flex-1 space-y-3 font-mono text-[7px] overflow-hidden">
                             {pulseLog.slice(0, 8).map((log, i) => (
-                                <div key={i} className="flex items-center gap-2 text-white/40"><span className="text-aether-gold">{'>'}</span><span className="uppercase truncate">{log}</span></div>
+                                <div key={i} className="flex items-center gap-2 text-white/40 animate-fade-in"><span className="text-aether-gold">{'>'}</span><span className="uppercase truncate">{log}</span></div>
                             ))}
                         </div>
                     </motion.div>
@@ -646,43 +861,146 @@ export default function Gateway() {
                     {/* Hardware Milestone */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('hardware')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'hardware' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[300px] cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'hardware' ? 'col-span-2 row-span-3' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 perspective-card bg-gradient-to-t from-white/5 to-transparent min-h-[350px] cursor-pointer group relative overflow-hidden`}
                     >
-                        <div className="space-y-6">
-                            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20"><Cpu className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
-                            <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Hardware</h3>
-                            <p className="text-[8px] text-white/40 uppercase tracking-widest font-black">Milestone 01: Render Node Active</p>
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-30 transition-opacity">
+                            <Cpu className="w-32 h-32 text-white" />
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); setShowSupportOverlay(true); }} className="w-full bg-white text-black py-4 rounded-xl text-[8px] font-black uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)]">Boost</button>
+                        
+                        <div className="space-y-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Cpu className="w-6 h-6 text-white" /></div>
+                                <div className="flex flex-col">
+                                    <h3 className="font-ritual text-xl font-black uppercase text-white">Hardware</h3>
+                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Node 01: Active</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                                    <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
+                                        <span className="text-white/40">Render Capacity</span>
+                                        <span className="text-white">84%</span>
+                                    </div>
+                                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            whileInView={{ width: '84%' }}
+                                            transition={{ duration: 2, ease: "easeOut" }}
+                                            className="h-full bg-white shadow-[0_0_10px_#fff]"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                                        <span className="block text-[6px] text-white/40 uppercase mb-1">Cores</span>
+                                        <span className="text-[10px] font-black text-white">128 vCPU</span>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-center">
+                                        <span className="block text-[6px] text-white/40 uppercase mb-1">Latency</span>
+                                        <span className="text-[10px] font-black text-white">12ms</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto pt-6">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); playSfx('click'); setShowSupportOverlay(true); }} 
+                                className="w-full bg-white text-black py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-3"
+                            >
+                                <Zap className="w-3 h-3 fill-current" />
+                                Boost Core
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {/* The 400 Series (FEATURE CARD) */}
+                    <motion.div 
+                        layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
+                        onClick={() => { playSfx('click'); setShowSupportOverlay(true); }}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'series' ? 'col-span-2 row-span-3' : (isMobile ? 'col-span-2' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-white/10 group cursor-pointer relative overflow-hidden bg-gradient-to-br from-aether-gold/10 to-transparent min-h-[350px]`}
+                    >
+                        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 group-hover:opacity-30 transition-all duration-1000 scale-110 group-hover:scale-100 pointer-events-none">
+                             <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center grayscale group-hover:grayscale-0 transition-all duration-1000"></div>
+                        </div>
+                        
+                        <div className="space-y-8 relative z-10">
+                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/5 backdrop-blur-md">
+                                <Sparkles className="w-3 h-3 text-aether-gold" />
+                                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">The Prophecy Series</span>
+                            </div>
+                            <div className="space-y-3">
+                                <h3 className="font-ritual text-4xl md:text-7xl font-black uppercase text-white gold-shimmer group-hover:glitch-text" data-text="THE 400 SERIES">THE 400 SERIES</h3>
+                                <p className="text-white/40 text-[9px] md:text-xs uppercase tracking-[0.2em] font-black max-w-md leading-relaxed">
+                                    The global premiere begins <span className="text-white">June 1st</span>. Exclusively behind the Truth B Told paywall. Secure Early Supporter privileges now.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-8 relative z-10">
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Time to Premiere</span>
+                                <div className="flex gap-4">
+                                    {[
+                                        { label: 'D', val: timeLeft.days },
+                                        { label: 'H', val: timeLeft.hours },
+                                        { label: 'M', val: timeLeft.mins },
+                                        { label: 'S', val: timeLeft.secs }
+                                    ].map((t, i) => (
+                                        <div key={i} className="flex flex-col items-center">
+                                            <span className="text-xl font-ritual font-black text-white leading-none">{String(t.val).padStart(2, '0')}</span>
+                                            <span className="text-[6px] font-mono text-aether-gold uppercase tracking-tighter">{t.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="h-10 w-[1px] bg-white/10"></div>
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">Contribution Recognition</span>
+                                <span className="text-[10px] font-black text-aether-gold uppercase tracking-[0.2em]">"400" PROTOCOL ACTIVE</span>
+                            </div>
+                        </div>
                     </motion.div>
 
                     {/* The Prelude */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('prelude')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : (isMobile ? 'col-span-2' : 'md:col-span-4')} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : (isMobile ? 'col-span-2' : 'md:col-span-4')} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer relative`}
                     >
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
                             <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" title="The Prelude"></iframe>
                          </div>
-                         <div className="p-6 md:p-8"><h4 className="font-ritual text-xl font-black text-white">THE PRELUDE</h4></div>
+                         <div className="p-6 md:p-8 flex items-center justify-between">
+                            <h4 className="font-ritual text-xl font-black text-white group-hover:gold-shimmer transition-all">THE PRELUDE</h4>
+                            <Video className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                         </div>
                     </motion.div>
 
                     {/* Historical Timeline */}
                     <motion.div 
                         layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
                         onClick={() => toggleExpand('timeline')}
                         className={`bento-card col-span-2 ${isMobile && expandedCard === 'timeline' ? 'row-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
                     >
                         {!isUnlocked && <LockedOverlay title="Timeline" />}
                         <div className="flex flex-col gap-4 text-center md:text-left relative z-10">
                             <div className="flex items-center justify-center md:justify-start gap-4 text-white"><History className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-[0.5em]">Cycle Protocol</span></div>
-                            <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer">ABRAHAM TO 2019</h3>
+                            <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer group-hover:glitch-text" data-text="ABRAHAM TO 2019">ABRAHAM TO 2019</h3>
                         </div>
                         <div className="flex items-center gap-6 md:gap-12 relative z-10">
                             {[2019, 1619, 'Gen'].map((year, i) => (
-                                <div key={i} className="flex flex-col items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-white"></div><span className="font-ritual text-lg md:text-2xl font-black text-white">{year}</span></div>
+                                <div key={i} className="flex flex-col items-center gap-2 group/year">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white group-hover/year:scale-150 transition-transform"></div>
+                                    <span className="font-ritual text-lg md:text-2xl font-black text-white group-hover/year:text-aether-gold transition-colors">{year}</span>
+                                </div>
                             ))}
                         </div>
                     </motion.div>
@@ -699,25 +1017,102 @@ export default function Gateway() {
             </section>
             </LayoutGroup>
 
-            <footer className="py-24 border-t border-white/10 text-center space-y-12 bg-void">
-                <div className="flex flex-col items-center gap-6">
+            <footer className="py-24 border-t border-white/10 text-center space-y-12 bg-void relative">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.03)_0%,transparent_50%)] pointer-events-none"></div>
+                <div className="flex flex-col items-center gap-6 relative z-10">
                     <div className="flex items-center gap-8 mb-4">
-                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors"><YoutubeIcon className="w-6 h-6" /></a>
-                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-colors"><TikTokIcon className="w-6 h-6" /></a>
+                        <a href="https://youtube.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-all hover:scale-110 active:scale-95"><YoutubeIcon className="w-6 h-6" /></a>
+                        <a href="https://tiktok.com/@truufbtold" target="_blank" className="text-white hover:text-aether-gold transition-all hover:scale-110 active:scale-95"><TikTokIcon className="w-6 h-6" /></a>
                     </div>
-                    <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase">Protocol A-25 • Truth B TOLD HUB • 2026 Edition</p>
+                    <p className="text-[10px] font-black tracking-[0.8em] text-white uppercase opacity-40 hover:opacity-100 transition-opacity cursor-default">Protocol A-25 • Truth B TOLD HUB • 2026 Edition</p>
                 </div>
             </footer>
 
             {/* Support Overlay */}
             <AnimatePresence>
                 {showSupportOverlay && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="liquid-glass rounded-[4rem] p-12 max-w-4xl w-full relative space-y-12 border-white/20">
-                            <button onClick={() => setShowSupportOverlay(false)} className="absolute top-10 right-10 text-white hover:text-aether-gold p-3 bg-white/5 rounded-full border border-white/20"><Lock className="w-6 h-6" /></button>
-                            <h2 className="font-ritual text-6xl font-black uppercase gold-shimmer text-center">The 400 Series Journey</h2>
-                            <div className="text-center">
-                                <a href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" target="_blank" className="inline-block px-12 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.4)]">Fuel Phase 01</a>
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-12 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 40 }} 
+                            animate={{ scale: 1, y: 0 }} 
+                            exit={{ scale: 0.9, y: 40 }} 
+                            className="liquid-glass rounded-[3rem] md:rounded-[5rem] p-8 md:p-20 max-w-6xl w-full relative border-white/20 shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                        >
+                            <button 
+                                onClick={() => { playSfx('click'); setShowSupportOverlay(false); }} 
+                                className="absolute top-8 right-8 md:top-12 md:right-12 text-white/40 hover:text-white p-4 bg-white/5 rounded-full border border-white/10 transition-all active:scale-90 group"
+                            >
+                                <Lock className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                            </button>
+
+                            <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
+                                <div className="space-y-10">
+                                    <div className="space-y-4">
+                                        <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/10">
+                                            <Sparkles className="w-3 h-3 text-aether-gold" />
+                                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-aether-gold">The 400 Series Protocol</span>
+                                        </div>
+                                        <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase gold-shimmer leading-none glitch-text" data-text="THE 400 SERIES">THE 400<br/>SERIES</h2>
+                                        <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
+                                            A cinematic journey into the prophetic timeline. The series officially begins dropping <span className="text-white font-black underline decoration-aether-gold underline-offset-4">June 1st</span>, exclusively behind the Truth B Told paywall.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Supporter Privileges</h4>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {[
+                                                { icon: <Eye className="w-4 h-4" />, title: "Free Viewership", desc: "Permanent access to the entire series." },
+                                                { icon: <Star className="w-4 h-4" />, title: "Early Access", desc: "View chapters 72 hours before global release." },
+                                                { icon: <ScrollText className="w-4 h-4" />, title: "Digital Credits", desc: "Name immortalized in the Global Archive." }
+                                            ].map((benefit, i) => (
+                                                <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-colors">
+                                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-aether-gold">{benefit.icon}</div>
+                                                    <div className="space-y-1">
+                                                        <span className="block text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
+                                                        <span className="block text-[8px] text-white/40 uppercase tracking-widest">{benefit.desc}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-10 p-8 md:p-12 rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent border border-white/10 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+                                    
+                                    <div className="text-center space-y-4 relative z-10">
+                                        <div className="w-20 h-20 bg-white rounded-3xl mx-auto flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.2)] mb-8">
+                                            <ShieldCheck className="w-10 h-10 text-black" />
+                                        </div>
+                                        <h3 className="text-xl font-ritual font-black text-white uppercase tracking-widest">Verify Contribution</h3>
+                                        <p className="text-[9px] text-white/40 uppercase tracking-[0.2em] leading-loose">
+                                            To be recognized for your contribution and unlock your privileges, please type <span className="text-white font-black text-[12px] bg-white/10 px-2 py-1 rounded">"400"</span> in the Stripe payout message/box.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-4 relative z-10">
+                                        <a 
+                                            href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
+                                            target="_blank" 
+                                            onClick={() => playSfx('click')} 
+                                            className="w-full flex items-center justify-center gap-4 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-[1.02] transition-transform active:scale-95 group"
+                                        >
+                                            Initialize Fueling
+                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+                                        </a>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="h-[1px] w-4 bg-white/10"></div>
+                                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.5em]">Secure Gateway</span>
+                                            <div className="h-[1px] w-4 bg-white/10"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
