@@ -115,6 +115,9 @@ export default function Gateway() {
         { title: 'Ur Chaldees', genre: 'Ancient Middle-Eastern', file: '/audio/Ur Chaldees.mp3' },
         { title: 'Wilderness Whispers', genre: 'Spiritual Nature', file: '/audio/Wilderness Whispers.mp3' }
     ];
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(0.5);
 
     // SFX
     const sfxRef = useRef<{ [key: string]: Howl }>({});
@@ -283,19 +286,56 @@ export default function Gateway() {
         };
     }, []);
 
+    // Audio Engine Bridge
     useEffect(() => {
-        // Audio Sync Logic
         if (audioRef.current) {
             if (isPlaying) {
-                audioRef.current.play().catch(err => {
-                    console.error("Playback failed:", err);
-                    setIsPlaying(false);
-                });
+                audioRef.current.play().catch(console.error);
             } else {
                 audioRef.current.pause();
             }
         }
     }, [isPlaying, currentTrack]);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const updateTime = () => setCurrentTime(audio.currentTime);
+        const updateDuration = () => setDuration(audio.duration);
+        const onEnd = () => nextTrack();
+
+        audio.addEventListener('timeupdate', updateTime);
+        audio.addEventListener('loadedmetadata', updateDuration);
+        audio.addEventListener('ended', onEnd);
+
+        return () => {
+            audio.removeEventListener('timeupdate', updateTime);
+            audio.removeEventListener('loadedmetadata', updateDuration);
+            audio.removeEventListener('ended', onEnd);
+        };
+    }, [currentTrack]);
+
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [volume]);
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const time = parseFloat(e.target.value);
+        if (audioRef.current) {
+            audioRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
+    };
+
+    const formatTime = (time: number) => {
+        if (isNaN(time)) return "0:00";
+        const mins = Math.floor(time / 60);
+        const secs = Math.floor(time % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
     const playSfx = (key: string) => {
         if (sfxRef.current[key] && sfxRef.current[key].state() === 'loaded') {
@@ -957,24 +997,81 @@ export default function Gateway() {
                         </div>
                     </motion.div>
 
-                    {/* Aether Player */}
+                    {/* Aether Player (HIGH GRADE) */}
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        onClick={() => toggleExpand('player')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'player' ? 'row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] bg-gradient-to-br from-white/5 to-transparent cursor-pointer group`}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'player' ? 'row-span-3' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-white/10 perspective-card min-h-[400px] bg-gradient-to-br from-white/5 to-transparent relative group overflow-hidden`}
                     >
-                        <div className="space-y-6">
-                            <div className="w-10 md:w-14 h-10 md:h-14 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Music className="w-5 md:w-7 h-5 md:h-7 text-white" /></div>
-                            <div className="space-y-1">
-                                <h3 className="font-ritual text-lg md:text-2xl font-black uppercase text-white">Aether Player</h3>
-                                <p className="text-white text-[10px] uppercase font-black">{tracks[currentTrack].title}</p>
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity pointer-events-none">
+                            <Waves className="w-64 h-64 text-white animate-pulse" />
+                        </div>
+
+                        <div className="space-y-8 relative z-10">
+                            <div className="flex items-center justify-between">
+                                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Music className="w-6 h-6 text-white" /></div>
+                                <div className="flex gap-1">
+                                    {[...Array(8)].map((_, i) => (
+                                        <motion.div 
+                                            key={i}
+                                            animate={{ height: isPlaying ? [10, 20, 10] : 10 }}
+                                            transition={{ repeat: Infinity, duration: 0.5 + i * 0.1, ease: "easeInOut" }}
+                                            className="w-1 bg-aether-gold/40 rounded-full"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <span className="text-[7px] font-mono text-aether-gold uppercase tracking-[0.4em] animate-pulse">Now Transmitting</span>
+                                <h3 className="font-ritual text-2xl md:text-3xl font-black uppercase text-white leading-tight">{tracks[currentTrack].title}</h3>
+                                <p className="text-white/40 text-[9px] uppercase font-mono tracking-widest">{tracks[currentTrack].genre}</p>
                             </div>
                         </div>
-                        <div className="flex items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={prevTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white transition-colors"><SkipBack className="w-4 h-4" /></button>
-                            <button onClick={toggleAudio} className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-110 transition-transform active:scale-95">{isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-1" />}</button>
-                            <button onClick={nextTrack} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white transition-colors"><SkipForward className="w-4 h-4" /></button>
+
+                        <div className="space-y-8 relative z-10">
+                            {/* Seek Bar */}
+                            <div className="space-y-3">
+                                <div className="relative group/seek">
+                                    <input 
+                                        type="range"
+                                        min={0}
+                                        max={duration || 0}
+                                        value={currentTime}
+                                        onChange={handleSeek}
+                                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white hover:accent-aether-gold transition-all"
+                                    />
+                                    <div 
+                                        className="absolute top-0 left-0 h-1 bg-white rounded-full pointer-events-none" 
+                                        style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[8px] font-mono text-white/40 uppercase tracking-widest">
+                                    <span>{formatTime(currentTime)}</span>
+                                    <span>{formatTime(duration)}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-6">
+                                <div className="flex items-center gap-4">
+                                    <button onClick={prevTrack} className="w-12 h-12 rounded-full border border-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"><SkipBack className="w-5 h-5" /></button>
+                                    <button onClick={toggleAudio} className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-black shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-110 active:scale-95 transition-transform">{isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}</button>
+                                    <button onClick={nextTrack} className="w-12 h-12 rounded-full border border-white/5 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"><SkipForward className="w-5 h-5" /></button>
+                                </div>
+
+                                <div className="hidden md:flex items-center gap-3 bg-white/5 border border-white/10 p-2 rounded-2xl group/volume">
+                                    <Volume2 className="w-4 h-4 text-white/40" />
+                                    <input 
+                                        type="range"
+                                        min={0}
+                                        max={1}
+                                        step={0.01}
+                                        value={volume}
+                                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                        className="w-16 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
 
