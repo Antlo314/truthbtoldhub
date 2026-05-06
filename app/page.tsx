@@ -287,6 +287,11 @@ export default function Gateway() {
         router.refresh();
     };
 
+    const navigateToTrial = () => {
+        playSfx('click');
+        router.push('/trial');
+    };
+
     const openSupport = (mode: 'series' | 'hardware' = 'series') => {
         playSfx('click');
         setSupportMode(mode);
