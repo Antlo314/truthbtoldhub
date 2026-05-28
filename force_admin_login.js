@@ -1,36 +1,82 @@
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
 const supabaseUrl = 'https://fveosuladewjtqoqhdbl.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2ZW9zdWxhZGV3anRxb3FoZGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExOTc5NjksImV4cCI6MjA4Njc3Mzk2OX0.tl1cQAwzQ-UWWoEYw0j4nkUmNPsQLQapk672qatxCPU';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2ZW9zdWxhZGV3anRxb3FoZGJsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTE5Nzk2OSwiZXhwIjoyMDg2NzczOTY5fQ.N590TQQP2c_N8bO5Fk2G8r-F-kFzB7PzG7H1hGzI7K8';
+const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+});
 
 async function execute() {
-    const email = 'admin@truthbtoldhub.com';
+    const email = 'iamwhoiambook@gmail.com';
     const password = 'SanctumPassword2026!';
 
-    console.log(`Attempting to sign in with ${email}...`);
-    let { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
+    console.log(`Setting up Admin account: ${email}...`);
 
-    if (error) {
-        console.log(`Sign-in failed: ${error.message}. Attempting to sign up...`);
-        let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // 1. Check if user exists in auth.users
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+        console.error("Failed to list users:", listError.message);
+        return;
+    }
+
+    let adminUser = users.find(u => u.email === email);
+
+    if (!adminUser) {
+        console.log(`User does not exist. Creating auth user...`);
+        const { data: { user }, error: createError } = await supabase.auth.admin.createUser({
             email,
-            password
+            password,
+            email_confirm: true,
+            user_metadata: {
+                username: 'iamwhoiam',
+                display_name: 'Main Admin',
+                aura_color: 'Architect'
+            }
         });
 
-        if (signUpError) {
-            console.error('Sign-up failed:', signUpError.message);
-        } else {
-            console.log('Sign-up successful!', signUpData.user ? 'User created.' : 'Check email for confirmation.');
-            console.log(`Credentials: ${email} / ${password}`);
+        if (createError) {
+            console.error("Failed to create auth user:", createError.message);
+            return;
         }
+        adminUser = user;
+        console.log(`Auth user created successfully! ID: ${adminUser.id}`);
     } else {
-        console.log('Sign-in successful! User already exists with this password.');
-        console.log(`Credentials: ${email} / ${password}`);
+        console.log(`Auth user already exists. ID: ${adminUser.id}`);
+        const { error: updateError } = await supabase.auth.admin.updateUserById(adminUser.id, {
+            password: password
+        });
+        if (updateError) {
+            console.warn("Failed to update password:", updateError.message);
+        }
+    }
+
+    // 2. Ensure the profiles table row exists and is promoted to Architect
+    console.log(`Ensuring profile row is set to Architect...`);
+    const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+            id: adminUser.id,
+            email: email,
+            username: 'iamwhoiam',
+            display_name: 'Main Admin',
+            tier: 'Architect',
+            soul_power: 9999,
+            is_supporter: true
+        });
+
+    if (profileError) {
+        console.error("Failed to upsert profile row:", profileError.message);
+    } else {
+        console.log("Success! Admin account and profile are ready.");
+        console.log(`Email: ${email}`);
+        console.log(`Password: ${password}`);
     }
 }
 
 execute();
+

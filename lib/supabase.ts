@@ -8,3 +8,16 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (typeof window !== 'undefined') {
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            // Set cookie for 7 days
+            document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
+        } else {
+            // Clear cookie
+            document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
+        }
+    });
+}
+

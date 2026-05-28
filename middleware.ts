@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('sb-access-token')?.value;
 
   // Paths to redirect
   const protectedPaths = [
@@ -15,7 +16,9 @@ export function middleware(request: NextRequest) {
   ];
 
   if (protectedPaths.some(path => pathname.startsWith(path))) {
-    return NextResponse.redirect(new URL('/', request.url));
+    if (!token) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
   return NextResponse.next();
@@ -32,3 +35,4 @@ export const config = {
     '/cineworks/:path*'
   ],
 };
+

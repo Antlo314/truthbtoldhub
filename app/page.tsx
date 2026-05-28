@@ -56,6 +56,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
 import { Howl } from 'howler';
+import AuthModal from '../components/AuthModal';
 
 // Custom Social Icons
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -87,6 +88,7 @@ function CipherTracker() {
 export default function Gateway() {
     const router = useRouter();
     const [showSupportOverlay, setShowSupportOverlay] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [supportMode, setSupportMode] = useState<'series' | 'hardware'>('series');
     const overlayScrollRef = useRef<HTMLDivElement>(null);
     const [isMounted, setIsMounted] = useState(false);
@@ -518,12 +520,13 @@ export default function Gateway() {
                 <p className="text-[8px] text-white/40 uppercase tracking-[0.2em] max-w-[200px]">Authentication required to decrypt {title}.</p>
             </div>
             <button 
-                onClick={navigateToTrial}
+                onClick={() => { playSfx('click'); setIsAuthModalOpen(true); }}
                 onMouseEnter={() => playSfx('hover')}
                 className="px-6 py-3 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform active:scale-95"
             >
                 Initialize Profile
             </button>
+
         </div>
     );
 
@@ -671,8 +674,9 @@ export default function Gateway() {
                             <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="text-white/40 hover:text-white transition-colors"><LogOut className="w-4 h-4" /></button>
                         </div>
                     ) : (
-                        <button onClick={navigateToTrial} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95 shadow-xl">Initialize Protocol</button>
+                        <button onClick={() => { playSfx('click'); setIsAuthModalOpen(true); }} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95 shadow-xl">Initialize Protocol</button>
                     )}
+
                     <button onClick={() => openSupport('series')} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
                 </div>
             </nav>
@@ -1579,6 +1583,12 @@ export default function Gateway() {
                     )}
                 </AnimatePresence>
             </div>
+            <AuthModal 
+                isOpen={isAuthModalOpen} 
+                onClose={() => setIsAuthModalOpen(false)} 
+                onSuccess={() => router.refresh()} 
+            />
         </div>
     );
 }
+

@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, Terminal, Lock, Unlock } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import AuthModal from '../../components/AuthModal';
+
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Howl } from 'howler';
@@ -30,6 +33,8 @@ export default function TheTrial() {
         "RIDDLE: 'I am the motion of the awakened. To escape the gravity of the matrix and claim the sky, what must you do?'"
     ]);
     const [isGranted, setIsGranted] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
 
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -70,8 +75,22 @@ export default function TheTrial() {
                 setTimeout(() => {
                     router.push('/'); // Redirect back to the Hub (Home)
                 }, 2000);
+            } else if (cmd === 'LOGIN' || cmd === 'REGISTER' || cmd === 'AUTH') {
+                setHistory(prev => [...prev, "[ SYSTEM ] INITIALIZING NEURAL AUTH OVERLAY..."]);
+                setTimeout(() => {
+                    setIsAuthModalOpen(true);
+                }, 500);
+            } else if (cmd === 'GOOGLE') {
+                setHistory(prev => [...prev, "[ SYSTEM ] REDIRECTING TO GOOGLE OAUTH SECURITY PORTAL..."]);
+                setTimeout(async () => {
+                    await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: { redirectTo: window.location.origin }
+                    });
+                }, 1000);
             } else if (cmd === 'HELP') {
-                setHistory(prev => [...prev, "Available Commands: HELP, CLEAR, [REDACTED]"]);
+                setHistory(prev => [...prev, "Available Commands: HELP, CLEAR, LOGIN, GOOGLE, ASCEND"]);
+
             } else if (cmd === 'CLEAR') {
                 setHistory(["OBSIDIAN VOID OS v9.9.0"]);
             } else {
@@ -199,6 +218,12 @@ export default function TheTrial() {
             >
                 Abort Protocol
             </button>
+            <AuthModal 
+                isOpen={isAuthModalOpen} 
+                onClose={() => setIsAuthModalOpen(false)} 
+                onSuccess={() => router.push('/')} 
+            />
         </div>
     );
 }
+
