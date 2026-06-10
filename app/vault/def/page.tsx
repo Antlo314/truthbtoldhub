@@ -35,7 +35,7 @@ export default function TheVaultDef() {
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center">
 
             <header className="fixed top-0 w-full z-[100] glass bg-black/60 backdrop-blur-xl px-6 py-4 flex items-center border-b border-red-500/10">
-                <button onClick={() => router.push('/sanctum')} className="text-red-500 hover:text-white transition-colors group flex items-center gap-2">
+                <button onClick={() => router.push('/')} className="text-red-500 hover:text-white transition-colors group flex items-center gap-2" title="Back to Sanctuary">
                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                     <span className="text-[9px] uppercase font-bold tracking-widest">Exit Secure Sector</span>
                 </button>

@@ -143,10 +143,7 @@ export default function Treasury() {
             });
             ambientDrone.play();
 
-            // Auto-trigger guide if first time
-            if (!localStorage.getItem('treasury_guide_complete')) {
-                setTimeout(() => setIsGuideOpen(true), 2000);
-            }
+            // Auto-trigger guide disabled to prevent lockout
         }
         return () => {
             if (ambientDrone) ambientDrone.stop();
@@ -483,10 +480,11 @@ export default function Treasury() {
             <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center w-full">
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => router.push('/sanctum')} 
+                        onClick={() => router.push('/')} 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         className="p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-white transition-colors"
+                        title="Back to Sanctuary"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
@@ -514,10 +512,21 @@ export default function Treasury() {
                     </div>
 
                     <button 
+                        onClick={() => setIsGuideOpen(true)} 
+                        onMouseMove={handleMagneticMove}
+                        onMouseLeave={handleMagneticLeave}
+                        className="text-zinc-500 hover:text-orange-500 transition-colors p-3 bg-white/5 rounded-full border border-white/5 mr-2"
+                        title="Guide Protocol"
+                    >
+                        <Flame className="w-4 h-4" />
+                    </button>
+
+                    <button 
                         onClick={handleSignOut} 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         className="text-zinc-500 hover:text-red-500 transition-colors p-3 bg-white/5 rounded-full border border-white/5"
+                        title="Disconnect Session"
                     >
                         <LogOut className="w-4 h-4" />
                     </button>

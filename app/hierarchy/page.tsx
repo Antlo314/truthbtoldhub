@@ -121,10 +121,11 @@ export default function HierarchyPage() {
             <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center w-full">
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => router.push('/sanctum')} 
+                        onClick={() => router.push('/')} 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         className="p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-white transition-colors"
+                        title="Back to Sanctuary"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>

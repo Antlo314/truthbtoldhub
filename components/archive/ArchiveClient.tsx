@@ -64,10 +64,7 @@ export default function ArchiveClient() {
                 }
             }
 
-            // Auto-trigger guide if first time
-            if (!localStorage.getItem('archive_guide_complete')) {
-                setTimeout(() => setIsGuideOpen(true), 2500);
-            }
+            // Auto-trigger guide disabled to prevent lockout
 
             // 2. Setup Global Presence
             presenceChannel = supabase.channel('archive_global_presence', {

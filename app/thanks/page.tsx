@@ -276,10 +276,10 @@ export default function ThanksPage() {
                                 </p>
                             </div>
                             <button 
-                                onClick={() => router.push('/sanctum')}
+                                onClick={() => router.push('/')}
                                 className="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-ritual tracking-[0.2em] font-black rounded-xl shadow-lg transition-all uppercase text-sm"
                             >
-                                Enter The Sanctum
+                                Enter The Sanctuary
                             </button>
                         </div>
                     </div>

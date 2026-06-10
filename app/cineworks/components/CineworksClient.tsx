@@ -168,12 +168,12 @@ export default function Cineworks() {
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(168,85,247,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
             </div>
 
-            {/* Header */}
             <header className="sticky top-0 z-50 glass bg-primary-950/20 backdrop-blur-xl px-6 py-4 flex justify-between items-center border-b border-purple-500/10">
                 <button
                     onMouseEnter={playHover}
-                    onClick={() => { playClick(); router.push('/sanctum'); }}
+                    onClick={() => { playClick(); router.push('/'); }}
                     className="text-purple-500 hover:text-white transition-colors group shrink-0"
+                    title="Back to Sanctuary"
                 >
                     <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 group-hover:-translate-x-1 transition-transform" />
                 </button>

@@ -437,10 +437,11 @@ export default function Archive() {
             <header className="sticky top-0 w-full z-[60] glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center">
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => router.push('/sanctum')} 
+                        onClick={() => router.push('/')} 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
                         className="text-zinc-500 hover:text-white transition-colors p-2"
+                        title="Back to Sanctuary"
                     >
                         <ArrowLeft className="w-6 h-6" />
                     </button>
