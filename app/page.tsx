@@ -1227,38 +1227,6 @@ export default function Gateway() {
                         </div>
                     </motion.div>
 
-                    {/* Cinematic Visual Archive */}
-                    <motion.div
-                        layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        className={`bento-card col-span-2 ${isMobile ? 'col-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 border-white/10 relative overflow-hidden`}
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <Clapperboard className="w-5 h-5 text-aether-gold" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Cinematic Archive</span>
-                            </div>
-                            <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">@truufbtold</span>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { src: '/images/cineworks/poster1.png', label: 'The Vision', sub: 'Prophetic Core' },
-                                { src: '/images/cineworks/poster2.png', label: 'Sacred Ruins', sub: 'Ancient Protocol' },
-                                { src: '/images/cineworks/poster3.png', label: 'Neural Synthesis', sub: 'Cineworks' },
-                                { src: '/page-images/image-(6).png', label: 'Frequency Break', sub: 'Audio Vision' },
-                            ].map((asset, i) => (
-                                <div key={i} className="group/asset relative aspect-[3/4] rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 hover:border-aether-gold/30 transition-all">
-                                    <img src={asset.src} alt={asset.label} className="w-full h-full object-cover grayscale group-hover/asset:grayscale-0 group-hover/asset:scale-105 transition-all duration-700" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                                    <div className="absolute bottom-3 left-3 right-3">
-                                        <span className="block text-[8px] font-black uppercase text-white tracking-widest">{asset.label}</span>
-                                        <span className="block text-[6px] font-mono text-aether-gold/70 uppercase tracking-widest">{asset.sub}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-
                     {/* The Prelude */}
                     <motion.div 
                         layout={isMobile}

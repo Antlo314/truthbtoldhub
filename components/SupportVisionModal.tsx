@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, ExternalLink } from 'lucide-react';
+import { X, Heart } from 'lucide-react';
+
+const CASH_APP_URL = 'https://cash.app/$truufbtold';
 
 const YoutubeIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -24,6 +27,13 @@ interface SupportVisionModalProps {
 }
 
 export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx }: SupportVisionModalProps) {
+    useEffect(() => {
+        if (!isOpen) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [isOpen]);
+
     const handleClose = () => {
         playSfx?.('click');
         onClose();
@@ -42,14 +52,16 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-2xl"
+                    className="fixed inset-0 z-[300] grid place-items-center p-4 md:p-8 bg-black/90 backdrop-blur-2xl"
+                    onClick={handleClose}
                 >
                     <motion.div
-                        initial={{ scale: 0.92, y: 30, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ scale: 0.92, y: 30, opacity: 0 }}
+                        initial={{ scale: 0.92, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.92, opacity: 0 }}
                         transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem] border border-white/15 shadow-[0_0_120px_rgba(212,175,55,0.15)]"
+                        onClick={(e) => e.stopPropagation()}
+                        className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem] border border-white/15 shadow-[0_0_120px_rgba(212,175,55,0.15)]"
                     >
                         <div className="absolute inset-0">
                             <img
@@ -69,63 +81,61 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="relative z-10 p-8 md:p-12 flex flex-col items-center text-center space-y-8">
+                        <div className="relative z-10 p-8 md:p-10 flex flex-col items-center justify-center text-center space-y-6">
                             <div className="w-20 h-20 rounded-3xl overflow-hidden border border-aether-gold/30 shadow-[0_0_40px_rgba(212,175,55,0.2)]">
                                 <img src="/viralcartel/400_manga_logo.jpg" alt="Truth B Told" className="w-full h-full object-cover" />
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/5">
                                     <Heart className="w-3 h-3 text-aether-gold" />
                                     <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Vision Transmission</span>
                                 </div>
-                                <h2 className="font-ritual text-2xl md:text-4xl font-black uppercase text-white gold-shimmer leading-tight">
+                                <h2 className="font-ritual text-2xl md:text-3xl font-black uppercase text-white leading-tight">
                                     Support the Truth B Told Vision
                                 </h2>
                                 <p className="text-sm md:text-base text-white/70 font-medium tracking-wide">
-                                    <span className="text-aether-gold font-black">@truufbtold</span>
+                                    <a
+                                        href={CASH_APP_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={() => playSfx?.('click')}
+                                        className="text-[#00D632] font-black hover:underline underline-offset-4 transition-colors"
+                                    >
+                                        @truufbtold
+                                    </a>
                                     <span className="text-white/40 mx-2">·</span>
                                     <span className="text-white italic">&apos;Ant Cee&apos;</span>
                                 </p>
-                                <p className="text-[10px] md:text-xs text-white/40 uppercase tracking-[0.25em] leading-relaxed max-w-md mx-auto">
+                                <p className="text-[10px] md:text-xs text-white/40 uppercase tracking-[0.25em] leading-relaxed max-w-sm mx-auto">
                                     The 400 Series is on pause until we are fiscally solid. Fuel the mission now to restore production.
                                 </p>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-                                <button
-                                    onClick={handleSupport}
-                                    className="flex-1 py-4 px-6 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-transform active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
-                                >
-                                    Support the Vision
-                                </button>
+                            <div className="flex flex-col gap-3 w-full max-w-xs">
                                 <a
-                                    href="https://youtube.com/@truufbtold"
+                                    href={CASH_APP_URL}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={() => playSfx?.('click')}
-                                    className="flex-1 py-4 px-6 bg-white/5 border border-white/15 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    className="w-full py-4 px-6 bg-[#00D632] text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-transform active:scale-95 shadow-[0_0_40px_rgba(0,214,50,0.3)] flex items-center justify-center gap-2"
                                 >
-                                    <YoutubeIcon className="w-4 h-4" />
-                                    Follow
+                                    Cash App · @truufbtold
                                 </a>
+                                <button
+                                    onClick={handleSupport}
+                                    className="w-full py-4 px-6 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-transform active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
+                                >
+                                    Support via Stripe
+                                </button>
                             </div>
 
-                            <div className="flex items-center gap-6 pt-2">
+                            <div className="flex items-center justify-center gap-6 pt-1">
                                 <a href="https://youtube.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-aether-gold transition-colors">
                                     <YoutubeIcon className="w-5 h-5" />
                                 </a>
                                 <a href="https://tiktok.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-aether-gold transition-colors">
                                     <TikTokIcon className="w-5 h-5" />
-                                </a>
-                                <a
-                                    href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => playSfx?.('click')}
-                                    className="text-white/40 hover:text-aether-gold transition-colors"
-                                >
-                                    <ExternalLink className="w-5 h-5" />
                                 </a>
                             </div>
                         </div>
