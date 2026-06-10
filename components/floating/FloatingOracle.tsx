@@ -4,23 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { MessageSquare, Send, X, Flame, ShieldAlert, Sparkles, User, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Howl } from 'howler';
 import gsap from 'gsap';
 
 // --- SFX ---
 let bubbleHoverSfx: any = null;
 let bubbleClickSfx: any = null;
-
-if (typeof window !== 'undefined') {
-    bubbleHoverSfx = new Howl({ 
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], 
-        volume: 0.05 
-    });
-    bubbleClickSfx = new Howl({ 
-        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], 
-        volume: 0.15 
-    });
-}
 
 export default function FloatingOracle() {
     const [isOpen, setIsOpen] = useState(false);
@@ -39,19 +27,58 @@ export default function FloatingOracle() {
         ]
     });
 
-    const playHover = () => bubbleHoverSfx?.play();
-    const playClick = () => bubbleClickSfx?.play();
+    useEffect(() => {
+        const initHowler = async () => {
+            try {
+                const { Howl } = await import('howler');
+                if (!bubbleHoverSfx) {
+                    bubbleHoverSfx = new Howl({ 
+                        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/hover_tech_01.mp3'], 
+                        volume: 0.05 
+                    });
+                }
+                if (!bubbleClickSfx) {
+                    bubbleClickSfx = new Howl({ 
+                        src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/confirm_deep.mp3'], 
+                        volume: 0.15 
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load Howler client SFX:", err);
+            }
+        };
+        initHowler();
+    }, []);
+
+    const playHover = () => {
+        try {
+            bubbleHoverSfx?.play();
+        } catch (e) {
+            console.warn("Failed to play hover SFX:", e);
+        }
+    };
+    const playClick = () => {
+        try {
+            bubbleClickSfx?.play();
+        } catch (e) {
+            console.warn("Failed to play click SFX:", e);
+        }
+    };
 
     // Auto scroll to bottom
     useEffect(() => {
         if (isOpen && chatEndRef.current) {
-            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            try {
+                chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                console.warn("scrollIntoView failed:", e);
+            }
         }
     }, [messages, isOpen]);
 
     // Notify user of new messages if widget is closed
     useEffect(() => {
-        if (messages.length > 1 && !isOpen) {
+        if (messages && messages.length > 1 && !isOpen) {
             setHasNewMessage(true);
         }
     }, [messages, isOpen]);
@@ -109,7 +136,7 @@ export default function FloatingOracle() {
 
                         {/* Message Feed */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar relative z-10">
-                            {messages.map((m: any) => {
+                            {(messages || []).map((m: any) => {
                                 const isAI = m.role === 'assistant';
                                 return (
                                     <div key={m.id} className={`flex ${isAI ? 'justify-start' : 'justify-end'} animate-fade-in`}>
@@ -139,14 +166,14 @@ export default function FloatingOracle() {
                         {/* Input Footer */}
                         <form onSubmit={handleSubmit} className="p-4 border-t border-white/5 bg-black/40 relative z-10 flex gap-2">
                             <input
-                                value={input}
+                                value={input || ''}
                                 onChange={handleInputChange}
                                 placeholder="State your work or query..."
                                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-orange-500/30 transition-all"
                             />
                             <button
                                 type="submit"
-                                disabled={!input.trim() || isLoading}
+                                disabled={!input || !input.trim() || isLoading}
                                 className="w-10 h-10 bg-orange-600 hover:bg-orange-500 text-white rounded-xl flex items-center justify-center transition-colors shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:hover:bg-orange-600 shrink-0"
                             >
                                 {isLoading ? (
