@@ -21,7 +21,7 @@ export const SUPPORT_TIERS: SupportTier[] = [
         tagline: 'Get on the record.',
         rewards: [
             'Personal thank-you from Ant Cee',
-            'Your name on the public Supporter Roll on TruthBTold.com',
+            'Your name on the public Supporter Roll on truthbtoldhub.com',
             'Early email when production resumes at $5k',
         ],
         delivery: 'Send via Cash App or Stripe — DM @truufbtold with your preferred display name.',
