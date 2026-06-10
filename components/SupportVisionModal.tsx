@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart } from 'lucide-react';
 
-const CASH_APP_URL = 'https://cash.app/$truufbtold';
+import { CASH_APP_URL, fundingProgressLabel, PRODUCTION_RESUME_AT, formatFunding } from '../lib/supportFunding';
 
 const YoutubeIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,7 +134,7 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
                                     <span className="italic text-white">&apos;Ant Cee&apos;</span>
                                 </p>
                                 <p className="mx-auto max-w-sm text-[10px] uppercase leading-relaxed tracking-[0.2em] text-white/40 md:text-xs">
-                                    The 400 Series is on pause until we are fiscally solid. Fuel the mission now to restore production.
+                                    The 400 Series is on pause. {fundingProgressLabel()} raised — at ${formatFunding(PRODUCTION_RESUME_AT)} we go back into production with a massive rollout.
                                 </p>
                             </div>
 

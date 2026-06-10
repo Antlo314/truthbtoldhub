@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
+import { fundingProgressLabel, fundingProgressPercent, PRODUCTION_RESUME_AT, formatFunding } from '@/lib/supportFunding';
 
 let uiHoverSfx: Howl | null = null;
 let uiClickSfx: Howl | null = null;
@@ -85,11 +86,14 @@ export default function CinemaClient() {
                             <div className="w-full space-y-2">
                                 <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-white/40">
                                     <span>Infrastructure Goal</span>
-                                    <span className="text-white">$4,821 / $10,000</span>
+                                    <span className="text-white">{fundingProgressLabel()}</span>
                                 </div>
                                 <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full bg-orange-400 w-[48.2%] shadow-[0_0_15px_rgba(251,146,60,0.5)]" />
+                                    <div className="h-full bg-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.5)]" style={{ width: `${fundingProgressPercent()}%` }} />
                                 </div>
+                                <p className="text-[7px] font-mono text-orange-400/70 uppercase tracking-widest text-center">
+                                    ${formatFunding(PRODUCTION_RESUME_AT)} — production resume + massive rollout
+                                </p>
                             </div>
                             <button
                                 onClick={() => { playClick(); window.open('https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01', '_blank'); }}

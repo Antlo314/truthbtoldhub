@@ -3,6 +3,15 @@
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabase';
+import {
+    FUNDING_RAISED,
+    FUNDING_GOAL,
+    PRODUCTION_RESUME_AT,
+    fundingProgressLabel,
+    fundingProgressPercent,
+    formatFunding,
+    INFRASTRUCTURE_MILESTONES,
+} from '../lib/supportFunding';
 import { 
     Play, 
     Pause,
@@ -979,7 +988,7 @@ export default function Gateway() {
                         <div className="flex justify-between items-end">
                             <div className="flex flex-col">
                                 <span className="text-[7px] font-mono text-zinc-600 uppercase tracking-widest mb-1">Mutual Aid Balance</span>
-                                <span className="text-2xl font-ritual font-black text-white/20">$4,821</span>
+                                <span className="text-2xl font-ritual font-black text-white/20">${formatFunding(FUNDING_RAISED)}</span>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20"><ArrowRight className="w-4 h-4" /></div>
                         </div>
@@ -1096,7 +1105,7 @@ export default function Gateway() {
                                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform"><Cpu className="w-6 h-6 text-white" /></div>
                                 <div className="flex flex-col">
                                     <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white leading-tight">Infrastructure Fueling</h3>
-                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Goal: $10,000</span>
+                                    <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest animate-pulse">Goal: ${formatFunding(FUNDING_GOAL)}</span>
                                 </div>
                             </div>
 
@@ -1104,29 +1113,30 @@ export default function Gateway() {
                                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
                                     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
                                         <span className="text-white/40">Total Fueling Progress</span>
-                                        <span className="text-white">$4,821 / $10,000</span>
+                                        <span className="text-white">{fundingProgressLabel()}</span>
                                     </div>
                                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                                         <motion.div 
                                             initial={{ width: 0 }}
-                                            whileInView={{ width: '48.2%' }}
+                                            whileInView={{ width: `${fundingProgressPercent()}%` }}
                                             transition={{ duration: 2, ease: "easeOut" }}
                                             className="h-full bg-aether-gold shadow-[0_0_15px_#d4af37]"
                                         />
                                     </div>
+                                    <p className="text-[7px] font-mono text-orange-400/80 uppercase tracking-widest">
+                                        ${formatFunding(PRODUCTION_RESUME_AT)} — back into production + massive rollout
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 mb-3">Required Hardware & Labor</h4>
-                                    {[
-                                        { label: 'Producer & Production Costs', val: '$4,500' },
-                                        { label: 'High-End AI Workstation', val: '$3,200' },
-                                        { label: 'RTX 4090 Render Core', val: '$1,800' },
-                                        { label: 'Studio Audio Monitoring', val: '$500' }
-                                    ].map((item, i) => (
-                                        <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                                            <span className="text-[7px] font-mono text-white/60 uppercase">{item.label}</span>
-                                            <span className="text-[9px] font-black text-white">{item.val}</span>
+                                    <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 mb-3">Infrastructure Roadmap</h4>
+                                    {INFRASTRUCTURE_MILESTONES.map((milestone) => (
+                                        <div key={milestone.label} className="py-2 border-b border-white/5 last:border-0">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[7px] font-mono text-white/60 uppercase">{milestone.label}</span>
+                                                <span className="text-[9px] font-black text-aether-gold">${formatFunding(milestone.amount)}</span>
+                                            </div>
+                                            <p className="text-[7px] text-white/40 mt-1 leading-relaxed">{milestone.description}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -1195,12 +1205,12 @@ export default function Gateway() {
                                 <span className="text-[7px] font-mono text-orange-400 uppercase tracking-widest mb-2">Fiscal Foundation Required</span>
                                 <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-white/40 mb-2">
                                     <span>Infrastructure Goal</span>
-                                    <span className="text-white">$4,821 / $10,000</span>
+                                    <span className="text-white">{fundingProgressLabel()}</span>
                                 </div>
                                 <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full bg-orange-400 w-[48.2%] shadow-[0_0_15px_rgba(251,146,60,0.5)]" />
+                                    <div className="h-full bg-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.5)]" style={{ width: `${fundingProgressPercent()}%` }} />
                                 </div>
-                                <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest mt-2">Resume production when goal is met</span>
+                                <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest mt-2">${formatFunding(PRODUCTION_RESUME_AT)} resumes production + massive rollout</span>
                             </div>
                             <button
                                 onClick={(e) => { e.stopPropagation(); openSupport('hardware'); }}
