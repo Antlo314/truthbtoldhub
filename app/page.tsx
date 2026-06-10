@@ -1245,7 +1245,7 @@ export default function Gateway() {
                                 { src: '/cineworks/poster1.png', label: 'The Vision', sub: 'Prophetic Core' },
                                 { src: '/cineworks/poster2.png', label: 'Sacred Ruins', sub: 'Ancient Protocol' },
                                 { src: '/cineworks/poster3.png', label: 'Neural Synthesis', sub: 'Cineworks' },
-                                { src: '/page-images/tmpvp6oh5mh (1).png', label: 'Frequency Break', sub: 'Audio Vision' },
+                                { src: '/page-images/image-(6).png', label: 'Frequency Break', sub: 'Audio Vision' },
                             ].map((asset, i) => (
                                 <div key={i} className="group/asset relative aspect-[3/4] rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 hover:border-aether-gold/30 transition-all">
                                     <img src={asset.src} alt={asset.label} className="w-full h-full object-cover grayscale group-hover/asset:grayscale-0 group-hover/asset:scale-105 transition-all duration-700" />

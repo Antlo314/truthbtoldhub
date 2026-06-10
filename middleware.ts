@@ -2,6 +2,12 @@ import { NextResponse, NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Allow static assets that live under public/ (e.g. /cineworks/poster1.png)
+  if (/\.(?:png|jpe?g|gif|webp|svg|ico|mp3|mp4|woff2?|css|js|json|txt|html)$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get('sb-access-token')?.value;
 
   // Paths to redirect
