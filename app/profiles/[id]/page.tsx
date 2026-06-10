@@ -255,9 +255,15 @@ export default function ProfileDetailPage() {
                     
                     <div className="flex flex-col lg:flex-row items-center gap-8 md:gap-12 relative z-10">
                         {/* Avatar display with glowing theme boundary */}
-                        <div className={`w-28 h-28 md:w-36 md:h-36 rounded-[1.8rem] md:rounded-[2.5rem] bg-zinc-900 border border-white/10 flex items-center justify-center p-1.5 shrink-0 relative overflow-hidden group hover:border-${theme.accentColor}/40 transition-colors`}>
+                        <div 
+                            className="w-28 h-28 md:w-36 md:h-36 rounded-[1.8rem] md:rounded-[2.5rem] bg-zinc-900 border flex items-center justify-center p-1.5 shrink-0 relative overflow-hidden group transition-colors"
+                            style={{ borderColor: `${theme.accentColor}4d` }} // 30% opacity
+                        >
                             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2.2rem]" />
-                            <div className={`absolute -inset-0.5 rounded-[1.8rem] md:rounded-[2.5rem] bg-gradient-to-tr from-${theme.accentColor}/10 to-transparent opacity-30 group-hover:scale-105 transition-transform`} />
+                            <div 
+                                className="absolute -inset-0.5 rounded-[1.8rem] md:rounded-[2.5rem] opacity-30 group-hover:scale-105 transition-transform" 
+                                style={{ backgroundImage: `linear-gradient(to top right, ${theme.accentColor}1a, transparent)` }}
+                            />
                         </div>
 
                         <div className="flex-1 text-center lg:text-left space-y-4">
@@ -281,7 +287,13 @@ export default function ProfileDetailPage() {
 
                             <div className="flex flex-wrap justify-center lg:justify-start gap-4 md:gap-6 mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/5">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full bg-${theme.accentColor}10 flex items-center justify-center border border-${theme.accentColor}20`}>
+                                    <div 
+                                        className="w-8 h-8 rounded-full flex items-center justify-center border"
+                                        style={{ 
+                                            backgroundColor: `${theme.accentColor}1a`, // 10% opacity in hex
+                                            borderColor: `${theme.accentColor}33`     // 20% opacity in hex
+                                        }}
+                                    >
                                         <Zap className={`w-4 h-4 ${theme.text}`} />
                                     </div>
                                     <div className="flex flex-col items-start">

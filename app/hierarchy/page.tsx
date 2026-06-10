@@ -166,7 +166,7 @@ export default function HierarchyPage() {
                         {topThree.length > 0 && (
                             <div className="w-full mb-16 relative">
                                 <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent blur-3xl rounded-full"></div>
-                                <div ref={podiumRef} className="flex flex-col md:flex-row justify-center items-end gap-12 relative z-10 mx-auto max-w-5xl min-h-[450px]">
+                                <div ref={podiumRef} className="flex flex-col md:flex-row justify-center items-center md:items-end gap-8 md:gap-12 relative z-10 mx-auto max-w-5xl min-h-[450px] px-4">
                                     
                                     {/* Rank 2 (Silver) */}
                                     {topThree[1] && (
@@ -272,10 +272,10 @@ export default function HierarchyPage() {
                                             <div 
                                                 key={profile.id}
                                                 onClick={() => router.push('/profiles/' + profile.id)}
-                                                className={`flex items-center justify-between p-6 rounded-3xl transition-all glass-panel border-white/5 cursor-pointer ${isCurrentUser ? 'border-aether-gold/40 bg-aether-gold/5 shadow-[0_0_30px_rgba(212,175,55,0.05)]' : 'hover:bg-white/5 hover:border-white/10 hover:border-white/20'}`}
+                                                className={`flex items-center justify-between p-4 md:p-6 rounded-3xl transition-all glass-panel border-white/5 cursor-pointer ${isCurrentUser ? 'border-aether-gold/40 bg-aether-gold/5 shadow-[0_0_30px_rgba(212,175,55,0.05)]' : 'hover:bg-white/5 hover:border-white/10 hover:border-white/20'}`}
                                             >
-                                                <div className="flex items-center gap-8">
-                                                    <div className={`w-12 font-mono text-xs font-black text-center ${isCurrentUser ? 'text-aether-gold' : 'text-zinc-600'}`}>
+                                                <div className="flex items-center gap-3 md:gap-8 min-w-0">
+                                                    <div className={`w-6 md:w-12 font-mono text-xs font-black text-center ${isCurrentUser ? 'text-aether-gold' : 'text-zinc-600'} shrink-0`}>
                                                         #{globalRank}
                                                     </div>
                                                     <div className="relative">
