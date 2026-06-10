@@ -429,52 +429,64 @@ export default function PowerSelf() {
                                 <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative" id="self-security-form">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">
                                     <User className="w-4 h-4 text-orange-500" /> Account Security
-                                </h3>
-                                <form className="space-y-4" onSubmit={async (e) => {
+                                </h3>                                <form className="space-y-4" onSubmit={async (e) => {
                                     e.preventDefault();
                                     const formData = new FormData(e.currentTarget);
                                     const nameVal = formData.get('identityName') as string;
                                     const passVal = formData.get('newCipher') as string;
-                                    let msg = "Processing Updates...\n";
-
-                                    if (nameVal && nameVal !== displayName) {
-                                        await updateProfile({ display_name: nameVal });
-                                        msg += "Identity Name Updated.\n";
-                                    }
-
                                     const userVal = formData.get('userName') as string;
-                                    if (userVal && userVal !== profile?.username) {
-                                        await updateProfile({ username: userVal });
-                                        msg += "Username Updated.\n";
-                                    }
-
                                     const titleVal = formData.get('customTitle') as string;
-                                    if (titleVal !== undefined && titleVal !== (profile?.custom_title || '')) {
-                                        await updateProfile({ custom_title: titleVal });
-                                        msg += "Title Updated.\n";
-                                    }
-
                                     const bioVal = formData.get('bio') as string;
-                                    if (bioVal !== undefined && bioVal !== (profile?.bio || '')) {
-                                        await updateProfile({ bio: bioVal });
-                                        msg += "Bio Updated.\n";
-                                    }
-
                                     const colorVal = formData.get('themeColor') as string;
-                                    if (colorVal && colorVal !== profile?.theme_color) {
-                                        await updateProfile({ theme_color: colorVal });
-                                        msg += "Theme Updated.\n";
-                                    }
 
-                                    if (passVal) {
-                                        const { error } = await supabase.auth.updateUser({ password: passVal });
-                                        if (error) msg += "Failed to update Cipher: " + error.message + "\n";
-                                        else msg += "Cipher Successfully Changed!\n";
-                                    }
+                                    let msg = "Processing Updates...\n";
+                                    let hasUpdates = false;
 
-                                    alert(msg);
-                                    if (passVal) {
-                                        (e.target as HTMLFormElement).reset();
+                                    try {
+                                        const profileUpdates: any = {};
+                                        if (nameVal && nameVal !== displayName) {
+                                            profileUpdates.display_name = nameVal;
+                                        }
+                                        if (userVal && userVal !== profile?.username) {
+                                            profileUpdates.username = userVal;
+                                        }
+                                        if (titleVal !== undefined && titleVal !== (profile?.custom_title || '')) {
+                                            profileUpdates.custom_title = titleVal;
+                                        }
+                                        if (bioVal !== undefined && bioVal !== (profile?.bio || '')) {
+                                            profileUpdates.bio = bioVal;
+                                        }
+                                        if (colorVal && colorVal !== profile?.theme_color) {
+                                            profileUpdates.theme_color = colorVal;
+                                        }
+
+                                        if (Object.keys(profileUpdates).length > 0) {
+                                            await updateProfile(profileUpdates);
+                                            msg += "Profile details updated successfully.\n";
+                                            hasUpdates = true;
+                                        }
+
+                                        if (passVal) {
+                                            const { error } = await supabase.auth.updateUser({ password: passVal });
+                                            if (error) {
+                                                msg += "Failed to update Cipher: " + error.message + "\n";
+                                            } else {
+                                                msg += "Cipher Successfully Changed!\n";
+                                                hasUpdates = true;
+                                            }
+                                        }
+
+                                        if (hasUpdates) {
+                                            alert(msg);
+                                        } else {
+                                            alert("No changes detected.");
+                                        }
+
+                                        if (passVal) {
+                                            (e.target as HTMLFormElement).reset();
+                                        }
+                                    } catch (err: any) {
+                                        alert("Update failed: " + (err.message || err));
                                     }
                                 }}>
                                     <div className="space-y-1">

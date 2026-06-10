@@ -76,6 +76,7 @@ export const useSoulStore = create<SoulState>((set, get) => ({
         } catch (err: any) {
             console.error('Update SP Error:', err);
             set({ error: err.message });
+            throw err;
         }
     },
 
@@ -94,6 +95,7 @@ export const useSoulStore = create<SoulState>((set, get) => ({
         } catch (err: any) {
             console.error('Update Profile Error:', err);
             set({ error: err.message });
+            throw err;
         }
     },
 
