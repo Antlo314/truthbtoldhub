@@ -108,6 +108,7 @@ export default function Gateway() {
     const [isAscended, setIsAscended] = useState(false);
     const [expandedCard, setExpandedCard] = useState<string | null>(null);
     const [isMobile, setIsMobile] = useState(false);
+    const [authLoading, setAuthLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     
@@ -193,6 +194,9 @@ export default function Gateway() {
         supabase.auth.getUser().then(({ data: { user } }) => {
             setUser(user);
             if (user) fetchProfile(user.id);
+            setAuthLoading(false);
+        }).catch(() => {
+            setAuthLoading(false);
         });
 
         // Check for Ascension flag
@@ -203,6 +207,7 @@ export default function Gateway() {
             setUser(session?.user ?? null);
             if (session?.user) fetchProfile(session.user.id);
             else setProfile(null);
+            setAuthLoading(false);
         });
 
         // Initialize SFX
@@ -486,6 +491,46 @@ export default function Gateway() {
                     onSupport={() => {}}
                 />
             </>
+        );
+    }
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.04)_0%,transparent_60%)]" />
+                <div className="w-16 h-16 relative">
+                    <div className="absolute inset-0 border border-aether-gold/10 rounded-full animate-ping" />
+                    <Sparkles className="w-16 h-16 text-aether-gold animate-pulse drop-shadow-[0_0_20px_rgba(212,175,55,0.3)]" />
+                </div>
+                <h2 className="mt-12 font-mono text-[9px] text-zinc-500 tracking-[0.4em] animate-pulse uppercase">Establishing Neural Uplink...</h2>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden">
+                <div className="absolute inset-0">
+                    <img src="/page-images/image-(8).png" alt="" className="w-full h-full object-cover opacity-20 grayscale" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/60 via-[#050505]/90 to-[#050505]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.08)_0%,transparent_70%)]" />
+                </div>
+                <div className="film-grain" />
+                <div className="relative z-10 w-full max-w-md my-8">
+                    <div className="flex flex-col items-center mb-8 text-center">
+                        <img src="/logo.png" alt="TBT" className="w-16 h-16 object-contain mb-4 animate-pulse" />
+                        <h1 className="font-ritual text-2xl tracking-[0.2em] font-black uppercase text-white gold-shimmer">Truth B Told Hub</h1>
+                        <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mt-1">Identity Gatekeeper v1.5</span>
+                    </div>
+                    
+                    <AuthModal 
+                        isOpen={true} 
+                        onClose={() => {}} 
+                        isGated={true} 
+                        onSuccess={() => router.refresh()} 
+                    />
+                </div>
+            </div>
         );
     }
 

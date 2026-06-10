@@ -172,7 +172,7 @@ export default function HierarchyPage() {
                                         <div className="order-2 md:order-1 flex flex-col items-center transform md:translate-y-12 w-full md:w-80">
                                             <div className="relative group w-full">
                                                 <div className="absolute -inset-1 bg-zinc-400/10 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                                                <div className="glass-panel rounded-[3rem] p-10 relative flex flex-col items-center text-center border-zinc-400/20">
+                                                <div onClick={() => router.push('/profiles/' + topThree[1].id)} className="glass-panel rounded-[3rem] p-10 relative flex flex-col items-center text-center border-zinc-400/20 cursor-pointer hover:border-zinc-400/50 hover:bg-white/[0.01] transition-all">
                                                     <div className="w-10 h-10 bg-zinc-400/20 text-zinc-300 rounded-full flex items-center justify-center border border-zinc-400/30 absolute -top-5 font-black text-xs">2</div>
                                                     <div className="relative mb-8">
                                                         <div className="w-24 h-24 rounded-full border-2 border-zinc-400/30 p-1 group-hover:border-zinc-400 transition-colors duration-500">
@@ -199,7 +199,7 @@ export default function HierarchyPage() {
                                         <div className="order-1 md:order-2 flex flex-col items-center z-20 w-full md:w-96">
                                             <div className="relative group w-full">
                                                 <div className="absolute -inset-2 bg-aether-gold/10 rounded-[4rem] blur-[50px] opacity-100 animate-pulse-slow"></div>
-                                                <div className="glass-panel rounded-[4rem] p-12 relative flex flex-col items-center text-center border-aether-gold/30 shadow-[0_0_100px_rgba(212,175,55,0.1)]">
+                                                <div onClick={() => router.push('/profiles/' + topThree[0].id)} className="glass-panel rounded-[4rem] p-12 relative flex flex-col items-center text-center border-aether-gold/30 shadow-[0_0_100px_rgba(212,175,55,0.1)] cursor-pointer hover:border-aether-gold/50 hover:bg-white/[0.01] transition-all">
                                                     <div className="w-14 h-14 bg-aether-gold text-black rounded-full flex items-center justify-center border-4 border-black absolute -top-7 shadow-2xl">
                                                         <Crown className="w-7 h-7" />
                                                     </div>
@@ -228,7 +228,7 @@ export default function HierarchyPage() {
                                         <div className="order-3 flex flex-col items-center transform md:translate-y-16 w-full md:w-80">
                                             <div className="relative group w-full">
                                                 <div className="absolute -inset-1 bg-amber-700/10 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                                                <div className="glass-panel rounded-[3rem] p-10 relative flex flex-col items-center text-center border-amber-700/20">
+                                                <div onClick={() => router.push('/profiles/' + topThree[2].id)} className="glass-panel rounded-[3rem] p-10 relative flex flex-col items-center text-center border-amber-700/20 cursor-pointer hover:border-amber-700/50 hover:bg-white/[0.01] transition-all">
                                                     <div className="w-10 h-10 bg-amber-700/20 text-amber-500 rounded-full flex items-center justify-center border border-amber-700/30 absolute -top-5 font-black text-xs">3</div>
                                                     <div className="relative mb-8">
                                                         <div className="w-20 h-20 rounded-full border-2 border-amber-700/30 p-1 group-hover:border-amber-700 transition-colors duration-500">
@@ -270,7 +270,8 @@ export default function HierarchyPage() {
                                         return (
                                             <div 
                                                 key={profile.id}
-                                                className={`flex items-center justify-between p-6 rounded-3xl transition-all glass-panel border-white/5 ${isCurrentUser ? 'border-aether-gold/40 bg-aether-gold/5 shadow-[0_0_30px_rgba(212,175,55,0.05)]' : 'hover:bg-white/5 hover:border-white/10'}`}
+                                                onClick={() => router.push('/profiles/' + profile.id)}
+                                                className={`flex items-center justify-between p-6 rounded-3xl transition-all glass-panel border-white/5 cursor-pointer ${isCurrentUser ? 'border-aether-gold/40 bg-aether-gold/5 shadow-[0_0_30px_rgba(212,175,55,0.05)]' : 'hover:bg-white/5 hover:border-white/10 hover:border-white/20'}`}
                                             >
                                                 <div className="flex items-center gap-8">
                                                     <div className={`w-12 font-mono text-xs font-black text-center ${isCurrentUser ? 'text-aether-gold' : 'text-zinc-600'}`}>

@@ -19,9 +19,10 @@ interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    isGated?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false }: AuthModalProps) {
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -129,11 +130,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     };
 
     return (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+        <div className={isGated ? "w-full" : "fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"}>
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                initial={isGated ? {} : { opacity: 0, scale: 0.95, y: 20 }}
+                animate={isGated ? {} : { opacity: 1, scale: 1, y: 0 }}
+                exit={isGated ? {} : { opacity: 0, scale: 0.95, y: 20 }}
                 className="w-full max-w-md bg-[#050505]/90 border border-white/10 rounded-[2rem] p-8 md:p-10 relative overflow-hidden shadow-[0_0_80px_rgba(212,175,55,0.15)]"
             >
                 {/* Decorative gradients */}
@@ -141,12 +142,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none"></div>
 
                 {/* Close Button */}
-                <button 
-                    onClick={onClose}
-                    className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10"
-                >
-                    <X className="w-4 h-4" />
-                </button>
+                {!isGated && (
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                )}
 
                 <div className="space-y-6 relative z-10">
                     <div className="text-center space-y-2">

@@ -10,21 +10,19 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get('sb-access-token')?.value;
 
-  // Paths to redirect
-  const protectedPaths = [
-    '/sanctum',
-    '/codex',
-    '/self',
-    '/treasury',
-    '/vault',
-    '/archive',
-    '/cineworks'
-  ];
+  // If at root, let next render page.tsx (it handles its own auth gating)
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
 
-  if (protectedPaths.some(path => pathname.startsWith(path))) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
+  // Allow Next.js internals and api
+  if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
+  // Protect all other routes
+  if (!token) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
@@ -32,13 +30,15 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/sanctum/:path*',
-    '/codex/:path*',
-    '/self/:path*',
-    '/treasury/:path*',
-    '/vault/:path*',
-    '/archive/:path*',
-    '/cineworks/:path*'
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
+
 
