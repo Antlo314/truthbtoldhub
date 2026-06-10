@@ -3,18 +3,18 @@ import CinemaClient from './components/CinemaClient';
 
 export const metadata: Metadata = {
     title: 'The Cinema | Truth B Told Hub',
-    description: 'Exclusive access to the 400 Series and prophetic cinematic transmissions.',
+    description: 'The 400 Series is on pause until fiscally solid. Preview transmissions and support the Truth B Told vision.',
     openGraph: {
         title: 'The Cinema | Truth B Told Hub',
-        description: 'Watch the 400 Series Premiere and ultra-rare cinematic artifacts.',
+        description: 'The 400 Series is on pause. Preview transmissions and support @truufbtold.',
         url: 'https://truthbtoldhub.com/cinema',
         type: 'video.other',
         images: [
             {
-                url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=2000',
-                width: 1920,
-                height: 1080,
-                alt: 'The Cinema Premiere',
+                url: 'https://truthbtoldhub.com/viralcartel/400_manga_logo.jpg',
+                width: 1200,
+                height: 630,
+                alt: 'The 400 Series — On Pause',
             },
         ],
     },

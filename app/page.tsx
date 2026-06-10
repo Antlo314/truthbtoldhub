@@ -57,6 +57,7 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useChat } from '@ai-sdk/react';
 import { Howl } from 'howler';
 import AuthModal from '../components/AuthModal';
+import SupportVisionModal from '../components/SupportVisionModal';
 
 // Custom Social Icons
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -88,6 +89,7 @@ function CipherTracker() {
 export default function Gateway() {
     const router = useRouter();
     const [showSupportOverlay, setShowSupportOverlay] = useState(false);
+    const [showVisionModal, setShowVisionModal] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [supportMode, setSupportMode] = useState<'series' | 'hardware'>('series');
     const overlayScrollRef = useRef<HTMLDivElement>(null);
@@ -142,41 +144,6 @@ export default function Gateway() {
     // Prophetic Alignment State
     const [alignment, setAlignment] = useState(98.4);
 
-    // Countdown State
-    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-    const [juneteenthLeft, setJuneteenthLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-
-    useEffect(() => {
-        const target = new Date('2026-06-01T00:00:00');
-        const juneteenth = new Date('2026-06-19T00:00:00');
-        
-        const timer = setInterval(() => {
-            const now = new Date();
-            
-            const diff = target.getTime() - now.getTime();
-            const jDiff = juneteenth.getTime() - now.getTime();
-            
-            if (diff > 0) {
-                setTimeLeft({
-                    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-                    mins: Math.floor((diff / 1000 / 60) % 60),
-                    secs: Math.floor((diff / 1000) % 60)
-                });
-            }
-
-            if (jDiff > 0) {
-                setJuneteenthLeft({
-                    days: Math.floor(jDiff / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((jDiff / (1000 * 60 * 60)) % 24),
-                    mins: Math.floor((jDiff / 1000 / 60) % 60),
-                    secs: Math.floor((jDiff / 1000) % 60)
-                });
-            }
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
-
     // AI Chat Integration
     const { messages: aiMessages, input: aiInput, handleInputChange: handleAiInputChange, handleSubmit, isLoading: isLoadingAi, append, setInput: setAiInput } = useChat() as any;
     const [oracleError, setOracleError] = useState<string | null>(null);
@@ -212,6 +179,7 @@ export default function Gateway() {
 
     useEffect(() => {
         setIsMounted(true);
+        setShowVisionModal(true);
         
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768);
@@ -677,13 +645,17 @@ export default function Gateway() {
                         <button onClick={() => { playSfx('click'); setIsAuthModalOpen(true); }} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/20 text-white rounded-full text-[9px] font-black tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all active:scale-95 shadow-xl">Initialize Protocol</button>
                     )}
 
-                    <button onClick={() => openSupport('series')} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support 400 Series</button>
+                    <button onClick={() => openSupport('series')} onMouseEnter={() => playSfx('hover')} className="px-6 md:px-10 py-3 bg-white text-black rounded-full text-[10px] font-black tracking-[0.3em] uppercase hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] border border-white/20 active:scale-95">Support the Vision</button>
                 </div>
             </nav>
 
             {/* HERO */}
-            <section className="relative h-[60dvh] flex flex-col items-center justify-center p-6 mt-12 md:mt-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.03)_0%,transparent_60%)]"></div>
+            <section className="relative h-[60dvh] flex flex-col items-center justify-center p-6 mt-12 md:mt-0 overflow-hidden">
+                <div className="absolute inset-0">
+                    <img src="/page-images/image-(8).png" alt="" className="w-full h-full object-cover opacity-25 grayscale" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/40 via-[#050505]/80 to-[#050505]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,175,55,0.06)_0%,transparent_60%)]" />
+                </div>
                 <div className="hero-content relative z-10 text-center space-y-8 md:space-y-12 w-full max-w-[100vw]">
                     <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-xl">
                         <Star className="w-4 h-4 text-aether-gold animate-pulse" />
@@ -1187,41 +1159,44 @@ export default function Gateway() {
                         </div>
                     </motion.div>
 
-                    {/* The 400 Series (FEATURE CARD) */}
+                    {/* The 400 Series (FEATURE CARD — ON PAUSE) */}
                     <motion.div 
                         layout={isMobile}
                         onMouseEnter={() => playSfx('hover')}
-                        onClick={() => { playSfx('click'); router.push('/cinema'); }}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'series' ? 'col-span-2 row-span-3' : (isMobile ? 'col-span-2' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-white/10 group cursor-pointer relative overflow-hidden bg-gradient-to-br from-aether-gold/10 to-transparent min-h-[350px]`}
+                        onClick={() => { playSfx('click'); openSupport('hardware'); }}
+                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'series' ? 'col-span-2 row-span-3' : (isMobile ? 'col-span-2' : 'md:col-span-8 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col justify-between border-orange-500/20 group cursor-pointer relative overflow-hidden bg-gradient-to-br from-orange-500/5 to-transparent min-h-[350px]`}
                     >
-                        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 group-hover:opacity-30 transition-all duration-1000 scale-110 group-hover:scale-100 pointer-events-none">
-                             <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center grayscale group-hover:grayscale-0 transition-all duration-1000"></div>
+                        <div className="absolute top-0 right-0 w-1/2 h-full opacity-15 group-hover:opacity-35 transition-all duration-1000 scale-110 group-hover:scale-100 pointer-events-none">
+                            <img src="/viralcartel/400_manga_logo.jpg" alt="" className="w-full h-full object-cover object-center grayscale group-hover:grayscale-0 transition-all duration-1000" />
                         </div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/80 to-transparent pointer-events-none" />
                         
                         <div className="space-y-8 relative z-10">
-                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/5 backdrop-blur-md">
-                                <Sparkles className="w-3 h-3 text-aether-gold" />
-                                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">The Prophecy Series</span>
+                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-md">
+                                <Pause className="w-3 h-3 text-orange-400" />
+                                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-orange-400">Series On Pause</span>
                             </div>
                             <div className="space-y-3">
                                 <h3 className="font-ritual text-4xl md:text-7xl font-black uppercase text-white gold-shimmer group-hover:glitch-text" data-text="THE 400 SERIES">THE 400 SERIES</h3>
                                 <p className="text-white/40 text-[9px] md:text-xs uppercase tracking-[0.2em] font-black max-w-md leading-relaxed">
-                                    The global premiere begins <span className="text-white">June 1st</span>. Exclusively behind the Truth B Told paywall. Secure Early Supporter privileges now.
+                                    Production is <span className="text-orange-400">on pause</span> until we are fiscally solid. Support <span className="text-white">@truufbtold</span> &apos;Ant Cee&apos; to fuel infrastructure and resume the vision.
                                 </p>
                             </div>
                             
-                            {/* Latest Transmissions Section */}
                             <div className="space-y-4 bg-white/5 p-6 rounded-3xl border border-white/10">
-                                <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">Latest Transmissions (YouTube)</h4>
+                                <h4 className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">Preview Transmissions (YouTube)</h4>
                                 <div className="space-y-3">
                                     {[
-                                        { title: "400 - Genesis 15 | Opening Scene Preview", url: "https://www.youtube.com/watch?v=jXezgcPBqGE", date: "2 days ago" },
-                                        { title: "400 Years Series: The Prelude", url: "https://www.youtube.com/watch?v=XnWdy_B7PgA", date: "4 days ago" }
+                                        { title: "400 - Genesis 15 | Opening Scene Preview", url: "https://www.youtube.com/watch?v=jXezgcPBqGE", thumb: "jXezgcPBqGE" },
+                                        { title: "400 Years Series: The Prelude", url: "https://www.youtube.com/watch?v=XnWdy_B7PgA", thumb: "XnWdy_B7PgA" }
                                     ].map((vid, i) => (
-                                        <a key={i} href={vid.url} target="_blank" className="flex items-center justify-between group/vid p-3 rounded-xl hover:bg-white/10 transition-colors">
-                                            <div className="flex flex-col gap-1">
+                                        <a key={i} href={vid.url} target="_blank" onClick={(e) => e.stopPropagation()} className="flex items-center gap-4 group/vid p-3 rounded-xl hover:bg-white/10 transition-colors">
+                                            <div className="w-16 aspect-video rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
+                                                <img src={`https://img.youtube.com/vi/${vid.thumb}/mqdefault.jpg`} alt="" className="w-full h-full object-cover grayscale group-hover/vid:grayscale-0 transition-all" />
+                                            </div>
+                                            <div className="flex flex-col gap-1 flex-1">
                                                 <span className="text-[10px] font-black text-white group-hover/vid:text-aether-gold transition-colors">{vid.title}</span>
-                                                <span className="text-[7px] font-mono text-white/20 uppercase">{vid.date}</span>
+                                                <span className="text-[7px] font-mono text-orange-400/60 uppercase">Preview Only</span>
                                             </div>
                                             <ArrowRight className="w-3 h-3 text-white/20 group-hover/vid:translate-x-1 group-hover/vid:text-white transition-all" />
                                         </a>
@@ -1231,39 +1206,56 @@ export default function Gateway() {
                         </div>
 
                         <div className="flex flex-col md:flex-row items-start md:items-center gap-8 relative z-10">
-                            <div className="flex flex-col">
-                                <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest mb-1">June 01 Premiere</span>
-                                <div className="flex gap-4">
-                                    {[
-                                        { label: 'D', val: timeLeft.days },
-                                        { label: 'H', val: timeLeft.hours },
-                                        { label: 'M', val: timeLeft.mins },
-                                        { label: 'S', val: timeLeft.secs }
-                                    ].map((t, i) => (
-                                        <div key={i} className="flex flex-col items-center">
-                                            <span className="text-xl font-ritual font-black text-white leading-none">{String(t.val).padStart(2, '0')}</span>
-                                            <span className="text-[6px] font-mono text-aether-gold uppercase tracking-tighter">{t.label}</span>
-                                        </div>
-                                    ))}
+                            <div className="flex flex-col flex-1 max-w-xs">
+                                <span className="text-[7px] font-mono text-orange-400 uppercase tracking-widest mb-2">Fiscal Foundation Required</span>
+                                <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-white/40 mb-2">
+                                    <span>Infrastructure Goal</span>
+                                    <span className="text-white">$4,821 / $10,000</span>
                                 </div>
-                            </div>
-                            <div className="h-10 w-[1px] bg-white/10 hidden md:block"></div>
-                            <div className="flex flex-col">
-                                <span className="text-[7px] font-mono text-aether-gold uppercase tracking-widest mb-1">Juneteenth Community Premiere</span>
-                                <div className="flex gap-4 opacity-60">
-                                    {[
-                                        { label: 'D', val: juneteenthLeft.days },
-                                        { label: 'H', val: juneteenthLeft.hours },
-                                        { label: 'M', val: juneteenthLeft.mins },
-                                        { label: 'S', val: juneteenthLeft.secs }
-                                    ].map((t, i) => (
-                                        <div key={i} className="flex flex-col items-center">
-                                            <span className="text-lg font-ritual font-black text-white leading-none">{String(t.val).padStart(2, '0')}</span>
-                                            <span className="text-[5px] font-mono text-white/40 uppercase tracking-tighter">{t.label}</span>
-                                        </div>
-                                    ))}
+                                <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-orange-400 w-[48.2%] shadow-[0_0_15px_rgba(251,146,60,0.5)]" />
                                 </div>
+                                <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest mt-2">Resume production when goal is met</span>
                             </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); openSupport('hardware'); }}
+                                className="px-8 py-4 bg-white text-black rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] hover:scale-105 transition-transform active:scale-95 flex items-center gap-2"
+                            >
+                                <Zap className="w-3 h-3 fill-current" />
+                                Fuel the Mission
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {/* Cinematic Visual Archive */}
+                    <motion.div
+                        layout={isMobile}
+                        onMouseEnter={() => playSfx('hover')}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 border-white/10 relative overflow-hidden`}
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <Clapperboard className="w-5 h-5 text-aether-gold" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Cinematic Archive</span>
+                            </div>
+                            <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">@truufbtold</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                                { src: '/cineworks/poster1.png', label: 'The Vision', sub: 'Prophetic Core' },
+                                { src: '/cineworks/poster2.png', label: 'Sacred Ruins', sub: 'Ancient Protocol' },
+                                { src: '/cineworks/poster3.png', label: 'Neural Synthesis', sub: 'Cineworks' },
+                                { src: '/page-images/tmpvp6oh5mh (1).png', label: 'Frequency Break', sub: 'Audio Vision' },
+                            ].map((asset, i) => (
+                                <div key={i} className="group/asset relative aspect-[3/4] rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 hover:border-aether-gold/30 transition-all">
+                                    <img src={asset.src} alt={asset.label} className="w-full h-full object-cover grayscale group-hover/asset:grayscale-0 group-hover/asset:scale-105 transition-all duration-700" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                        <span className="block text-[8px] font-black uppercase text-white tracking-widest">{asset.label}</span>
+                                        <span className="block text-[6px] font-mono text-aether-gold/70 uppercase tracking-widest">{asset.sub}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </motion.div>
 
@@ -1275,7 +1267,9 @@ export default function Gateway() {
                         className={`bento-card col-span-2 ${isMobile && expandedCard === 'prelude' ? 'row-span-2' : (isMobile ? 'col-span-2' : 'md:col-span-4')} liquid-glass rounded-[2rem] md:rounded-[4rem] overflow-hidden group border-white/10 p-1 md:p-2 cursor-pointer relative`}
                     >
                          <div className="aspect-video relative rounded-[1.8rem] md:rounded-[3.5rem] overflow-hidden bg-black">
+                            <img src="https://img.youtube.com/vi/XnWdy_B7PgA/maxresdefault.jpg" alt="The Prelude" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
                             <iframe className="absolute inset-0 w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" src="https://www.youtube.com/embed/XnWdy_B7PgA?autoplay=0&controls=0&rel=0" title="The Prelude"></iframe>
+                            <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-[7px] font-black uppercase tracking-widest text-orange-400 pointer-events-none">Preview</div>
                          </div>
                          <div className="p-6 md:p-8 flex items-center justify-between">
                             <h4 className="font-ritual text-xl font-black text-white group-hover:gold-shimmer transition-all">THE PRELUDE</h4>
@@ -1299,14 +1293,14 @@ export default function Gateway() {
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
                                 {[
                                     { step: '01', title: 'Fueling', status: 'In Progress', desc: 'Hardware & Production Funding' },
-                                    { step: '02', title: 'Synthesis', status: 'Upcoming', desc: 'Episode 01 Rendering & SFX' },
-                                    { step: '03', title: 'Early Access', status: 'May 25', desc: 'Beta Screening for Donors' },
-                                    { step: '04', title: 'Premiere', status: 'June 01', desc: 'Global Drop behind Paywall' }
+                                    { step: '02', title: 'Synthesis', status: 'On Pause', desc: 'Episode 01 Rendering & SFX' },
+                                    { step: '03', title: 'Early Access', status: 'On Pause', desc: 'Beta Screening for Donors' },
+                                    { step: '04', title: 'Premiere', status: 'On Pause', desc: 'Resumes when fiscally solid' }
                                 ].map((milestone, i) => (
                                     <div key={i} className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group/step">
                                         <div className="flex items-center justify-between mb-4">
                                             <span className="text-[10px] font-ritual font-black text-aether-gold">{milestone.step}</span>
-                                            <span className={`text-[6px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${milestone.status === 'In Progress' ? 'bg-aether-gold text-black' : 'bg-white/10 text-white/40'}`}>
+                                            <span className={`text-[6px] font-black uppercase tracking-widest px-2 py-1 rounded-full ${milestone.status === 'In Progress' ? 'bg-aether-gold text-black' : milestone.status === 'On Pause' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-white/10 text-white/40'}`}>
                                                 {milestone.status}
                                             </span>
                                         </div>
@@ -1583,6 +1577,12 @@ export default function Gateway() {
                     )}
                 </AnimatePresence>
             </div>
+            <SupportVisionModal
+                isOpen={showVisionModal}
+                onClose={() => setShowVisionModal(false)}
+                onSupport={() => openSupport('series')}
+                playSfx={playSfx}
+            />
             <AuthModal 
                 isOpen={isAuthModalOpen} 
                 onClose={() => setIsAuthModalOpen(false)} 
