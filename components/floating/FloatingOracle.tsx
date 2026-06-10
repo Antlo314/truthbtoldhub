@@ -5,12 +5,15 @@ import { useChat } from '@ai-sdk/react';
 import { MessageSquare, Send, X, Flame, ShieldAlert, Sparkles, User, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
+import { supabase } from '@/lib/supabase';
 
 // --- SFX ---
 let bubbleHoverSfx: any = null;
 let bubbleClickSfx: any = null;
 
 export default function FloatingOracle() {
+    const [mounted, setMounted] = useState(false);
+    const [user, setUser] = useState<any>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [hasNewMessage, setHasNewMessage] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -28,6 +31,18 @@ export default function FloatingOracle() {
     });
 
     useEffect(() => {
+        setMounted(true);
+
+        // Fetch current session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+        });
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
         const initHowler = async () => {
             try {
                 const { Howl } = await import('howler');
@@ -48,6 +63,10 @@ export default function FloatingOracle() {
             }
         };
         initHowler();
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const playHover = () => {
@@ -90,6 +109,8 @@ export default function FloatingOracle() {
             setHasNewMessage(false);
         }
     };
+
+    if (!mounted || !user) return null;
 
     return (
         <div className="fixed bottom-6 right-6 z-[99] flex flex-col items-end">
