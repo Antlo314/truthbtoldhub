@@ -58,6 +58,7 @@ import { useChat } from '@ai-sdk/react';
 import { Howl } from 'howler';
 import AuthModal from '../components/AuthModal';
 import SupportVisionModal from '../components/SupportVisionModal';
+import SupportOverlay from '../components/SupportOverlay';
 
 // Custom Social Icons
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -92,14 +93,7 @@ export default function Gateway() {
     const [showVisionModal, setShowVisionModal] = useState(true);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [supportMode, setSupportMode] = useState<'series' | 'hardware'>('series');
-    const overlayScrollRef = useRef<HTMLDivElement>(null);
     const [isMounted, setIsMounted] = useState(false);
-
-    useEffect(() => {
-        if (showSupportOverlay && overlayScrollRef.current) {
-            overlayScrollRef.current.scrollTo(0, 0);
-        }
-    }, [showSupportOverlay]);
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
     const [isAscended, setIsAscended] = useState(false);
@@ -343,6 +337,7 @@ export default function Gateway() {
 
     const openSupport = (mode: 'series' | 'hardware' = 'series') => {
         playSfx('click');
+        setShowVisionModal(false);
         setSupportMode(mode);
         setShowSupportOverlay(true);
     };
@@ -1397,126 +1392,13 @@ export default function Gateway() {
                 </div>
             </footer>
 
-            {/* Support Overlay */}
-            <AnimatePresence>
-                {showSupportOverlay && (
-                    <motion.div 
-                        ref={overlayScrollRef}
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
-                        className="fixed inset-0 z-[200] flex items-start justify-center p-4 md:p-12 bg-[#050505]/98 backdrop-blur-3xl overflow-y-auto scroll-smooth"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.9, y: 40 }} 
-                            animate={{ scale: 1, y: 0 }} 
-                            exit={{ scale: 0.9, y: 40 }} 
-                            className="liquid-glass rounded-[3rem] md:rounded-[5rem] p-8 md:p-20 max-w-6xl w-full relative border-white/20 shadow-[0_0_100px_rgba(0,0,0,0.5)] my-auto"
-                        >
-                            <button 
-                                onClick={() => { playSfx('click'); setShowSupportOverlay(false); }} 
-                                className="absolute top-8 right-8 md:top-12 md:right-12 text-white/40 hover:text-white p-4 bg-white/5 rounded-full border border-white/10 transition-all active:scale-90 group z-50"
-                            >
-                                <Lock className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                            </button>
-
-                            <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
-                                {supportMode === 'series' ? (
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Tier Selection</h4>
-                                        <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[40vh] md:max-h-none pr-2 hide-scrollbar">
-                                            {[
-                                                { tier: "$5", title: "The Echo Ticket", desc: "Single Premiere Access to Chapter 01 + Global Archive Access.", icon: <Eye className="w-4 h-4" /> },
-                                                { tier: "$10", title: "The Frequency Bundle", desc: "Full '400' Digital Album + Permanent Chapter 01 Access.", icon: <Music className="w-4 h-4" />, best: true },
-                                                { tier: "$25", title: "The Chronicle Pass", desc: "Digital Artifacts (Storyboards/Stills) + 72-Hour Early Access.", icon: <ScrollText className="w-4 h-4" /> },
-                                                { tier: "$50", title: "The Oracle Status", desc: "Name in Credits + Oracle Chat Aura + Behind the Scenes Vault.", icon: <Star className="w-4 h-4" /> },
-                                                { tier: "$100", title: "Founding Architect", desc: "Immortalization on Founding Wall + 20% Viral Cartel Discount.", icon: <ShieldCheck className="w-4 h-4" /> },
-                                                { tier: "$400", title: "Prophetic Ancestor", desc: "Executive Producer Credit + Custom Cinematic Avatar Synthesis.", icon: <Sparkles className="w-4 h-4" /> }
-                                            ].map((benefit, i) => (
-                                                <div key={i} className={`flex gap-5 items-start p-5 rounded-3xl bg-white/5 border ${benefit.best ? 'border-aether-gold/40 shadow-[0_0_20px_rgba(212,175,55,0.1)]' : 'border-white/5'} hover:border-white/20 transition-all group/tier relative`}>
-                                                    {benefit.best && <span className="absolute -top-2 -right-2 px-3 py-1 bg-aether-gold text-black text-[6px] font-black uppercase rounded-full">Best Value</span>}
-                                                    <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 ${benefit.best ? 'text-aether-gold' : 'text-white/40'} group-hover/tier:scale-110 transition-transform`}>{benefit.icon}</div>
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-xl font-ritual font-black text-white">{benefit.tier}</span>
-                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white">{benefit.title}</span>
-                                                        </div>
-                                                        <span className="block text-[8px] text-white/40 uppercase tracking-widest leading-relaxed">{benefit.desc}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-10">
-                                        <div className="space-y-4">
-                                            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-white/20 bg-white/5">
-                                                <Cpu className="w-3 h-3 text-white" />
-                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white">Hardware Requirements</span>
-                                            </div>
-                                            <h2 className="font-ritual text-5xl md:text-8xl font-black uppercase text-white leading-none">INFRA-<br/>STRUCTURE</h2>
-                                            <p className="text-white/60 text-xs md:text-sm font-medium leading-relaxed tracking-wide">
-                                                To produce the "400 Series" at institutional cinematic quality, we must scale our physical and neural processing nodes.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-6">
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Cost Justification</h4>
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {[
-                                                    { icon: <User className="w-4 h-4" />, title: "Production & Labor ($4,500)", desc: "Covers historical research, narrative scripting, and high-fidelity voice orchestration." },
-                                                    { icon: <Server className="w-4 h-4" />, title: "AI Workstation ($3,200)", desc: "Next-gen processing for real-time generative upscaling and 4K neural rendering." },
-                                                    { icon: <Gpu className="w-4 h-4" />, title: "RTX 4090 Core ($1,800)", desc: "The essential hardware engine for parallel cinematic rendering of complex environments." },
-                                                    { icon: <Volume2 className="w-4 h-4" />, title: "Studio Audio ($500)", desc: "Precision spatial monitoring for the Prophetic Frequency audio experience." }
-                                                ].map((item, i) => (
-                                                    <div key={i} className="flex gap-5 items-start p-4 rounded-2xl bg-white/5 border border-white/5">
-                                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-white">{item.icon}</div>
-                                                        <div className="space-y-1">
-                                                            <span className="block text-[10px] font-black uppercase tracking-widest text-white">{item.title}</span>
-                                                            <span className="block text-[8px] text-white/40 uppercase tracking-widest leading-relaxed">{item.desc}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-10 p-8 md:p-12 rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent border border-white/10 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
-                                    
-                                    <div className="text-center space-y-4 relative z-10">
-                                        <div className="w-20 h-20 bg-white rounded-3xl mx-auto flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.2)] mb-8">
-                                            <ShieldCheck className="w-10 h-10 text-black" />
-                                        </div>
-                                        <h3 className="text-xl font-ritual font-black text-white uppercase tracking-widest">Verify Contribution</h3>
-                                        <p className="text-[9px] text-white/40 uppercase tracking-[0.2em] leading-loose">
-                                            To be recognized for your contribution and unlock your privileges, please type <span className="text-white font-black text-[12px] bg-white/10 px-2 py-1 rounded">"400"</span> in the <span className="text-white font-black">Referral / Support Code</span> section on Stripe.
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-4 relative z-10">
-                                        <a 
-                                            href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
-                                            target="_blank" 
-                                            onClick={() => playSfx('click')} 
-                                            className="w-full flex items-center justify-center gap-4 py-6 bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-[1.02] transition-transform active:scale-95 group"
-                                        >
-                                            Initialize Fueling
-                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-                                        </a>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="h-[1px] w-4 bg-white/10"></div>
-                                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.5em]">Secure Gateway</span>
-                                            <div className="h-[1px] w-4 bg-white/10"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <SupportOverlay
+                isOpen={showSupportOverlay}
+                mode={supportMode}
+                onClose={() => setShowSupportOverlay(false)}
+                onModeChange={setSupportMode}
+                playSfx={playSfx}
+            />
             {/* Floating Community Chat FAB */}
             <div className="fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4">
                 <AnimatePresence>
