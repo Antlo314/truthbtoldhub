@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart } from 'lucide-react';
 
@@ -28,10 +29,32 @@ interface SupportVisionModalProps {
 
 export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx }: SupportVisionModalProps) {
     useEffect(() => {
-        if (!isOpen) return;
-        const prev = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => { document.body.style.overflow = prev; };
+        if (!isOpen || typeof document === 'undefined') return;
+
+        const html = document.documentElement;
+        const body = document.body;
+        const scrollY = window.scrollY;
+
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = `-${scrollY}px`;
+        body.style.left = '0';
+        body.style.right = '0';
+        body.style.width = '100%';
+        body.style.overscrollBehavior = 'none';
+
+        return () => {
+            html.style.overflow = '';
+            body.style.overflow = '';
+            body.style.position = '';
+            body.style.top = '';
+            body.style.left = '';
+            body.style.right = '';
+            body.style.width = '';
+            body.style.overscrollBehavior = '';
+            window.scrollTo(0, scrollY);
+        };
     }, [isOpen]);
 
     const handleClose = () => {
@@ -45,103 +68,107 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
         onClose();
     };
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 1 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[300] grid place-items-center p-4 md:p-8 bg-black/90 backdrop-blur-2xl"
-                    onClick={handleClose}
+                    className="fixed inset-0 z-[10000] flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black/95 p-4 backdrop-blur-2xl"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="support-vision-title"
                 >
                     <motion.div
-                        initial={{ scale: 0.92, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.92, opacity: 0 }}
-                        transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] md:rounded-[3.5rem] border border-white/15 shadow-[0_0_120px_rgba(212,175,55,0.15)]"
+                        initial={{ opacity: 1, scale: 1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.96 }}
+                        transition={{ duration: 0.2 }}
+                        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/20 shadow-[0_0_120px_rgba(212,175,55,0.2)] md:max-w-lg md:rounded-[2.5rem]"
                     >
                         <div className="absolute inset-0">
                             <img
                                 src="/images/cineworks/poster1.png"
                                 alt=""
-                                className="w-full h-full object-cover opacity-30"
+                                className="h-full w-full object-cover opacity-25"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/90 to-[#050505]/70" />
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.12)_0%,transparent_60%)]" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/95 to-[#050505]/80" />
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.15)_0%,transparent_60%)]" />
                         </div>
 
                         <button
                             onClick={handleClose}
-                            className="absolute top-5 right-5 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-white/30 transition-all active:scale-90"
+                            className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-white/5 p-2.5 text-white/50 transition-all hover:border-white/30 hover:text-white active:scale-90"
                             aria-label="Close"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="h-5 w-5" />
                         </button>
 
-                        <div className="relative z-10 p-8 md:p-10 flex flex-col items-center justify-center text-center space-y-6">
-                            <div className="w-20 h-20 rounded-3xl overflow-hidden border border-aether-gold/30 shadow-[0_0_40px_rgba(212,175,55,0.2)]">
-                                <img src="/viralcartel/400_manga_logo.jpg" alt="Truth B Told" className="w-full h-full object-cover" />
+                        <div className="relative z-10 flex flex-col items-center justify-center overflow-y-auto p-6 text-center md:p-8">
+                            <div className="mb-5 h-16 w-16 overflow-hidden rounded-2xl border border-aether-gold/30 shadow-[0_0_40px_rgba(212,175,55,0.2)] md:h-20 md:w-20 md:rounded-3xl">
+                                <img src="/viralcartel/400_manga_logo.jpg" alt="Truth B Told" className="h-full w-full object-cover" />
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/5">
-                                    <Heart className="w-3 h-3 text-aether-gold" />
+                            <div className="mb-6 space-y-3">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-aether-gold/30 bg-aether-gold/5 px-4 py-1.5">
+                                    <Heart className="h-3 w-3 text-aether-gold" />
                                     <span className="text-[8px] font-black uppercase tracking-[0.4em] text-aether-gold">Vision Transmission</span>
                                 </div>
-                                <h2 className="font-ritual text-2xl md:text-3xl font-black uppercase text-white leading-tight">
+                                <h2 id="support-vision-title" className="font-ritual text-xl font-black uppercase leading-tight text-white md:text-3xl">
                                     Support the Truth B Told Vision
                                 </h2>
-                                <p className="text-sm md:text-base text-white/70 font-medium tracking-wide">
+                                <p className="text-sm font-medium tracking-wide text-white/70 md:text-base">
                                     <a
                                         href={CASH_APP_URL}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={() => playSfx?.('click')}
-                                        className="text-[#00D632] font-black hover:underline underline-offset-4 transition-colors"
+                                        className="font-black text-[#00D632] underline-offset-4 transition-colors hover:underline"
                                     >
                                         @truufbtold
                                     </a>
-                                    <span className="text-white/40 mx-2">·</span>
-                                    <span className="text-white italic">&apos;Ant Cee&apos;</span>
+                                    <span className="mx-2 text-white/40">·</span>
+                                    <span className="italic text-white">&apos;Ant Cee&apos;</span>
                                 </p>
-                                <p className="text-[10px] md:text-xs text-white/40 uppercase tracking-[0.25em] leading-relaxed max-w-sm mx-auto">
+                                <p className="mx-auto max-w-sm text-[10px] uppercase leading-relaxed tracking-[0.2em] text-white/40 md:text-xs">
                                     The 400 Series is on pause until we are fiscally solid. Fuel the mission now to restore production.
                                 </p>
                             </div>
 
-                            <div className="flex flex-col gap-3 w-full max-w-xs">
+                            <div className="flex w-full max-w-xs flex-col gap-3">
                                 <a
                                     href={CASH_APP_URL}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={() => playSfx?.('click')}
-                                    className="w-full py-4 px-6 bg-[#00D632] text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-transform active:scale-95 shadow-[0_0_40px_rgba(0,214,50,0.3)] flex items-center justify-center gap-2"
+                                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#00D632] px-6 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-black shadow-[0_0_40px_rgba(0,214,50,0.35)] transition-transform hover:scale-[1.02] active:scale-95"
                                 >
                                     Cash App · @truufbtold
                                 </a>
                                 <button
                                     onClick={handleSupport}
-                                    className="w-full py-4 px-6 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-transform active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
+                                    className="w-full rounded-2xl bg-white px-6 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-black shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-transform hover:scale-[1.02] active:scale-95"
                                 >
                                     Support via Stripe
                                 </button>
                             </div>
 
-                            <div className="flex items-center justify-center gap-6 pt-1">
-                                <a href="https://youtube.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-aether-gold transition-colors">
-                                    <YoutubeIcon className="w-5 h-5" />
+                            <div className="mt-5 flex items-center justify-center gap-6">
+                                <a href="https://youtube.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors hover:text-aether-gold">
+                                    <YoutubeIcon className="h-5 w-5" />
                                 </a>
-                                <a href="https://tiktok.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-aether-gold transition-colors">
-                                    <TikTokIcon className="w-5 h-5" />
+                                <a href="https://tiktok.com/@truufbtold" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors hover:text-aether-gold">
+                                    <TikTokIcon className="h-5 w-5" />
                                 </a>
                             </div>
                         </div>
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

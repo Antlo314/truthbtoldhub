@@ -89,7 +89,7 @@ function CipherTracker() {
 export default function Gateway() {
     const router = useRouter();
     const [showSupportOverlay, setShowSupportOverlay] = useState(false);
-    const [showVisionModal, setShowVisionModal] = useState(false);
+    const [showVisionModal, setShowVisionModal] = useState(true);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [supportMode, setSupportMode] = useState<'series' | 'hardware'>('series');
     const overlayScrollRef = useRef<HTMLDivElement>(null);
@@ -179,7 +179,6 @@ export default function Gateway() {
 
     useEffect(() => {
         setIsMounted(true);
-        setShowVisionModal(true);
         
         const handleResize = () => {
             setIsMobile(window.innerWidth < 768);
@@ -473,7 +472,18 @@ export default function Gateway() {
         });
     }, { scope: containerRef, dependencies: [isMounted] });
 
-    if (!isMounted) return <div className="min-h-screen bg-[#050505]" />;
+    if (!isMounted) {
+        return (
+            <>
+                <div className="min-h-screen bg-[#050505]" />
+                <SupportVisionModal
+                    isOpen={showVisionModal}
+                    onClose={() => setShowVisionModal(false)}
+                    onSupport={() => {}}
+                />
+            </>
+        );
+    }
 
     const isUnlocked = user || isAscended;
 
@@ -499,7 +509,7 @@ export default function Gateway() {
     );
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden">
+        <div ref={containerRef} className={`min-h-screen bg-[#050505] text-white font-sans selection:bg-aether-gold/30 overflow-x-hidden ${showVisionModal ? 'h-[100dvh] overflow-hidden' : ''}`}>
             <audio ref={audioRef} key={currentTrack} src={tracks[currentTrack].file} onEnded={nextTrack} />
             
             <style jsx global>{`
