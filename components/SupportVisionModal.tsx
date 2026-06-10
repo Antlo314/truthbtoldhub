@@ -53,7 +53,7 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
                     >
                         <div className="absolute inset-0">
                             <img
-                                src="/cineworks/poster1.png"
+                                src="/images/cineworks/poster1.png"
                                 alt=""
                                 className="w-full h-full object-cover opacity-30"
                             />

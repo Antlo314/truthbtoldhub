@@ -1242,9 +1242,9 @@ export default function Gateway() {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {[
-                                { src: '/cineworks/poster1.png', label: 'The Vision', sub: 'Prophetic Core' },
-                                { src: '/cineworks/poster2.png', label: 'Sacred Ruins', sub: 'Ancient Protocol' },
-                                { src: '/cineworks/poster3.png', label: 'Neural Synthesis', sub: 'Cineworks' },
+                                { src: '/images/cineworks/poster1.png', label: 'The Vision', sub: 'Prophetic Core' },
+                                { src: '/images/cineworks/poster2.png', label: 'Sacred Ruins', sub: 'Ancient Protocol' },
+                                { src: '/images/cineworks/poster3.png', label: 'Neural Synthesis', sub: 'Cineworks' },
                                 { src: '/page-images/image-(6).png', label: 'Frequency Break', sub: 'Audio Vision' },
                             ].map((asset, i) => (
                                 <div key={i} className="group/asset relative aspect-[3/4] rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 hover:border-aether-gold/30 transition-all">

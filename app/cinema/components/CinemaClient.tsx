@@ -113,9 +113,9 @@ export default function CinemaClient() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                            { title: "The Prelude", id: "XnWdy_B7PgA", desc: "Before the fire. The foundation of the prophecy.", poster: '/cineworks/poster2.png' },
-                            { title: "Genesis 15:13", id: "jXezgcPBqGE", desc: "The root of the 400-year cycle protocol.", poster: '/cineworks/poster1.png' },
-                            { title: "Prophetic Frequency", id: "msKxh1gInMU", desc: "Audio synthesis of the coming invasion.", poster: '/cineworks/poster3.png' }
+                            { title: "The Prelude", id: "XnWdy_B7PgA", desc: "Before the fire. The foundation of the prophecy.", poster: '/images/cineworks/poster2.png' },
+                            { title: "Genesis 15:13", id: "jXezgcPBqGE", desc: "The root of the 400-year cycle protocol.", poster: '/images/cineworks/poster1.png' },
+                            { title: "Prophetic Frequency", id: "msKxh1gInMU", desc: "Audio synthesis of the coming invasion.", poster: '/images/cineworks/poster3.png' }
                         ].map((v, i) => (
                             <motion.div 
                                 key={i}
