@@ -487,24 +487,15 @@ export default function Gateway() {
 
     const isUnlocked = user || isAscended;
 
-    const LockedOverlay = ({ title }: { title: string }) => (
-        <div className="absolute inset-0 bg-[#050505]/95 backdrop-blur-3xl z-[40] flex flex-col items-center justify-center p-8 text-center space-y-6 animate-fade-in">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/20 relative group">
-                <div className="absolute inset-0 bg-white/5 rounded-full animate-ping opacity-20"></div>
-                <Lock className="w-6 h-6 text-white/40 group-hover:text-white transition-colors" />
-            </div>
-            <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white glitch-text" data-text="PROTOCOL BREACH">PROTOCOL BREACH</h4>
-                <p className="text-[8px] text-white/40 uppercase tracking-[0.2em] max-w-[200px]">Authentication required to decrypt {title}.</p>
-            </div>
-            <button 
-                onClick={() => { playSfx('click'); setIsAuthModalOpen(true); }}
-                onMouseEnter={() => playSfx('hover')}
-                className="px-6 py-3 bg-white text-black rounded-xl text-[9px] font-black uppercase tracking-[0.3em] hover:scale-105 transition-transform active:scale-95"
-            >
-                Initialize Profile
-            </button>
+    const sectionOfflineClass = 'grayscale opacity-60 cursor-not-allowed pointer-events-none select-none';
 
+    const OfflineOverlay = ({ title, subtitle = 'Protocol Offline' }: { title: string; subtitle?: string }) => (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] p-6 text-center">
+            <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-4">
+                <Lock className="w-5 h-5 text-white/40" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">{title}</span>
+            <span className="text-[7px] font-mono text-white/20 uppercase tracking-widest">{subtitle}</span>
         </div>
     );
 
@@ -701,10 +692,9 @@ export default function Gateway() {
                     {/* Global Archive (COMMUNITY CHAT) */}
                     <motion.div 
                         layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'chat' ? 'fixed inset-0 z-[150] rounded-none p-4 pb-24' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group transition-all duration-500`}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group transition-all duration-500 ${sectionOfflineClass}`}
                     >
-                        {!isUnlocked && <LockedOverlay title="The Archive" />}
+                        <OfflineOverlay title="Transmission Archive" subtitle="Coming Soon" />
                         
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div className="flex items-center gap-4">
@@ -853,10 +843,9 @@ export default function Gateway() {
                     {/* Prophetic AI Oracle (AI CHAT) */}
                     <motion.div 
                         layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'oracle' ? 'row-span-3' : (isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2')} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group`}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-1 row-span-2' : 'md:col-span-4 md:row-span-2'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent min-h-[450px] relative overflow-hidden group ${sectionOfflineClass}`}
                     >
-                        {!isUnlocked && <LockedOverlay title="The Oracle" />}
+                        <OfflineOverlay title="AI Oracle" subtitle="Protocol Offline" />
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-all"><Terminal className="w-5 h-5 md:w-6 md:h-6 text-white" /></div>
@@ -985,16 +974,9 @@ export default function Gateway() {
                     {/* THE POOL / TREASURY */}
                     <motion.div 
                         layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pool' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-white/5 to-transparent cursor-not-allowed group grayscale opacity-60`}
+                        className={`bento-card col-span-1 ${isMobile ? 'col-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col justify-between border-white/10 perspective-card min-h-[300px] relative overflow-hidden bg-gradient-to-t from-white/5 to-transparent group ${sectionOfflineClass}`}
                     >
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-6 text-center">
-                            <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-4">
-                                <Lock className="w-5 h-5 text-white/40" />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">The Pool</span>
-                            <span className="text-[7px] font-mono text-white/20 uppercase tracking-widest">Protocol Offline</span>
-                        </div>
+                        <OfflineOverlay title="The Pool" subtitle="Protocol Offline" />
                         <div className="space-y-8">
                             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10"><Wallet className="w-5 h-5 md:w-6 md:h-6 text-white/20" /></div>
                             <h3 className="font-ritual text-lg md:text-xl font-black uppercase text-white/40">The Pool</h3>
@@ -1089,11 +1071,9 @@ export default function Gateway() {
                     {/* Global Pulse Terminal */}
                     <motion.div 
                         layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        onClick={() => toggleExpand('pulse')}
-                        className={`bento-card col-span-1 ${isMobile && expandedCard === 'pulse' ? 'col-span-2 row-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative cursor-pointer`}
+                        className={`bento-card col-span-1 ${isMobile ? 'col-span-2' : 'md:col-span-4'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-6 md:p-10 flex flex-col border-white/10 bg-black/60 min-h-[300px] overflow-hidden relative ${sectionOfflineClass}`}
                     >
-                        {!isUnlocked && <LockedOverlay title="Global Pulse" />}
+                        <OfflineOverlay title="Global Pulse" subtitle="Protocol Offline" />
                         <div className="flex items-center gap-4 mb-6">
                             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10"><Signal className="w-5 h-5 text-white animate-pulse" /></div>
                             <span className="text-[10px] font-black uppercase text-white">Pulse</span>
@@ -1377,11 +1357,9 @@ export default function Gateway() {
                     {/* Historical Timeline */}
                     <motion.div 
                         layout={isMobile}
-                        onMouseEnter={() => playSfx('hover')}
-                        onClick={() => toggleExpand('timeline')}
-                        className={`bento-card col-span-2 ${isMobile && expandedCard === 'timeline' ? 'row-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden cursor-pointer`}
+                        className={`bento-card col-span-2 ${isMobile ? 'col-span-2' : 'md:col-span-12'} liquid-glass rounded-[2rem] md:rounded-[4rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between border-white/10 group gap-8 relative overflow-hidden ${sectionOfflineClass}`}
                     >
-                        {!isUnlocked && <LockedOverlay title="Timeline" />}
+                        <OfflineOverlay title="Cycle Protocol" subtitle="Coming Soon" />
                         <div className="flex flex-col gap-4 text-center md:text-left relative z-10">
                             <div className="flex items-center justify-center md:justify-start gap-4 text-white"><History className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-[0.5em]">Cycle Protocol</span></div>
                             <h3 className="font-ritual text-2xl md:text-5xl font-black text-white gold-shimmer group-hover:glitch-text" data-text="ABRAHAM TO 2019">ABRAHAM TO 2019</h3>
