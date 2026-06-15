@@ -8,7 +8,7 @@ import { PATH_BY_ID } from '@/lib/game/paths';
 import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, X } from 'lucide-react';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
-import { DEST_BY_POI, RELIC_BY_ID, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
 import WeaponForge from '@/components/game/WeaponForge';
@@ -305,7 +305,18 @@ export default function WorldPage() {
                             <X className="w-4 h-4" />
                         </button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
-                        <h2 className="font-ritual text-2xl gold-shimmer mb-5">Satchel of Relics</h2>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-4">Satchel of Relics</h2>
+                        {(() => {
+                            const b = relicBonuses(character.inventory);
+                            const parts = [b.hp ? `+${b.hp} vitality` : '', b.damage ? `+${b.damage} strike` : '', b.reach ? `+${b.reach} reach` : ''].filter(Boolean);
+                            return parts.length ? (
+                                <div className="mb-5 flex flex-wrap gap-2">
+                                    {parts.map((p) => (
+                                        <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
+                                    ))}
+                                </div>
+                            ) : null;
+                        })()}
                         {character.inventory.length === 0 ? (
                             <p className="text-zinc-500 text-sm text-center py-10 leading-relaxed">No relics yet.<br />Step through the portals and descend the caverns to find them.</p>
                         ) : (
@@ -322,6 +333,7 @@ export default function WorldPage() {
                                                 <h4 className="text-sm font-bold text-white">{r.name}</h4>
                                                 <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{r.from}</p>
                                                 <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{r.desc}</p>
+                                                {r.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {r.power.label}</p>}
                                             </div>
                                         </div>
                                     );
@@ -354,6 +366,9 @@ export default function WorldPage() {
                     character={character}
                     weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
                     weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
+                    bonusHp={relicBonuses(character.inventory).hp}
+                    bonusDamage={relicBonuses(character.inventory).damage}
+                    bonusReach={relicBonuses(character.inventory).reach}
                     onVictory={onVictory}
                     onDefeat={onDefeat}
                     onExit={() => setCombatDest(null)}

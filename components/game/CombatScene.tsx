@@ -26,12 +26,18 @@ interface Props {
     character: GameCharacter;
     weaponDamage: number;
     weaponReach: number;
+    bonusHp?: number;
+    bonusDamage?: number;
+    bonusReach?: number;
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, onVictory, onDefeat, onExit }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, onVictory, onDefeat, onExit }: Props) {
+    const maxHp = PLAYER_HP + bonusHp;
+    const dmg = weaponDamage + bonusDamage;
+    const reach = weaponReach + bonusReach;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
@@ -41,7 +47,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const baseRef = useRef<HTMLDivElement>(null);
     const JOY_R = 46;
 
-    const [hp, setHp] = useState(PLAYER_HP);
+    const [hp, setHp] = useState(maxHp);
     const [boss, setBoss] = useState<{ name: string; hp: number; max: number } | null>(null);
     const [foesLeft, setFoesLeft] = useState(0);
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
@@ -58,7 +64,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
         const st = {
-            px: W / 2, py: H - TILE * 3, php: PLAYER_HP, atk: 0, swing: 0,
+            px: W / 2, py: H - TILE * 3, php: maxHp, atk: 0, swing: 0,
             foes: [] as Foe[], bossSpawned: false, done: false,
         };
         for (let i = 0; i < cfg.enemyCount; i++) {
@@ -105,12 +111,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 st.atk -= dt; st.swing -= dt;
                 const me = { x: st.px, y: st.py };
                 const forceStrike = attackRef.current || keysRef.current.has('j') || keysRef.current.has(' ');
-                const inReach = st.foes.some((f) => dist(f, me) <= weaponReach + (f.boss ? 6 : 0));
+                const inReach = st.foes.some((f) => dist(f, me) <= reach + (f.boss ? 6 : 0));
                 if (st.atk <= 0 && (inReach || forceStrike)) {
                     st.atk = 0.42; st.swing = 0.18;
                     for (const f of st.foes) {
-                        if (dist(f, me) <= weaponReach + (f.boss ? 6 : 0)) {
-                            f.hp -= weaponDamage; f.hurt = 0.12;
+                        if (dist(f, me) <= reach + (f.boss ? 6 : 0)) {
+                            f.hp -= dmg; f.hurt = 0.12;
                             const a = Math.atan2(f.y - st.py, f.x - st.px);
                             f.x += Math.cos(a) * 6; f.y += Math.sin(a) * 6;
                         }
@@ -196,7 +202,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             if (st.swing > 0) {
                 ctx.strokeStyle = `rgba(251,191,36,${st.swing / 0.18})`;
                 ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(st.px, st.py - 2, weaponReach, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, 0, Math.PI * 2); ctx.stroke();
             }
 
             // player
@@ -243,7 +249,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 </div>
                 {/* player hp */}
                 <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${hp}%`, background: hp > 30 ? '#34d399' : '#ef4444' }} />
+                    <div className="h-full rounded-full transition-all" style={{ width: `${(hp / maxHp) * 100}%`, background: hp > maxHp * 0.3 ? '#34d399' : '#ef4444' }} />
                 </div>
                 {boss && (
                     <div className="mt-1">

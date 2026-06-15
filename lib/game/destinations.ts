@@ -10,10 +10,18 @@ import type { Puzzle } from '@/lib/game/puzzles';
 
 export type DestinationKind = 'portal' | 'cave';
 
+export interface RelicPower {
+    hp?: number;
+    damage?: number;
+    reach?: number;
+    label: string;
+}
+
 export interface Relic {
     id: string;
     name: string;
     desc: string;
+    power?: RelicPower;
 }
 
 export interface LoreSection {
@@ -72,7 +80,17 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Fall', body: 'The fall was not a place you dropped from. It was a frequency you dropped to — from union into separation, from knowing into believing. Every lie of the world is built on that drop.' },
             { heading: 'The Way Back', body: 'You cannot climb back to Eden by effort. You return by laying down the cares of the world, one by one, until nothing stands between you and the Source.' },
         ],
-        relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.' }],
+        relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.', power: { hp: 25, label: '+25 vitality' } }],
+        combat: {
+            challenge: 'The way back is guarded. Cherubim with flaming swords bar the gate, as they have since the first exile. To pass, you must endure them.',
+            enemyCount: 3,
+            enemyHp: 26,
+            enemyDmg: 10,
+            bossName: 'The Cherub of the Flaming Sword',
+            bossHp: 150,
+            bossDmg: 19,
+            victory: 'The flaming sword lowers. For the first time since the fall, the gate of the Garden stands open to you.',
+        },
         puzzle: {
             kind: 'sequence',
             id: 'puz_eden',
@@ -102,7 +120,17 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Light', body: 'The Fair ran on light no one could fully explain — a luminance the records soften and the photographs cannot quite hold. What was demonstrated there, and quietly retired?' },
             { heading: 'The Orphans', body: 'Children arrived by the trainload in those years, their origins blurred in the ledgers. A history is not only what is built. It is also what is conveniently forgotten.' },
         ],
-        relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.' }],
+        relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.', power: { hp: 15, damage: 2, label: '+15 vitality · +2 strike' } }],
+        combat: {
+            challenge: 'The white halls are not empty. The Erased — those the ledgers forgot — drift the corridors, and the Caretaker comes to keep his secret buried.',
+            enemyCount: 4,
+            enemyHp: 24,
+            enemyDmg: 10,
+            bossName: 'The Caretaker of the Fair',
+            bossHp: 165,
+            bossDmg: 20,
+            victory: 'The Caretaker fades, his ledger spilling burned pages across the marble. What was hidden is yours to read.',
+        },
         puzzle: {
             kind: 'dials',
             id: 'puz_fair',
@@ -137,7 +165,7 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Hum', body: 'The King\'s Chamber answers a single note. Strike it and the whole room becomes an instrument. Whatever it was tuned to, the builders meant for it to resonate.' },
             { heading: 'The Question', body: 'The honest question is not how primitive men dragged these stones. It is why we were taught they were primitive at all.' },
         ],
-        relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.' }],
+        relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.', power: { reach: 8, label: '+reach' } }],
         combat: {
             challenge: 'The chamber is not empty. Shades of those who died seeking its secret still guard the stone. Defend yourself.',
             enemyCount: 3,
@@ -181,7 +209,17 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Destroyer', body: 'A red wanderer that returns in long ages, dragging fire and flood across the sky. The Kolbrin names it where your textbooks leave only silence and superstition.' },
             { heading: 'The Pattern', body: 'Read enough forbidden books and you stop seeing contradictions. You start seeing one story, told in many tongues, guarded by many hands.' },
         ],
-        relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.' }],
+        relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.', power: { damage: 4, label: '+4 strike' } }],
+        combat: {
+            challenge: 'The vault remembers the flood. Shades of the drowned rise from the black water to keep the Bronzebook from unworthy hands.',
+            enemyCount: 4,
+            enemyHp: 28,
+            enemyDmg: 11,
+            bossName: "The Destroyer's Herald",
+            bossHp: 190,
+            bossDmg: 22,
+            victory: 'The herald sinks back beneath the still black water. The Bronzebook lies open, and unguarded.',
+        },
         puzzle: {
             kind: 'sequence',
             id: 'puz_kolbrin',
@@ -211,7 +249,17 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Tablets', body: 'Thirteen tablets of imperishable emerald, recording a science of mind and matter older than the flood. Most who quote them have never stood where they are kept.' },
             { heading: 'The Light Within', body: 'The Source you are walking back toward was never far. It is the light the body was built to house. "Man, know thyself, and thou shalt know the All."' },
         ],
-        relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.' }],
+        relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.', power: { damage: 6, label: '+6 strike' } }],
+        combat: {
+            challenge: 'No one reads the Tablets unchallenged. The thought-forms of every age that ever sought them rise — and the Guardian of the Threshold rises with them.',
+            enemyCount: 4,
+            enemyHp: 30,
+            enemyDmg: 12,
+            bossName: 'The Guardian of the Threshold',
+            bossHp: 230,
+            bossDmg: 24,
+            victory: 'The Guardian inclines its head and unmakes itself. "Pass," says Hermes. "You have earned the All."',
+        },
         puzzle: {
             kind: 'sequence',
             id: 'puz_emerald',
@@ -234,3 +282,19 @@ export const RELIC_BY_ID: Record<string, Relic & { from: string }> = DESTINATION
     for (const r of d.relics) acc[r.id] = { ...r, from: d.name };
     return acc;
 }, {} as Record<string, Relic & { from: string }>);
+
+// Sum the passive combat bonuses from the relics a soul carries.
+export function relicBonuses(inventory: string[]): { hp: number; damage: number; reach: number } {
+    let hp = 0;
+    let damage = 0;
+    let reach = 0;
+    for (const id of inventory) {
+        const p = RELIC_BY_ID[id]?.power;
+        if (p) {
+            hp += p.hp || 0;
+            damage += p.damage || 0;
+            reach += p.reach || 0;
+        }
+    }
+    return { hp, damage, reach };
+}
