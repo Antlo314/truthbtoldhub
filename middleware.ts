@@ -15,6 +15,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // The initiation is open to everyone — the game is the front door now.
+  if (pathname === '/awakening' || pathname.startsWith('/awakening/')) {
+    return NextResponse.next();
+  }
+
   // Allow Next.js internals and api
   if (pathname.startsWith('/_next') || pathname.startsWith('/api/')) {
     return NextResponse.next();
