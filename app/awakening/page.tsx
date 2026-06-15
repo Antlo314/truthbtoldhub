@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
 import { useGameStore } from '@/lib/store/useGameStore';
+import KenneySprite, { ROGUELIKE_CHAR, TRUTH_TILE } from '@/components/game/KenneySprite';
 
 // ============================================================
 //  CHAPTER I — THE AWAKENING  (first-person POV)
@@ -204,8 +205,45 @@ export default function AwakeningPage() {
             {/* the vision behind your eyelids — focuses from blur to clear */}
             <div className={`pov-vision ${focused ? 'focused' : ''}`} />
 
-            {/* ===== Truth's sprite slot — a Kenney sprite will stand here in first person =====
-                (intentionally empty until the Kenney art is wired in) */}
+            {/* Truth, standing before you in first person (Kenney sprite) */}
+            {phase === 'scene' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 1.6, ease: 'easeOut' }}
+                    className="absolute left-0 right-0 top-[15%] z-[2] flex justify-center pointer-events-none"
+                >
+                    <div className="relative truth-float">
+                        <div
+                            className="absolute left-1/2 top-1/2 rounded-full"
+                            style={{
+                                width: 400,
+                                height: 400,
+                                transform: 'translate(-50%,-50%)',
+                                background: 'radial-gradient(circle, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.05) 45%, transparent 68%)',
+                                filter: 'blur(4px)',
+                            }}
+                        />
+                        <KenneySprite
+                            {...ROGUELIKE_CHAR}
+                            {...TRUTH_TILE}
+                            scale={16}
+                            style={{ position: 'relative', filter: 'drop-shadow(0 10px 12px rgba(0,0,0,0.55))' }}
+                        />
+                        <div
+                            className="absolute left-1/2"
+                            style={{
+                                bottom: -16,
+                                transform: 'translateX(-50%)',
+                                width: 170,
+                                height: 24,
+                                borderRadius: '50%',
+                                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 70%)',
+                            }}
+                        />
+                    </div>
+                </motion.div>
+            )}
 
             {/* dialogue */}
             <AnimatePresence>

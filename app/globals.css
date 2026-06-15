@@ -309,6 +309,13 @@ h1, h2, h3, .font-ritual {
     100% { height: 6%; }    /* settled, open */
 }
 
+/* Truth, breathing in place */
+.truth-float { animation: truthFloat 4.5s ease-in-out infinite; }
+@keyframes truthFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
 .awaken-caret {
     color: var(--aether-gold);
     margin-left: 2px;
