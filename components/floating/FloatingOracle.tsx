@@ -6,6 +6,7 @@ import { MessageSquare, Send, X, Flame, ShieldAlert, Sparkles, User, ChevronDown
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 
 // --- SFX ---
 let bubbleHoverSfx: any = null;
@@ -18,6 +19,7 @@ export default function FloatingOracle() {
     const [hasNewMessage, setHasNewMessage] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const chatButtonRef = useRef<HTMLButtonElement>(null);
+    const pathname = usePathname();
 
     const { messages, input, handleInputChange, handleSubmit, isLoading } = (useChat as any)({
         api: '/api/nehemiah',
@@ -110,7 +112,9 @@ export default function FloatingOracle() {
         }
     };
 
-    if (!mounted || !user) return null;
+    // Hide the oracle inside the game so it never blocks the controls / breaks immersion.
+    const onGameRoute = pathname?.startsWith('/world') || pathname?.startsWith('/awakening');
+    if (!mounted || !user || onGameRoute) return null;
 
     return (
         <div className="fixed bottom-6 right-6 z-[99] flex flex-col items-end">

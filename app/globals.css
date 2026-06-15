@@ -309,6 +309,16 @@ h1, h2, h3, .font-ritual {
     100% { height: 6%; }    /* settled, open */
 }
 
+/* The world canvas fills its container, crisp pixels */
+.world-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+}
+
 /* Truth, breathing in place */
 .truth-float { animation: truthFloat 4.5s ease-in-out infinite; }
 @keyframes truthFloat {

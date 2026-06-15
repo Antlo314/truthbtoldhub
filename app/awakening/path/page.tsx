@@ -132,14 +132,14 @@ export default function PathPage() {
 
                     <div className="mt-12 text-center space-y-4">
                         <p className="text-[11px] text-zinc-500 font-mono uppercase tracking-[0.2em]">
-                            The first cavern is being prepared. Your world opens soon.
+                            Truth waits in the first cavern. Your journey begins.
                         </p>
                         <Link
-                            href="/self"
+                            href="/world"
                             className="inline-flex items-center gap-2 px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black"
                             style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
                         >
-                            Enter the Sanctum <ArrowRight className="w-3.5 h-3.5" />
+                            Enter the Cavern <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
                 </div>
