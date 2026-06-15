@@ -5,11 +5,14 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, X } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, X } from 'lucide-react';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { DEST_BY_POI, RELIC_BY_ID, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
+import CombatScene from '@/components/game/CombatScene';
+import WeaponForge from '@/components/game/WeaponForge';
+import { WEAPON_BY_ID } from '@/lib/game/weapons';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -29,6 +32,8 @@ export default function WorldPage() {
     const founderNumber = useGameStore((s) => s.founderNumber);
     const claimRelic = useGameStore((s) => s.claimRelic);
     const saveToCloud = useGameStore((s) => s.saveToCloud);
+    const equipWeapon = useGameStore((s) => s.equipWeapon);
+    const markCleared = useGameStore((s) => s.markCleared);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -40,6 +45,8 @@ export default function WorldPage() {
     const [isArchitect, setIsArchitect] = useState(false);
     const [activeDest, setActiveDest] = useState<Destination | null>(null);
     const [satchelOpen, setSatchelOpen] = useState(false);
+    const [forgeOpen, setForgeOpen] = useState(false);
+    const [combatDest, setCombatDest] = useState<Destination | null>(null);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -69,7 +76,15 @@ export default function WorldPage() {
         setHint(false);
         const dest = DEST_BY_POI[poi.id];
         if (dest) {
-            setActiveDest(dest);
+            const ch = useGameStore.getState().character;
+            const needsFight = !!dest.combat && !ch.cleared.includes(dest.poiId);
+            if (needsFight && !ch.equipped.weapon) {
+                setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truth’s Hut and forge your first weapon.', color: dest.accent });
+            } else if (needsFight) {
+                setCombatDest(dest);
+            } else {
+                setActiveDest(dest);
+            }
             return;
         }
         if (poi.type === 'hut') {
@@ -94,6 +109,30 @@ export default function WorldPage() {
         const r = RELIC_BY_ID[relicId];
         showToast(`✦ ${r?.name || 'Relic'} claimed`);
     }, [claimRelic, saveToCloud, showToast]);
+
+    const handleForge = useCallback((id: string) => {
+        equipWeapon(id);
+        saveToCloud();
+        setForgeOpen(false);
+        showToast(`✦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged — you are armed`);
+    }, [equipWeapon, saveToCloud, showToast]);
+
+    const onVictory = useCallback(() => {
+        setCombatDest((d) => {
+            if (d) {
+                markCleared(d.poiId);
+                saveToCloud();
+                showToast(d.combat?.victory || 'The guardian falls.');
+                setActiveDest(d);
+            }
+            return null;
+        });
+    }, [markCleared, saveToCloud, showToast]);
+
+    const onDefeat = useCallback(() => {
+        setCombatDest(null);
+        showToast('The shades overwhelm you. Rest, and return stronger.');
+    }, [showToast]);
 
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
 
@@ -230,6 +269,17 @@ export default function WorldPage() {
                             </>
                         )}
 
+                        {/* first weapon */}
+                        {!character.equipped.weapon ? (
+                            <button onClick={() => { setHutOpen(false); setForgeOpen(true); }} className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                <Swords className="w-3.5 h-3.5" /> Forge your first weapon
+                            </button>
+                        ) : (
+                            <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-zinc-500 flex items-center justify-center gap-2">
+                                <Swords className="w-3 h-3 text-aether-gold" /> Armed · {WEAPON_BY_ID[character.equipped.weapon]?.name}
+                            </p>
+                        )}
+
                         {/* architect access */}
                         {isArchitect && (
                             <Link href="/hut-admin" className="mt-6 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
@@ -282,6 +332,22 @@ export default function WorldPage() {
                     inventory={character.inventory}
                     onClaim={handleClaim}
                     onExit={() => setActiveDest(null)}
+                />
+            )}
+
+            {/* first-weapon forge */}
+            {forgeOpen && <WeaponForge onForge={handleForge} onClose={() => setForgeOpen(false)} />}
+
+            {/* combat encounter */}
+            {combatDest && combatDest.combat && (
+                <CombatScene
+                    destination={combatDest}
+                    character={character}
+                    weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
+                    weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
+                    onVictory={onVictory}
+                    onDefeat={onDefeat}
+                    onExit={() => setCombatDest(null)}
                 />
             )}
         </div>

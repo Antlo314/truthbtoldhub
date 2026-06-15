@@ -26,6 +26,17 @@ export interface Guide {
     intro: string;
 }
 
+export interface CombatConfig {
+    challenge: string;   // line shown when the encounter begins
+    enemyCount: number;
+    enemyHp: number;
+    enemyDmg: number;    // contact damage per second
+    bossName: string;
+    bossHp: number;
+    bossDmg: number;
+    victory: string;     // line on victory
+}
+
 export interface Destination {
     poiId: string;       // overworld POI id that opens this
     kind: DestinationKind;
@@ -36,6 +47,7 @@ export interface Destination {
     guide: Guide;
     lore: LoreSection[];
     relics: Relic[];
+    combat?: CombatConfig;
 }
 
 export const DESTINATIONS: Destination[] = [
@@ -98,6 +110,16 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Question', body: 'The honest question is not how primitive men dragged these stones. It is why we were taught they were primitive at all.' },
         ],
         relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.' }],
+        combat: {
+            challenge: 'The chamber is not empty. Shades of those who died seeking its secret still guard the stone. Defend yourself.',
+            enemyCount: 3,
+            enemyHp: 28,
+            enemyDmg: 11,
+            bossName: 'The Sentinel of Stone',
+            bossHp: 170,
+            bossDmg: 20,
+            victory: 'The guardian dissolves into dust and silence. The hum of the stone steadies — it has accepted you.',
+        },
     },
     {
         poiId: 'dest_kolbrin',

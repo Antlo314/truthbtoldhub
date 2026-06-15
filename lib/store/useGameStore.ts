@@ -29,6 +29,7 @@ export interface CharacterAppearance {
 }
 
 export interface EquippedItems {
+    weapon: string | null;
     clothing: string | null;
     relic: string | null;
     scroll: string | null;
@@ -42,6 +43,7 @@ export interface GameCharacter {
     skillPoints: number;     // unspent points
     founderClaimed: boolean; // one-time founder reward granted?
     inventory: string[];     // claimed relic ids
+    cleared: string[];       // destination ids whose guardians are defeated
     equipped: EquippedItems;
 }
 
@@ -57,7 +59,8 @@ const DEFAULT_CHARACTER: GameCharacter = {
     skillPoints: 1,
     founderClaimed: false,
     inventory: [],
-    equipped: { clothing: 'plain', relic: null, scroll: null },
+    cleared: [],
+    equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
 };
 
 function freshCharacter(): GameCharacter {
@@ -66,6 +69,7 @@ function freshCharacter(): GameCharacter {
         appearance: { ...DEFAULT_CHARACTER.appearance, bodyTile: { ...DEFAULT_CHARACTER.appearance.bodyTile } },
         skills: [...DEFAULT_CHARACTER.skills],
         inventory: [...DEFAULT_CHARACTER.inventory],
+        cleared: [...DEFAULT_CHARACTER.cleared],
         equipped: { ...DEFAULT_CHARACTER.equipped },
     };
 }
@@ -81,6 +85,8 @@ interface GameState {
     setPath: (path: GamePath) => void;
     learnSkill: (id: string) => void;
     claimRelic: (id: string) => void;
+    equipWeapon: (id: string) => void;
+    markCleared: (destId: string) => void;
     completeAwakening: () => void;
     reset: () => void;
 
@@ -121,6 +127,16 @@ export const useGameStore = create<GameState>()(
                     const c = s.character;
                     if (c.inventory.includes(id)) return {};
                     return { character: { ...c, inventory: [...c.inventory, id] } };
+                }),
+
+            equipWeapon: (id) =>
+                set((s) => ({ character: { ...s.character, equipped: { ...s.character.equipped, weapon: id } } })),
+
+            markCleared: (destId) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.cleared.includes(destId)) return {};
+                    return { character: { ...c, cleared: [...c.cleared, destId] } };
                 }),
 
             completeAwakening: () => set({ initiated: true }),
@@ -228,6 +244,7 @@ export const useGameStore = create<GameState>()(
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
                         inventory: pc.inventory || c.character.inventory,
+                        cleared: pc.cleared || c.character.cleared,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };
