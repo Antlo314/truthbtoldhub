@@ -5,33 +5,32 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID } from '@/lib/game/paths';
-import { ArrowLeft, ScrollText } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, X } from 'lucide-react';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
-const TRUTH_LINES = [
-    'Walk slowly. The cavern shows itself only to the patient eye.',
-    'That shade was once a soul like you — bound here by what it would not release.',
-    'Every scroll you recover is a lie the world told you, undone.',
-    'The Source is not above you, nor ahead of you. It is beneath the noise. Be still.',
-];
+interface InteractPOI {
+    id: string;
+    type: string;
+    name: string;
+    detail?: string;
+}
 
 export default function WorldPage() {
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
 
     const [mounted, setMounted] = useState(false);
-    const [dialogue, setDialogue] = useState<string | null>(null);
+    const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
+    const [hutOpen, setHutOpen] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [hint, setHint] = useState(true);
-    const [scrolls, setScrolls] = useState(0);
-    const lineIdx = useRef(0);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setMounted(true);
         loadFromCloud();
-        const t = setTimeout(() => setHint(false), 4500);
+        const t = setTimeout(() => setHint(false), 5000);
         return () => clearTimeout(t);
     }, [loadFromCloud]);
 
@@ -41,17 +40,18 @@ export default function WorldPage() {
         toastTimer.current = setTimeout(() => setToast(null), 2600);
     }, []);
 
-    const onTalk = useCallback(() => {
-        setDialogue(TRUTH_LINES[lineIdx.current % TRUTH_LINES.length]);
-        lineIdx.current += 1;
+    const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
+        if (poi.type === 'hut') {
+            setHutOpen(true);
+        } else if (poi.type === 'npc') {
+            setDialogue({ speaker: poi.name, text: poi.detail || '…' });
+        } else if (poi.type === 'cave') {
+            setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
+        } else if (poi.type === 'portal') {
+            setDialogue({ speaker: 'Portal to the Past', text: 'The veil between ages shimmers, but holds. Its hour has not yet come.', color: '#a855f7' });
+        }
     }, []);
-
-    const onCollect = useCallback(() => {
-        setScrolls((n) => n + 1);
-        showToast('✦ Scroll of Knowledge recovered');
-        setHint(false);
-    }, [showToast]);
 
     const onEncounter = useCallback(() => {
         showToast('A shade drifts through you — cold, and searching…');
@@ -63,58 +63,81 @@ export default function WorldPage() {
     const path = character.path ? PATH_BY_ID[character.path] : null;
 
     return (
-        <div
-            className="relative w-full overflow-hidden bg-void select-none"
-            style={{ height: '100dvh', touchAction: 'none' }}
-        >
-            <WorldCanvas character={character} onTalk={onTalk} onCollect={onCollect} onEncounter={onEncounter} />
+        <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
+            <WorldCanvas character={character} onInteract={onInteract} onEncounter={onEncounter} />
 
             {/* HUD */}
             <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 pointer-events-none">
-                <Link
-                    href="/awakening/path"
-                    className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-white"
-                >
+                <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-white">
                     <ArrowLeft className="w-4 h-4" />
                 </Link>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
                     <span className="font-ritual text-sm text-white">{character.name || 'Soul'}</span>
                     {path && (
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: path.color }}>
-                            · {path.name}
-                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: path.color }}>· {path.name}</span>
                     )}
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
-                    <ScrollText className="w-3.5 h-3.5 text-aether-gold" />
-                    <span className="text-xs font-black text-aether-gold">{scrolls}</span>
-                </div>
+                <div className="w-8" />
             </div>
 
-            {/* hint */}
             {hint && (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 animate-pulse">drag to move · find Truth</p>
+                <div className="absolute left-1/2 top-[58%] -translate-x-1/2 text-center pointer-events-none">
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/45 animate-pulse">drag to roam · find Truth's Hut</p>
                 </div>
             )}
 
-            {/* toast */}
             {toast && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/70 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide animate-fade-in pointer-events-none whitespace-nowrap">
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/70 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide pointer-events-none whitespace-nowrap">
                     {toast}
                 </div>
             )}
 
-            {/* dialogue */}
+            {/* NPC / cave / portal dialogue */}
             {dialogue && (
-                <div className="absolute inset-x-0 bottom-0 p-4 flex justify-center" onClick={() => setDialogue(null)}>
-                    <div className="w-full max-w-xl glass-panel rounded-2xl p-5 border border-[rgba(251,191,36,0.15)] cursor-pointer">
+                <div className="absolute inset-x-0 bottom-0 p-4 flex justify-center z-20" onClick={() => setDialogue(null)}>
+                    <div className="w-full max-w-xl glass-panel rounded-2xl p-5 border cursor-pointer" style={{ borderColor: (dialogue.color || '#fbbf24') + '40' }}>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.35em]" style={{ color: dialogue.color || '#fbbf24' }}>{dialogue.speaker}</span>
                             <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
                         </div>
-                        <p className="font-ritual text-base md:text-lg text-white/90 leading-relaxed">{dialogue}</p>
+                        <p className="font-ritual text-base md:text-lg text-white/90 leading-relaxed">{dialogue.text}</p>
                         <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 mt-3">tap to close</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Truth's Hut — daily dispatch */}
+            {hutOpen && (
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setHutOpen(false)}>
+                    <div className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 border border-[rgba(251,191,36,0.2)] relative" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setHutOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white">
+                            <X className="w-4 h-4" />
+                        </button>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Truth's Hut</p>
+                        <h2 className="font-ritual text-2xl md:text-3xl gold-shimmer mb-5">The Daily Dispatch</h2>
+
+                        <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-5">
+                            <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60 mb-2">Today · From Truth</p>
+                            <p className="font-ritual text-white/90 leading-relaxed">
+                                Welcome home, {character.name || 'initiate'}. You stand at the center of all things. Each day I will leave word here —
+                                a truth unearthed, a scroll to study, a mission to walk. Return often. The world is waking with you.
+                            </p>
+                        </div>
+
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Dispatch Shelf</p>
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { icon: FileText, label: 'Scrolls' },
+                                { icon: Film, label: 'Visions' },
+                                { icon: Music, label: 'Frequencies' },
+                            ].map(({ icon: Icon, label }) => (
+                                <div key={label} className="flex flex-col items-center gap-2 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-zinc-500">
+                                    <Icon className="w-5 h-5 text-aether-gold/70" />
+                                    <span className="text-[9px] uppercase tracking-widest">{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-[10px] text-zinc-600 text-center mt-4 font-mono uppercase tracking-widest">Daily uploads — opening soon</p>
                     </div>
                 </div>
             )}
