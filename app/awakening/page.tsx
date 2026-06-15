@@ -15,7 +15,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 //  LPC / AI portrait of Truth later.
 // ============================================================
 
-type Phase = 'gate' | 'eyes' | 'plunge' | 'scene';
+type Phase = 'eyes' | 'plunge' | 'scene';
 
 interface Line {
     t: string;
@@ -81,7 +81,7 @@ function Typewriter({
 // ---- placeholder figure of Truth (swap for LPC/AI art) ----
 function TruthFigure() {
     return (
-        <div className="relative flex items-end justify-center w-full" style={{ height: '44vh' }}>
+        <div className="relative flex items-end justify-center w-full h-full">
             {/* aether glow */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div
@@ -165,7 +165,7 @@ export default function AwakeningPage() {
     const completeAwakening = useGameStore((s) => s.completeAwakening);
 
     const [mounted, setMounted] = useState(false);
-    const [phase, setPhase] = useState<Phase>('gate');
+    const [phase, setPhase] = useState<Phase>('eyes');
     const [lineIndex, setLineIndex] = useState(0);
     const [typingDone, setTypingDone] = useState(false);
     const [reveal, setReveal] = useState(false);
@@ -175,32 +175,37 @@ export default function AwakeningPage() {
 
     const droneRef = useRef<Howl | null>(null);
 
-    useEffect(() => setMounted(true), []);
-    useEffect(() => {
-        return () => {
-            droneRef.current?.stop();
-        };
-    }, []);
-
-    const begin = useCallback(() => {
-        // first interaction unlocks audio; the soft drone fades in
+    const startAudio = useCallback(() => {
+        if (droneRef.current) return;
         try {
             const drone = new Howl({
                 src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
                 loop: true,
                 volume: 0,
             });
-            drone.play();
+            drone.play(); // Howler resumes on the first gesture if autoplay is blocked
             drone.fade(0, 0.22, 4000);
             droneRef.current = drone;
         } catch {
             /* audio is optional */
         }
-        setPhase('eyes');
     }, []);
+
+    // mount: reveal the scene and bring up the ambient drone
+    useEffect(() => {
+        setMounted(true);
+        startAudio();
+        const onFirst = () => startAudio();
+        window.addEventListener('pointerdown', onFirst, { once: true });
+        return () => {
+            window.removeEventListener('pointerdown', onFirst);
+            droneRef.current?.stop();
+        };
+    }, [startAudio]);
 
     // drive the cinematic timing: eyes -> plunge -> scene
     useEffect(() => {
+        if (!mounted) return;
         if (phase === 'eyes') {
             const id = setTimeout(() => setPhase('plunge'), 4200);
             return () => clearTimeout(id);
@@ -209,7 +214,7 @@ export default function AwakeningPage() {
             const id = setTimeout(() => setPhase('scene'), 1300);
             return () => clearTimeout(id);
         }
-    }, [phase]);
+    }, [phase, mounted]);
 
     const current = LINES[lineIndex];
 
@@ -264,7 +269,7 @@ export default function AwakeningPage() {
     return (
         <div className="awaken-root select-none">
             {/* skip */}
-            {phase !== 'gate' && !named && (
+            {!named && (
                 <button
                     onClick={() => {
                         setPhase('scene');
@@ -278,28 +283,12 @@ export default function AwakeningPage() {
             )}
 
             <AnimatePresence mode="wait">
-                {/* ---- GATE ---- */}
-                {phase === 'gate' && (
-                    <motion.button
-                        key="gate"
-                        onClick={begin}
-                        exit={{ opacity: 0, transition: { duration: 0.8 } }}
-                        className="absolute inset-0 flex flex-col items-center justify-center gap-6 cursor-pointer"
-                    >
-                        <div
-                            className="w-2 h-2 rounded-full bg-aether-gold"
-                            style={{ boxShadow: '0 0 24px 6px rgba(251,191,36,0.5)', animation: 'awakenBreathe 3s ease-in-out infinite' }}
-                        />
-                        <span className="awaken-pulse">open your eyes</span>
-                    </motion.button>
-                )}
-
                 {/* ---- EYES / PLUNGE ---- */}
                 {(phase === 'eyes' || phase === 'plunge') && (
                     <motion.div
                         key="eyes"
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: 1.2 } }}
+                        animate={{ opacity: 1, transition: { duration: 0.6 } }}
                         className={`awaken-eyes ${phase === 'eyes' ? 'eyes-in' : 'eyes-plunge'}`}
                     >
                         <Eye />
@@ -312,16 +301,20 @@ export default function AwakeningPage() {
                     <motion.div
                         key="scene"
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: 1.6 } }}
-                        className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4"
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1.2 }}
+                        className="absolute inset-0"
                     >
-                        <div className="flex-1 flex items-end justify-center w-full">
+                        {/* Truth stands in the field above the dialogue */}
+                        <div className="absolute top-0 left-0 right-0 bottom-[210px] flex items-end justify-center">
                             <TruthFigure />
                         </div>
 
+                        {/* dialogue, pinned to the bottom of the screen */}
+                        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex justify-center">
                         <div
                             onClick={advance}
-                            className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 mb-4 cursor-pointer border border-[rgba(251,191,36,0.12)]"
+                            className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)]"
                         >
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
@@ -385,6 +378,7 @@ export default function AwakeningPage() {
                                     Step into the light →
                                 </button>
                             )}
+                        </div>
                         </div>
                     </motion.div>
                 )}

@@ -232,11 +232,16 @@ h1, h2, h3, .font-ritual {
    CHAPTER I — THE AWAKENING
    ============================================================ */
 .awaken-root {
-    position: fixed;
-    inset: 0;
+    /* relative + explicit height so the scene is immune to the page-transition
+       wrapper in template.tsx (its transform/filter would otherwise capture a
+       position:fixed child and collapse the box). */
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    min-height: 100vh;
     background: #000;
     overflow: hidden;
-    z-index: 60;
+    z-index: 1;
 }
 
 .awaken-pulse {
