@@ -7,19 +7,19 @@ import { Howl } from 'howler';
 import { useGameStore } from '@/lib/store/useGameStore';
 
 // ============================================================
-//  CHAPTER I — THE AWAKENING
-//  Black -> eyes blink open -> plunge into the pupil -> Truth is
-//  revealed -> he speaks -> he asks your name. Pure React/CSS so
-//  it needs no engine and no art pipeline yet. The figure below
-//  is a deliberate placeholder, built to be swapped for the real
-//  LPC / AI portrait of Truth later.
+//  CHAPTER I — THE AWAKENING  (first-person POV)
+//  The screen IS your vision. Black -> your eyelids part open over
+//  the camera, groggy blinks, vision focuses from blur to clear ->
+//  Truth speaks -> he asks your name.
+//  Character art (Truth's sprite) will be a Kenney sprite dropped
+//  into the marked slot below; nothing fake is rendered until then.
 // ============================================================
 
-type Phase = 'eyes' | 'plunge' | 'scene';
+type Phase = 'waking' | 'scene';
 
 interface Line {
     t: string;
-    name?: boolean; // this line ends by asking for the player's name
+    name?: boolean;
 }
 
 const LINES: Line[] = [
@@ -78,94 +78,14 @@ function Typewriter({
     );
 }
 
-// ---- placeholder figure of Truth (swap for LPC/AI art) ----
-function TruthFigure() {
-    return (
-        <div className="relative flex items-end justify-center w-full h-full">
-            {/* aether glow */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div
-                    style={{
-                        width: 460,
-                        height: 460,
-                        borderRadius: '50%',
-                        background:
-                            'radial-gradient(circle, rgba(251,191,36,0.20) 0%, rgba(251,191,36,0.06) 42%, transparent 70%)',
-                        filter: 'blur(6px)',
-                    }}
-                />
-            </div>
-
-            <svg
-                viewBox="0 0 300 360"
-                width="280"
-                height="336"
-                className="relative"
-                style={{ filter: 'drop-shadow(0 0 26px rgba(251,191,36,0.18))', maxHeight: '44vh' }}
-                aria-label="A figure emerging from darkness"
-            >
-                <defs>
-                    <linearGradient id="truthBody" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1b1710" />
-                        <stop offset="55%" stopColor="#16120b" stopOpacity="0.9" />
-                        <stop offset="100%" stopColor="#16120b" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="truthRim" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="rgba(251,191,36,0)" />
-                        <stop offset="100%" stopColor="rgba(251,191,36,0.5)" />
-                    </linearGradient>
-                </defs>
-
-                {/* shoulders / torso fading into the dark */}
-                <path
-                    d="M60 360 C70 250 110 220 150 220 C190 220 230 250 240 360 Z"
-                    fill="url(#truthBody)"
-                    stroke="url(#truthRim)"
-                    strokeWidth="1.5"
-                />
-                {/* neck */}
-                <rect x="134" y="186" width="32" height="46" rx="12" fill="#17130c" />
-                {/* head */}
-                <ellipse cx="150" cy="150" rx="50" ry="58" fill="#1b1710" stroke="url(#truthRim)" strokeWidth="1.2" />
-                {/* the afro */}
-                <g fill="#15120b" stroke="url(#truthRim)" strokeWidth="1.4">
-                    <ellipse cx="150" cy="92" rx="74" ry="58" />
-                    <circle cx="92" cy="104" r="30" />
-                    <circle cx="208" cy="104" r="30" />
-                    <circle cx="116" cy="62" r="28" />
-                    <circle cx="184" cy="62" r="28" />
-                    <circle cx="150" cy="50" r="30" />
-                </g>
-                {/* faint, knowing eyes */}
-                <ellipse cx="131" cy="150" rx="6" ry="4" fill="rgba(251,191,36,0.85)" />
-                <ellipse cx="169" cy="150" rx="6" ry="4" fill="rgba(251,191,36,0.85)" />
-            </svg>
-        </div>
-    );
-}
-
-// ---- a single eye ----
-function Eye() {
-    return (
-        <div className="eye">
-            <div className="eye-sclera" />
-            <div className="eye-iris">
-                <div className="eye-pupil" />
-                <div className="eye-glint" />
-            </div>
-            <div className="eye-lid eye-lid-top" />
-            <div className="eye-lid eye-lid-bottom" />
-        </div>
-    );
-}
-
 export default function AwakeningPage() {
     const router = useRouter();
     const setName = useGameStore((s) => s.setName);
     const completeAwakening = useGameStore((s) => s.completeAwakening);
 
     const [mounted, setMounted] = useState(false);
-    const [phase, setPhase] = useState<Phase>('eyes');
+    const [phase, setPhase] = useState<Phase>('waking');
+    const [focused, setFocused] = useState(false);
     const [lineIndex, setLineIndex] = useState(0);
     const [typingDone, setTypingDone] = useState(false);
     const [reveal, setReveal] = useState(false);
@@ -183,7 +103,7 @@ export default function AwakeningPage() {
                 loop: true,
                 volume: 0,
             });
-            drone.play(); // Howler resumes on the first gesture if autoplay is blocked
+            drone.play(); // Howler resumes on first gesture if autoplay is blocked
             drone.fade(0, 0.22, 4000);
             droneRef.current = drone;
         } catch {
@@ -191,7 +111,7 @@ export default function AwakeningPage() {
         }
     }, []);
 
-    // mount: reveal the scene and bring up the ambient drone
+    // mount: reveal scene, start ambient audio
     useEffect(() => {
         setMounted(true);
         startAudio();
@@ -203,18 +123,16 @@ export default function AwakeningPage() {
         };
     }, [startAudio]);
 
-    // drive the cinematic timing: eyes -> plunge -> scene
+    // the waking cinematic: lids open over ~4.4s, vision focuses, then the scene
     useEffect(() => {
         if (!mounted) return;
-        if (phase === 'eyes') {
-            const id = setTimeout(() => setPhase('plunge'), 4200);
-            return () => clearTimeout(id);
-        }
-        if (phase === 'plunge') {
-            const id = setTimeout(() => setPhase('scene'), 1300);
-            return () => clearTimeout(id);
-        }
-    }, [phase, mounted]);
+        const t1 = setTimeout(() => setFocused(true), 2800);
+        const t2 = setTimeout(() => setPhase('scene'), 4400);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [mounted]);
 
     const current = LINES[lineIndex];
 
@@ -233,11 +151,9 @@ export default function AwakeningPage() {
         }
     }, [phase, typingDone, named, current, lineIndex]);
 
-    // advance with keyboard too
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (phase === 'scene' && (e.key === 'Enter' || e.key === ' ')) {
-                // don't hijack typing in the name field
                 const tag = (e.target as HTMLElement)?.tagName;
                 if (tag === 'INPUT') return;
                 e.preventDefault();
@@ -264,125 +180,124 @@ export default function AwakeningPage() {
         router.push('/awakening/create');
     };
 
+    const skip = () => {
+        setPhase('scene');
+        setFocused(true);
+        setLineIndex(LINES.length - 1);
+        setReveal(true);
+    };
+
     if (!mounted) return <div className="fixed inset-0 bg-black" />;
 
     return (
-        <div className="awaken-root select-none">
+        <div className="pov-root select-none">
             {/* skip */}
             {!named && (
                 <button
-                    onClick={() => {
-                        setPhase('scene');
-                        setLineIndex(LINES.length - 1);
-                        setReveal(true);
-                    }}
-                    className="fixed top-5 right-6 z-20 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-aether-gold transition-colors"
+                    onClick={skip}
+                    className="absolute top-5 right-6 z-30 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-aether-gold transition-colors"
                 >
                     skip ▸
                 </button>
             )}
 
-            <AnimatePresence mode="wait">
-                {/* ---- EYES / PLUNGE ---- */}
-                {(phase === 'eyes' || phase === 'plunge') && (
-                    <motion.div
-                        key="eyes"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: 0.6 } }}
-                        className={`awaken-eyes ${phase === 'eyes' ? 'eyes-in' : 'eyes-plunge'}`}
-                    >
-                        <Eye />
-                        <Eye />
-                    </motion.div>
-                )}
+            {/* the vision behind your eyelids — focuses from blur to clear */}
+            <div className={`pov-vision ${focused ? 'focused' : ''}`} />
 
-                {/* ---- SCENE ---- */}
+            {/* ===== Truth's sprite slot — a Kenney sprite will stand here in first person =====
+                (intentionally empty until the Kenney art is wired in) */}
+
+            {/* dialogue */}
+            <AnimatePresence>
                 {phase === 'scene' && (
                     <motion.div
                         key="scene"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 1.2 }}
-                        className="absolute inset-0"
+                        className="absolute inset-0 z-30"
                     >
-                        {/* Truth stands in the field above the dialogue */}
-                        <div className="absolute top-0 left-0 right-0 bottom-[210px] flex items-end justify-center">
-                            <TruthFigure />
-                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 px-4 pb-7 flex justify-center">
+                            <div
+                                onClick={advance}
+                                className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)]"
+                            >
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
+                                    <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
+                                </div>
 
-                        {/* dialogue, pinned to the bottom of the screen */}
-                        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 flex justify-center">
-                        <div
-                            onClick={advance}
-                            className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)]"
-                        >
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
-                                <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
-                            </div>
+                                <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
+                                    {!named ? (
+                                        <Typewriter
+                                            key={lineIndex}
+                                            text={current.t}
+                                            reveal={reveal}
+                                            onDone={() => setTypingDone(true)}
+                                        />
+                                    ) : (
+                                        <Typewriter
+                                            key="post"
+                                            text={`${finalName}. Yes — that name will mean something before the end.`}
+                                            reveal={reveal}
+                                            onDone={() => setTypingDone(true)}
+                                        />
+                                    )}
+                                </p>
 
-                            <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
-                                {!named ? (
-                                    <Typewriter
-                                        key={lineIndex}
-                                        text={current.t}
-                                        reveal={reveal}
-                                        onDone={() => setTypingDone(true)}
-                                    />
-                                ) : (
-                                    <Typewriter
-                                        key="post"
-                                        text={`${finalName}. Yes — that name will mean something before the end.`}
-                                        reveal={reveal}
-                                        onDone={() => setTypingDone(true)}
-                                    />
+                                {/* name input */}
+                                {!named && current?.name && typingDone && (
+                                    <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            autoFocus
+                                            value={nameInput}
+                                            onChange={(e) => setNameInput(e.target.value)}
+                                            maxLength={24}
+                                            placeholder="speak your name"
+                                            className="flex-1 bg-black/50 border border-[rgba(251,191,36,0.25)] rounded-lg px-4 py-3 text-base text-white tracking-wide focus:outline-none focus:border-aether-gold transition-colors font-ritual"
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="px-6 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.25em] text-black"
+                                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                        >
+                                            Name Yourself
+                                        </button>
+                                    </form>
                                 )}
-                            </p>
 
-                            {/* name input */}
-                            {!named && current?.name && typingDone && (
-                                <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
-                                    <input
-                                        autoFocus
-                                        value={nameInput}
-                                        onChange={(e) => setNameInput(e.target.value)}
-                                        maxLength={24}
-                                        placeholder="speak your name"
-                                        className="flex-1 bg-black/50 border border-[rgba(251,191,36,0.25)] rounded-lg px-4 py-3 text-base text-white tracking-wide focus:outline-none focus:border-aether-gold transition-colors font-ritual"
-                                    />
+                                {/* continue hint */}
+                                {!named && !current?.name && typingDone && lineIndex < LINES.length - 1 && (
+                                    <div className="mt-4 text-[10px] uppercase tracking-[0.3em] text-white/30 animate-pulse">▸ click to continue</div>
+                                )}
+
+                                {/* step into the light */}
+                                {named && typingDone && (
                                     <button
-                                        type="submit"
-                                        className="px-6 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.25em] text-black"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            stepIntoLight();
+                                        }}
+                                        className="mt-6 w-full sm:w-auto px-8 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.02]"
                                         style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
                                     >
-                                        Name Yourself
+                                        Step into the light →
                                     </button>
-                                </form>
-                            )}
-
-                            {/* continue hint */}
-                            {!named && !current?.name && typingDone && lineIndex < LINES.length - 1 && (
-                                <div className="mt-4 text-[10px] uppercase tracking-[0.3em] text-white/30 animate-pulse">▸ click to continue</div>
-                            )}
-
-                            {/* step into the light */}
-                            {named && typingDone && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        stepIntoLight();
-                                    }}
-                                    className="mt-6 w-full sm:w-auto px-8 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.02]"
-                                    style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                                >
-                                    Step into the light →
-                                </button>
-                            )}
-                        </div>
+                                )}
+                            </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* peripheral vignette — keeps the eye-aperture feel even when open */}
+            <div className="pov-vignette" />
+
+            {/* the eyelids themselves, framing your vision */}
+            <div className={`pov-lids ${phase === 'waking' ? 'pov-lids-in' : ''}`}>
+                <div className="pov-lid pov-lid-top" />
+                <div className="pov-lid pov-lid-bottom" />
+            </div>
         </div>
     );
 }
