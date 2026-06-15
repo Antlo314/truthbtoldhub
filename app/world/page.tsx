@@ -9,6 +9,7 @@ import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Setti
 import { QUESTS, questsFor, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
+import { founderBonuses } from '@/lib/game/founders';
 import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
@@ -445,19 +446,20 @@ export default function WorldPage() {
             {/* first-weapon forge */}
             {forgeOpen && <WeaponForge onForge={handleForge} onClose={() => setForgeOpen(false)} />}
 
-            {/* combat encounter — relics + your path's attunements stack */}
+            {/* combat encounter — relics + your path's attunements + founder blessing stack */}
             {combatDest && combatDest.combat && (() => {
                 const rb = relicBonuses(character.inventory);
                 const sb = skillBonuses(character.skills);
+                const fb = founderBonuses(founderNumber);
                 return (
                     <CombatScene
                         destination={combatDest}
                         character={character}
                         weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
                         weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
-                        bonusHp={rb.hp + sb.hp}
-                        bonusDamage={rb.damage + sb.damage}
-                        bonusReach={rb.reach + sb.reach}
+                        bonusHp={rb.hp + sb.hp + fb.hp}
+                        bonusDamage={rb.damage + sb.damage + fb.damage}
+                        bonusReach={rb.reach + sb.reach + fb.reach}
                         bonusRegen={sb.regen}
                         onVictory={onVictory}
                         onDefeat={onDefeat}

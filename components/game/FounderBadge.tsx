@@ -44,6 +44,7 @@ export function FounderSeal({ tier, founderNumber }: { tier: FounderTier; founde
             <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest">
                 <span style={{ color: tier.color }}>+{tier.bonusSkillPoints} skill {tier.bonusSkillPoints === 1 ? 'point' : 'points'}</span>
             </div>
+            <p className="text-[10px] font-black uppercase tracking-widest mt-2" style={{ color: tier.color }}>⚔ {tier.combat.label}</p>
             <p className="text-[10px] text-zinc-500 mt-3 leading-relaxed">{tier.perk}</p>
         </div>
     );

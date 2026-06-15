@@ -9,6 +9,15 @@ import { supabase } from '@/lib/supabase';
 
 export type FounderTierId = 'twelve' | 'forty' | 'one44';
 
+// A founder's permanent combat blessing — the earliest souls carry a
+// little more of the Source into every fight. Same axes as relics/skills.
+export interface FounderCombat {
+    hp?: number;
+    damage?: number;
+    reach?: number;
+    label: string;
+}
+
 export interface FounderTier {
     id: FounderTierId;
     name: string;
@@ -19,6 +28,7 @@ export interface FounderTier {
     ring: string;            // gradient for the seal
     blurb: string;
     perk: string;            // reserved season-two reward
+    combat: FounderCombat;   // permanent combat blessing for this tier
 }
 
 // Ordered best -> broadest. The first matching tier (n <= max) wins.
@@ -33,6 +43,7 @@ export const FOUNDER_TIERS: FounderTier[] = [
         ring: 'linear-gradient(135deg,#fff7d6 0%,#fbbf24 45%,#b45309 100%)',
         blurb: 'Among the first twelve to awaken — the cornerstone of the movement.',
         perk: 'Season II: a reserved super-perk slot + the Cornerstone relic.',
+        combat: { hp: 30, damage: 5, label: 'Cornerstone · +30 vitality, +5 might' },
     },
     {
         id: 'forty',
@@ -44,6 +55,7 @@ export const FOUNDER_TIERS: FounderTier[] = [
         ring: 'linear-gradient(135deg,#e9d5ff 0%,#a855f7 45%,#6b21a8 100%)',
         blurb: 'Tested in the wilderness — among the first forty.',
         perk: 'Season II: an exclusive Wilderness skill branch.',
+        combat: { hp: 20, damage: 3, label: 'Wilderness Elect · +20 vitality, +3 might' },
     },
     {
         id: 'one44',
@@ -55,6 +67,7 @@ export const FOUNDER_TIERS: FounderTier[] = [
         ring: 'linear-gradient(135deg,#cffafe 0%,#22d3ee 45%,#0e7490 100%)',
         blurb: 'Sealed among the first 144 to walk the path.',
         perk: 'Season II: the Sealed aura + early access to new caverns.',
+        combat: { hp: 12, damage: 2, label: 'Sealed Remnant · +12 vitality, +2 might' },
     },
 ];
 
@@ -64,6 +77,13 @@ export function founderTierFor(n: number | null | undefined): FounderTier | null
     if (!n || n < 1) return null;
     for (const t of FOUNDER_TIERS) if (n <= t.max) return t;
     return null;
+}
+
+// A founder's permanent combat blessing, by signup number. Stacks with
+// relicBonuses() and skillBonuses() on the same axes. Non-founders get zeros.
+export function founderBonuses(n: number | null | undefined): { hp: number; damage: number; reach: number } {
+    const c = founderTierFor(n)?.combat;
+    return { hp: c?.hp || 0, damage: c?.damage || 0, reach: c?.reach || 0 };
 }
 
 export async function getFounderStatus(): Promise<{ founderNumber: number | null; tier: FounderTier | null }> {
