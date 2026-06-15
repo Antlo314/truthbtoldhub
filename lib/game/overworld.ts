@@ -84,11 +84,12 @@ export function buildOverworld(): Overworld {
 
     const pois: POI[] = [
         { id: 'hut', type: 'hut', x: cx, y: cy, name: "Truth's Hut", detail: 'The centerpiece — daily dispatches and scrolls.' },
-        { id: 'cave_echoes', type: 'cave', x: 7, y: H - 8, name: 'Cave of Echoes' },
-        { id: 'cave_deep', type: 'cave', x: W - 8, y: 8, name: 'The Deep' },
-        { id: 'portal_past', type: 'portal', x: W - 9, y: H - 9, name: 'Portal to the Past' },
-        { id: 'npc_hana', type: 'npc', x: 13, y: cy + 2, name: 'Hana', npcTile: { col: 0, row: 5 }, detail: 'I have lost a scroll in the Cave of Echoes…' },
-        { id: 'npc_eli', type: 'npc', x: cx + 9, y: 12, name: 'Eli', npcTile: { col: 0, row: 6 }, detail: 'The shades grow bold near the portal. Be careful.' },
+        { id: 'dest_eden', type: 'portal', x: 8, y: 8, name: 'Eden — Before the Fall' },
+        { id: 'dest_emerald', type: 'portal', x: cx, y: 7, name: 'The Emerald Halls' },
+        { id: 'dest_fair', type: 'portal', x: W - 8, y: 8, name: 'St. Louis, 1904' },
+        { id: 'dest_giza', type: 'cave', x: 8, y: H - 8, name: 'Giza — The Engine of Stone' },
+        { id: 'dest_kolbrin', type: 'cave', x: W - 8, y: H - 8, name: 'The Kolbrin Vault' },
+        { id: 'npc_hana', type: 'npc', x: 14, y: cy + 5, name: 'Hana', npcTile: { col: 0, row: 5 }, detail: 'Each portal asks something of you. Bring what you find back to Truth.' },
     ];
 
     const inB = (c: number, r: number) => c >= 0 && r >= 0 && c < W && r < H;

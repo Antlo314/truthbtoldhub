@@ -5,9 +5,11 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, X } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, X } from 'lucide-react';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
+import { DEST_BY_POI, RELIC_BY_ID, type Destination } from '@/lib/game/destinations';
+import DestinationScene from '@/components/game/DestinationScene';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -25,6 +27,8 @@ export default function WorldPage() {
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const loadFounder = useGameStore((s) => s.loadFounder);
     const founderNumber = useGameStore((s) => s.founderNumber);
+    const claimRelic = useGameStore((s) => s.claimRelic);
+    const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -34,6 +38,8 @@ export default function WorldPage() {
     const [bulletins, setBulletins] = useState<Bulletin[]>([]);
     const [media, setMedia] = useState<DispatchMedia[]>([]);
     const [isArchitect, setIsArchitect] = useState(false);
+    const [activeDest, setActiveDest] = useState<Destination | null>(null);
+    const [satchelOpen, setSatchelOpen] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -61,6 +67,11 @@ export default function WorldPage() {
 
     const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
+        const dest = DEST_BY_POI[poi.id];
+        if (dest) {
+            setActiveDest(dest);
+            return;
+        }
         if (poi.type === 'hut') {
             setHutOpen(true);
         } else if (poi.type === 'npc') {
@@ -76,6 +87,13 @@ export default function WorldPage() {
         showToast('A shade drifts through you — cold, and searching…');
         setHint(false);
     }, [showToast]);
+
+    const handleClaim = useCallback(async (relicId: string) => {
+        claimRelic(relicId);
+        await saveToCloud();
+        const r = RELIC_BY_ID[relicId];
+        showToast(`✦ ${r?.name || 'Relic'} claimed`);
+    }, [claimRelic, saveToCloud, showToast]);
 
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
 
@@ -97,7 +115,10 @@ export default function WorldPage() {
                         <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: path.color }}>· {path.name}</span>
                     )}
                 </div>
-                <div className="w-8" />
+                <button onClick={() => setSatchelOpen(true)} className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                    <Gem className="w-3.5 h-3.5 text-aether-gold" />
+                    <span className="text-xs font-black text-aether-gold">{character.inventory.length}</span>
+                </button>
             </div>
 
             {hint && (
@@ -217,6 +238,51 @@ export default function WorldPage() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* satchel of relics */}
+            {satchelOpen && (
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setSatchelOpen(false)}>
+                    <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[82dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setSatchelOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white">
+                            <X className="w-4 h-4" />
+                        </button>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-5">Satchel of Relics</h2>
+                        {character.inventory.length === 0 ? (
+                            <p className="text-zinc-500 text-sm text-center py-10 leading-relaxed">No relics yet.<br />Step through the portals and descend the caverns to find them.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {character.inventory.map((id) => {
+                                    const r = RELIC_BY_ID[id];
+                                    if (!r) return null;
+                                    return (
+                                        <div key={id} className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-start gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-aether-gold/10 border border-aether-gold/20 flex items-center justify-center text-aether-gold shrink-0">
+                                                <Gem className="w-5 h-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="text-sm font-bold text-white">{r.name}</h4>
+                                                <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{r.from}</p>
+                                                <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{r.desc}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* destination chamber (cave / portal) */}
+            {activeDest && (
+                <DestinationScene
+                    destination={activeDest}
+                    inventory={character.inventory}
+                    onClaim={handleClaim}
+                    onExit={() => setActiveDest(null)}
+                />
             )}
         </div>
     );

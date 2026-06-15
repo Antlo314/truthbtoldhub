@@ -41,6 +41,7 @@ export interface GameCharacter {
     skills: string[];        // learned skill ids
     skillPoints: number;     // unspent points
     founderClaimed: boolean; // one-time founder reward granted?
+    inventory: string[];     // claimed relic ids
     equipped: EquippedItems;
 }
 
@@ -55,6 +56,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     skills: [],
     skillPoints: 1,
     founderClaimed: false,
+    inventory: [],
     equipped: { clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -63,6 +65,7 @@ function freshCharacter(): GameCharacter {
         ...DEFAULT_CHARACTER,
         appearance: { ...DEFAULT_CHARACTER.appearance, bodyTile: { ...DEFAULT_CHARACTER.appearance.bodyTile } },
         skills: [...DEFAULT_CHARACTER.skills],
+        inventory: [...DEFAULT_CHARACTER.inventory],
         equipped: { ...DEFAULT_CHARACTER.equipped },
     };
 }
@@ -77,6 +80,7 @@ interface GameState {
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
     setPath: (path: GamePath) => void;
     learnSkill: (id: string) => void;
+    claimRelic: (id: string) => void;
     completeAwakening: () => void;
     reset: () => void;
 
@@ -110,6 +114,13 @@ export const useGameStore = create<GameState>()(
                     const c = s.character;
                     if (c.skills.includes(id) || c.skillPoints <= 0) return {};
                     return { character: { ...c, skills: [...c.skills, id], skillPoints: c.skillPoints - 1 } };
+                }),
+
+            claimRelic: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.inventory.includes(id)) return {};
+                    return { character: { ...c, inventory: [...c.inventory, id] } };
                 }),
 
             completeAwakening: () => set({ initiated: true }),
@@ -216,6 +227,7 @@ export const useGameStore = create<GameState>()(
                         skills: pc.skills || c.character.skills,
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
+                        inventory: pc.inventory || c.character.inventory,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };
