@@ -324,13 +324,29 @@ export default function WorldPage() {
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-4">Satchel of Relics</h2>
                         {(() => {
-                            const b = relicBonuses(character.inventory);
-                            const parts = [b.hp ? `+${b.hp} vitality` : '', b.damage ? `+${b.damage} strike` : '', b.reach ? `+${b.reach} reach` : ''].filter(Boolean);
+                            // Your full combat blessing carried into every fight — relics
+                            // you bear, the attunements of your path, and your founder seal.
+                            const rb = relicBonuses(character.inventory);
+                            const sb = skillBonuses(character.skills);
+                            const fb = founderBonuses(founderNumber);
+                            const hp = rb.hp + sb.hp + fb.hp;
+                            const damage = rb.damage + sb.damage + fb.damage;
+                            const reach = rb.reach + sb.reach + fb.reach;
+                            const regen = sb.regen;
+                            const parts = [
+                                hp ? `+${hp} vitality` : '',
+                                damage ? `+${damage} might` : '',
+                                reach ? `+${reach} reach` : '',
+                                regen ? `+${regen}/s renewal` : '',
+                            ].filter(Boolean);
                             return parts.length ? (
-                                <div className="mb-5 flex flex-wrap gap-2">
-                                    {parts.map((p) => (
-                                        <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
-                                    ))}
+                                <div className="mb-5">
+                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · relics + path + seal</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {parts.map((p) => (
+                                            <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
+                                        ))}
+                                    </div>
                                 </div>
                             ) : null;
                         })()}
