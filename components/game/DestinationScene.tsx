@@ -2,18 +2,23 @@
 
 import { useState } from 'react';
 import KenneySprite, { ROGUELIKE_CHAR } from '@/components/game/KenneySprite';
+import PuzzleScene from '@/components/game/PuzzleScene';
 import type { Destination } from '@/lib/game/destinations';
-import { ArrowLeft, Gem, Check, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Gem, Check, ChevronDown, Lock, Puzzle as PuzzleIcon } from 'lucide-react';
 
 interface Props {
     destination: Destination;
     inventory: string[];
+    solved: string[];
     onClaim: (relicId: string) => void;
+    onSolve: (puzzleId: string) => void;
     onExit: () => void;
 }
 
-export default function DestinationScene({ destination: d, inventory, onClaim, onExit }: Props) {
+export default function DestinationScene({ destination: d, inventory, solved, onClaim, onSolve, onExit }: Props) {
     const [open, setOpen] = useState<number>(0);
+    const [puzzleOpen, setPuzzleOpen] = useState(false);
+    const questDone = !d.puzzle || solved.includes(d.puzzle.id);
 
     return (
         <div
@@ -68,38 +73,73 @@ export default function DestinationScene({ destination: d, inventory, onClaim, o
                     })}
                 </div>
 
-                {/* relics */}
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Relics of this place</p>
-                <div className="space-y-3">
-                    {d.relics.map((r) => {
-                        const have = inventory.includes(r.id);
-                        return (
-                            <div key={r.id} className="glass bg-white/[0.03] border rounded-2xl p-4 flex items-center gap-4" style={{ borderColor: have ? d.accent + '44' : 'rgba(255,255,255,0.1)' }}>
-                                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: d.accent + '14', border: `1px solid ${d.accent}44`, color: d.accent }}>
-                                    <Gem className="w-5 h-5" />
+                {/* quest gate, then relics */}
+                {d.puzzle && !questDone ? (
+                    <>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">The Quest</p>
+                        <button
+                            onClick={() => setPuzzleOpen(true)}
+                            className="w-full text-left rounded-2xl border p-5 transition-transform hover:scale-[1.01]"
+                            style={{ borderColor: d.accent + '44', background: d.accent + '0d' }}
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <PuzzleIcon className="w-4 h-4" style={{ color: d.accent }} />
+                                    <h4 className="font-ritual text-lg text-white">{d.puzzle.title}</h4>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-sm font-bold text-white">{r.name}</h4>
-                                    <p className="text-[11px] text-zinc-400 leading-relaxed">{r.desc}</p>
-                                </div>
-                                {have ? (
-                                    <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0" style={{ color: d.accent }}>
-                                        <Check className="w-3.5 h-3.5" /> Claimed
-                                    </span>
-                                ) : (
-                                    <button
-                                        onClick={() => onClaim(r.id)}
-                                        className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg text-black shrink-0"
-                                        style={{ background: d.accent }}
-                                    >
-                                        Claim
-                                    </button>
-                                )}
+                                <span className="text-[10px] uppercase tracking-widest shrink-0" style={{ color: d.accent }}>Solve →</span>
                             </div>
-                        );
-                    })}
-                </div>
+                            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">A riddle of this place guards its relic. Solve it, and what lies here is yours.</p>
+                        </button>
+                        <div className="mt-3 flex items-center gap-2 text-zinc-600 text-[11px]">
+                            <Lock className="w-3.5 h-3.5" /> {d.relics.length} relic{d.relics.length === 1 ? '' : 's'} locked behind the quest
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Relics of this place</p>
+                        <div className="space-y-3">
+                            {d.relics.map((r) => {
+                                const have = inventory.includes(r.id);
+                                return (
+                                    <div key={r.id} className="glass bg-white/[0.03] border rounded-2xl p-4 flex items-center gap-4" style={{ borderColor: have ? d.accent + '44' : 'rgba(255,255,255,0.1)' }}>
+                                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: d.accent + '14', border: `1px solid ${d.accent}44`, color: d.accent }}>
+                                            <Gem className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-sm font-bold text-white">{r.name}</h4>
+                                            <p className="text-[11px] text-zinc-400 leading-relaxed">{r.desc}</p>
+                                        </div>
+                                        {have ? (
+                                            <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0" style={{ color: d.accent }}>
+                                                <Check className="w-3.5 h-3.5" /> Claimed
+                                            </span>
+                                        ) : (
+                                            <button
+                                                onClick={() => onClaim(r.id)}
+                                                className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg text-black shrink-0"
+                                                style={{ background: d.accent }}
+                                            >
+                                                Claim
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
             </div>
+
+            {/* the puzzle quest */}
+            {puzzleOpen && d.puzzle && (
+                <PuzzleScene
+                    puzzle={d.puzzle}
+                    accent={d.accent}
+                    onSolve={() => { onSolve(d.puzzle!.id); setPuzzleOpen(false); }}
+                    onExit={() => setPuzzleOpen(false)}
+                />
+            )}
         </div>
     );
 }

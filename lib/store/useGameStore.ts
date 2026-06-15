@@ -44,6 +44,7 @@ export interface GameCharacter {
     founderClaimed: boolean; // one-time founder reward granted?
     inventory: string[];     // claimed relic ids
     cleared: string[];       // destination ids whose guardians are defeated
+    solved: string[];        // puzzle ids solved
     equipped: EquippedItems;
 }
 
@@ -60,6 +61,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     founderClaimed: false,
     inventory: [],
     cleared: [],
+    solved: [],
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -70,6 +72,7 @@ function freshCharacter(): GameCharacter {
         skills: [...DEFAULT_CHARACTER.skills],
         inventory: [...DEFAULT_CHARACTER.inventory],
         cleared: [...DEFAULT_CHARACTER.cleared],
+        solved: [...DEFAULT_CHARACTER.solved],
         equipped: { ...DEFAULT_CHARACTER.equipped },
     };
 }
@@ -87,6 +90,7 @@ interface GameState {
     claimRelic: (id: string) => void;
     equipWeapon: (id: string) => void;
     markCleared: (destId: string) => void;
+    markSolved: (puzzleId: string) => void;
     completeAwakening: () => void;
     reset: () => void;
 
@@ -137,6 +141,13 @@ export const useGameStore = create<GameState>()(
                     const c = s.character;
                     if (c.cleared.includes(destId)) return {};
                     return { character: { ...c, cleared: [...c.cleared, destId] } };
+                }),
+
+            markSolved: (puzzleId) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.solved.includes(puzzleId)) return {};
+                    return { character: { ...c, solved: [...c.solved, puzzleId] } };
                 }),
 
             completeAwakening: () => set({ initiated: true }),
@@ -245,6 +256,7 @@ export const useGameStore = create<GameState>()(
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
                         inventory: pc.inventory || c.character.inventory,
                         cleared: pc.cleared || c.character.cleared,
+                        solved: pc.solved || c.character.solved,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };

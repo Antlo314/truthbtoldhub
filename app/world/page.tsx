@@ -34,6 +34,7 @@ export default function WorldPage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
     const equipWeapon = useGameStore((s) => s.equipWeapon);
     const markCleared = useGameStore((s) => s.markCleared);
+    const markSolved = useGameStore((s) => s.markSolved);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -133,6 +134,12 @@ export default function WorldPage() {
         setCombatDest(null);
         showToast('The shades overwhelm you. Rest, and return stronger.');
     }, [showToast]);
+
+    const handleSolve = useCallback((puzzleId: string) => {
+        markSolved(puzzleId);
+        saveToCloud();
+        showToast('✦ The quest is solved — the relic is yours to claim');
+    }, [markSolved, saveToCloud, showToast]);
 
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
 
@@ -330,7 +337,9 @@ export default function WorldPage() {
                 <DestinationScene
                     destination={activeDest}
                     inventory={character.inventory}
+                    solved={character.solved}
                     onClaim={handleClaim}
+                    onSolve={handleSolve}
                     onExit={() => setActiveDest(null)}
                 />
             )}

@@ -6,6 +6,8 @@
 //  depth later without touching the engine.
 // ============================================================
 
+import type { Puzzle } from '@/lib/game/puzzles';
+
 export type DestinationKind = 'portal' | 'cave';
 
 export interface Relic {
@@ -48,6 +50,7 @@ export interface Destination {
     lore: LoreSection[];
     relics: Relic[];
     combat?: CombatConfig;
+    puzzle?: Puzzle;
 }
 
 export const DESTINATIONS: Destination[] = [
@@ -70,6 +73,16 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Way Back', body: 'You cannot climb back to Eden by effort. You return by laying down the cares of the world, one by one, until nothing stands between you and the Source.' },
         ],
         relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.' }],
+        puzzle: {
+            kind: 'sequence',
+            id: 'puz_eden',
+            title: 'The Four Rivers',
+            prompt: 'A river went out of Eden and parted into four heads. Name them in the order the first book gives them, and the garden will open its memory to you.',
+            hint: 'Genesis 2 lists them in order; the last is the great river that waters Babylon.',
+            tokens: ['Euphrates', 'Gihon', 'Pishon', 'Hiddekel'],
+            solution: ['Pishon', 'Gihon', 'Hiddekel', 'Euphrates'],
+            solvedText: 'The four waters run as one again. The way is open.',
+        },
     },
     {
         poiId: 'dest_fair',
@@ -90,6 +103,21 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Orphans', body: 'Children arrived by the trainload in those years, their origins blurred in the ledgers. A history is not only what is built. It is also what is conveniently forgotten.' },
         ],
         relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.' }],
+        puzzle: {
+            kind: 'dials',
+            id: 'puz_fair',
+            title: 'The Year of the White City',
+            prompt: 'The turnstile is locked to a year — the year the ivory city rose and, within a single season, was gone. Set the four dials.',
+            hint: 'The Louisiana Purchase Exposition. Nineteen hundred and four.',
+            dials: [
+                { label: 'M', values: ['1', '2', '3'] },
+                { label: 'C', values: ['7', '8', '9', '0'] },
+                { label: 'X', values: ['0', '1', '2'] },
+                { label: 'I', values: ['2', '3', '4', '5'] },
+            ],
+            solution: [0, 2, 0, 2],
+            solvedText: 'The turnstile gives way. The gates of the Fair swing wide.',
+        },
     },
     {
         poiId: 'dest_giza',
@@ -120,6 +148,20 @@ export const DESTINATIONS: Destination[] = [
             bossDmg: 20,
             victory: 'The guardian dissolves into dust and silence. The hum of the stone steadies — it has accepted you.',
         },
+        puzzle: {
+            kind: 'dials',
+            id: 'puz_giza',
+            title: 'The Measure of the Stone',
+            prompt: 'Khaemwaset sets his hand on a seam in the wall. "It is a machine of measure. Set its order — the faces, the shafts, the chambers — and it will yield what it guards."',
+            hint: 'Four faces. Two air-shafts. Three chambers.',
+            dials: [
+                { label: 'Faces', values: ['2', '3', '4', '5'] },
+                { label: 'Shafts', values: ['1', '2', '3'] },
+                { label: 'Chambers', values: ['1', '2', '3', '4'] },
+            ],
+            solution: [2, 1, 2],
+            solvedText: 'The granite slides aside, humming. What it guarded waits within.',
+        },
     },
     {
         poiId: 'dest_kolbrin',
@@ -140,6 +182,16 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Pattern', body: 'Read enough forbidden books and you stop seeing contradictions. You start seeing one story, told in many tongues, guarded by many hands.' },
         ],
         relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.' }],
+        puzzle: {
+            kind: 'sequence',
+            id: 'puz_kolbrin',
+            title: 'The Name of the Destroyer',
+            prompt: 'Brother Caileph lays eight runes before you. "Scripture named the burning star that turns the waters bitter. Order the runes, and speak it."',
+            hint: 'Revelation 8 — a great star fell, burning as a torch, and its name is called…',
+            tokens: ['O', 'W', 'O', 'R', 'D', 'W', 'M', 'O'],
+            solution: ['W', 'O', 'R', 'M', 'W', 'O', 'O', 'D'],
+            solvedText: 'The runes blaze: WORMWOOD. The Bronzebook turns its own page.',
+        },
     },
     {
         poiId: 'dest_emerald',
@@ -160,6 +212,16 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Light Within', body: 'The Source you are walking back toward was never far. It is the light the body was built to house. "Man, know thyself, and thou shalt know the All."' },
         ],
         relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.' }],
+        puzzle: {
+            kind: 'sequence',
+            id: 'puz_emerald',
+            title: 'As Above, So Below',
+            prompt: 'Hermes spreads the seven wanderers. "Order them as the ancients did — from the slowest and highest sphere to the swiftest and nearest. Do this, and you read the pattern of all things."',
+            hint: 'Saturn is highest and slowest; the Moon is nearest and swiftest. The Chaldean order.',
+            tokens: ['Sun', 'Moon', 'Mars', 'Saturn', 'Venus', 'Jupiter', 'Mercury'],
+            solution: ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'],
+            solvedText: 'The seven fall into their spheres. “As above,” he says, “so below.”',
+        },
     },
 ];
 
