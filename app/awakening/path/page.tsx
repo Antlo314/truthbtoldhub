@@ -106,6 +106,9 @@ export default function PathPage() {
                                                 {node.super && <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: `${active.color}22`, color: active.color }}>Super</span>}
                                             </div>
                                             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{node.desc}</p>
+                                            {node.combat && (
+                                                <p className="text-[10px] font-black uppercase tracking-widest mt-1.5" style={{ color: active.color }}>⚔ {node.combat.label}</p>
+                                            )}
 
                                             <div className="mt-3">
                                                 {learned && <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: active.color }}>✦ Attuned</span>}

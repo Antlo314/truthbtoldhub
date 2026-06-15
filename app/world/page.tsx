@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
-import { PATH_BY_ID } from '@/lib/game/paths';
+import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
 import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X } from 'lucide-react';
 import { QUESTS, questsFor, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
@@ -445,21 +445,26 @@ export default function WorldPage() {
             {/* first-weapon forge */}
             {forgeOpen && <WeaponForge onForge={handleForge} onClose={() => setForgeOpen(false)} />}
 
-            {/* combat encounter */}
-            {combatDest && combatDest.combat && (
-                <CombatScene
-                    destination={combatDest}
-                    character={character}
-                    weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
-                    weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
-                    bonusHp={relicBonuses(character.inventory).hp}
-                    bonusDamage={relicBonuses(character.inventory).damage}
-                    bonusReach={relicBonuses(character.inventory).reach}
-                    onVictory={onVictory}
-                    onDefeat={onDefeat}
-                    onExit={() => setCombatDest(null)}
-                />
-            )}
+            {/* combat encounter — relics + your path's attunements stack */}
+            {combatDest && combatDest.combat && (() => {
+                const rb = relicBonuses(character.inventory);
+                const sb = skillBonuses(character.skills);
+                return (
+                    <CombatScene
+                        destination={combatDest}
+                        character={character}
+                        weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
+                        weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
+                        bonusHp={rb.hp + sb.hp}
+                        bonusDamage={rb.damage + sb.damage}
+                        bonusReach={rb.reach + sb.reach}
+                        bonusRegen={sb.regen}
+                        onVictory={onVictory}
+                        onDefeat={onDefeat}
+                        onExit={() => setCombatDest(null)}
+                    />
+                );
+            })()}
         </div>
     );
 }

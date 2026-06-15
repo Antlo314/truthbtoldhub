@@ -29,15 +29,17 @@ interface Props {
     bonusHp?: number;
     bonusDamage?: number;
     bonusReach?: number;
+    bonusRegen?: number; // HP restored per second (the Mystic's channel)
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, onVictory, onDefeat, onExit }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, onVictory, onDefeat, onExit }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
     const dmg = weaponDamage + bonusDamage;
     const reach = weaponReach + bonusReach;
+    const regen = bonusRegen;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
@@ -54,6 +56,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
+    // last HP value pushed to the bar — guards against a render every frame
+    // while the Mystic's renewal is ticking.
+    const shownRef = useRef(maxHp);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -134,7 +139,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     f.y += Math.sin(a) * speedFor(f) * dt;
                     if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? cfg.bossDmg : cfg.enemyDmg;
                 }
-                if (contactDps > 0) { st.php -= contactDps * dt; setHp(Math.max(0, Math.round(st.php))); }
+                if (contactDps > 0) st.php -= contactDps * dt;
+                // renewal — the Source mends you over time, never past your max
+                if (regen > 0 && st.php > 0) st.php = Math.min(maxHp, st.php + regen * dt);
+                // reflect HP to the bar only when the rounded value changes
+                const shown = Math.max(0, Math.round(st.php));
+                if (shown !== shownRef.current) { shownRef.current = shown; setHp(shown); }
 
                 // remove dead
                 const before = st.foes.length;
