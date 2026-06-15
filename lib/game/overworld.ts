@@ -89,7 +89,9 @@ export function buildOverworld(): Overworld {
         { id: 'dest_fair', type: 'portal', x: W - 8, y: 8, name: 'St. Louis, 1904' },
         { id: 'dest_giza', type: 'cave', x: 8, y: H - 8, name: 'Giza — The Engine of Stone' },
         { id: 'dest_kolbrin', type: 'cave', x: W - 8, y: H - 8, name: 'The Kolbrin Vault' },
-        { id: 'npc_hana', type: 'npc', x: 14, y: cy + 5, name: 'Hana', npcTile: { col: 0, row: 5 }, detail: 'Each portal asks something of you. Bring what you find back to Truth.' },
+        { id: 'npc_hana', type: 'npc', x: 14, y: cy + 5, name: 'Hana', npcTile: { col: 0, row: 5 }, detail: 'A mission for you, if you have the will.' },
+        { id: 'npc_eli', type: 'npc', x: cx + 9, y: cy + 6, name: 'Eli', npcTile: { col: 0, row: 6 }, detail: 'A scribe of buried books.' },
+        { id: 'npc_mara', type: 'npc', x: cx - 4, y: 13, name: 'Sister Mara', npcTile: { col: 1, row: 5 }, detail: 'She studies the relics of this world.' },
     ];
 
     const inB = (c: number, r: number) => c >= 0 && r >= 0 && c < W && r < H;

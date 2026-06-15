@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, X } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X } from 'lucide-react';
+import { QUESTS, questsFor, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, type Destination } from '@/lib/game/destinations';
@@ -35,6 +36,7 @@ export default function WorldPage() {
     const equipWeapon = useGameStore((s) => s.equipWeapon);
     const markCleared = useGameStore((s) => s.markCleared);
     const markSolved = useGameStore((s) => s.markSolved);
+    const claimQuest = useGameStore((s) => s.claimQuest);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -48,6 +50,8 @@ export default function WorldPage() {
     const [satchelOpen, setSatchelOpen] = useState(false);
     const [forgeOpen, setForgeOpen] = useState(false);
     const [combatDest, setCombatDest] = useState<Destination | null>(null);
+    const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
+    const [questLogOpen, setQuestLogOpen] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -91,7 +95,8 @@ export default function WorldPage() {
         if (poi.type === 'hut') {
             setHutOpen(true);
         } else if (poi.type === 'npc') {
-            setDialogue({ speaker: poi.name, text: poi.detail || '…' });
+            if (questsFor(poi.id).length > 0) setQuestNpc({ id: poi.id, name: poi.name });
+            else setDialogue({ speaker: poi.name, text: poi.detail || '…' });
         } else if (poi.type === 'cave') {
             setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
         } else if (poi.type === 'portal') {
@@ -141,6 +146,12 @@ export default function WorldPage() {
         showToast('✦ The quest is solved — the relic is yours to claim');
     }, [markSolved, saveToCloud, showToast]);
 
+    const handleClaimQuest = useCallback((q: Quest) => {
+        claimQuest(q.id, q.reward.skillPoints);
+        saveToCloud();
+        showToast(`✦ Mission complete · ${q.reward.text}`);
+    }, [claimQuest, saveToCloud, showToast]);
+
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
 
     const path = character.path ? PATH_BY_ID[character.path] : null;
@@ -151,9 +162,14 @@ export default function WorldPage() {
 
             {/* HUD */}
             <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 pointer-events-none">
-                <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-white">
-                    <ArrowLeft className="w-4 h-4" />
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-white">
+                        <ArrowLeft className="w-4 h-4" />
+                    </Link>
+                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-aether-gold" title="Missions">
+                        <ScrollText className="w-4 h-4" />
+                    </button>
+                </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
                     <FounderBadge founderNumber={founderNumber} size={18} />
                     <span className="font-ritual text-sm text-white">{character.name || 'Soul'}</span>
@@ -354,6 +370,76 @@ export default function WorldPage() {
                     onSolve={handleSolve}
                     onExit={() => setActiveDest(null)}
                 />
+            )}
+
+            {/* NPC mission dialog */}
+            {questNpc && (
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestNpc(null)}>
+                    <div className="w-full max-w-lg glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[85dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setQuestNpc(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Mission</p>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-5">{questNpc.name}</h2>
+                        <div className="space-y-4">
+                            {questsFor(questNpc.id).map((q) => {
+                                const claimed = character.questsClaimed.includes(q.id);
+                                const met = objectiveMet(q, character);
+                                return (
+                                    <div key={q.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <h3 className="font-ritual text-lg text-white mb-2">{q.title}</h3>
+                                        <p className="font-ritual italic text-white/85 text-sm leading-relaxed mb-4">“{claimed || met ? q.completeText : q.intro}”</p>
+                                        <div className="text-[11px] mb-3">
+                                            {claimed ? (
+                                                <span className="text-aether-gold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Completed</span>
+                                            ) : (
+                                                <span className="text-zinc-400"><span className="uppercase tracking-widest text-[9px] text-zinc-500">Objective · </span>{q.objectiveText} <span style={{ color: met ? '#34d399' : '#fbbf24' }}>({objectiveProgress(q, character)})</span></span>
+                                            )}
+                                        </div>
+                                        {!claimed && (met ? (
+                                            <button onClick={() => handleClaimQuest(q)} className="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
+                                            </button>
+                                        ) : (
+                                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">Reward · {q.reward.skillPoints} skill point{q.reward.skillPoints === 1 ? '' : 's'}</p>
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* quest log */}
+            {questLogOpen && (
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestLogOpen(false)}>
+                    <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[82dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setQuestLogOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Missions</p>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-5">Quest Log</h2>
+                        <div className="space-y-2">
+                            {QUESTS.map((q) => {
+                                const claimed = character.questsClaimed.includes(q.id);
+                                const met = objectiveMet(q, character);
+                                const status = claimed ? 'Done' : met ? 'Ready' : 'In progress';
+                                const color = claimed ? '#10b981' : met ? '#fbbf24' : '#64748b';
+                                return (
+                                    <div key={q.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="text-sm font-bold text-white">{q.title}</h3>
+                                            <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color }}>{status}</span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-500 mt-0.5">{q.giverName} · {q.objectiveText} ({objectiveProgress(q, character)})</p>
+                                        {met && !claimed && (
+                                            <button onClick={() => handleClaimQuest(q)} className="mt-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* first-weapon forge */}
