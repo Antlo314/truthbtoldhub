@@ -47,7 +47,6 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
 
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
-    const interactRef = useRef(false);
     const nearRef = useRef<NearPOI | null>(null);
     const [near, setNear] = useState<NearPOI | null>(null);
     const [knob, setKnob] = useState({ x: 0, y: 0 });
@@ -276,10 +275,6 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
                 nearRef.current = found;
                 setNear(found);
             }
-            if (interactRef.current) {
-                interactRef.current = false;
-                if (found) cbRef.current.onInteract(found);
-            }
 
             // ---- camera ----
             const vw = canvas.clientWidth;
@@ -403,6 +398,13 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         setKnob({ x: 0, y: 0 });
         joyRef.current = { x: 0, y: 0 };
     };
+    // Fire interact straight from the tap using the POI the loop keeps current
+    // in nearRef — no waiting for the rAF loop to read a flag, so the very
+    // first tap after entering the world lands (no more "tap twice").
+    const doInteract = () => {
+        const n = nearRef.current;
+        if (n) cbRef.current.onInteract(n);
+    };
 
     return (
         <>
@@ -432,8 +434,8 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
 
             {near && (
                 <button
-                    onClick={() => { interactRef.current = true; }}
-                    onTouchStart={(e) => { e.preventDefault(); interactRef.current = true; }}
+                    onClick={doInteract}
+                    onTouchStart={(e) => { e.preventDefault(); doInteract(); }}
                     className="absolute right-7 bottom-12 px-5 h-20 min-w-20 rounded-full text-[10px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center text-center animate-pulse"
                     style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 24px rgba(251,191,36,0.4)', touchAction: 'none' }}
                 >

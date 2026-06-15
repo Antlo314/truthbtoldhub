@@ -1,8 +1,10 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
+import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
 
 // ============================================================
 //  COMBAT — real-time, mobile-first. Move with the joystick,
@@ -53,6 +55,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const [boss, setBoss] = useState<{ name: string; hp: number; max: number } | null>(null);
     const [foesLeft, setFoesLeft] = useState(0);
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
+    const [muted, setMutedState] = useState(isMuted());
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
@@ -71,6 +74,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const st = {
             px: W / 2, py: H - TILE * 3, php: maxHp, atk: 0, swing: 0,
             foes: [] as Foe[], bossSpawned: false, done: false,
+            shake: 0, hurtFlash: 0, hurtCd: 0,
         };
         for (let i = 0; i < cfg.enemyCount; i++) {
             st.foes.push({ x: rand(TILE * 2, W - TILE * 2), y: rand(TILE * 2, H / 2), hp: cfg.enemyHp, max: cfg.enemyHp, hurt: 0 });
@@ -97,6 +101,11 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             const dt = Math.min(0.05, (now - last) / 1000);
             last = now;
 
+            // juice decays run regardless of state so they settle on the banner
+            st.shake = Math.max(0, st.shake - dt * 22);
+            st.hurtFlash = Math.max(0, st.hurtFlash - dt * 1.6);
+            st.hurtCd -= dt;
+
             if (!st.done) {
                 // input
                 let ix = joyRef.current.x, iy = joyRef.current.y;
@@ -119,13 +128,17 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 const inReach = st.foes.some((f) => dist(f, me) <= reach + (f.boss ? 6 : 0));
                 if (st.atk <= 0 && (inReach || forceStrike)) {
                     st.atk = 0.42; st.swing = 0.18;
+                    sfx.strike();
+                    let hits = 0;
                     for (const f of st.foes) {
                         if (dist(f, me) <= reach + (f.boss ? 6 : 0)) {
-                            f.hp -= dmg; f.hurt = 0.12;
+                            f.hp -= dmg; f.hurt = 0.14; hits++;
                             const a = Math.atan2(f.y - st.py, f.x - st.px);
-                            f.x += Math.cos(a) * 6; f.y += Math.sin(a) * 6;
+                            const kb = f.boss ? 5 : 9; // bosses are heavier
+                            f.x += Math.cos(a) * kb; f.y += Math.sin(a) * kb;
                         }
                     }
+                    if (hits > 0) { sfx.hit(); st.shake = Math.max(st.shake, 2.2); }
                 }
                 attackRef.current = false;
 
@@ -139,7 +152,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     f.y += Math.sin(a) * speedFor(f) * dt;
                     if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? cfg.bossDmg : cfg.enemyDmg;
                 }
-                if (contactDps > 0) st.php -= contactDps * dt;
+                if (contactDps > 0) {
+                    st.php -= contactDps * dt;
+                    st.hurtFlash = Math.min(1, st.hurtFlash + 0.22);
+                    st.shake = Math.max(st.shake, 2.6);
+                    if (st.hurtCd <= 0) { sfx.hurt(); st.hurtCd = 0.45; }
+                }
                 // renewal — the Source mends you over time, never past your max
                 if (regen > 0 && st.php > 0) st.php = Math.min(maxHp, st.php + regen * dt);
                 // reflect HP to the bar only when the rounded value changes
@@ -148,8 +166,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
                 // remove dead
                 const before = st.foes.length;
+                const shadeDied = st.foes.some((f) => !f.boss && f.hp <= 0);
                 st.foes = st.foes.filter((f) => f.hp > 0);
-                if (st.foes.length !== before) setFoesLeft(st.foes.filter((f) => !f.boss).length);
+                if (st.foes.length !== before) {
+                    if (shadeDied) { sfx.enemyDown(); st.shake = Math.max(st.shake, 3); }
+                    setFoesLeft(st.foes.filter((f) => !f.boss).length);
+                }
 
                 // boss phase
                 if (!st.bossSpawned && st.foes.length === 0) {
@@ -157,6 +179,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     const b: Foe = { x: W / 2, y: TILE * 3, hp: cfg.bossHp, max: cfg.bossHp, boss: true, hurt: 0 };
                     st.foes.push(b);
                     setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
+                    sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
                 }
                 if (st.bossSpawned) {
                     const b = st.foes.find((f) => f.boss);
@@ -164,8 +187,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 }
 
                 // outcomes
-                if (st.php <= 0) { st.done = true; setOutcome('lost'); setTimeout(() => endRef.current.onDefeat(), 1400); }
-                else if (st.bossSpawned && st.foes.length === 0) { st.done = true; setOutcome('won'); setTimeout(() => endRef.current.onVictory(), 1600); }
+                if (st.php <= 0) { st.done = true; setOutcome('lost'); sfx.defeat(); st.shake = Math.max(st.shake, 5); setTimeout(() => endRef.current.onDefeat(), 1400); }
+                else if (st.bossSpawned && st.foes.length === 0) { st.done = true; setOutcome('won'); sfx.victory(); st.shake = Math.max(st.shake, 7); setTimeout(() => endRef.current.onVictory(), 1600); }
             }
 
             // ---- render ----
@@ -173,7 +196,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             const scale = Math.min(vw / W, vh / H);
             const ox = (vw - W * scale) / 2, oy = (vh - H * scale) / 2;
             ctx.fillStyle = '#04060a'; ctx.fillRect(0, 0, vw, vh);
-            ctx.save(); ctx.translate(ox, oy); ctx.scale(scale, scale);
+            const shx = st.shake > 0 ? (Math.random() * 2 - 1) * st.shake : 0;
+            const shy = st.shake > 0 ? (Math.random() * 2 - 1) * st.shake : 0;
+            ctx.save(); ctx.translate(ox + shx, oy + shy); ctx.scale(scale, scale);
 
             // floor
             ctx.fillStyle = d.bg[0]; ctx.fillRect(0, 0, W, H);
@@ -221,6 +246,15 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             ctx.drawImage(img, character.appearance.bodyTile.col * 17, character.appearance.bodyTile.row * 17, 16, 16, st.px - 11, st.py - 14, 22, 22);
 
             ctx.restore();
+
+            // hurt vignette — a red bleed at the edges when you take a wound
+            if (st.hurtFlash > 0.01) {
+                const rv = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.28, vw / 2, vh / 2, Math.max(vw, vh) * 0.62);
+                rv.addColorStop(0, 'rgba(239,68,68,0)');
+                rv.addColorStop(1, `rgba(239,68,68,${0.55 * Math.min(1, st.hurtFlash)})`);
+                ctx.fillStyle = rv; ctx.fillRect(0, 0, vw, vh);
+            }
+
             raf = requestAnimationFrame(loop);
         }
 
@@ -246,6 +280,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         setKnob({ x: kx, y: ky }); joyRef.current = { x: kx / JOY_R, y: ky / JOY_R };
     };
     const joyEnd = () => { joyActive.current = false; setKnob({ x: 0, y: 0 }); joyRef.current = { x: 0, y: 0 }; };
+    const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m); };
 
     return (
         <div className="absolute inset-0 z-40 bg-black select-none" style={{ touchAction: 'none' }}>
@@ -255,7 +290,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             <div className="absolute top-0 left-0 right-0 px-4 py-3 flex flex-col gap-2 pointer-events-none">
                 <div className="flex items-center justify-between">
                     <button onClick={onExit} className="pointer-events-auto text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white">‹ Flee</button>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">{boss ? 'Guardian' : `Shades · ${foesLeft}`}</span>
+                    <div className="flex items-center gap-3 pointer-events-auto">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">{boss ? 'Guardian' : `Shades · ${foesLeft}`}</span>
+                        <button onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'} className="text-white/50 hover:text-white">
+                            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </button>
+                    </div>
                 </div>
                 {/* player hp */}
                 <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
@@ -283,10 +323,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             {/* joystick */}
             <div
                 ref={baseRef}
-                onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
+                onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
                 onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
                 onTouchEnd={joyEnd}
-                onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
+                onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
                 onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
                 onMouseUp={joyEnd} onMouseLeave={joyEnd}
                 className="absolute left-6 bottom-9 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm"
@@ -297,8 +337,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
             {/* attack */}
             <button
-                onClick={() => { attackRef.current = true; }}
-                onTouchStart={(e) => { e.preventDefault(); attackRef.current = true; }}
+                onClick={() => { unlockAudio(); attackRef.current = true; }}
+                onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}
                 className="absolute right-7 bottom-10 w-20 h-20 rounded-full text-[11px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95"
                 style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 24px rgba(251,191,36,0.4)', touchAction: 'none' }}
             >
