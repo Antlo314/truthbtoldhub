@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
+import { getFounderStatus, type FounderTier } from '@/lib/game/founders';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -39,6 +40,7 @@ export interface GameCharacter {
     path: GamePath | null;
     skills: string[];        // learned skill ids
     skillPoints: number;     // unspent points
+    founderClaimed: boolean; // one-time founder reward granted?
     equipped: EquippedItems;
 }
 
@@ -52,6 +54,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     path: null,
     skills: [],
     skillPoints: 1,
+    founderClaimed: false,
     equipped: { clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -68,6 +71,7 @@ interface GameState {
     initiated: boolean;          // has the Awakening been completed?
     character: GameCharacter;
     cloudLoaded: boolean;        // have we pulled this soul's row from Supabase?
+    founderNumber: number | null;
 
     setName: (name: string) => void;
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
@@ -78,6 +82,7 @@ interface GameState {
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
+    loadFounder: () => Promise<FounderTier | null>;
 }
 
 export const useGameStore = create<GameState>()(
@@ -86,6 +91,7 @@ export const useGameStore = create<GameState>()(
             initiated: false,
             character: freshCharacter(),
             cloudLoaded: false,
+            founderNumber: null,
 
             setName: (name) => set((s) => ({ character: { ...s.character, name } })),
 
@@ -166,6 +172,24 @@ export const useGameStore = create<GameState>()(
                     /* ignore — localStorage retains it until the table exists */
                 }
             },
+
+            loadFounder: async () => {
+                const status = await getFounderStatus();
+                set({ founderNumber: status.founderNumber });
+                const tier = status.tier;
+                if (tier && !get().character.founderClaimed) {
+                    set((s) => ({
+                        character: {
+                            ...s.character,
+                            founderClaimed: true,
+                            skillPoints: s.character.skillPoints + tier.bonusSkillPoints,
+                        },
+                    }));
+                    await get().saveToCloud();
+                    return tier;
+                }
+                return null;
+            },
         }),
         {
             name: 'tbth-journey',
@@ -191,6 +215,7 @@ export const useGameStore = create<GameState>()(
                         },
                         skills: pc.skills || c.character.skills,
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
+                        founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };

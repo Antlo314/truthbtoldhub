@@ -7,6 +7,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID } from '@/lib/game/paths';
 import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, X } from 'lucide-react';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
+import { FounderBadge } from '@/components/game/FounderBadge';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -22,6 +23,8 @@ interface InteractPOI {
 export default function WorldPage() {
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
+    const loadFounder = useGameStore((s) => s.loadFounder);
+    const founderNumber = useGameStore((s) => s.founderNumber);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -39,6 +42,13 @@ export default function WorldPage() {
         fetchBulletins(8).then(setBulletins);
         fetchMedia(16).then(setMedia);
         getArchitectStatus().then((a) => setIsArchitect(a.isArchitect));
+        loadFounder().then((tier) => {
+            if (tier) {
+                setToast(`✦ ${tier.name} — founding seal claimed · +${tier.bonusSkillPoints} skill ${tier.bonusSkillPoints === 1 ? 'point' : 'points'}`);
+                if (toastTimer.current) clearTimeout(toastTimer.current);
+                toastTimer.current = setTimeout(() => setToast(null), 5000);
+            }
+        });
         const t = setTimeout(() => setHint(false), 5000);
         return () => clearTimeout(t);
     }, [loadFromCloud]);
@@ -81,6 +91,7 @@ export default function WorldPage() {
                     <ArrowLeft className="w-4 h-4" />
                 </Link>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                    <FounderBadge founderNumber={founderNumber} size={18} />
                     <span className="font-ritual text-sm text-white">{character.name || 'Soul'}</span>
                     {path && (
                         <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: path.color }}>· {path.name}</span>

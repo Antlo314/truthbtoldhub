@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
+import { countFounders, FOUNDER_CAP } from '@/lib/game/founders';
 
 // ============================================================
 //  TITLE CARD — the front door of Truth B Told Hub.
@@ -19,6 +20,7 @@ function TitleCardInner() {
     const searchParams = useSearchParams();
     const [authOpen, setAuthOpen] = useState(false);
     const [hasSession, setHasSession] = useState(false);
+    const [founders, setFounders] = useState<number | null>(null);
 
     // preserve referral capture
     useEffect(() => {
@@ -29,6 +31,7 @@ function TitleCardInner() {
     // returning souls get "continue" instead of "begin"
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
+        countFounders().then(setFounders);
     }, []);
 
     return (
@@ -96,6 +99,22 @@ function TitleCardInner() {
                         </button>
                     )}
                 </div>
+
+                {/* founding seals — scarcity */}
+                {founders !== null && (
+                    founders < FOUNDER_CAP ? (
+                        <div className="mt-8 flex flex-col items-center gap-2">
+                            <div className="px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/[0.06]">
+                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold">
+                                    {FOUNDER_CAP - founders} of {FOUNDER_CAP} founding seals remain
+                                </span>
+                            </div>
+                            <span className="text-[9px] uppercase tracking-[0.3em] text-white/30">The first 12 · 40 · 144 are sealed forever</span>
+                        </div>
+                    ) : (
+                        <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-white/30">All 144 founding seals have been claimed</p>
+                    )
+                )}
             </motion.div>
 
             <p className="absolute bottom-6 text-[8px] uppercase tracking-[0.4em] text-white/20">
