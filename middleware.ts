@@ -10,10 +10,10 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get('sb-access-token')?.value;
 
-  // Only the title card (root) is public. Everything else — including the
-  // game (/awakening*) — requires a signed-in soul. ALL users must log in
-  // before they can play.
-  if (pathname === '/') {
+  // The title card and the intro/onboarding (Awakening -> character creation
+  // -> path) are reachable so the flow is never broken by a cookie race.
+  // Login is still enforced at the title-card "Begin" and at the game (/world).
+  if (pathname === '/' || pathname === '/awakening' || pathname.startsWith('/awakening/')) {
     return NextResponse.next();
   }
 

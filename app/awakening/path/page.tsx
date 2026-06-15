@@ -34,15 +34,15 @@ export default function PathPage() {
         if (character.path) setView('tree');
     }, [character.path]);
 
-    const embrace = async (id: GamePath) => {
+    const embrace = (id: GamePath) => {
         setPath(id);
         setView('tree');
-        await saveToCloud();
+        saveToCloud();
     };
 
-    const learn = async (id: string) => {
+    const learn = (id: string) => {
         learnSkill(id);
-        await saveToCloud();
+        saveToCloud();
     };
 
     if (!mounted) return <div className="min-h-screen bg-void" />;

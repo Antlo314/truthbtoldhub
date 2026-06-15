@@ -17,12 +17,15 @@ if (typeof window !== 'undefined') {
     }
 
     supabase.auth.onAuthStateChange((event, session) => {
+        // Only mark the cookie Secure over https — on http (localhost) a Secure
+        // cookie is silently dropped, which would break the auth gate locally.
+        const secure = location.protocol === 'https:' ? '; Secure' : '';
         if (session) {
             // Set session-only cookie (no max-age / expires, so it clears when browser closes)
-            document.cookie = `sb-access-token=${session.access_token}; path=/; SameSite=Lax; Secure`;
+            document.cookie = `sb-access-token=${session.access_token}; path=/; SameSite=Lax${secure}`;
         } else {
             // Clear cookie
-            document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
+            document.cookie = `sb-access-token=; path=/; max-age=0; SameSite=Lax${secure}`;
         }
     });
 }

@@ -177,9 +177,9 @@ export default function AwakeningPage() {
         setReveal(false);
     };
 
-    const stepIntoLight = async () => {
+    const stepIntoLight = () => {
         completeAwakening();
-        await saveToCloud();
+        saveToCloud(); // fire-and-forget — never block the journey on a save
         router.push('/awakening/create');
     };
 

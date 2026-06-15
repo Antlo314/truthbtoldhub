@@ -41,11 +41,11 @@ export default function CreatePage() {
         setAppearance({ gender: g, ...(first ? { bodyTile: { col: first.col, row: first.row } } : {}) });
     };
 
-    const confirm = async () => {
+    const confirm = () => {
         if (!character.name.trim()) return;
         setSaving(true);
         completeAwakening();
-        await saveToCloud();
+        saveToCloud(); // fire-and-forget — don't block the journey on a save
         router.push('/awakening/path');
     };
 
