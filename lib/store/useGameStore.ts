@@ -37,6 +37,8 @@ export interface GameCharacter {
     name: string;
     appearance: CharacterAppearance;
     path: GamePath | null;
+    skills: string[];        // learned skill ids
+    skillPoints: number;     // unspent points
     equipped: EquippedItems;
 }
 
@@ -48,6 +50,8 @@ const DEFAULT_CHARACTER: GameCharacter = {
         aura: '#fbbf24',
     },
     path: null,
+    skills: [],
+    skillPoints: 1,
     equipped: { clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -55,6 +59,7 @@ function freshCharacter(): GameCharacter {
     return {
         ...DEFAULT_CHARACTER,
         appearance: { ...DEFAULT_CHARACTER.appearance, bodyTile: { ...DEFAULT_CHARACTER.appearance.bodyTile } },
+        skills: [...DEFAULT_CHARACTER.skills],
         equipped: { ...DEFAULT_CHARACTER.equipped },
     };
 }
@@ -67,6 +72,7 @@ interface GameState {
     setName: (name: string) => void;
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
     setPath: (path: GamePath) => void;
+    learnSkill: (id: string) => void;
     completeAwakening: () => void;
     reset: () => void;
 
@@ -92,6 +98,13 @@ export const useGameStore = create<GameState>()(
                 })),
 
             setPath: (path) => set((s) => ({ character: { ...s.character, path } })),
+
+            learnSkill: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.skills.includes(id) || c.skillPoints <= 0) return {};
+                    return { character: { ...c, skills: [...c.skills, id], skillPoints: c.skillPoints - 1 } };
+                }),
 
             completeAwakening: () => set({ initiated: true }),
 
@@ -176,6 +189,8 @@ export const useGameStore = create<GameState>()(
                             ...(pc.appearance || {}),
                             bodyTile: pc.appearance?.bodyTile || c.character.appearance.bodyTile,
                         },
+                        skills: pc.skills || c.character.skills,
+                        skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };
