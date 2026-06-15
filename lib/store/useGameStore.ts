@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase } from '@/lib/supabase';
 
 // ============================================================
 //  THE JOURNEY — game state
-//  Local-first (localStorage). We sync to Supabase `game_state`
-//  in the Foundation phase so progress follows the soul, not the
-//  browser. Soul Power continues to live on `profiles`.
+//  Local-first (localStorage) for instant UX, synced to Supabase
+//  `game_state` so progress follows the soul, not the browser.
+//  Cloud calls are resilient: if the table doesn't exist yet (or
+//  the user is offline), we silently keep the local copy.
+//  Soul Power continues to live on `profiles`.
 // ============================================================
 
 export type Gender = 'male' | 'female';
@@ -13,11 +16,15 @@ export type Gender = 'male' | 'female';
 // The four Paths back to the Source.
 export type GamePath = 'seer' | 'sentinel' | 'scribe' | 'mystic';
 
+export interface TileRef {
+    col: number;
+    row: number;
+}
+
 export interface CharacterAppearance {
     gender: Gender;
-    skinTone: string;   // key into the curated LPC tone set
-    hairStyle: string;  // key into the curated LPC hair set (incl. 'afro')
-    hairColor: string;  // key into the curated LPC hair palette
+    bodyTile: TileRef;   // chosen Kenney character tile
+    aura: string;        // aura glow colour (hex)
 }
 
 export interface EquippedItems {
@@ -37,33 +44,44 @@ const DEFAULT_CHARACTER: GameCharacter = {
     name: '',
     appearance: {
         gender: 'male',
-        skinTone: 'brown',
-        hairStyle: 'afro',
-        hairColor: 'black',
+        bodyTile: { col: 1, row: 6 },
+        aura: '#fbbf24',
     },
     path: null,
     equipped: { clothing: 'plain', relic: null, scroll: null },
 };
 
+function freshCharacter(): GameCharacter {
+    return {
+        ...DEFAULT_CHARACTER,
+        appearance: { ...DEFAULT_CHARACTER.appearance, bodyTile: { ...DEFAULT_CHARACTER.appearance.bodyTile } },
+        equipped: { ...DEFAULT_CHARACTER.equipped },
+    };
+}
+
 interface GameState {
-    initiated: boolean;            // has the Awakening been completed?
+    initiated: boolean;          // has the Awakening been completed?
     character: GameCharacter;
+    cloudLoaded: boolean;        // have we pulled this soul's row from Supabase?
 
     setName: (name: string) => void;
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
     setPath: (path: GamePath) => void;
     completeAwakening: () => void;
     reset: () => void;
+
+    loadFromCloud: () => Promise<void>;
+    saveToCloud: () => Promise<void>;
 }
 
 export const useGameStore = create<GameState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             initiated: false,
-            character: { ...DEFAULT_CHARACTER, appearance: { ...DEFAULT_CHARACTER.appearance } },
+            character: freshCharacter(),
+            cloudLoaded: false,
 
-            setName: (name) =>
-                set((s) => ({ character: { ...s.character, name } })),
+            setName: (name) => set((s) => ({ character: { ...s.character, name } })),
 
             setAppearance: (updates) =>
                 set((s) => ({
@@ -73,24 +91,95 @@ export const useGameStore = create<GameState>()(
                     },
                 })),
 
-            setPath: (path) =>
-                set((s) => ({ character: { ...s.character, path } })),
+            setPath: (path) => set((s) => ({ character: { ...s.character, path } })),
 
             completeAwakening: () => set({ initiated: true }),
 
-            reset: () =>
-                set({
-                    initiated: false,
-                    character: {
-                        ...DEFAULT_CHARACTER,
-                        appearance: { ...DEFAULT_CHARACTER.appearance },
-                        equipped: { ...DEFAULT_CHARACTER.equipped },
-                    },
-                }),
+            reset: () => set({ initiated: false, character: freshCharacter(), cloudLoaded: false }),
+
+            loadFromCloud: async () => {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) return;
+
+                    const { data, error } = await supabase
+                        .from('game_state')
+                        .select('character, initiated')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
+
+                    // table missing / RLS / offline -> keep the local copy
+                    if (error) {
+                        set({ cloudLoaded: true });
+                        return;
+                    }
+
+                    if (data && data.character && Object.keys(data.character).length > 0) {
+                        const c = data.character as Partial<GameCharacter>;
+                        set({
+                            character: {
+                                ...freshCharacter(),
+                                ...c,
+                                appearance: { ...DEFAULT_CHARACTER.appearance, ...(c.appearance || {}) },
+                                equipped: { ...DEFAULT_CHARACTER.equipped, ...(c.equipped || {}) },
+                            },
+                            initiated: !!data.initiated,
+                            cloudLoaded: true,
+                        });
+                    } else {
+                        set({ cloudLoaded: true });
+                    }
+                } catch {
+                    /* offline — local copy stands */
+                }
+            },
+
+            saveToCloud: async () => {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) return;
+
+                    const { character, initiated } = get();
+                    await supabase.from('game_state').upsert(
+                        {
+                            user_id: session.user.id,
+                            character,
+                            initiated,
+                            updated_at: new Date().toISOString(),
+                        },
+                        { onConflict: 'user_id' }
+                    );
+                } catch {
+                    /* ignore — localStorage retains it until the table exists */
+                }
+            },
         }),
         {
             name: 'tbth-journey',
+            version: 1,
             storage: createJSONStorage(() => localStorage),
+            partialize: (s) => ({ initiated: s.initiated, character: s.character }),
+            // Heal any older persisted shape (e.g. pre-Kenney appearance) into the
+            // current one so required fields like bodyTile/aura always exist.
+            merge: (persisted, current) => {
+                const c = current as GameState;
+                const p = (persisted as Partial<GameState>) || {};
+                const pc = (p.character || {}) as Partial<GameCharacter>;
+                return {
+                    ...c,
+                    initiated: typeof p.initiated === 'boolean' ? p.initiated : c.initiated,
+                    character: {
+                        ...c.character,
+                        ...pc,
+                        appearance: {
+                            ...c.character.appearance,
+                            ...(pc.appearance || {}),
+                            bodyTile: pc.appearance?.bodyTile || c.character.appearance.bodyTile,
+                        },
+                        equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
+                    },
+                };
+            },
         }
     )
 );

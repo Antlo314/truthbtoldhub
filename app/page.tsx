@@ -80,7 +80,7 @@ function TitleCardInner() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     <button
-                        onClick={() => router.push('/awakening')}
+                        onClick={() => (hasSession ? router.push('/awakening') : setAuthOpen(true))}
                         className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
                         style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
                     >

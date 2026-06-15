@@ -83,6 +83,7 @@ export default function AwakeningPage() {
     const router = useRouter();
     const setName = useGameStore((s) => s.setName);
     const completeAwakening = useGameStore((s) => s.completeAwakening);
+    const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
     const [phase, setPhase] = useState<Phase>('waking');
@@ -176,8 +177,9 @@ export default function AwakeningPage() {
         setReveal(false);
     };
 
-    const stepIntoLight = () => {
+    const stepIntoLight = async () => {
         completeAwakening();
+        await saveToCloud();
         router.push('/awakening/create');
     };
 

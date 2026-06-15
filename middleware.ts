@@ -10,13 +10,10 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get('sb-access-token')?.value;
 
-  // If at root, let next render page.tsx (it handles its own auth gating)
+  // Only the title card (root) is public. Everything else — including the
+  // game (/awakening*) — requires a signed-in soul. ALL users must log in
+  // before they can play.
   if (pathname === '/') {
-    return NextResponse.next();
-  }
-
-  // The initiation is open to everyone — the game is the front door now.
-  if (pathname === '/awakening' || pathname.startsWith('/awakening/')) {
     return NextResponse.next();
   }
 
