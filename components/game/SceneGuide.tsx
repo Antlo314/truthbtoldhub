@@ -1,23 +1,21 @@
 'use client';
 
-import KenneySprite, { ROGUELIKE_CHAR, TRUTH_TILE } from '@/components/game/KenneySprite';
+import TruthSprite from '@/components/game/TruthSprite';
 
 // ============================================================
-//  SCENE GUIDE — Truth (or any guide) present in a scene, speaking
-//  through the game's dialogue box. Reused across the creator and
-//  path-selection scenes so they read as the 2D game, not web forms.
+//  SCENE GUIDE — Truth present in a scene, speaking through the
+//  game's dialogue box. Reused across the creator and path-selection
+//  scenes so they read as the 2D game, not web forms.
 // ============================================================
 
 export function SceneGuide({
     line,
     speaker = 'Truth',
     accent = '#fbbf24',
-    tile = TRUTH_TILE,
 }: {
     line: string;
     speaker?: string;
     accent?: string;
-    tile?: { col: number; row: number };
 }) {
     return (
         <div className="flex items-start gap-3 sm:gap-4 max-w-xl mx-auto">
@@ -32,10 +30,7 @@ export function SceneGuide({
                         filter: 'blur(3px)',
                     }}
                 />
-                <KenneySprite
-                    {...ROGUELIKE_CHAR}
-                    col={tile.col}
-                    row={tile.row}
+                <TruthSprite
                     scale={5}
                     style={{ position: 'relative', filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.5))' }}
                 />

@@ -20,7 +20,6 @@ import {
 // ============================================================
 
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
-const TRUTH_TILE = { col: 1, row: 10 };
 const SHADE_TILE = { col: 0, row: 3 };
 
 function clamp(v: number, lo: number, hi: number) {
@@ -66,6 +65,8 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         envImg.src = '/assets/kenney/roguelikeSheet.png';
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
+        const truthImg = new Image();
+        truthImg.src = '/assets/truth.png';
 
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
@@ -108,6 +109,13 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             const s = 16 * Z * scale;
             ctx.globalAlpha = alpha;
             ctx.drawImage(img, col * 17, row * 17, 16, 16, SX(wx) - s / 2, SY(wy) - s * 0.74, s, s);
+            ctx.globalAlpha = 1;
+        }
+        // Truth uses his own standalone sprite (not a sheet crop), drawn a touch larger.
+        function truthSprite(wx: number, wy: number, alpha = 1, scale = 1.3) {
+            const s = 16 * Z * scale;
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(truthImg, 0, 0, 16, 16, SX(wx) - s / 2, SY(wy) - s * 0.74, s, s);
             ctx.globalAlpha = 1;
         }
         function aura(wx: number, wy: number, color: string, rWorld: number) {
@@ -338,7 +346,7 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             const twy = (hut.y + 1.7) * TILE + Math.sin(st.t / 600) * 1.2;
             aura(twx, twy, '#fbbf24', 12);
             shadow(twx, twy);
-            sprite(charImg, TRUTH_TILE.col, TRUTH_TILE.row, twx, twy);
+            truthSprite(twx, twy);
 
             // shades
             for (const sh of st.shades) {
@@ -358,13 +366,14 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
 
         const tryStart = () => {
             ready += 1;
-            if (ready >= 2) {
+            if (ready >= 3) {
                 last = performance.now();
                 raf = requestAnimationFrame(loop);
             }
         };
         if (envImg.complete) tryStart(); else envImg.onload = tryStart;
         if (charImg.complete) tryStart(); else charImg.onload = tryStart;
+        if (truthImg.complete) tryStart(); else { truthImg.onload = tryStart; truthImg.onerror = tryStart; }
 
         const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());

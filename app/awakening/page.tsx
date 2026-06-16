@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
 import { useGameStore } from '@/lib/store/useGameStore';
-import KenneySprite, { ROGUELIKE_CHAR, TRUTH_TILE } from '@/components/game/KenneySprite';
+import TruthSprite from '@/components/game/TruthSprite';
 
 // ============================================================
 //  CHAPTER I — THE AWAKENING  (first-person POV)
@@ -226,9 +226,7 @@ export default function AwakeningPage() {
                                 filter: 'blur(4px)',
                             }}
                         />
-                        <KenneySprite
-                            {...ROGUELIKE_CHAR}
-                            {...TRUTH_TILE}
+                        <TruthSprite
                             scale={16}
                             style={{ position: 'relative', filter: 'drop-shadow(0 10px 12px rgba(0,0,0,0.55))' }}
                         />

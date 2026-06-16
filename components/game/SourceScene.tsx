@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import KenneySprite, { ROGUELIKE_CHAR, TRUTH_TILE } from '@/components/game/KenneySprite';
+import TruthSprite from '@/components/game/TruthSprite';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 
 // ============================================================
@@ -89,13 +89,7 @@ export default function SourceScene({ character, onComplete, onExit }: Props) {
                     })}
                     {/* Truth at the centre */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 truth-float">
-                        <KenneySprite
-                            {...ROGUELIKE_CHAR}
-                            col={TRUTH_TILE.col}
-                            row={TRUTH_TILE.row}
-                            scale={7}
-                            style={{ filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.5))' }}
-                        />
+                        <TruthSprite scale={7} style={{ filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.5))' }} />
                     </div>
                 </div>
             </div>

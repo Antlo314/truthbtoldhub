@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import KenneySprite, { ROGUELIKE_CHAR, TRUTH_TILE } from '@/components/game/KenneySprite';
+import TruthSprite from '@/components/game/TruthSprite';
 import { STARTER_WEAPONS, WEAPON_BY_ID } from '@/lib/game/weapons';
 import { Hammer, X } from 'lucide-react';
 
@@ -26,7 +26,7 @@ export default function WeaponForge({ onForge, onClose }: { onForge: (id: string
                 <div className="glass-panel rounded-2xl p-4 flex items-start gap-4 mb-7 border border-[rgba(251,191,36,0.2)]">
                     <div className="relative flex items-center justify-center shrink-0" style={{ width: 64, height: 64 }}>
                         <div className="absolute rounded-full" style={{ width: 64, height: 64, background: 'radial-gradient(circle, rgba(251,191,36,0.3), transparent 68%)' }} />
-                        <KenneySprite {...ROGUELIKE_CHAR} {...TRUTH_TILE} scale={4} style={{ position: 'relative' }} />
+                        <TruthSprite scale={4} style={{ position: 'relative' }} />
                     </div>
                     <div>
                         <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/70">Truth</p>
