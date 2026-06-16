@@ -8,6 +8,7 @@ import KenneySprite, {
     CHARACTER_OPTIONS,
     AURA_OPTIONS,
 } from '@/components/game/KenneySprite';
+import { SceneGuide } from '@/components/game/SceneGuide';
 import { Loader2 } from 'lucide-react';
 
 // ============================================================
@@ -59,19 +60,24 @@ export default function CreatePage() {
             />
 
             <div className="relative z-10 max-w-5xl mx-auto px-5 py-10 md:py-14">
-                <div className="text-center mb-10">
-                    <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Chapter II</p>
-                    <h1 className="font-ritual text-3xl md:text-5xl font-black uppercase gold-shimmer">The Forging of Self</h1>
-                    <p className="text-zinc-500 text-xs md:text-sm mt-3 max-w-md mx-auto">
-                        Truth studies you in the half-light. Shape the vessel you carry into the world.
-                    </p>
+                <div className="text-center mb-5">
+                    <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70">Chapter II · The Forging of Self</p>
+                </div>
+                <div className="mb-8">
+                    <SceneGuide line="Now shape the vessel you will carry into the world — your form, your name, and the light you give off. Choose well; the world will know you by it." />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* ===== live preview ===== */}
-                    <div className="glass-panel rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[360px]">
+                    <div
+                        className="rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[380px] border border-[rgba(251,191,36,0.12)]"
+                        style={{ background: 'radial-gradient(circle at 50% 32%, #15110a 0%, #0a0805 58%, #050403 100%)' }}
+                    >
+                        {/* chamber floor glow */}
+                        <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ height: 130, background: `linear-gradient(to top, ${aura}22, transparent)` }} />
+                        {/* aura behind the soul */}
                         <div
-                            className="absolute rounded-full"
+                            className="absolute rounded-full pointer-events-none"
                             style={{
                                 width: 300,
                                 height: 300,
@@ -87,12 +93,24 @@ export default function CreatePage() {
                             className="truth-float"
                             style={{ position: 'relative', filter: 'drop-shadow(0 10px 12px rgba(0,0,0,0.5))' }}
                         />
+                        {/* glowing dais the soul stands upon */}
+                        <div
+                            className="absolute pointer-events-none"
+                            style={{
+                                bottom: 72,
+                                width: 172,
+                                height: 30,
+                                borderRadius: '50%',
+                                background: `radial-gradient(ellipse at center, ${aura}55 0%, ${aura}1a 45%, transparent 72%)`,
+                                filter: 'blur(1px)',
+                            }}
+                        />
                         <div
                             className="absolute"
                             style={{
-                                bottom: 70,
-                                width: 150,
-                                height: 22,
+                                bottom: 74,
+                                width: 118,
+                                height: 15,
                                 borderRadius: '50%',
                                 background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%)',
                             }}

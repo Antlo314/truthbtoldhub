@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useGameStore, type GamePath } from '@/lib/store/useGameStore';
 import { PATHS, PATH_BY_ID } from '@/lib/game/paths';
+import { SceneGuide } from '@/components/game/SceneGuide';
 import { Eye, Shield, ScrollText, Sparkles, Lock, Check, Crown, ArrowRight } from 'lucide-react';
 
 // ============================================================
@@ -71,6 +72,10 @@ export default function PathPage() {
                                 {character.skillPoints} skill point{character.skillPoints === 1 ? '' : 's'}
                             </span>
                         </div>
+                    </div>
+
+                    <div className="mb-9">
+                        <SceneGuide accent={active.color} line="This is your path now. Spend what you have earned — every attunement you take will be felt in the world, and in every fight." />
                     </div>
 
                     {/* skill tree */}
@@ -157,12 +162,11 @@ export default function PathPage() {
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
             <div className="relative z-10 max-w-5xl mx-auto px-5 py-12">
-                <div className="text-center mb-10">
-                    <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Chapter III</p>
-                    <h1 className="font-ritual text-3xl md:text-5xl font-black uppercase gold-shimmer">Choose Your Path</h1>
-                    <p className="text-zinc-500 text-xs md:text-sm mt-3 max-w-lg mx-auto">
-                        {character.name ? <>Four roads lie before you, <span className="text-aether-gold">{character.name}</span>.</> : 'Four roads lie before you.'} Each leads back to the Source by a different light. Choose with care — your strengths and your weaknesses are born here.
-                    </p>
+                <div className="text-center mb-5">
+                    <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70">Chapter III · The Crossroads</p>
+                </div>
+                <div className="mb-9">
+                    <SceneGuide line={`Four roads lie before you${character.name ? `, ${character.name}` : ''}. Each leads back to the Source by a different light. Choose with care — your strengths and your weaknesses are born here.`} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
