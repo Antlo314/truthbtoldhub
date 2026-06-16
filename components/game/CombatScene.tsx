@@ -119,8 +119,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 const mag = Math.hypot(ix, iy);
                 if (mag > 1) { ix /= mag; iy /= mag; }
                 const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
-                st.px = Math.max(lo, Math.min(hiX, st.px + ix * 64 * dt));
-                st.py = Math.max(lo, Math.min(hiY, st.py + iy * 64 * dt));
+                st.px = Math.max(lo, Math.min(hiX, st.px + ix * 84 * dt));
+                st.py = Math.max(lo, Math.min(hiY, st.py + iy * 84 * dt));
 
                 // attack — the weapon strikes any shade within reach on its own
                 // rhythm (move to engage); the Strike button forces a swing.

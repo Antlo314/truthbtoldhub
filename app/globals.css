@@ -252,7 +252,7 @@ h1, h2, h3, .font-ritual {
     background: radial-gradient(120% 85% at 50% 62%, #2c271f 0%, #16120c 46%, #050403 100%);
     filter: blur(18px) brightness(0.45);
     transform: scale(1.08);
-    transition: filter 1.8s ease, transform 1.8s ease;
+    transition: filter 1.2s ease, transform 1.2s ease;
 }
 .pov-vision.focused {
     filter: blur(0px) brightness(1);
@@ -297,7 +297,7 @@ h1, h2, h3, .font-ritual {
 /* shut -> open, with two groggy blinks */
 .pov-lids-in .pov-lid-top,
 .pov-lids-in .pov-lid-bottom {
-    animation: povBlink 4.4s ease-in-out forwards;
+    animation: povBlink 2s ease-in-out forwards;
 }
 @keyframes povBlink {
     0%   { height: 56%; }   /* shut */

@@ -34,7 +34,7 @@ const LINES: Line[] = [
 // ---- typewriter ----
 function Typewriter({
     text,
-    speed = 30,
+    speed = 16,
     reveal,
     onDone,
 }: {
@@ -125,11 +125,11 @@ export default function AwakeningPage() {
         };
     }, [startAudio]);
 
-    // the waking cinematic: lids open over ~4.4s, vision focuses, then the scene
+    // the waking cinematic: lids open, vision focuses, then the scene — kept brisk
     useEffect(() => {
         if (!mounted) return;
-        const t1 = setTimeout(() => setFocused(true), 2800);
-        const t2 = setTimeout(() => setPhase('scene'), 4400);
+        const t1 = setTimeout(() => setFocused(true), 800);
+        const t2 = setTimeout(() => setPhase('scene'), 2000);
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);

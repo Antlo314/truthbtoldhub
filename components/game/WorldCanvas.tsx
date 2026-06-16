@@ -258,7 +258,7 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             if (mag > 1) { ix /= mag; iy /= mag; }
 
             // move with per-axis collision (feet point)
-            const spd = 64;
+            const spd = 92;
             const fy = 5; // feet offset
             const nx = st.px + ix * spd * dt;
             if (!solidAt(nx, st.py + fy) && !solidAt(nx, st.py)) st.px = nx;
