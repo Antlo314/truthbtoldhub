@@ -54,24 +54,29 @@ export default function KenneySprite({
 export const ROGUELIKE_CHAR = { sheet: '/assets/kenney/roguelikeChar.png', sheetW: 918, sheetH: 203 };
 export const TRUTH_TILE = { col: 1, row: 10 };
 
-// Selectable player forms from the same sheet (Truth's tile c1/r10 is reserved).
-export interface CharOption { col: number; row: number; gender: Gender; }
+// Selectable player forms — the full human cast from the roguelike sheet.
+// (Rows 0-2 are faceless skin-tone blobs, row 3 is goblins/enemies, and
+//  c1/r10 is Truth — all reserved. Rows 5-11 cols 0-1 are the real avatars.)
+// Each figure carries its own skin tone, hair, and clothing baked in, so a
+// "form" is a whole look. `gender` is just a default identity hint — the
+// creator shows every form to everyone.
 export type Gender = 'male' | 'female';
+export interface CharOption { col: number; row: number; label: string; gender: Gender; }
 
 export const CHARACTER_OPTIONS: CharOption[] = [
-    { col: 0, row: 5, gender: 'female' },
-    { col: 1, row: 5, gender: 'female' },
-    { col: 0, row: 10, gender: 'female' },
-    { col: 0, row: 6, gender: 'male' },
-    { col: 1, row: 6, gender: 'male' },
-    { col: 0, row: 7, gender: 'male' },
-    { col: 1, row: 7, gender: 'male' },
-    { col: 0, row: 8, gender: 'male' },
-    { col: 1, row: 8, gender: 'male' },
-    { col: 0, row: 9, gender: 'male' },
-    { col: 1, row: 9, gender: 'male' },
-    { col: 0, row: 11, gender: 'male' },
-    { col: 1, row: 11, gender: 'male' },
+    { col: 0, row: 5, label: 'Seeker', gender: 'female' },   // blonde braid, ember top
+    { col: 1, row: 5, label: 'Matron', gender: 'female' },   // silver hair, teal robe
+    { col: 1, row: 7, label: 'Weaver', gender: 'female' },   // braided, laced bodice
+    { col: 0, row: 9, label: 'Ember', gender: 'female' },    // long auburn hair
+    { col: 0, row: 10, label: 'Oracle', gender: 'female' },  // red hair, teal veil
+    { col: 0, row: 6, label: 'Wanderer', gender: 'male' },   // bare-shouldered traveller
+    { col: 1, row: 6, label: 'Warden', gender: 'male' },     // dark skin, black beard
+    { col: 0, row: 7, label: 'Pilgrim', gender: 'male' },    // plain grey tunic
+    { col: 0, row: 8, label: 'Monk', gender: 'male' },       // topknot, belted robe
+    { col: 1, row: 8, label: 'Ascetic', gender: 'male' },    // fair hair, plain wrap
+    { col: 1, row: 9, label: 'Nomad', gender: 'male' },      // deep skin, earthen cloak
+    { col: 0, row: 11, label: 'Sage', gender: 'male' },      // white-bearded, grey robe
+    { col: 1, row: 11, label: 'Elder', gender: 'male' },     // white-bearded, pale robe
 ];
 
 // Aura glow colours (drawn behind the sprite — never tints the sprite itself).

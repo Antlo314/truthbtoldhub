@@ -34,12 +34,11 @@ export default function CreatePage() {
     }, [loadFromCloud]);
 
     const { gender, bodyTile, aura } = character.appearance;
-    const forms = CHARACTER_OPTIONS.filter((o) => o.gender === gender);
+    // Every form is offered to everyone — the gender toggle is identity only.
+    const forms = CHARACTER_OPTIONS;
+    const currentForm = CHARACTER_OPTIONS.find((o) => o.col === bodyTile.col && o.row === bodyTile.row);
 
-    const chooseGender = (g: 'male' | 'female') => {
-        const first = CHARACTER_OPTIONS.find((o) => o.gender === g);
-        setAppearance({ gender: g, ...(first ? { bodyTile: { col: first.col, row: first.row } } : {}) });
-    };
+    const chooseGender = (g: 'male' | 'female') => setAppearance({ gender: g });
 
     const confirm = () => {
         if (!character.name.trim()) return;
@@ -101,6 +100,9 @@ export default function CreatePage() {
                         <p className="relative font-ritual text-2xl text-white mt-6 tracking-wide">
                             {character.name || <span className="text-zinc-600 italic">Unnamed Soul</span>}
                         </p>
+                        {currentForm && (
+                            <p className="relative text-[10px] uppercase tracking-[0.3em] text-aether-gold/70 mt-1">{currentForm.label}</p>
+                        )}
                     </div>
 
                     {/* ===== controls ===== */}
@@ -118,7 +120,7 @@ export default function CreatePage() {
 
                         {/* gender */}
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-2 block">Form</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-2 block">Identity</label>
                             <div className="flex gap-3">
                                 {(['male', 'female'] as const).map((g) => (
                                     <button
@@ -138,13 +140,14 @@ export default function CreatePage() {
 
                         {/* appearance gallery */}
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-2 block">Appearance</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-2 block">Form · {forms.length} to choose</label>
                             <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
                                 {forms.map((o) => {
                                     const selected = o.col === bodyTile.col && o.row === bodyTile.row;
                                     return (
                                         <button
                                             key={`${o.col}-${o.row}`}
+                                            title={o.label}
                                             onClick={() => setAppearance({ bodyTile: { col: o.col, row: o.row } })}
                                             className={`aspect-square rounded-lg flex items-center justify-center border transition-all ${
                                                 selected
