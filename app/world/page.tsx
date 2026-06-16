@@ -11,9 +11,10 @@ import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulle
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
-import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, hasAllRelics, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
+import SourceScene from '@/components/game/SourceScene';
 import WeaponForge from '@/components/game/WeaponForge';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 
@@ -41,6 +42,7 @@ export default function WorldPage() {
     const markCleared = useGameStore((s) => s.markCleared);
     const markSolved = useGameStore((s) => s.markSolved);
     const claimQuest = useGameStore((s) => s.claimQuest);
+    const returnToSource = useGameStore((s) => s.returnToSource);
 
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
@@ -56,6 +58,7 @@ export default function WorldPage() {
     const [combatDest, setCombatDest] = useState<Destination | null>(null);
     const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
     const [questLogOpen, setQuestLogOpen] = useState(false);
+    const [sourceOpen, setSourceOpen] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -204,6 +207,25 @@ export default function WorldPage() {
             {toast && (
                 <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/70 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide pointer-events-none whitespace-nowrap">
                     {toast}
+                </div>
+            )}
+
+            {/* the way to the Source — opens once every relic has been gathered */}
+            {hasAllRelics(character.inventory) && !character.sourceReturned && (
+                <button
+                    onClick={() => setSourceOpen(true)}
+                    className="absolute left-1/2 top-[14%] -translate-x-1/2 z-20 pointer-events-auto px-5 py-3 rounded-2xl text-center animate-pulse"
+                    style={{ background: 'linear-gradient(135deg, rgba(252,211,77,0.96) 0%, rgba(180,83,9,0.96) 100%)', boxShadow: '0 0 44px rgba(251,191,36,0.6)' }}
+                >
+                    <span className="block text-[8px] font-black uppercase tracking-[0.35em] text-black/70">The five relics burn as one</span>
+                    <span className="block text-[12px] font-black uppercase tracking-[0.25em] text-black mt-0.5">Return to the Source →</span>
+                </button>
+            )}
+
+            {/* the journey, once completed, dwells in the soul */}
+            {character.sourceReturned && (
+                <div className="absolute left-1/2 top-[14%] -translate-x-1/2 z-10 pointer-events-none px-4 py-1.5 rounded-full bg-black/50 border border-aether-gold/30">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-aether-gold">✦ The Source dwells in you</span>
                 </div>
             )}
 
@@ -528,6 +550,15 @@ export default function WorldPage() {
                     />
                 );
             })()}
+
+            {/* the endgame — the Return to the Source */}
+            {sourceOpen && (
+                <SourceScene
+                    character={character}
+                    onComplete={() => { returnToSource(); saveToCloud(); setSourceOpen(false); showToast('✦ You have returned to the Source'); }}
+                    onExit={() => setSourceOpen(false)}
+                />
+            )}
         </div>
     );
 }

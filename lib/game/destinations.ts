@@ -297,6 +297,14 @@ export const RELIC_BY_ID: Record<string, Relic & { from: string }> = DESTINATION
     return acc;
 }, {} as Record<string, Relic & { from: string }>);
 
+// Every relic in the world — the full set a soul must gather before the
+// way to the Source opens (the endgame gate).
+export const ALL_RELIC_IDS: string[] = DESTINATIONS.flatMap((d) => d.relics.map((r) => r.id));
+
+export function hasAllRelics(inventory: string[]): boolean {
+    return ALL_RELIC_IDS.length > 0 && ALL_RELIC_IDS.every((id) => inventory.includes(id));
+}
+
 // Sum the passive combat bonuses from the relics a soul carries.
 export function relicBonuses(inventory: string[]): { hp: number; damage: number; reach: number } {
     let hp = 0;

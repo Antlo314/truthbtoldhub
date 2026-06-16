@@ -48,6 +48,7 @@ export interface GameCharacter {
     solved: string[];        // puzzle ids solved
     questsClaimed: string[]; // quest ids whose reward was taken
     wardrobe: string[];      // clothing ids the soul has found
+    sourceReturned: boolean; // has the soul completed the Return to the Source?
     equipped: EquippedItems;
 }
 
@@ -67,6 +68,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     solved: [],
     questsClaimed: [],
     wardrobe: ['plain'],
+    sourceReturned: false,
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -101,6 +103,7 @@ interface GameState {
     markCleared: (destId: string) => void;
     markSolved: (puzzleId: string) => void;
     claimQuest: (questId: string, skillPointsReward: number) => void;
+    returnToSource: () => void;
     completeAwakening: () => void;
     reset: () => void;
 
@@ -184,6 +187,9 @@ export const useGameStore = create<GameState>()(
                     if (c.questsClaimed.includes(questId)) return {};
                     return { character: { ...c, questsClaimed: [...c.questsClaimed, questId], skillPoints: c.skillPoints + skillPointsReward } };
                 }),
+
+            returnToSource: () =>
+                set((s) => (s.character.sourceReturned ? {} : { character: { ...s.character, sourceReturned: true } })),
 
             completeAwakening: () => set({ initiated: true }),
 
@@ -294,6 +300,7 @@ export const useGameStore = create<GameState>()(
                         solved: pc.solved || c.character.solved,
                         questsClaimed: pc.questsClaimed || c.character.questsClaimed,
                         wardrobe: pc.wardrobe && pc.wardrobe.length ? pc.wardrobe : c.character.wardrobe,
+                        sourceReturned: typeof pc.sourceReturned === 'boolean' ? pc.sourceReturned : c.character.sourceReturned,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };
