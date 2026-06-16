@@ -22,7 +22,7 @@ import SourceScene from '@/components/game/SourceScene';
 import WeaponForge from '@/components/game/WeaponForge';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
-import { WEAPON_BY_ID, weaponForTier } from '@/lib/game/weapons';
+import { WEAPON_BY_ID } from '@/lib/game/weapons';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -188,14 +188,11 @@ export default function WorldPage() {
             if (d) {
                 const ch = useGameStore.getState().character;
                 const freshClear = !ch.cleared.includes(d.poiId);
-                const before = ch.cleared.length;
                 markCleared(d.poiId);
                 saveToCloud();
                 showToast(d.combat?.victory || 'The guardian falls.');
-                // your weapon tempers up a tier on each new guardian felled
                 if (freshClear) {
-                    const oldW = weaponForTier(before), newW = weaponForTier(before + 1);
-                    if (newW.id !== oldW.id) setTimeout(() => showToast(`✦ Your weapon tempers into the ${newW.name}`), 2800);
+                    setTimeout(() => showToast(`✦ Guardian defeated! Visit Truth's Forge to upgrade your weapon using gathered resources.`), 2800);
                 }
                 setActiveDest(d);
             }
@@ -695,7 +692,8 @@ export default function WorldPage() {
                 const sb = skillBonuses(character.skills);
                 const fb = founderBonuses(founderNumber);
                 const cb = clothingBonus(character.equipped.clothing);
-                const wpn = weaponForTier(character.cleared.length);
+                const wpnId = character.equipped.weapon || 'wood_staff';
+                const wpn = WEAPON_BY_ID[wpnId] || WEAPON_BY_ID['wood_staff'];
                 return (
                     <CombatScene
                         destination={combatDest}

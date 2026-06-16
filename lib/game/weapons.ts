@@ -64,7 +64,9 @@ export const WEAPON_BY_ID: Record<string, Weapon> = WEAPON_TIERS.reduce((acc, w)
 export const STARTER_WEAPON = WEAPON_TIERS[0];
 export const STARTER_WEAPONS = [WEAPON_TIERS[0]];
 
-// The weapon for a given number of guardians felled (clamped to the ladder).
+/**
+ * @deprecated Auto-tempering has been deprecated. Use character.equipped.weapon instead.
+ */
 export function weaponForTier(tier: number): Weapon {
     return WEAPON_TIERS[Math.max(0, Math.min(WEAPON_TIERS.length - 1, tier))];
 }

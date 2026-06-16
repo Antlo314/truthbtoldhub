@@ -329,7 +329,10 @@ export interface CombatBonuses {
     regen: number; lifesteal: number; crit: number; knockback: number;
 }
 
-// Sum the passive combat powers from the relics a soul carries.
+/**
+ * @deprecated Use combatRelicBonuses(inventory, equippedRelic) in resonance.ts instead.
+ * This is left here to prevent circular dependencies.
+ */
 export function relicBonuses(inventory: string[]): CombatBonuses {
     const b: CombatBonuses = { hp: 0, damage: 0, reach: 0, regen: 0, lifesteal: 0, crit: 0, knockback: 0 };
     for (const id of inventory) {

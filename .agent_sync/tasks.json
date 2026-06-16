@@ -1,0 +1,19 @@
+{
+  "active_assignments": {
+    "gemini": "idle",
+    "claude": "idle",
+    "grok": "idle"
+  },
+  "completed_milestones": [
+    "Interactive portal canvases for Eden, St. Louis, Giza, Kolbrin, and Emerald Halls",
+    "Weapon forge smelting upgrades and materials tracking store",
+    "Weather and particle systems inside all five mini-world canvases",
+    "Cinematic cutscene asset pack and CutscenePlayer (title, chapters, world entry, 5 destination intros, 5 combat preludes, endgame)",
+    "Path powers gameplay — Seer hidden POIs, Sentinel/Scribe/Mystic combat modifiers, Mystic Channel heal",
+    "Equipment loop — equippable relics with resonance echo, scrolls from quests, satchel equip UI",
+    "Chained quest line (6 missions) and destination revisit deep lore (On Second Passing)",
+    "Procedural layered avatar engine + creator (Claude) — skin/hair/face/outfit, 4-direction facing, walk animation; replaces Kenney busts",
+    "Combat overhaul (Claude) — manual directional fighting, Wooden Staff->Sword weapon tiers, distinct per-destination bosses, real relic powers (regen/lifesteal/crit/knockback)",
+    "Bigger 88x88 procedural overworld + centered mobile controls + compact no-scroll onboarding (Claude)"
+  ]
+}
