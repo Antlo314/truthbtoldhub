@@ -69,10 +69,12 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const truthImg = new Image();
         truthImg.src = '/assets/truth.png';
 
-        // the player's layered avatar, pre-rendered to an offscreen canvas and
-        // rebuilt only when the config changes.
-        let avatarCanvas = avatarOffscreen(charRef.current.avatar);
+        // the player's layered avatar — three pre-rendered walk frames
+        // (idle / left-step / right-step), rebuilt only when the look changes.
+        const buildFrames = (cfg: GameCharacter['avatar']) => [avatarOffscreen(cfg, 0), avatarOffscreen(cfg, 1), avatarOffscreen(cfg, 2)];
+        let avatarFrames = buildFrames(charRef.current.avatar);
         let avatarKey = JSON.stringify(charRef.current.avatar);
+        let walkT = 0;
 
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
@@ -125,10 +127,11 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             ctx.globalAlpha = 1;
         }
         // The player's full-body avatar (16x24), feet anchored near (wx,wy).
-        function drawAvatar(wx: number, wy: number, scale = 1.05) {
+        // `bob` lifts the body a pixel on the step beat.
+        function drawAvatar(wx: number, wy: number, img: CanvasImageSource, bob = 0, scale = 1.05) {
             const w = 16 * Z * scale;
             const h = 24 * Z * scale;
-            ctx.drawImage(avatarCanvas, SX(wx) - w / 2, SY(wy) - h + 5 * Z * scale, w, h);
+            ctx.drawImage(img, SX(wx) - w / 2, SY(wy) - h + (5 - bob) * Z * scale, w, h);
         }
         function aura(wx: number, wy: number, color: string, rWorld: number) {
             const x = SX(wx);
@@ -256,6 +259,8 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             if (k.has('arrowdown') || k.has('s')) iy = 1;
             const mag = Math.hypot(ix, iy);
             if (mag > 1) { ix /= mag; iy /= mag; }
+            const moving = Math.hypot(ix, iy) > 0.12;
+            walkT += moving ? dt : 0;
 
             // move with per-axis collision (feet point)
             const spd = 92;
@@ -367,13 +372,16 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
                 sprite(charImg, SHADE_TILE.col, SHADE_TILE.row, sh.x, sh.y, fl);
             }
 
-            // player — rebuild the avatar canvas if the look changed, then draw it
+            // player — rebuild the avatar frames if the look changed, then draw
+            // the right walk frame (idle when still)
             const ap = charRef.current.appearance;
             const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) { avatarKey = curKey; avatarCanvas = avatarOffscreen(charRef.current.avatar); }
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
             shadow(st.px, st.py);
             aura(st.px, st.py, ap.aura, 11);
-            drawAvatar(st.px, st.py);
+            const wphase = Math.floor(walkT * 7) % 2;
+            const wframe = moving ? avatarFrames[wphase === 0 ? 1 : 2] : avatarFrames[0];
+            drawAvatar(st.px, st.py, wframe, moving && wphase === 0 ? 1 : 0);
 
             raf = requestAnimationFrame(loop);
         }

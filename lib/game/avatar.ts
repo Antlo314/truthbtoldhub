@@ -60,7 +60,9 @@ function px(g: (string | null)[][], x: number, y: number, c: string) {
 }
 
 // Build the full character. Layers are drawn back-to-front.
-export function buildAvatarPixels(cfg: AvatarConfig): (string | null)[][] {
+// `step` drives a 2-frame walk cycle: 0 = idle, 1 = left foot lifted,
+// 2 = right foot lifted.
+export function buildAvatarPixels(cfg: AvatarConfig, step = 0): (string | null)[][] {
     const g = emptyGrid();
     const skin = SKIN_TONES[cfg.skin] ?? SKIN_TONES[4];
     const shade = skinShade[cfg.skin] ?? '#8d5524';
@@ -80,11 +82,13 @@ export function buildAvatarPixels(cfg: AvatarConfig): (string | null)[][] {
         rect(g, 5, 22, 2, 1, skin); rect(g, 9, 22, 2, 1, skin);
         rect(g, 5, 22, 6, 2, boot); // shoes row
     } else {
-        // trousers + two legs with a centre gap
+        // trousers + two legs with a centre gap; a lifted foot shortens its
+        // lower leg and raises its boot for the walk cycle.
+        const lLift = step === 1 ? 1 : 0;
+        const rLift = step === 2 ? 1 : 0;
         rect(g, 5, 16, 6, 4, bottom);
-        rect(g, 5, 20, 2, 2, bottom); rect(g, 9, 20, 2, 2, bottom);
-        // boots
-        rect(g, 5, 22, 2, 2, boot); rect(g, 9, 22, 2, 2, boot);
+        rect(g, 5, 20, 2, 2 - lLift, bottom); rect(g, 9, 20, 2, 2 - rLift, bottom);
+        rect(g, 5, 22 - lLift, 2, 2, boot); rect(g, 9, 22 - rLift, 2, 2, boot);
         // crotch gap shadow
         px(g, 7, 21, shade); px(g, 8, 21, shade);
     }

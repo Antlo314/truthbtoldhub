@@ -22,13 +22,14 @@ export function paintGrid(ctx: CanvasRenderingContext2D, grid: (string | null)[]
 }
 
 // Render a config to a fresh offscreen canvas at native resolution (1px cells).
-// The caller can drawImage() it at any scale with imageSmoothing off.
-export function avatarOffscreen(config: AvatarConfig): HTMLCanvasElement {
+// `step` selects a walk frame (0 idle, 1/2 stepping). The caller can
+// drawImage() it at any scale with imageSmoothing off.
+export function avatarOffscreen(config: AvatarConfig, step = 0): HTMLCanvasElement {
     const c = document.createElement('canvas');
     c.width = AV_W;
     c.height = AV_H;
     const ctx = c.getContext('2d')!;
-    paintGrid(ctx, buildAvatarPixels(config), 1, 0, 0);
+    paintGrid(ctx, buildAvatarPixels(config, step), 1, 0, 0);
     return c;
 }
 

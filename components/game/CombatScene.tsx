@@ -69,7 +69,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         let ctx = canvas.getContext('2d')!;
         const img = new Image();
         img.src = CHAR_SHEET;
-        const avatarCanvas = avatarOffscreen(character.avatar);
+        const avatarFrames = [avatarOffscreen(character.avatar, 0), avatarOffscreen(character.avatar, 1), avatarOffscreen(character.avatar, 2)];
+        let walkTimer = 0;
         const cfg = d.combat!;
 
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -107,6 +108,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             st.shake = Math.max(0, st.shake - dt * 22);
             st.hurtFlash = Math.max(0, st.hurtFlash - dt * 1.6);
             st.hurtCd -= dt;
+            let frameMoving = false;
 
             if (!st.done) {
                 // input
@@ -118,6 +120,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 if (k.has('arrowdown') || k.has('s')) iy = 1;
                 const mag = Math.hypot(ix, iy);
                 if (mag > 1) { ix /= mag; iy /= mag; }
+                frameMoving = Math.hypot(ix, iy) > 0.12;
+                if (frameMoving) walkTimer += dt;
                 const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
                 st.px = Math.max(lo, Math.min(hiX, st.px + ix * 84 * dt));
                 st.py = Math.max(lo, Math.min(hiY, st.py + iy * 84 * dt));
@@ -242,10 +246,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, 0, Math.PI * 2); ctx.stroke();
             }
 
-            // player — the layered avatar (16x24), feet near st.py
+            // player — the layered avatar (16x24) with its walk cycle
             glow(st.px, st.py, character.appearance.aura, 11);
             ctx.globalAlpha = 1;
-            ctx.drawImage(avatarCanvas, st.px - 8, st.py - 19, 16, 24);
+            const wphase = Math.floor(walkTimer * 7) % 2;
+            const wframe = frameMoving ? avatarFrames[wphase === 0 ? 1 : 2] : avatarFrames[0];
+            ctx.drawImage(wframe, st.px - 8, st.py - 19 - (frameMoving && wphase === 0 ? 1 : 0), 16, 24);
 
             ctx.restore();
 
