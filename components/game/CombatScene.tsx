@@ -44,12 +44,17 @@ interface Props {
     canChannel?: boolean;
     channelHealPct?: number;
     channelCooldownSec?: number;
+    canBlock?: boolean;
+    blockReduction?: number;
+    blockCooldownSec?: number;
+    canWeakPoint?: boolean;
+    weakPointDamageMult?: number;
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, canChannel = false, channelHealPct = 0.25, channelCooldownSec = 14, onVictory, onDefeat, onExit }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, canChannel = false, channelHealPct = 0.25, channelCooldownSec = 14, canBlock = false, blockReduction = 0.55, blockCooldownSec = 8, canWeakPoint = false, weakPointDamageMult = 2, onVictory, onDefeat, onExit }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
     const dmg = Math.round((weaponDamage + bonusDamage) * playerDamageMult);
     const reach = weaponReach + bonusReach + playerReachBonus;
@@ -72,7 +77,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
     const [muted, setMutedState] = useState(isMuted());
     const [channelCd, setChannelCd] = useState(0);
+    const [blockCd, setBlockCd] = useState(0);
+    const [weakPointActive, setWeakPointActive] = useState(false);
     const channelRef = useRef(false);
+    const blockRef = useRef(false);
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
@@ -99,6 +107,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             aimx: 0, aimy: 1, // attack direction (last movement; default down)
             foes: [] as Foe[], bossSpawned: false, done: false,
             shake: 0, hurtFlash: 0, hurtCd: 0,
+            blockT: 0, blockCd: 0,
+            weakPointT: 0, weakPointActive: false, weakPointCycle: 7,
         };
         const foeHp = Math.round(cfg.enemyHp * enemyHpMult);
         const bossHp = Math.round(cfg.bossHp * enemyHpMult);
@@ -176,7 +186,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         if (dd > reach + (f.boss ? 8 : 0)) continue;
                         if ((dx * st.aimx + dy * st.aimy) / dd < 0.35) continue; // must be in front
                         const isCrit = crit > 0 && Math.random() < crit;
-                        const hitDmg = isCrit ? dmg * 2 : dmg;
+                        const weakMult = f.boss && canWeakPoint && st.weakPointActive ? weakPointDamageMult : 1;
+                        const hitDmg = Math.round((isCrit ? dmg * 2 : dmg) * weakMult);
                         f.hp -= hitDmg; f.hurt = 0.16; hits++; dealt += hitDmg;
                         const a = Math.atan2(dy, dx);
                         const kb = (f.boss ? 4 : 9) + knockbackBonus + (isCrit ? 4 : 0);
@@ -199,6 +210,28 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     f.y += Math.sin(a) * speedFor(f) * dt;
                     if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? bossDmg : foeDmg;
                 }
+                // Sentinel block — brief damage reduction on cooldown
+                st.blockCd = Math.max(0, st.blockCd - dt);
+                if (canBlock && blockRef.current && st.blockCd <= 0) {
+                    blockRef.current = false;
+                    st.blockT = 0.45;
+                    st.blockCd = blockCooldownSec;
+                }
+                st.blockT = Math.max(0, st.blockT - dt);
+                if (Math.abs(st.blockCd - blockCd) > 0.4 || (st.blockCd === 0 && blockCd > 0)) {
+                    setBlockCd(st.blockCd);
+                }
+
+                // Seer weak point — periodic boss vulnerability window
+                if (canWeakPoint && st.bossSpawned) {
+                    st.weakPointCycle -= dt;
+                    if (st.weakPointCycle <= 0) {
+                        st.weakPointActive = !st.weakPointActive;
+                        st.weakPointCycle = st.weakPointActive ? 2.4 : 7;
+                        if (st.weakPointActive !== weakPointActive) setWeakPointActive(st.weakPointActive);
+                    }
+                }
+
                 // Mystic channel — burst heal on cooldown
                 channelTimer = Math.max(0, channelTimer - dt);
                 if (canChannel && channelRef.current && channelTimer <= 0 && st.php > 0) {
@@ -212,7 +245,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     setChannelCd(channelTimer);
                 }
                 if (contactDps > 0) {
-                    st.php -= contactDps * dt;
+                    const blockMult = st.blockT > 0 ? Math.max(0, 1 - blockReduction) : 1;
+                    st.php -= contactDps * blockMult * dt;
                     st.hurtFlash = Math.min(1, st.hurtFlash + 0.22);
                     st.shake = Math.max(st.shake, 2.6);
                     if (st.hurtCd <= 0) { sfx.hurt(); st.hurtCd = 0.45; }
@@ -316,7 +350,15 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             // foes
             for (const f of st.foes) {
                 if (f.boss) {
-                    drawBoss(f.x, f.y, d.accent, cfg.bossArt || 'wraith', f.hurt);
+                    if (canWeakPoint && st.weakPointActive) {
+                        glow(f.x, f.y, '#22d3ee', 30);
+                        ctx.strokeStyle = '#22d3ee88';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(f.x, f.y - 6, 18, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                    drawBoss(f.x, f.y, canWeakPoint && st.weakPointActive ? '#22d3ee' : d.accent, cfg.bossArt || 'wraith', f.hurt);
                     ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 16, f.y - 28, 32, 3);
                     ctx.fillStyle = d.accent; ctx.fillRect(f.x - 16, f.y - 28, 32 * (f.hp / f.max), 3);
                 } else {
@@ -397,6 +439,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
                     <div className="h-full rounded-full transition-all" style={{ width: `${(hp / maxHp) * 100}%`, background: hp > maxHp * 0.3 ? '#34d399' : '#ef4444' }} />
                 </div>
+                {canWeakPoint && boss && weakPointActive && (
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 animate-pulse">Weak point revealed — strike now</p>
+                )}
                 {boss && (
                     <div className="mt-1">
                         <p className="text-[9px] uppercase tracking-[0.25em] text-red-400 mb-1">{boss.name}</p>
@@ -433,6 +478,23 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     <div className="absolute rounded-full" style={{ width: '44%', height: '44%', left: '28%', top: '28%', background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)', boxShadow: '0 0 12px rgba(251,191,36,0.5)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
                 </div>
 
+                {canBlock && (
+                    <button
+                        onClick={() => { unlockAudio(); blockRef.current = true; }}
+                        disabled={blockCd > 0}
+                        className="absolute w-[4.25rem] h-[4.25rem] rounded-full text-[8px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-35"
+                        style={{
+                            right: canChannel ? '11.5rem' : '6.75rem',
+                            bottom: 'calc(2rem + env(safe-area-inset-bottom))',
+                            background: 'linear-gradient(135deg,#e2e8f0 0%,#94a3b8 100%)',
+                            boxShadow: '0 0 18px rgba(148,163,184,0.35)',
+                            touchAction: 'none',
+                        }}
+                    >
+                        Block
+                        {blockCd > 0 && <span className="text-[7px] mt-0.5">{Math.ceil(blockCd)}s</span>}
+                    </button>
+                )}
                 {canChannel && (
                     <button
                         onClick={() => { unlockAudio(); channelRef.current = true; }}

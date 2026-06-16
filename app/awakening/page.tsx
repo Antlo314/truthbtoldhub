@@ -3,22 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Howl } from 'howler';
 import { useGameStore } from '@/lib/store/useGameStore';
-import TruthSprite from '@/components/game/TruthSprite';
-import CutscenePlayer from '@/components/game/CutscenePlayer';
-import { cutscene } from '@/lib/game/cutscenes';
-
-// ============================================================
-//  CHAPTER I — THE AWAKENING  (first-person POV)
-//  The screen IS your vision. Black -> your eyelids part open over
-//  the camera, groggy blinks, vision focuses from blur to clear ->
-//  Truth speaks -> he asks your name.
-//  Character art (Truth's sprite) will be a Kenney sprite dropped
-//  into the marked slot below; nothing fake is rendered until then.
-// ============================================================
-
-type Phase = 'waking' | 'scene';
+import CinematicVideo from '@/components/game/CinematicVideo';
+import { CINEMA } from '@/lib/game/cutscenes';
 
 interface Line {
     t: string;
@@ -33,7 +20,6 @@ const LINES: Line[] = [
     { t: 'Before we take the first step… what shall I call you?', name: true },
 ];
 
-// ---- typewriter ----
 function Typewriter({
     text,
     speed = 16,
@@ -88,9 +74,6 @@ export default function AwakeningPage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
-    const [introDone, setIntroDone] = useState(false);
-    const [phase, setPhase] = useState<Phase>('waking');
-    const [focused, setFocused] = useState(false);
     const [lineIndex, setLineIndex] = useState(0);
     const [typingDone, setTypingDone] = useState(false);
     const [reveal, setReveal] = useState(false);
@@ -98,67 +81,27 @@ export default function AwakeningPage() {
     const [nameInput, setNameInput] = useState('');
     const [finalName, setFinalName] = useState('');
 
-    const droneRef = useRef<Howl | null>(null);
-
-    const startAudio = useCallback(() => {
-        if (droneRef.current) return;
-        try {
-            const drone = new Howl({
-                src: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/sfx/monolith_drone.mp3'],
-                loop: true,
-                volume: 0,
-            });
-            drone.play(); // Howler resumes on first gesture if autoplay is blocked
-            drone.fade(0, 0.22, 4000);
-            droneRef.current = drone;
-        } catch {
-            /* audio is optional */
-        }
-    }, []);
-
-    // mount: reveal scene, start ambient audio
-    useEffect(() => {
-        setMounted(true);
-        startAudio();
-        const onFirst = () => startAudio();
-        window.addEventListener('pointerdown', onFirst, { once: true });
-        return () => {
-            window.removeEventListener('pointerdown', onFirst);
-            droneRef.current?.stop();
-        };
-    }, [startAudio]);
-
-    // the waking cinematic: lids open, vision focuses, then the scene — kept brisk
-    useEffect(() => {
-        if (!mounted || !introDone) return;
-        const t1 = setTimeout(() => setFocused(true), 800);
-        const t2 = setTimeout(() => setPhase('scene'), 2000);
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
-    }, [mounted, introDone]);
+    useEffect(() => { setMounted(true); }, []);
 
     const current = LINES[lineIndex];
 
     const advance = useCallback(() => {
-        if (phase !== 'scene') return;
         if (!typingDone) {
-            setReveal(true); // click while typing -> reveal full line
+            setReveal(true);
             return;
         }
         if (named) return;
-        if (current?.name) return; // name line waits for the input
+        if (current?.name) return;
         if (lineIndex < LINES.length - 1) {
             setLineIndex((i) => i + 1);
             setTypingDone(false);
             setReveal(false);
         }
-    }, [phase, typingDone, named, current, lineIndex]);
+    }, [typingDone, named, current, lineIndex]);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (phase === 'scene' && (e.key === 'Enter' || e.key === ' ')) {
+            if (e.key === 'Enter' || e.key === ' ') {
                 const tag = (e.target as HTMLElement)?.tagName;
                 if (tag === 'INPUT') return;
                 e.preventDefault();
@@ -167,7 +110,7 @@ export default function AwakeningPage() {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [advance, phase]);
+    }, [advance]);
 
     const submitName = (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -182,13 +125,11 @@ export default function AwakeningPage() {
 
     const stepIntoLight = () => {
         completeAwakening();
-        saveToCloud(); // fire-and-forget — never block the journey on a save
+        saveToCloud();
         router.push('/awakening/create');
     };
 
     const skip = () => {
-        setPhase('scene');
-        setFocused(true);
         setLineIndex(LINES.length - 1);
         setReveal(true);
     };
@@ -196,13 +137,10 @@ export default function AwakeningPage() {
     if (!mounted) return <div className="fixed inset-0 bg-black" />;
 
     return (
-        <div className="pov-root select-none">
-            {!introDone && (
-                <CutscenePlayer scene={cutscene('awakening')} onComplete={() => setIntroDone(true)} />
-            )}
+        <div className="fixed inset-0 bg-black select-none">
+            <CinematicVideo src={CINEMA.awakening} overlay="medium" showMuteControl />
 
-            {/* skip */}
-            {!named && introDone && (
+            {!named && (
                 <button
                     onClick={skip}
                     className="absolute top-5 right-6 z-30 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-aether-gold transition-colors"
@@ -211,141 +149,73 @@ export default function AwakeningPage() {
                 </button>
             )}
 
-            {/* the vision behind your eyelids — focuses from blur to clear */}
-            <div
-                className={`pov-vision ${focused ? 'focused' : ''}`}
-                style={introDone ? { backgroundImage: 'url(/assets/cutscenes/cutscene-awakening-truth.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-            />
-
-            {/* Truth, standing before you in first person (Kenney sprite) */}
-            {phase === 'scene' && (
-                <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 1.6, ease: 'easeOut' }}
-                    className="absolute left-0 right-0 top-[15%] z-[2] flex justify-center pointer-events-none"
-                >
-                    <div className="relative truth-float">
-                        <div
-                            className="absolute left-1/2 top-1/2 rounded-full"
-                            style={{
-                                width: 400,
-                                height: 400,
-                                transform: 'translate(-50%,-50%)',
-                                background: 'radial-gradient(circle, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.05) 45%, transparent 68%)',
-                                filter: 'blur(4px)',
-                            }}
-                        />
-                        <TruthSprite
-                            scale={16}
-                            style={{ position: 'relative', filter: 'drop-shadow(0 10px 12px rgba(0,0,0,0.55))' }}
-                        />
-                        <div
-                            className="absolute left-1/2"
-                            style={{
-                                bottom: -16,
-                                transform: 'translateX(-50%)',
-                                width: 170,
-                                height: 24,
-                                borderRadius: '50%',
-                                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 70%)',
-                            }}
-                        />
-                    </div>
-                </motion.div>
-            )}
-
-            {/* dialogue */}
             <AnimatePresence>
-                {phase === 'scene' && (
-                    <motion.div
-                        key="scene"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 1.2 }}
-                        className="absolute inset-0 z-30"
-                    >
-                        <div className="absolute bottom-0 left-0 right-0 px-4 pb-7 flex justify-center">
-                            <div
-                                onClick={advance}
-                                className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)]"
-                            >
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
-                                    <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
-                                </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute inset-0 z-30"
+                >
+                    <div className="absolute bottom-0 left-0 right-0 px-4 pb-7 flex justify-center">
+                        <div
+                            onClick={advance}
+                            className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)] bg-black/40 backdrop-blur-md"
+                        >
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
+                                <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
+                            </div>
 
-                                <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
-                                    {!named ? (
-                                        <Typewriter
-                                            key={lineIndex}
-                                            text={current.t}
-                                            reveal={reveal}
-                                            onDone={() => setTypingDone(true)}
-                                        />
-                                    ) : (
-                                        <Typewriter
-                                            key="post"
-                                            text={`${finalName}. Yes — that name will mean something before the end.`}
-                                            reveal={reveal}
-                                            onDone={() => setTypingDone(true)}
-                                        />
-                                    )}
-                                </p>
-
-                                {/* name input */}
-                                {!named && current?.name && typingDone && (
-                                    <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                            autoFocus
-                                            value={nameInput}
-                                            onChange={(e) => setNameInput(e.target.value)}
-                                            maxLength={24}
-                                            placeholder="speak your name"
-                                            className="flex-1 bg-black/50 border border-[rgba(251,191,36,0.25)] rounded-lg px-4 py-3 text-base text-white tracking-wide focus:outline-none focus:border-aether-gold transition-colors font-ritual"
-                                        />
-                                        <button
-                                            type="submit"
-                                            className="px-6 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.25em] text-black"
-                                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                                        >
-                                            Name Yourself
-                                        </button>
-                                    </form>
+                            <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
+                                {!named ? (
+                                    <Typewriter key={lineIndex} text={current.t} reveal={reveal} onDone={() => setTypingDone(true)} />
+                                ) : (
+                                    <Typewriter
+                                        key="post"
+                                        text={`${finalName}. Yes — that name will mean something before the end.`}
+                                        reveal={reveal}
+                                        onDone={() => setTypingDone(true)}
+                                    />
                                 )}
+                            </p>
 
-                                {/* continue hint */}
-                                {!named && !current?.name && typingDone && lineIndex < LINES.length - 1 && (
-                                    <div className="mt-4 text-[10px] uppercase tracking-[0.3em] text-white/30 animate-pulse">▸ click to continue</div>
-                                )}
-
-                                {/* step into the light */}
-                                {named && typingDone && (
+                            {!named && current?.name && typingDone && (
+                                <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                        autoFocus
+                                        value={nameInput}
+                                        onChange={(e) => setNameInput(e.target.value)}
+                                        maxLength={24}
+                                        placeholder="speak your name"
+                                        className="flex-1 bg-black/50 border border-[rgba(251,191,36,0.25)] rounded-lg px-4 py-3 text-base text-white tracking-wide focus:outline-none focus:border-aether-gold transition-colors font-ritual"
+                                    />
                                     <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            stepIntoLight();
-                                        }}
-                                        className="mt-6 w-full sm:w-auto px-8 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.02]"
+                                        type="submit"
+                                        className="px-6 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.25em] text-black"
                                         style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
                                     >
-                                        Step into the light →
+                                        Name Yourself
                                     </button>
-                                )}
-                            </div>
+                                </form>
+                            )}
+
+                            {!named && !current?.name && typingDone && lineIndex < LINES.length - 1 && (
+                                <div className="mt-4 text-[10px] uppercase tracking-[0.3em] text-white/30 animate-pulse">▸ click to continue</div>
+                            )}
+
+                            {named && typingDone && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); stepIntoLight(); }}
+                                    className="mt-6 w-full sm:w-auto px-8 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.02]"
+                                    style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                >
+                                    Step into the light →
+                                </button>
+                            )}
                         </div>
-                    </motion.div>
-                )}
+                    </div>
+                </motion.div>
             </AnimatePresence>
-
-            {/* peripheral vignette — keeps the eye-aperture feel even when open */}
-            <div className="pov-vignette" />
-
-            {/* the eyelids themselves, framing your vision */}
-            <div className={`pov-lids ${phase === 'waking' ? 'pov-lids-in' : ''}`}>
-                <div className="pov-lid pov-lid-top" />
-                <div className="pov-lid pov-lid-bottom" />
-            </div>
         </div>
     );
 }

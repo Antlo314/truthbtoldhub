@@ -43,7 +43,10 @@ export default function DestinationScene({ destination: d, inventory, solved, on
             onClaim: () => {
                 onClaim(d.relics[0].id);
             },
-            onExit: onExit
+            onExit: onExit,
+            puzzleId: d.puzzle?.id,
+            puzzleHint: d.puzzle?.hint,
+            accent: d.accent,
         };
 
         switch (d.poiId) {

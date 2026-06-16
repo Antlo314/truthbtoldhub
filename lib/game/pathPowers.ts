@@ -16,6 +16,11 @@ export interface PathCombatMods {
     canChannel: boolean;
     channelHealPct: number;
     channelCooldownSec: number;
+    canBlock: boolean;
+    blockReduction: number;
+    blockCooldownSec: number;
+    canWeakPoint: boolean;
+    weakPointDamageMult: number;
 }
 
 const DEFAULT_MODS: PathCombatMods = {
@@ -26,6 +31,11 @@ const DEFAULT_MODS: PathCombatMods = {
     canChannel: false,
     channelHealPct: 0,
     channelCooldownSec: 0,
+    canBlock: false,
+    blockReduction: 0,
+    blockCooldownSec: 0,
+    canWeakPoint: false,
+    weakPointDamageMult: 1,
 };
 
 export function pathCombatMods(path: GamePath | null, skills: string[]): PathCombatMods {
@@ -37,17 +47,19 @@ export function pathCombatMods(path: GamePath | null, skills: string[]): PathCom
             ...DEFAULT_MODS,
             playerReachBonus: Math.floor(sb.reach * 0.5) + (skills.includes('seer_eye') ? 4 : 0),
             playerDamageMult: 1 + (skills.includes('seer_pierce') ? 0.08 : 0),
+            canWeakPoint: skills.includes('seer_eye'),
+            weakPointDamageMult: skills.includes('seer_super') ? 2.5 : skills.includes('seer_pierce') ? 2.2 : 2,
         };
     }
     if (path === 'sentinel') {
         return {
+            ...DEFAULT_MODS,
             enemyHpMult: 1.1,
             enemyDmgMult: 1.05,
             playerDamageMult: 1.12 + (skills.includes('sen_strike') ? 0.06 : 0),
-            playerReachBonus: 0,
-            canChannel: false,
-            channelHealPct: 0,
-            channelCooldownSec: 0,
+            canBlock: skills.includes('sen_ward'),
+            blockReduction: skills.includes('sen_super') ? 0.72 : 0.55,
+            blockCooldownSec: skills.includes('sen_banish') ? 6 : 8,
         };
     }
     if (path === 'scribe') {

@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useGameStore, type GamePath } from '@/lib/store/useGameStore';
 import { PATHS, PATH_BY_ID } from '@/lib/game/paths';
 import { Eye, Shield, ScrollText, Sparkles, Lock, Check, Crown, ArrowRight } from 'lucide-react';
-import CutscenePlayer from '@/components/game/CutscenePlayer';
-import { cutscene } from '@/lib/game/cutscenes';
+import CinematicVideo from '@/components/game/CinematicVideo';
+import { CINEMA } from '@/lib/game/cutscenes';
 
 // ============================================================
 //  CHAPTER III — THE FOUR PATHS
@@ -24,20 +24,13 @@ export default function PathPage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
-    const [introDone, setIntroDone] = useState(false);
     const [selected, setSelected] = useState<GamePath | null>(null);
     const [view, setView] = useState<'select' | 'tree'>('select');
 
     useEffect(() => {
         setMounted(true);
         loadFromCloud();
-        setIntroDone(sessionStorage.getItem('tbth-cutscene-paths') === '1');
     }, [loadFromCloud]);
-
-    const finishIntro = () => {
-        sessionStorage.setItem('tbth-cutscene-paths', '1');
-        setIntroDone(true);
-    };
 
     useEffect(() => {
         if (character.path) setView('tree');
@@ -62,8 +55,9 @@ export default function PathPage() {
     if (view === 'tree' && active) {
         const Icon = ICONS[active.icon];
         return (
-            <main className="relative bg-void text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-                <div className="grain-overlay" />
+            <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+                <CinematicVideo src={CINEMA.paths} overlay="dark" showMuteControl />
+                <div className="grain-overlay pointer-events-none" />
                 <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${active.color}1f, transparent 55%)` }} />
 
                 <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-4"
@@ -135,9 +129,9 @@ export default function PathPage() {
 
     // ---------------- SELECT VIEW ----------------
     return (
-        <main className="relative bg-void text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-            {!introDone && <CutscenePlayer scene={cutscene('paths')} onComplete={finishIntro} onSkip={finishIntro} />}
-            <div className="grain-overlay" />
+        <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+            <CinematicVideo src={CINEMA.paths} overlay="dark" showMuteControl />
+            <div className="grain-overlay pointer-events-none" />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
             <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-4"

@@ -5,15 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
+import CinematicVideo from '@/components/game/CinematicVideo';
 import { countFounders, FOUNDER_CAP } from '@/lib/game/founders';
-
-// ============================================================
-//  TITLE CARD — the front door of Truth B Told Hub.
-//  The game is now the site: this is the title screen that opens
-//  the initiation. Sign-in (real Supabase auth) and the ?cipher=
-//  referral capture are preserved from the old landing.
-//  The previous marketing landing remains in git history.
-// ============================================================
+import { CINEMA } from '@/lib/game/cutscenes';
 
 function TitleCardInner() {
     const router = useRouter();
@@ -22,72 +16,31 @@ function TitleCardInner() {
     const [hasSession, setHasSession] = useState(false);
     const [founders, setFounders] = useState<number | null>(null);
 
-    // preserve referral capture
     useEffect(() => {
         const cipher = searchParams.get('cipher');
         if (cipher) localStorage.setItem('cipher_referral', cipher);
     }, [searchParams]);
 
-    // returning souls get "continue" instead of "begin"
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
         countFounders().then(setFounders);
     }, []);
 
     return (
-        <main className="relative min-h-screen bg-void text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
-            {/* cinematic title key art */}
-            <div
-                className="absolute inset-0 bg-cover bg-center pointer-events-none"
-                style={{ backgroundImage: 'url(/assets/cutscenes/title-bg.jpg)' }}
-            />
-            <div className="absolute inset-0 pointer-events-none bg-black/55" />
-            {/* aether glow */}
-            <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                    background:
-                        'radial-gradient(circle at 50% 38%, rgba(251,191,36,0.12), transparent 55%)',
-                }}
-            />
-            {/* breathing ember */}
-            <div
-                className="absolute top-[22%] w-2 h-2 rounded-full bg-aether-gold"
-                style={{ boxShadow: '0 0 30px 8px rgba(251,191,36,0.45)', animation: 'awakenBreathe 4s ease-in-out infinite' }}
-            />
-            {/* two faint, watching eyes */}
-            <div className="absolute top-[20%] flex gap-10 opacity-[0.07] pointer-events-none">
-                <div className="w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle,#fff,transparent 60%)' }} />
-                <div className="w-16 h-16 rounded-full" style={{ background: 'radial-gradient(circle,#fff,transparent 60%)' }} />
-            </div>
+        <main className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
+            <CinematicVideo src={CINEMA.landing} overlay="medium" showMuteControl />
 
             <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.4, ease: 'easeOut' }}
-                className="relative z-10 flex flex-col items-center max-w-2xl"
+                className="relative z-10 flex flex-col items-center max-w-2xl pointer-events-none"
             >
-                <img
-                    src="/brand/logo-gold.png"
-                    alt=""
-                    className="w-16 h-16 mb-6 opacity-80"
-                    onError={(e) => ((e.currentTarget.style.display = 'none'))}
-                />
-
-                <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.5em] text-aether-gold/70 mb-6">
-                    Truth B Told Hub · An Initiation
-                </p>
-
-                <h1 className="font-ritual text-5xl md:text-7xl font-black uppercase tracking-tight gold-shimmer leading-[0.95] mb-7">
+                <h1 className="font-ritual text-5xl md:text-7xl font-black uppercase tracking-tight gold-shimmer leading-[0.95] mb-10 pointer-events-none">
                     Return to<br />the Source
                 </h1>
 
-                <p className="text-zinc-400 text-sm md:text-base leading-relaxed max-w-xl mb-12 font-ritual italic">
-                    They built a dream and called it the world. Truth is waiting in the dark —
-                    open your eyes, and walk back to the beginning.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 pointer-events-auto">
                     <button
                         onClick={() => (hasSession ? router.push('/awakening') : setAuthOpen(true))}
                         className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
@@ -106,24 +59,18 @@ function TitleCardInner() {
                     )}
                 </div>
 
-                {/* founding seals — scarcity */}
                 {founders !== null && (
                     founders < FOUNDER_CAP ? (
-                        <div className="mt-8 flex flex-col items-center gap-2">
-                            <div className="px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/[0.06]">
-                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold">
-                                    {FOUNDER_CAP - founders} of {FOUNDER_CAP} founding seals remain
-                                </span>
-                            </div>
-                            <span className="text-[9px] uppercase tracking-[0.3em] text-white/30">The first 12 · 40 · 144 are sealed forever</span>
-                        </div>
+                        <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-white/35 pointer-events-none">
+                            {FOUNDER_CAP - founders} of {FOUNDER_CAP} founding seals remain
+                        </p>
                     ) : (
-                        <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-white/30">All 144 founding seals have been claimed</p>
+                        <p className="mt-8 text-[9px] uppercase tracking-[0.3em] text-white/30 pointer-events-none">All 144 founding seals claimed</p>
                     )
                 )}
             </motion.div>
 
-            <p className="absolute bottom-6 text-[8px] uppercase tracking-[0.4em] text-white/20">
+            <p className="absolute bottom-6 z-10 text-[8px] uppercase tracking-[0.4em] text-white/20 pointer-events-none">
                 Truth B Told Hub © {new Date().getFullYear()}
             </p>
 
@@ -138,7 +85,7 @@ function TitleCardInner() {
 
 export default function Home() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-void" />}>
+        <Suspense fallback={<div className="min-h-screen bg-black" />}>
             <TitleCardInner />
         </Suspense>
     );

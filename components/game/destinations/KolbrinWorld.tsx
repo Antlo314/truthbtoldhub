@@ -5,6 +5,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
+import MiniWorldInsight from '@/components/game/MiniWorldInsight';
 
 const MAP_SIZE = 15;
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
@@ -16,9 +17,12 @@ interface Props {
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    puzzleId?: string;
+    puzzleHint?: string;
+    accent?: string;
 }
 
-export default function KolbrinWorld({ character, isSolved, onSolve, onClaim, onExit }: Props) {
+export default function KolbrinWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#a855f7' }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -520,6 +524,8 @@ export default function KolbrinWorld({ character, isSolved, onSolve, onClaim, on
             <div className="relative border-4 border-purple-600/40 rounded-2xl overflow-hidden bg-purple-950 shadow-inner">
                 <canvas ref={canvasRef} className="block w-full max-w-[480px] aspect-square" />
             </div>
+
+            <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />
 
             {/* Dialogue text box */}
             {dialogue && (

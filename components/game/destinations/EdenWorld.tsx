@@ -5,6 +5,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
+import MiniWorldInsight from '@/components/game/MiniWorldInsight';
 
 const TILE_COUNT = 16;
 const MAP_SIZE = TILE_COUNT;
@@ -17,9 +18,12 @@ interface Props {
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    puzzleId?: string;
+    puzzleHint?: string;
+    accent?: string;
 }
 
-export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExit }: Props) {
+export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#34d399' }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -30,7 +34,6 @@ export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExi
             ? "The four rivers flow. The Garden of Eden remembers. The Leaf is yours." 
             : "Welcome to Eden, child. Attune the four rivers in order: Pishon (North-West), Gihon (North-East), Hiddekel (South-West), and Euphrates (South-East) to lower the central barrier."
     );
-    const [hint] = useState<string | null>("NW -> NE -> SW -> SE");
     const [sequence, setSequence] = useState<number[]>([]);
     const [relicClaimed, setRelicClaimed] = useState(character.inventory.includes('relic_eden_leaf'));
 
@@ -539,12 +542,7 @@ export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExi
                 <canvas ref={canvasRef} className="block w-full max-w-[480px] aspect-square" />
             </div>
 
-            {/* Instruction/Status Banner */}
-            {hint && (
-                <div className="mt-2 text-center text-[10px] font-mono tracking-widest text-emerald-400/70">
-                    Guide: {hint}
-                </div>
-            )}
+            <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />
 
             {/* Dialogue text box */}
             {dialogue && (

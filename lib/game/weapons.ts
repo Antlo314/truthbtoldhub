@@ -1,8 +1,8 @@
 // ============================================================
-//  WEAPONS — a tier ladder. You begin with a Wooden Staff; each
-//  guardian you defeat tempers your weapon up a tier, until it
-//  becomes the Sword of Light. Weapons strike the spirit, not the
-//  flesh (enemies are shades).
+//  WEAPONS — a smelting tier ladder. Begin with a Wooden Staff;
+//  gather iron, copper, and cosmic shards in the portal worlds,
+//  then upgrade at Truth's Forge. Combat reads equipped.weapon.
+//  Weapons strike the spirit, not the flesh (enemies are shades).
 // ============================================================
 
 export type WeaponKind = 'staff' | 'blade' | 'sword';
@@ -22,7 +22,7 @@ export interface Weapon {
     };
 }
 
-// Ordered, lowest -> highest. Your tier = how many guardians you've felled.
+// Ordered, lowest -> highest. Forge upgrades step through this ladder.
 export const WEAPON_TIERS: Weapon[] = [
     {
         id: 'wood_staff', name: 'Wooden Staff', kind: 'staff', damage: 12, reach: 30,

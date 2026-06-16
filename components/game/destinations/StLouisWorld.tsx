@@ -6,6 +6,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
+import MiniWorldInsight from '@/components/game/MiniWorldInsight';
 
 const MAP_W = 18;
 const MAP_H = 14;
@@ -18,9 +19,12 @@ interface Props {
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    puzzleId?: string;
+    puzzleHint?: string;
+    accent?: string;
 }
 
-export default function StLouisWorld({ character, isSolved, onSolve, onClaim, onExit }: Props) {
+export default function StLouisWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#fbbf24' }: Props) {
     const addMaterial = useGameStore(s => s.addMaterial);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -527,6 +531,8 @@ export default function StLouisWorld({ character, isSolved, onSolve, onClaim, on
             <div className="relative border-4 border-amber-600/40 rounded-2xl overflow-hidden bg-amber-950 shadow-inner">
                 <canvas ref={canvasRef} className="block w-full max-w-[480px]" />
             </div>
+
+            <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />
 
             {/* Dialogue text box */}
             {dialogue && (

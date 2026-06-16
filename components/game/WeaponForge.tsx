@@ -83,7 +83,10 @@ export default function WeaponForge({ onForge, onClose }: { onForge: (id: string
                 </div>
 
                 {/* Materials Backpack View */}
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Your Materials</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Your Materials</p>
+                <p className="text-[10px] text-zinc-500 mb-3 leading-relaxed">
+                    Iron Ore — Giza tomb · Copper Sheets — St. Louis Fair · Cosmic Shards — Emerald Halls
+                </p>
                 <div className="grid grid-cols-3 gap-3 mb-8">
                     <div className="glass bg-white/[0.02] border border-white/5 rounded-xl p-3 text-center">
                         <span className="block text-[8px] uppercase tracking-widest text-zinc-500 mb-1">Iron Ore</span>

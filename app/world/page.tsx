@@ -714,6 +714,11 @@ export default function WorldPage() {
                         canChannel={pathMods.canChannel}
                         channelHealPct={pathMods.channelHealPct}
                         channelCooldownSec={pathMods.channelCooldownSec}
+                        canBlock={pathMods.canBlock}
+                        blockReduction={pathMods.blockReduction}
+                        blockCooldownSec={pathMods.blockCooldownSec}
+                        canWeakPoint={pathMods.canWeakPoint}
+                        weakPointDamageMult={pathMods.weakPointDamageMult}
                         onVictory={onVictory}
                         onDefeat={onDefeat}
                         onExit={() => setCombatDest(null)}

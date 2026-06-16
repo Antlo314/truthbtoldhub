@@ -12,7 +12,8 @@ export type QuestObjective =
     | { kind: 'clear'; destId: string }
     | { kind: 'solve'; puzzleId: string }
     | { kind: 'collect'; relicId: string }
-    | { kind: 'collectCount'; count: number };
+    | { kind: 'collectCount'; count: number }
+    | { kind: 'materials'; iron?: number; copper?: number; cosmic?: number };
 
 export interface Quest {
     id: string;
@@ -29,6 +30,65 @@ export interface Quest {
 }
 
 export const QUESTS: Quest[] = [
+    {
+        id: 'q_eden_gate',
+        giver: 'npc_gardener',
+        giverName: 'The Gardener',
+        title: 'Before the Fall',
+        intro: 'The Garden still remembers those who walked beside the Source. Face the cherub at the gate — only the armed may pass.',
+        objectiveText: 'Defeat the cherub guarding Eden.',
+        objective: { kind: 'clear', destId: 'dest_eden' },
+        reward: { skillPoints: 1, text: '+1 skill point and the Gardener\'s blessing.' },
+        completeText: 'The flaming sword lowers for you. The gate stands open — now walk the rivers within and claim what the tree keeps.',
+    },
+    {
+        id: 'q_eden_rivers',
+        giver: 'npc_gardener',
+        giverName: 'The Gardener',
+        title: 'The Four Rivers',
+        requires: ['q_eden_gate'],
+        intro: 'A river went out of Eden and parted into four heads. Attune them in the order the first book gives, and I will entrust you a page of the old tongue.',
+        objectiveText: 'Solve the riddle of Eden — attune the four rivers.',
+        objective: { kind: 'solve', puzzleId: 'puz_eden' },
+        reward: { skillPoints: 1, text: '+1 skill point and the Scroll of the Four Rivers.' },
+        completeText: 'Pishon, Gihon, Hiddekel, Euphrates — they run as one again. Take this scroll; other seals will yield to its memory.',
+        grantsScroll: 'scroll_rivers',
+    },
+    {
+        id: 'q_fair_city',
+        giver: 'npc_mabel',
+        giverName: 'Mabel Hart',
+        title: 'The Year of the White City',
+        intro: 'Twelve hundred palaces of plaster and light — and a turnstile locked to the year they rose. Walk the Fair and set the dials.',
+        objectiveText: 'Solve the riddle of St. Louis — set the year of the Fair.',
+        objective: { kind: 'solve', puzzleId: 'puz_fair' },
+        reward: { skillPoints: 1, text: '+1 skill point and Mabel\'s chronicle.' },
+        completeText: 'Nineteen hundred and four. The gates swing wide, and the Erased drift aside. The Caretaker still waits deeper in.',
+    },
+    {
+        id: 'q_fair_guardian',
+        giver: 'npc_mabel',
+        giverName: 'Mabel Hart',
+        title: 'The Erased Ledger',
+        requires: ['q_fair_city'],
+        intro: 'The Caretaker keeps his ledger of forgotten souls. Break his hold on the Fair, and brass truth is yours.',
+        objectiveText: 'Defeat the Caretaker of the Fair.',
+        objective: { kind: 'clear', destId: 'dest_fair' },
+        reward: { skillPoints: 1, text: '+1 skill point; the ivory city remembers you.' },
+        completeText: 'His ledger burns. What was hidden in the white halls is yours to read — and the copper sheets scattered there are yours to gather.',
+    },
+    {
+        id: 'q_smelt',
+        giver: 'npc_hana',
+        giverName: 'Hana',
+        title: 'Ore of the Engine',
+        requires: ['q_eden_gate'],
+        intro: 'You have seen a portal. Now learn the forge. Descend into Giza and strike the iron nodes in the tomb — three pieces are enough to temper your first upgrade at Truth\'s Hut.',
+        objectiveText: 'Gather 3 Iron Ore from Giza.',
+        objective: { kind: 'materials', iron: 3 },
+        reward: { skillPoints: 1, text: '+1 skill point; carry the ore to Truth\'s Forge.' },
+        completeText: 'Good. The ore is hot with memory. Return to Truth\'s Hut, open the forge, and smelt your staff into ironwood.',
+    },
     {
         id: 'q_giza',
         giver: 'npc_hana',
@@ -123,11 +183,26 @@ export function objectiveMet(q: Quest, c: GameCharacter): boolean {
     if (o.kind === 'solve') return c.solved.includes(o.puzzleId);
     if (o.kind === 'collect') return c.inventory.includes(o.relicId);
     if (o.kind === 'collectCount') return c.inventory.length >= o.count;
+    if (o.kind === 'materials') {
+        const m = c.materials || { iron: 0, copper: 0, cosmic: 0 };
+        if (o.iron && m.iron < o.iron) return false;
+        if (o.copper && m.copper < o.copper) return false;
+        if (o.cosmic && m.cosmic < o.cosmic) return false;
+        return true;
+    }
     return false;
 }
 
 export function objectiveProgress(q: Quest, c: GameCharacter): string {
     const o = q.objective;
     if (o.kind === 'collectCount') return `${Math.min(c.inventory.length, o.count)} / ${o.count} relics`;
+    if (o.kind === 'materials') {
+        const m = c.materials || { iron: 0, copper: 0, cosmic: 0 };
+        const parts: string[] = [];
+        if (o.iron) parts.push(`iron ${Math.min(m.iron, o.iron)}/${o.iron}`);
+        if (o.copper) parts.push(`copper ${Math.min(m.copper, o.copper)}/${o.copper}`);
+        if (o.cosmic) parts.push(`cosmic ${Math.min(m.cosmic, o.cosmic)}/${o.cosmic}`);
+        return parts.join(' · ') || 'Complete';
+    }
     return objectiveMet(q, c) ? 'Complete' : 'Not yet';
 }

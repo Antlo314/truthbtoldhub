@@ -6,6 +6,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
+import MiniWorldInsight from '@/components/game/MiniWorldInsight';
 
 const MAP_SIZE = 16;
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
@@ -17,9 +18,12 @@ interface Props {
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    puzzleId?: string;
+    puzzleHint?: string;
+    accent?: string;
 }
 
-export default function GizaWorld({ character, isSolved, onSolve, onClaim, onExit }: Props) {
+export default function GizaWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#22d3ee' }: Props) {
     const addMaterial = useGameStore(s => s.addMaterial);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -586,6 +590,8 @@ export default function GizaWorld({ character, isSolved, onSolve, onClaim, onExi
             <div className="relative border-4 border-cyan-600/40 rounded-2xl overflow-hidden bg-cyan-950 shadow-inner">
                 <canvas ref={canvasRef} className="block w-full max-w-[480px] aspect-square" />
             </div>
+
+            <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />
 
             {/* Dialogue text box */}
             {dialogue && (

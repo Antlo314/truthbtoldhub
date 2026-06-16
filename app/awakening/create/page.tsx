@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store/useGameStore';
 import AvatarCanvas from '@/components/game/AvatarCanvas';
-import TruthSprite from '@/components/game/TruthSprite';
+import CinematicVideo from '@/components/game/CinematicVideo';
 import { AURA_OPTIONS } from '@/components/game/KenneySprite';
 import {
     SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS,
@@ -13,8 +13,7 @@ import {
     type Build, type HairStyle, type OutfitStyle, type FaceStyle,
 } from '@/lib/game/avatar';
 import { Loader2, Shuffle } from 'lucide-react';
-import CutscenePlayer from '@/components/game/CutscenePlayer';
-import { cutscene } from '@/lib/game/cutscenes';
+import { CINEMA } from '@/lib/game/cutscenes';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -37,20 +36,13 @@ export default function CreatePage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
-    const [introDone, setIntroDone] = useState(false);
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<Tab>('Body');
 
     useEffect(() => {
         setMounted(true);
         loadFromCloud();
-        setIntroDone(sessionStorage.getItem('tbth-cutscene-forging') === '1');
     }, [loadFromCloud]);
-
-    const finishIntro = () => {
-        sessionStorage.setItem('tbth-cutscene-forging', '1');
-        setIntroDone(true);
-    };
 
     const av = character.avatar;
     const aura = character.appearance.aura;
@@ -67,21 +59,18 @@ export default function CreatePage() {
     if (!mounted) return <div className="bg-void" style={{ height: '100dvh' }} />;
 
     return (
-        <main className="relative bg-void text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-            {!introDone && <CutscenePlayer scene={cutscene('forging')} onComplete={finishIntro} onSkip={finishIntro} />}
-            <div className="grain-overlay" />
+        <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+            <CinematicVideo src={CINEMA.forging} overlay="dark" showMuteControl />
+            <div className="grain-overlay pointer-events-none" />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
             <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-4"
                 style={{ paddingTop: 'calc(0.6rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.6rem + env(safe-area-inset-bottom))' }}>
 
                 {/* slim guide header */}
-                <div className="flex items-center gap-2.5 shrink-0">
-                    <TruthSprite scale={2.4} style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.5))' }} />
-                    <div className="min-w-0">
-                        <p className="text-[8px] tracking-[0.35em] uppercase text-aether-gold/70">Chapter II · Forging of Self</p>
-                        <p className="font-ritual text-sm text-white/90 leading-tight">“Forge the vessel you will carry into the world.”</p>
-                    </div>
+                <div className="shrink-0 rounded-2xl border border-[rgba(251,191,36,0.15)] bg-black/35 backdrop-blur-sm px-3.5 py-2.5">
+                    <p className="text-[8px] tracking-[0.35em] uppercase text-aether-gold/70">Chapter II · Forging of Self</p>
+                    <p className="font-ritual text-sm text-white/90 leading-tight mt-0.5">“Forge the vessel you will carry into the world.”</p>
                 </div>
 
                 {/* preview + name / presets */}
