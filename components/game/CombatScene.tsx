@@ -288,8 +288,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         <div className="absolute inset-0 z-40 bg-black select-none" style={{ touchAction: 'none' }}>
             <canvas ref={canvasRef} className="world-canvas" />
 
-            {/* top bars */}
-            <div className="absolute top-0 left-0 right-0 px-4 py-3 flex flex-col gap-2 pointer-events-none">
+            {/* top bars — centred phone-width frame, safe-area aware */}
+            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] px-4 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center justify-between">
                     <button onClick={onExit} className="pointer-events-auto text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white">‹ Flee</button>
                     <div className="flex items-center gap-3 pointer-events-auto">
@@ -322,30 +322,32 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 </div>
             )}
 
-            {/* joystick */}
-            <div
-                ref={baseRef}
-                onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
-                onTouchEnd={joyEnd}
-                onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                onMouseUp={joyEnd} onMouseLeave={joyEnd}
-                className="absolute left-6 bottom-9 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm"
-                style={{ width: JOY_R * 2, height: JOY_R * 2, touchAction: 'none' }}
-            >
-                <div className="absolute rounded-full" style={{ width: '42%', height: '42%', left: '29%', top: '29%', background: 'rgba(251,191,36,0.55)', border: '1px solid rgba(251,191,36,0.8)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
-            </div>
+            {/* controls — centred phone-width frame; joystick and Strike sit at
+                the same height (safe-area aware) so they're balanced for thumbs */}
+            <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[540px] pointer-events-none" style={{ height: 220 }}>
+                <div
+                    ref={baseRef}
+                    onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
+                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
+                    onTouchEnd={joyEnd}
+                    onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
+                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
+                    onMouseUp={joyEnd} onMouseLeave={joyEnd}
+                    className="absolute left-6 rounded-full border border-white/15 bg-black/30 backdrop-blur-md pointer-events-auto"
+                    style={{ width: JOY_R * 2, height: JOY_R * 2, bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', boxShadow: 'inset 0 0 18px rgba(0,0,0,0.4)', touchAction: 'none' }}
+                >
+                    <div className="absolute rounded-full" style={{ width: '44%', height: '44%', left: '28%', top: '28%', background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)', boxShadow: '0 0 12px rgba(251,191,36,0.5)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
+                </div>
 
-            {/* attack */}
-            <button
-                onClick={() => { unlockAudio(); attackRef.current = true; }}
-                onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}
-                className="absolute right-7 bottom-10 w-20 h-20 rounded-full text-[11px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95"
-                style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 24px rgba(251,191,36,0.4)', touchAction: 'none' }}
-            >
-                Strike
-            </button>
+                <button
+                    onClick={() => { unlockAudio(); attackRef.current = true; }}
+                    onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}
+                    className="absolute right-6 w-[5.5rem] h-[5.5rem] rounded-full text-[11px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95 transition-transform pointer-events-auto"
+                    style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 28px rgba(251,191,36,0.45)', touchAction: 'none' }}
+                >
+                    Strike
+                </button>
+            </div>
         </div>
     );
 }

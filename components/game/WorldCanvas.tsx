@@ -433,41 +433,47 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         <>
             <canvas ref={canvasRef} className="world-canvas" />
 
-            <div
-                ref={baseRef}
-                onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
-                onTouchEnd={joyEnd}
-                onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                onMouseUp={joyEnd}
-                onMouseLeave={joyEnd}
-                className="absolute left-6 bottom-9 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm"
-                style={{ width: JOY_R * 2, height: JOY_R * 2, touchAction: 'none' }}
-            >
+            {/* on-screen controls — held in a centred phone-width frame so they
+                stay thumb-reachable on mobile and don't fly to the far corners
+                on wide screens. Both sit at the same height (safe-area aware). */}
+            <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-[540px] pointer-events-none" style={{ height: 220 }}>
                 <div
-                    className="absolute rounded-full"
-                    style={{
-                        width: '42%', height: '42%', left: '29%', top: '29%',
-                        background: 'rgba(251,191,36,0.55)', border: '1px solid rgba(251,191,36,0.8)',
-                        transform: `translate(${knob.x}px, ${knob.y}px)`,
-                    }}
-                />
-            </div>
-
-            {near && (
-                <button
-                    onClick={doInteract}
-                    onTouchStart={(e) => { e.preventDefault(); doInteract(); }}
-                    className="absolute right-7 bottom-12 px-5 h-20 min-w-20 rounded-full text-[10px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center text-center animate-pulse"
-                    style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 24px rgba(251,191,36,0.4)', touchAction: 'none' }}
+                    ref={baseRef}
+                    onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
+                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
+                    onTouchEnd={joyEnd}
+                    onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
+                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
+                    onMouseUp={joyEnd}
+                    onMouseLeave={joyEnd}
+                    className="absolute left-6 rounded-full border border-white/15 bg-black/30 backdrop-blur-md pointer-events-auto"
+                    style={{ width: JOY_R * 2, height: JOY_R * 2, bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', boxShadow: 'inset 0 0 18px rgba(0,0,0,0.4)', touchAction: 'none' }}
                 >
-                    <span className="text-[8px] opacity-70">
-                        {near.type === 'hut' ? 'Enter' : near.type === 'cave' ? 'Descend' : near.type === 'portal' ? 'Step through' : 'Speak'}
-                    </span>
-                    {near.name}
-                </button>
-            )}
+                    <div
+                        className="absolute rounded-full"
+                        style={{
+                            width: '44%', height: '44%', left: '28%', top: '28%',
+                            background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)',
+                            boxShadow: '0 0 12px rgba(251,191,36,0.5)',
+                            transform: `translate(${knob.x}px, ${knob.y}px)`,
+                        }}
+                    />
+                </div>
+
+                {near && (
+                    <button
+                        onClick={doInteract}
+                        onTouchStart={(e) => { e.preventDefault(); doInteract(); }}
+                        className="absolute right-6 w-[5.5rem] h-[5.5rem] rounded-full text-[10px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center text-center animate-pulse pointer-events-auto active:scale-95 transition-transform"
+                        style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 28px rgba(251,191,36,0.45)', touchAction: 'none' }}
+                    >
+                        <span className="text-[8px] opacity-70 leading-none mb-0.5">
+                            {near.type === 'hut' ? 'Enter' : near.type === 'cave' ? 'Descend' : near.type === 'portal' ? 'Step through' : 'Speak'}
+                        </span>
+                        <span className="leading-tight">{near.name}</span>
+                    </button>
+                )}
+            </div>
         </>
     );
 }

@@ -175,32 +175,36 @@ export default function WorldPage() {
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
             <WorldCanvas character={character} onInteract={onInteract} onEncounter={onEncounter} />
 
-            {/* HUD */}
-            <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 pointer-events-none">
+            {/* readability scrims so the HUD + controls read against bright grass */}
+            <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
+            <div className="absolute bottom-0 inset-x-0 h-44 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.45), transparent)' }} />
+
+            {/* HUD — centred phone-width frame, safe-area aware */}
+            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] flex items-center justify-between gap-2 px-4 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center gap-2">
-                    <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-white">
+                    <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white">
                         <ArrowLeft className="w-4 h-4" />
                     </Link>
-                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/40 border border-white/10 text-zinc-300 hover:text-aether-gold" title="Missions">
+                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Missions">
                         <ScrollText className="w-4 h-4" />
                     </button>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0">
                     <FounderBadge founderNumber={founderNumber} size={18} />
-                    <span className="font-ritual text-sm text-white">{character.name || 'Soul'}</span>
+                    <span className="font-ritual text-sm text-white truncate">{character.name || 'Soul'}</span>
                     {path && (
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: path.color }}>· {path.name}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
                     )}
                 </div>
-                <button onClick={() => setSatchelOpen(true)} className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm">
+                <button onClick={() => setSatchelOpen(true)} className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40">
                     <Gem className="w-3.5 h-3.5 text-aether-gold" />
                     <span className="text-xs font-black text-aether-gold">{character.inventory.length}</span>
                 </button>
             </div>
 
             {hint && (
-                <div className="absolute left-1/2 top-[58%] -translate-x-1/2 text-center pointer-events-none">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/45 animate-pulse">drag to roam · find Truth's Hut</p>
+                <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none">
+                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · find Truth's Hut</p>
                 </div>
             )}
 
