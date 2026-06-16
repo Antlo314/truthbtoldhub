@@ -11,6 +11,7 @@ import {
     type POI,
     type POIType,
 } from '@/lib/game/overworld';
+import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
 
 // ============================================================
 //  THE OVERWORLD ENGINE — mobile-first 2D, scrolling camera.
@@ -34,11 +35,12 @@ interface NearPOI {
 
 interface WorldCanvasProps {
     character: GameCharacter;
+    shadeCount?: number;
     onInteract: (poi: NearPOI) => void;
     onEncounter: () => void;
 }
 
-export default function WorldCanvas({ character, onInteract, onEncounter }: WorldCanvasProps) {
+export default function WorldCanvas({ character, shadeCount = 2, onInteract, onEncounter }: WorldCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -59,6 +61,7 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const canvas = canvasRef.current!;
         let ctx = canvas.getContext('2d')!;
         const ow = buildOverworld();
+        applyHiddenClears(ow);
 
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
@@ -82,10 +85,12 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
             py: (ow.spawn.y + 0.5) * TILE,
-            shades: [
-                { x: (MAP_W - 9) * TILE, y: (MAP_H - 12) * TILE, vx: 11, vy: 8 },
-                { x: 24 * TILE, y: 26 * TILE, vx: -9, vy: 12 },
-            ],
+            shades: Array.from({ length: shadeCount }, (_, i) => ({
+                x: (20 + i * 17) * TILE,
+                y: (24 + i * 11) * TILE,
+                vx: i % 2 === 0 ? 11 : -9,
+                vy: i % 2 === 0 ? 8 : 12,
+            })),
             encountered: false,
             t: 0,
         };
@@ -352,7 +357,8 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             // nearest POI
             let found: NearPOI | null = null;
             let bestD = Infinity;
-            for (const p of ow.pois) {
+            const pois = allVisiblePois(ow.pois, charRef.current);
+            for (const p of pois) {
                 const pwx = (p.x + 0.5) * TILE;
                 const pwy = (p.y + (p.type === 'hut' ? 1.2 : 0.5)) * TILE;
                 const d = Math.hypot(pwx - st.px, pwy - st.py);
@@ -403,8 +409,9 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
                 }
             }
 
-            // POIs
-            for (const p of ow.pois) {
+            // POIs (includes Seer-hidden places when attuned)
+            const drawPois = allVisiblePois(ow.pois, charRef.current);
+            for (const p of drawPois) {
                 if (p.type === 'hut') drawHut(p);
                 else if (p.type === 'cave') drawCave(p);
                 else if (p.type === 'portal') drawPortal(p);

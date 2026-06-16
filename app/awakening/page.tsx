@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
 import { useGameStore } from '@/lib/store/useGameStore';
 import TruthSprite from '@/components/game/TruthSprite';
+import CutscenePlayer from '@/components/game/CutscenePlayer';
+import { cutscene } from '@/lib/game/cutscenes';
 
 // ============================================================
 //  CHAPTER I — THE AWAKENING  (first-person POV)
@@ -86,6 +88,7 @@ export default function AwakeningPage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
+    const [introDone, setIntroDone] = useState(false);
     const [phase, setPhase] = useState<Phase>('waking');
     const [focused, setFocused] = useState(false);
     const [lineIndex, setLineIndex] = useState(0);
@@ -127,14 +130,14 @@ export default function AwakeningPage() {
 
     // the waking cinematic: lids open, vision focuses, then the scene — kept brisk
     useEffect(() => {
-        if (!mounted) return;
+        if (!mounted || !introDone) return;
         const t1 = setTimeout(() => setFocused(true), 800);
         const t2 = setTimeout(() => setPhase('scene'), 2000);
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
         };
-    }, [mounted]);
+    }, [mounted, introDone]);
 
     const current = LINES[lineIndex];
 
@@ -194,8 +197,12 @@ export default function AwakeningPage() {
 
     return (
         <div className="pov-root select-none">
+            {!introDone && (
+                <CutscenePlayer scene={cutscene('awakening')} onComplete={() => setIntroDone(true)} />
+            )}
+
             {/* skip */}
-            {!named && (
+            {!named && introDone && (
                 <button
                     onClick={skip}
                     className="absolute top-5 right-6 z-30 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-aether-gold transition-colors"
@@ -205,7 +212,10 @@ export default function AwakeningPage() {
             )}
 
             {/* the vision behind your eyelids — focuses from blur to clear */}
-            <div className={`pov-vision ${focused ? 'focused' : ''}`} />
+            <div
+                className={`pov-vision ${focused ? 'focused' : ''}`}
+                style={introDone ? { backgroundImage: 'url(/assets/cutscenes/cutscene-awakening-truth.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+            />
 
             {/* Truth, standing before you in first person (Kenney sprite) */}
             {phase === 'scene' && (

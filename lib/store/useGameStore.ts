@@ -46,12 +46,19 @@ export interface GameCharacter {
     skillPoints: number;     // unspent points
     founderClaimed: boolean; // one-time founder reward granted?
     inventory: string[];     // claimed relic ids
+    scrolls: string[];       // knowledge scrolls from quests
     cleared: string[];       // destination ids whose guardians are defeated
     solved: string[];        // puzzle ids solved
     questsClaimed: string[]; // quest ids whose reward was taken
+    discovered: string[];    // hidden POIs found, etc.
     wardrobe: string[];      // clothing ids the soul has found
     sourceReturned: boolean; // has the soul completed the Return to the Source?
     equipped: EquippedItems;
+    materials: {
+        iron: number;
+        copper: number;
+        cosmic: number;
+    };
 }
 
 const DEFAULT_CHARACTER: GameCharacter = {
@@ -67,12 +74,15 @@ const DEFAULT_CHARACTER: GameCharacter = {
     skillPoints: 1,
     founderClaimed: false,
     inventory: [],
+    scrolls: [],
     cleared: [],
     solved: [],
     questsClaimed: [],
+    discovered: [],
     wardrobe: ['plain'],
     sourceReturned: false,
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
+    materials: { iron: 0, copper: 0, cosmic: 0 },
 };
 
 function freshCharacter(): GameCharacter {
@@ -82,11 +92,14 @@ function freshCharacter(): GameCharacter {
         avatar: { ...DEFAULT_CHARACTER.avatar },
         skills: [...DEFAULT_CHARACTER.skills],
         inventory: [...DEFAULT_CHARACTER.inventory],
+        scrolls: [...DEFAULT_CHARACTER.scrolls],
         cleared: [...DEFAULT_CHARACTER.cleared],
         solved: [...DEFAULT_CHARACTER.solved],
         questsClaimed: [...DEFAULT_CHARACTER.questsClaimed],
+        discovered: [...DEFAULT_CHARACTER.discovered],
         wardrobe: [...DEFAULT_CHARACTER.wardrobe],
         equipped: { ...DEFAULT_CHARACTER.equipped },
+        materials: { ...DEFAULT_CHARACTER.materials },
     };
 }
 
@@ -102,6 +115,10 @@ interface GameState {
     setPath: (path: GamePath) => void;
     learnSkill: (id: string) => void;
     claimRelic: (id: string) => void;
+    equipRelic: (id: string | null) => void;
+    grantScroll: (id: string) => void;
+    equipScroll: (id: string | null) => void;
+    markDiscovered: (id: string) => void;
     equipWeapon: (id: string) => void;
     findClothing: (id: string) => void;
     equipClothing: (id: string) => void;
@@ -111,6 +128,8 @@ interface GameState {
     returnToSource: () => void;
     completeAwakening: () => void;
     reset: () => void;
+    addMaterial: (type: 'iron' | 'copper' | 'cosmic', qty: number) => void;
+    spendMaterials: (costs: { iron?: number; copper?: number; cosmic?: number }) => void;
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
@@ -151,7 +170,37 @@ export const useGameStore = create<GameState>()(
                 set((s) => {
                     const c = s.character;
                     if (c.inventory.includes(id)) return {};
-                    return { character: { ...c, inventory: [...c.inventory, id] } };
+                    const equipped = c.equipped.relic ? c.equipped : { ...c.equipped, relic: id };
+                    return { character: { ...c, inventory: [...c.inventory, id], equipped } };
+                }),
+
+            equipRelic: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (id && !c.inventory.includes(id)) return {};
+                    return { character: { ...c, equipped: { ...c.equipped, relic: id } } };
+                }),
+
+            grantScroll: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.scrolls.includes(id)) return {};
+                    const equipped = c.equipped.scroll ? c.equipped : { ...c.equipped, scroll: id };
+                    return { character: { ...c, scrolls: [...c.scrolls, id], equipped } };
+                }),
+
+            equipScroll: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (id && !c.scrolls.includes(id)) return {};
+                    return { character: { ...c, equipped: { ...c.equipped, scroll: id } } };
+                }),
+
+            markDiscovered: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.discovered.includes(id)) return {};
+                    return { character: { ...c, discovered: [...c.discovered, id] } };
                 }),
 
             equipWeapon: (id) =>
@@ -202,6 +251,35 @@ export const useGameStore = create<GameState>()(
             completeAwakening: () => set({ initiated: true }),
 
             reset: () => set({ initiated: false, character: freshCharacter(), cloudLoaded: false }),
+
+            addMaterial: (type, qty) =>
+                set((s) => {
+                    const mats = s.character.materials || { iron: 0, copper: 0, cosmic: 0 };
+                    return {
+                        character: {
+                            ...s.character,
+                            materials: {
+                                ...mats,
+                                [type]: (mats[type] || 0) + qty
+                            }
+                        }
+                    };
+                }),
+
+            spendMaterials: (costs) =>
+                set((s) => {
+                    const mats = s.character.materials || { iron: 0, copper: 0, cosmic: 0 };
+                    return {
+                        character: {
+                            ...s.character,
+                            materials: {
+                                iron: Math.max(0, (mats.iron || 0) - (costs.iron || 0)),
+                                copper: Math.max(0, (mats.copper || 0) - (costs.copper || 0)),
+                                cosmic: Math.max(0, (mats.cosmic || 0) - (costs.cosmic || 0))
+                            }
+                        }
+                    };
+                }),
 
             loadFromCloud: async () => {
                 try {
@@ -306,12 +384,15 @@ export const useGameStore = create<GameState>()(
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
                         inventory: pc.inventory || c.character.inventory,
+                        scrolls: pc.scrolls || c.character.scrolls,
                         cleared: pc.cleared || c.character.cleared,
                         solved: pc.solved || c.character.solved,
                         questsClaimed: pc.questsClaimed || c.character.questsClaimed,
+                        discovered: pc.discovered || c.character.discovered,
                         wardrobe: pc.wardrobe && pc.wardrobe.length ? pc.wardrobe : c.character.wardrobe,
                         sourceReturned: typeof pc.sourceReturned === 'boolean' ? pc.sourceReturned : c.character.sourceReturned,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
+                        materials: pc.materials || c.character.materials,
                     },
                 };
             },

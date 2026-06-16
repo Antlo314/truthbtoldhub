@@ -36,6 +36,12 @@ function TitleCardInner() {
 
     return (
         <main className="relative min-h-screen bg-void text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
+            {/* cinematic title key art */}
+            <div
+                className="absolute inset-0 bg-cover bg-center pointer-events-none"
+                style={{ backgroundImage: 'url(/assets/cutscenes/title-bg.jpg)' }}
+            />
+            <div className="absolute inset-0 pointer-events-none bg-black/55" />
             {/* aether glow */}
             <div
                 className="absolute inset-0 pointer-events-none"

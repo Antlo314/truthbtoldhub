@@ -8,11 +8,13 @@ import { ArrowLeft, Check, RotateCcw, ChevronUp, ChevronDown, ChevronLeft, Chevr
 interface Props {
     puzzle: Puzzle;
     accent?: string;
+    /** Shown when Scribe path or a matching scroll grants insight */
+    insightHint?: string | null;
     onSolve: () => void;
     onExit: () => void;
 }
 
-export default function PuzzleScene({ puzzle, accent = '#fbbf24', onSolve, onExit }: Props) {
+export default function PuzzleScene({ puzzle, accent = '#fbbf24', insightHint, onSolve, onExit }: Props) {
     const [solved, setSolved] = useState(false);
     const [wrong, setWrong] = useState(false);
 
@@ -98,7 +100,13 @@ export default function PuzzleScene({ puzzle, accent = '#fbbf24', onSolve, onExi
                 <p className="text-[10px] tracking-[0.4em] uppercase mb-2" style={{ color: accent }}>The Quest</p>
                 <h1 className="font-ritual text-2xl md:text-3xl font-black text-white mb-4">{puzzle.title}</h1>
                 <p className="text-sm text-zinc-300 leading-relaxed mb-3">{puzzle.prompt}</p>
-                {puzzle.hint && <p className="text-[11px] text-zinc-500 italic mb-7">Hint · {puzzle.hint}</p>}
+                {insightHint ? (
+                    <p className="text-[11px] italic mb-7 px-3 py-2 rounded-xl border" style={{ color: accent, borderColor: accent + '44', background: accent + '0d' }}>
+                        Insight · {insightHint}
+                    </p>
+                ) : puzzle.hint ? (
+                    <p className="text-[11px] text-zinc-600 italic mb-7">A sealed hint waits — seek the Scribe&apos;s path or a scroll that opens this riddle.</p>
+                ) : null}
 
                 {solved ? (
                     <div className="rounded-2xl border p-6 text-center" style={{ borderColor: accent + '55', background: accent + '12' }}>

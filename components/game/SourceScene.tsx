@@ -40,9 +40,20 @@ export default function SourceScene({ character, onComplete, onExit }: Props) {
     return (
         <div
             className="absolute inset-0 z-[70] flex flex-col items-center justify-between overflow-hidden select-none"
-            style={{ background: 'radial-gradient(circle at 50% 42%, #2a2410 0%, #110d05 55%, #050403 100%)' }}
             onClick={advance}
         >
+            <video
+                src="/assets/cutscenes/source-return.mp4"
+                className="absolute inset-0 w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+            />
+            <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: 'radial-gradient(circle at 50% 42%, rgba(42,36,16,0.55) 0%, rgba(5,4,3,0.82) 70%)' }}
+            />
             {/* the rising light of the Source — intensifies as the truth lands */}
             <div
                 className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none transition-all duration-[1400ms]"

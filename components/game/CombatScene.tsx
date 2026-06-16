@@ -32,17 +32,31 @@ interface Props {
     bonusHp?: number;
     bonusDamage?: number;
     bonusReach?: number;
-    bonusRegen?: number; // HP restored per second (the Mystic's channel)
+    bonusRegen?: number;      // HP restored per second (the Mystic's channel)
+    bonusLifesteal?: number;  // fraction of damage healed back
+    bonusCrit?: number;       // chance (0..1) a strike lands for double
+    bonusKnockback?: number;  // extra knockback on hit
+    /** Path-specific combat modifiers (lib/game/pathPowers.ts) */
+    enemyHpMult?: number;
+    enemyDmgMult?: number;
+    playerDamageMult?: number;
+    playerReachBonus?: number;
+    canChannel?: boolean;
+    channelHealPct?: number;
+    channelCooldownSec?: number;
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, onVictory, onDefeat, onExit }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, canChannel = false, channelHealPct = 0.25, channelCooldownSec = 14, onVictory, onDefeat, onExit }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
-    const dmg = weaponDamage + bonusDamage;
-    const reach = weaponReach + bonusReach;
+    const dmg = Math.round((weaponDamage + bonusDamage) * playerDamageMult);
+    const reach = weaponReach + bonusReach + playerReachBonus;
     const regen = bonusRegen;
+    const lifesteal = bonusLifesteal;
+    const crit = bonusCrit;
+    const knockbackBonus = bonusKnockback;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
@@ -57,6 +71,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const [foesLeft, setFoesLeft] = useState(0);
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
     const [muted, setMutedState] = useState(isMuted());
+    const [channelCd, setChannelCd] = useState(0);
+    const channelRef = useRef(false);
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
@@ -80,11 +96,18 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
         const st = {
             px: W / 2, py: H - TILE * 3, php: maxHp, atk: 0, swing: 0,
+            aimx: 0, aimy: 1, // attack direction (last movement; default down)
             foes: [] as Foe[], bossSpawned: false, done: false,
             shake: 0, hurtFlash: 0, hurtCd: 0,
         };
+        const foeHp = Math.round(cfg.enemyHp * enemyHpMult);
+        const bossHp = Math.round(cfg.bossHp * enemyHpMult);
+        const foeDmg = cfg.enemyDmg * enemyDmgMult;
+        const bossDmg = cfg.bossDmg * enemyDmgMult;
+        let channelTimer = 0;
+
         for (let i = 0; i < cfg.enemyCount; i++) {
-            st.foes.push({ x: rand(TILE * 2, W - TILE * 2), y: rand(TILE * 2, H / 2), hp: cfg.enemyHp, max: cfg.enemyHp, hurt: 0 });
+            st.foes.push({ x: rand(TILE * 2, W - TILE * 2), y: rand(TILE * 2, H / 2), hp: foeHp, max: foeHp, hurt: 0 });
         }
         setFoesLeft(st.foes.length);
 
@@ -125,32 +148,46 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 const mag = Math.hypot(ix, iy);
                 if (mag > 1) { ix /= mag; iy /= mag; }
                 frameMoving = Math.hypot(ix, iy) > 0.12;
-                if (frameMoving) { walkTimer += dt; facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down'); }
+                if (frameMoving) {
+                    walkTimer += dt;
+                    facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
+                    const am = Math.hypot(ix, iy) || 1; st.aimx = ix / am; st.aimy = iy / am; // aim follows movement
+                }
                 const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
                 st.px = Math.max(lo, Math.min(hiX, st.px + ix * 84 * dt));
                 st.py = Math.max(lo, Math.min(hiY, st.py + iy * 84 * dt));
 
-                // attack — the weapon strikes any shade within reach on its own
-                // rhythm (move to engage); the Strike button forces a swing.
+                // attack — MANUAL: only when you press Strike (or J / Space), on a
+                // short cooldown. The swing is DIRECTIONAL — it hits foes in front
+                // of you (a cone around your aim), so positioning + timing matter.
                 st.atk -= dt; st.swing -= dt;
-                const me = { x: st.px, y: st.py };
                 const forceStrike = attackRef.current || keysRef.current.has('j') || keysRef.current.has(' ');
-                const inReach = st.foes.some((f) => dist(f, me) <= reach + (f.boss ? 6 : 0));
-                if (st.atk <= 0 && (inReach || forceStrike)) {
-                    st.atk = 0.42; st.swing = 0.18;
-                    sfx.strike();
-                    let hits = 0;
-                    for (const f of st.foes) {
-                        if (dist(f, me) <= reach + (f.boss ? 6 : 0)) {
-                            f.hp -= dmg; f.hurt = 0.14; hits++;
-                            const a = Math.atan2(f.y - st.py, f.x - st.px);
-                            const kb = f.boss ? 5 : 9; // bosses are heavier
-                            f.x += Math.cos(a) * kb; f.y += Math.sin(a) * kb;
-                        }
-                    }
-                    if (hits > 0) { sfx.hit(); st.shake = Math.max(st.shake, 2.2); }
-                }
                 attackRef.current = false;
+                if (st.atk <= 0 && forceStrike) {
+                    st.atk = 0.34; st.swing = 0.2;
+                    sfx.strike();
+                    // a small lunge in the aim direction for punch
+                    st.px = Math.max(lo, Math.min(hiX, st.px + st.aimx * 5));
+                    st.py = Math.max(lo, Math.min(hiY, st.py + st.aimy * 5));
+                    let hits = 0, dealt = 0;
+                    for (const f of st.foes) {
+                        const dx = f.x - st.px, dy = f.y - st.py;
+                        const dd = Math.hypot(dx, dy) || 0.001;
+                        if (dd > reach + (f.boss ? 8 : 0)) continue;
+                        if ((dx * st.aimx + dy * st.aimy) / dd < 0.35) continue; // must be in front
+                        const isCrit = crit > 0 && Math.random() < crit;
+                        const hitDmg = isCrit ? dmg * 2 : dmg;
+                        f.hp -= hitDmg; f.hurt = 0.16; hits++; dealt += hitDmg;
+                        const a = Math.atan2(dy, dx);
+                        const kb = (f.boss ? 4 : 9) + knockbackBonus + (isCrit ? 4 : 0);
+                        f.x += Math.cos(a) * kb; f.y += Math.sin(a) * kb;
+                    }
+                    if (hits > 0) {
+                        sfx.hit();
+                        st.shake = Math.max(st.shake, dealt > dmg ? 4.5 : 2.6);
+                        if (lifesteal > 0) st.php = Math.min(maxHp, st.php + dealt * lifesteal);
+                    }
+                }
 
                 // foes act
                 const speedFor = (f: Foe) => (f.boss ? 26 : 34);
@@ -160,7 +197,19 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     const a = Math.atan2(st.py - f.y, st.px - f.x);
                     f.x += Math.cos(a) * speedFor(f) * dt;
                     f.y += Math.sin(a) * speedFor(f) * dt;
-                    if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? cfg.bossDmg : cfg.enemyDmg;
+                    if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? bossDmg : foeDmg;
+                }
+                // Mystic channel — burst heal on cooldown
+                channelTimer = Math.max(0, channelTimer - dt);
+                if (canChannel && channelRef.current && channelTimer <= 0 && st.php > 0) {
+                    channelRef.current = false;
+                    channelTimer = channelCooldownSec;
+                    st.php = Math.min(maxHp, st.php + maxHp * channelHealPct);
+                    st.shake = Math.max(st.shake, 3);
+                    sfx.hit();
+                }
+                if (Math.abs(channelTimer - channelCd) > 0.4 || (channelTimer === 0 && channelCd > 0)) {
+                    setChannelCd(channelTimer);
                 }
                 if (contactDps > 0) {
                     st.php -= contactDps * dt;
@@ -186,7 +235,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 // boss phase
                 if (!st.bossSpawned && st.foes.length === 0) {
                     st.bossSpawned = true;
-                    const b: Foe = { x: W / 2, y: TILE * 3, hp: cfg.bossHp, max: cfg.bossHp, boss: true, hurt: 0 };
+                    const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0 };
                     st.foes.push(b);
                     setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
                     sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
@@ -230,24 +279,58 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 g.addColorStop(0, color + '66'); g.addColorStop(1, color + '00');
                 ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy - 4, r, 0, Math.PI * 2); ctx.fill();
             };
+            // each guardian is its own creature, drawn in the destination's accent
+            const drawBoss = (cx: number, cy: number, accent: string, art: string, hurt: number) => {
+                glow(cx, cy, accent, 24);
+                ctx.save();
+                ctx.globalAlpha = hurt > 0 ? 0.95 : 1;
+                const eye = '#fff7d6';
+                if (art === 'golem') {
+                    ctx.fillStyle = '#3a3340'; ctx.fillRect(cx - 12, cy - 16, 24, 28);
+                    ctx.fillStyle = '#2a2530'; ctx.fillRect(cx - 12, cy + 7, 24, 5);
+                    ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx - 6, cy - 12); ctx.lineTo(cx - 1, cy - 1); ctx.lineTo(cx - 6, cy + 7); ctx.stroke();
+                    ctx.fillStyle = eye; ctx.fillRect(cx - 6, cy - 10, 3, 3); ctx.fillRect(cx + 3, cy - 10, 3, 3);
+                } else if (art === 'serpent') {
+                    ctx.strokeStyle = accent; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy + 4, 11, 0, Math.PI * 1.7); ctx.stroke();
+                    ctx.fillStyle = '#16241f'; ctx.beginPath(); ctx.ellipse(cx, cy - 12, 7, 6, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = accent; ctx.fillRect(cx - 3, cy - 13, 2, 2); ctx.fillRect(cx + 1, cy - 13, 2, 2);
+                } else if (art === 'sentinel') {
+                    ctx.fillStyle = '#2b2b3a'; ctx.fillRect(cx - 9, cy - 16, 18, 27);
+                    ctx.fillStyle = accent; ctx.fillRect(cx - 9, cy - 17, 18, 3);
+                    ctx.fillStyle = '#d8dde6'; ctx.fillRect(cx + 9, cy - 20, 3, 30);
+                    ctx.fillStyle = eye; ctx.fillRect(cx - 5, cy - 10, 3, 2); ctx.fillRect(cx + 2, cy - 10, 3, 2);
+                } else if (art === 'titan') {
+                    ctx.fillStyle = '#2a2230'; ctx.beginPath(); ctx.ellipse(cx, cy - 2, 13, 16, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = accent; ctx.beginPath(); ctx.moveTo(cx - 10, cy - 13); ctx.lineTo(cx - 15, cy - 23); ctx.lineTo(cx - 6, cy - 15); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(cx + 10, cy - 13); ctx.lineTo(cx + 15, cy - 23); ctx.lineTo(cx + 6, cy - 15); ctx.fill();
+                    ctx.fillStyle = eye; ctx.fillRect(cx - 5, cy - 7, 3, 3); ctx.fillRect(cx + 2, cy - 7, 3, 3);
+                } else { // wraith
+                    ctx.fillStyle = '#0c0a14'; ctx.beginPath();
+                    ctx.moveTo(cx, cy - 22); ctx.quadraticCurveTo(cx - 15, cy - 6, cx - 11, cy + 12); ctx.lineTo(cx + 11, cy + 12); ctx.quadraticCurveTo(cx + 15, cy - 6, cx, cy - 22); ctx.fill();
+                    ctx.fillStyle = accent + '33'; ctx.beginPath(); ctx.ellipse(cx, cy - 8, 5, 7, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = accent; ctx.fillRect(cx - 3, cy - 9, 2, 2); ctx.fillRect(cx + 1, cy - 9, 2, 2);
+                }
+                ctx.restore();
+            };
 
             // foes
             for (const f of st.foes) {
-                const col = f.boss ? '#ef4444' : '#22d3ee';
-                glow(f.x, f.y, col, f.boss ? 18 : 11);
-                spriteAt(f.x, f.y, f.boss ? 2.4 : 1.2, f.hurt > 0 ? 0.9 : 0.55);
                 if (f.boss) {
-                    // boss hp pip ring is shown in DOM; draw a small bar above
-                    ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 14, f.y - 26, 28, 3);
-                    ctx.fillStyle = col; ctx.fillRect(f.x - 14, f.y - 26, 28 * (f.hp / f.max), 3);
+                    drawBoss(f.x, f.y, d.accent, cfg.bossArt || 'wraith', f.hurt);
+                    ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 16, f.y - 28, 32, 3);
+                    ctx.fillStyle = d.accent; ctx.fillRect(f.x - 16, f.y - 28, 32 * (f.hp / f.max), 3);
+                } else {
+                    glow(f.x, f.y, '#22d3ee', 11);
+                    spriteAt(f.x, f.y, 1.2, f.hurt > 0 ? 0.9 : 0.55);
                 }
             }
 
-            // swing
+            // swing — a directional slash arc in the aim direction
             if (st.swing > 0) {
-                ctx.strokeStyle = `rgba(251,191,36,${st.swing / 0.18})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, 0, Math.PI * 2); ctx.stroke();
+                const a0 = Math.atan2(st.aimy, st.aimx);
+                ctx.strokeStyle = `rgba(251,191,36,${Math.min(1, st.swing / 0.2)})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, a0 - 0.7, a0 + 0.7); ctx.stroke();
             }
 
             // player — the layered avatar (16x24) with its walk cycle
@@ -350,6 +433,17 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     <div className="absolute rounded-full" style={{ width: '44%', height: '44%', left: '28%', top: '28%', background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)', boxShadow: '0 0 12px rgba(251,191,36,0.5)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
                 </div>
 
+                {canChannel && (
+                    <button
+                        onClick={() => { unlockAudio(); channelRef.current = true; }}
+                        disabled={channelCd > 0}
+                        className="absolute right-[6.75rem] w-[4.5rem] h-[4.5rem] rounded-full text-[9px] font-black uppercase tracking-widest text-white flex flex-col items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-35"
+                        style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#10b981 0%,#047857 100%)', boxShadow: '0 0 20px rgba(16,185,129,0.35)', touchAction: 'none' }}
+                    >
+                        Channel
+                        {channelCd > 0 && <span className="text-[7px] mt-0.5">{Math.ceil(channelCd)}s</span>}
+                    </button>
+                )}
                 <button
                     onClick={() => { unlockAudio(); attackRef.current = true; }}
                     onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}

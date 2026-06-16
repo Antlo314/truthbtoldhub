@@ -6,17 +6,23 @@ import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
 import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt } from 'lucide-react';
-import { QUESTS, questsFor, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
+import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
+import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
+import { pathCombatMods } from '@/lib/game/pathPowers';
+import { hiddenPoiById } from '@/lib/game/hiddenPois';
+import { SCROLL_BY_ID } from '@/lib/game/scrolls';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
-import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
 import SourceScene from '@/components/game/SourceScene';
 import WeaponForge from '@/components/game/WeaponForge';
-import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import CutscenePlayer from '@/components/game/CutscenePlayer';
+import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
+import { WEAPON_BY_ID, weaponForTier } from '@/lib/game/weapons';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -42,6 +48,10 @@ export default function WorldPage() {
     const markCleared = useGameStore((s) => s.markCleared);
     const markSolved = useGameStore((s) => s.markSolved);
     const claimQuest = useGameStore((s) => s.claimQuest);
+    const grantScroll = useGameStore((s) => s.grantScroll);
+    const equipRelic = useGameStore((s) => s.equipRelic);
+    const equipScroll = useGameStore((s) => s.equipScroll);
+    const markDiscovered = useGameStore((s) => s.markDiscovered);
     const returnToSource = useGameStore((s) => s.returnToSource);
 
     const [mounted, setMounted] = useState(false);
@@ -55,14 +65,29 @@ export default function WorldPage() {
     const [activeDest, setActiveDest] = useState<Destination | null>(null);
     const [satchelOpen, setSatchelOpen] = useState(false);
     const [forgeOpen, setForgeOpen] = useState(false);
+    const [worldIntroDone, setWorldIntroDone] = useState(false);
+    const [combatIntroDest, setCombatIntroDest] = useState<Destination | null>(null);
     const [combatDest, setCombatDest] = useState<Destination | null>(null);
     const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
     const [questLogOpen, setQuestLogOpen] = useState(false);
     const [sourceOpen, setSourceOpen] = useState(false);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const finishWorldIntro = useCallback(() => {
+        sessionStorage.setItem('tbth-cutscene-world', '1');
+        setWorldIntroDone(true);
+    }, []);
+
+    const finishCombatIntro = useCallback(() => {
+        if (combatIntroDest) {
+            setCombatDest(combatIntroDest);
+            setCombatIntroDest(null);
+        }
+    }, [combatIntroDest]);
+
     useEffect(() => {
         setMounted(true);
+        setWorldIntroDone(sessionStorage.getItem('tbth-cutscene-world') === '1');
         loadFromCloud();
         fetchBulletins(8).then(setBulletins);
         fetchMedia(16).then(setMedia);
@@ -93,7 +118,7 @@ export default function WorldPage() {
             if (needsFight && !ch.equipped.weapon) {
                 setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truth’s Hut and forge your first weapon.', color: dest.accent });
             } else if (needsFight) {
-                setCombatDest(dest);
+                setCombatIntroDest(dest);
             } else {
                 setActiveDest(dest);
             }
@@ -102,14 +127,31 @@ export default function WorldPage() {
         if (poi.type === 'hut') {
             setHutOpen(true);
         } else if (poi.type === 'npc') {
-            if (questsFor(poi.id).length > 0) setQuestNpc({ id: poi.id, name: poi.name });
-            else setDialogue({ speaker: poi.name, text: poi.detail || '…' });
+            const hidden = hiddenPoiById(poi.id);
+            if (hidden) {
+                const ch = useGameStore.getState().character;
+                if (!ch.discovered.includes(hidden.discoverId)) {
+                    markDiscovered(hidden.discoverId);
+                    if (hidden.rewardSkillPoints) {
+                        useGameStore.setState((s) => ({
+                            character: { ...s.character, skillPoints: s.character.skillPoints + hidden.rewardSkillPoints },
+                        }));
+                    }
+                    saveToCloud();
+                    showToast(`✦ ${hidden.name} revealed · +${hidden.rewardSkillPoints} skill point`);
+                }
+                setDialogue({ speaker: hidden.name, text: hidden.lore, color: '#22d3ee' });
+            } else if (questsAvailable(poi.id, useGameStore.getState().character).length > 0) {
+                setQuestNpc({ id: poi.id, name: poi.name });
+            } else {
+                setDialogue({ speaker: poi.name, text: poi.detail || '…' });
+            }
         } else if (poi.type === 'cave') {
             setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
         } else if (poi.type === 'portal') {
             setDialogue({ speaker: 'Portal to the Past', text: 'The veil between ages shimmers, but holds. Its hour has not yet come.', color: '#a855f7' });
         }
-    }, []);
+    }, [markDiscovered, saveToCloud, showToast]);
 
     const onEncounter = useCallback(() => {
         showToast('A shade drifts through you — cold, and searching…');
@@ -117,9 +159,12 @@ export default function WorldPage() {
     }, [showToast]);
 
     const handleClaim = useCallback(async (relicId: string) => {
+        const beforeTier = resonanceTier(useGameStore.getState().character.inventory);
         claimRelic(relicId);
         const r = RELIC_BY_ID[relicId];
-        let msg = `✦ ${r?.name || 'Relic'} claimed`;
+        let msg = `✦ ${r?.name || 'Relic'} claimed · equipped`;
+        const afterTier = resonanceTier(useGameStore.getState().character.inventory);
+        if (afterTier > beforeTier) msg += ` · ${resonanceLabel(afterTier)}`;
         // the destination's garment is found alongside its relic
         const cloth = activeDest?.clothing;
         if (cloth && !useGameStore.getState().character.wardrobe.includes(cloth)) {
@@ -141,9 +186,17 @@ export default function WorldPage() {
     const onVictory = useCallback(() => {
         setCombatDest((d) => {
             if (d) {
+                const ch = useGameStore.getState().character;
+                const freshClear = !ch.cleared.includes(d.poiId);
+                const before = ch.cleared.length;
                 markCleared(d.poiId);
                 saveToCloud();
                 showToast(d.combat?.victory || 'The guardian falls.');
+                // your weapon tempers up a tier on each new guardian felled
+                if (freshClear) {
+                    const oldW = weaponForTier(before), newW = weaponForTier(before + 1);
+                    if (newW.id !== oldW.id) setTimeout(() => showToast(`✦ Your weapon tempers into the ${newW.name}`), 2800);
+                }
                 setActiveDest(d);
             }
             return null;
@@ -163,17 +216,32 @@ export default function WorldPage() {
 
     const handleClaimQuest = useCallback((q: Quest) => {
         claimQuest(q.id, q.reward.skillPoints);
+        if (q.grantsScroll) grantScroll(q.grantsScroll);
         saveToCloud();
-        showToast(`✦ Mission complete · ${q.reward.text}`);
-    }, [claimQuest, saveToCloud, showToast]);
+        const scrollName = q.grantsScroll ? SCROLL_BY_ID[q.grantsScroll]?.name : null;
+        showToast(`✦ Mission complete · ${q.reward.text}${scrollName ? ` · ${scrollName}` : ''}`);
+    }, [claimQuest, grantScroll, saveToCloud, showToast]);
 
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
 
     const path = character.path ? PATH_BY_ID[character.path] : null;
 
+    const combatPrelude = combatIntroDest ? cutsceneForCombat(combatIntroDest.poiId) : null;
+    const resTier = resonanceTier(character.inventory);
+    const pathMods = pathCombatMods(character.path, character.skills);
+    const combatBlessing = combatRelicBonuses(character.inventory, character.equipped.relic);
+
     return (
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
-            <WorldCanvas character={character} onInteract={onInteract} onEncounter={onEncounter} />
+            {!worldIntroDone && (
+                <CutscenePlayer scene={cutscene('world')} onComplete={finishWorldIntro} onSkip={finishWorldIntro} />
+            )}
+
+            {combatIntroDest && combatPrelude && (
+                <CutscenePlayer scene={combatPrelude} onComplete={finishCombatIntro} onSkip={finishCombatIntro} />
+            )}
+
+            <WorldCanvas character={character} shadeCount={shadeCountForTier(resTier)} onInteract={onInteract} onEncounter={onEncounter} />
 
             {/* readability scrims so the HUD + controls read against bright grass */}
             <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
@@ -361,6 +429,31 @@ export default function WorldPage() {
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-4">Your Satchel</h2>
 
+                        {/* raw materials backpack */}
+                        <div className="mb-5 grid grid-cols-3 gap-2 border-b border-white/5 pb-4">
+                            <div className="flex flex-col items-center p-2 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                                <span className="text-[7px] uppercase tracking-widest text-zinc-500">Iron Ore</span>
+                                <span className="text-xs font-bold text-slate-300 mt-1 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                    {character.materials?.iron || 0}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center p-2 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                                <span className="text-[7px] uppercase tracking-widest text-zinc-500">Copper</span>
+                                <span className="text-xs font-bold text-amber-500 mt-1 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                    {character.materials?.copper || 0}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-center p-2 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                                <span className="text-[7px] uppercase tracking-widest text-zinc-500">Cosmic</span>
+                                <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                    {character.materials?.cosmic || 0}
+                                </span>
+                            </div>
+                        </div>
+
                         {/* the goal — gather all five relics to open the way to the Source */}
                         {(() => {
                             const got = ALL_RELIC_IDS.filter((id) => character.inventory.includes(id)).length;
@@ -381,26 +474,28 @@ export default function WorldPage() {
                                 </div>
                             );
                         })()}
+                        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                            <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/80 mb-1">Relic resonance</p>
+                            <p className="text-[11px] text-zinc-400 leading-relaxed">{resonanceLabel(resTier)} · {resTier}/5 relics humming</p>
+                        </div>
                         {(() => {
-                            // Your full combat blessing carried into every fight — relics
-                            // you bear, your path's attunements, founder seal, and garment.
-                            const rb = relicBonuses(character.inventory);
+                            const rb = combatBlessing;
                             const sb = skillBonuses(character.skills);
                             const fb = founderBonuses(founderNumber);
                             const cb = clothingBonus(character.equipped.clothing);
                             const hp = rb.hp + sb.hp + fb.hp + cb.hp;
                             const damage = rb.damage + sb.damage + fb.damage + cb.damage;
                             const reach = rb.reach + sb.reach + fb.reach + cb.reach;
-                            const regen = sb.regen + cb.regen;
+                            const regen = sb.regen + cb.regen + rb.regen;
                             const parts = [
-                                hp ? `+${hp} vitality` : '',
-                                damage ? `+${damage} might` : '',
-                                reach ? `+${reach} reach` : '',
+                                hp ? `+${Math.round(hp)} vitality` : '',
+                                damage ? `+${Math.round(damage)} might` : '',
+                                reach ? `+${Math.round(reach)} reach` : '',
                                 regen ? `+${regen}/s renewal` : '',
                             ].filter(Boolean);
                             return parts.length ? (
                                 <div className="mb-5">
-                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · relics + path + seal + garment</p>
+                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · equipped relic + echo + path</p>
                                     <div className="flex flex-wrap gap-2">
                                         {parts.map((p) => (
                                             <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
@@ -416,20 +511,60 @@ export default function WorldPage() {
                                 {character.inventory.map((id) => {
                                     const r = RELIC_BY_ID[id];
                                     if (!r) return null;
+                                    const equipped = character.equipped.relic === id;
                                     return (
-                                        <div key={id} className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-start gap-3">
+                                        <div key={id} className="glass bg-white/[0.03] border rounded-2xl p-4 flex items-start gap-3" style={{ borderColor: equipped ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.1)' }}>
                                             <div className="w-10 h-10 rounded-xl bg-aether-gold/10 border border-aether-gold/20 flex items-center justify-center text-aether-gold shrink-0">
                                                 <Gem className="w-5 h-5" />
                                             </div>
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <h4 className="text-sm font-bold text-white">{r.name}</h4>
                                                 <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{r.from}</p>
                                                 <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{r.desc}</p>
-                                                {r.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {r.power.label}</p>}
+                                                {r.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {r.power.label}{equipped ? '' : ' (20% echo)'}</p>}
                                             </div>
+                                            {equipped ? (
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-aether-gold shrink-0 self-center">Equipped</span>
+                                            ) : (
+                                                <button onClick={() => { equipRelic(id); saveToCloud(); showToast(`✦ ${r.name} equipped`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                    Equip
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+
+                        {/* scrolls — puzzle insight */}
+                        {character.scrolls.length > 0 && (
+                            <div className="mt-6 pt-5 border-t border-white/10">
+                                <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Scrolls</p>
+                                <div className="space-y-3">
+                                    {character.scrolls.map((id) => {
+                                        const sc = SCROLL_BY_ID[id];
+                                        if (!sc) return null;
+                                        const equipped = character.equipped.scroll === id;
+                                        return (
+                                            <div key={id} className="glass bg-white/[0.03] border rounded-2xl p-4 flex items-start gap-3" style={{ borderColor: equipped ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.1)' }}>
+                                                <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                                                    <ScrollText className="w-5 h-5" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="text-sm font-bold text-white">{sc.name}</h4>
+                                                    <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{sc.desc}</p>
+                                                </div>
+                                                {equipped ? (
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-purple-400 shrink-0 self-center">Readied</span>
+                                                ) : (
+                                                    <button onClick={() => { equipScroll(id); saveToCloud(); showToast(`✦ ${sc.name} readied`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#c084fc 0%,#6b21a8 100%)' }}>
+                                                        Ready
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
 
@@ -488,7 +623,7 @@ export default function WorldPage() {
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Mission</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-5">{questNpc.name}</h2>
                         <div className="space-y-4">
-                            {questsFor(questNpc.id).map((q) => {
+                            {questsAvailable(questNpc.id, character).map((q) => {
                                 const claimed = character.questsClaimed.includes(q.id);
                                 const met = objectiveMet(q, character);
                                 return (
@@ -525,10 +660,11 @@ export default function WorldPage() {
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Missions</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-5">Quest Log</h2>
                         <div className="space-y-2">
-                            {QUESTS.map((q) => {
+                            {QUESTS.filter((q) => !q.requires?.length || q.requires.every((id) => character.questsClaimed.includes(id))).map((q) => {
                                 const claimed = character.questsClaimed.includes(q.id);
                                 const met = objectiveMet(q, character);
-                                const status = claimed ? 'Done' : met ? 'Ready' : 'In progress';
+                                const locked = !claimed && q.requires?.some((id) => !character.questsClaimed.includes(id));
+                                const status = claimed ? 'Done' : locked ? 'Locked' : met ? 'Ready' : 'In progress';
                                 const color = claimed ? '#10b981' : met ? '#fbbf24' : '#64748b';
                                 return (
                                     <div key={q.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -555,20 +691,31 @@ export default function WorldPage() {
 
             {/* combat encounter — relics + your path's attunements + founder blessing stack */}
             {combatDest && combatDest.combat && (() => {
-                const rb = relicBonuses(character.inventory);
+                const rb = combatBlessing;
                 const sb = skillBonuses(character.skills);
                 const fb = founderBonuses(founderNumber);
                 const cb = clothingBonus(character.equipped.clothing);
+                const wpn = weaponForTier(character.cleared.length);
                 return (
                     <CombatScene
                         destination={combatDest}
                         character={character}
-                        weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
-                        weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
+                        weaponDamage={wpn.damage}
+                        weaponReach={wpn.reach}
                         bonusHp={rb.hp + sb.hp + fb.hp + cb.hp}
                         bonusDamage={rb.damage + sb.damage + fb.damage + cb.damage}
                         bonusReach={rb.reach + sb.reach + fb.reach + cb.reach}
-                        bonusRegen={sb.regen + cb.regen}
+                        bonusRegen={sb.regen + cb.regen + rb.regen}
+                        bonusLifesteal={rb.lifesteal}
+                        bonusCrit={rb.crit}
+                        bonusKnockback={rb.knockback}
+                        enemyHpMult={pathMods.enemyHpMult}
+                        enemyDmgMult={pathMods.enemyDmgMult}
+                        playerDamageMult={pathMods.playerDamageMult}
+                        playerReachBonus={pathMods.playerReachBonus}
+                        canChannel={pathMods.canChannel}
+                        channelHealPct={pathMods.channelHealPct}
+                        channelCooldownSec={pathMods.channelCooldownSec}
                         onVictory={onVictory}
                         onDefeat={onDefeat}
                         onExit={() => setCombatDest(null)}

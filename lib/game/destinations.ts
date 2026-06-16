@@ -14,6 +14,10 @@ export interface RelicPower {
     hp?: number;
     damage?: number;
     reach?: number;
+    regen?: number;      // HP restored per second in combat
+    lifesteal?: number;  // fraction of damage dealt healed back (0..1)
+    crit?: number;       // chance (0..1) a strike lands for double
+    knockback?: number;  // extra knockback on hit (world px)
     label: string;
 }
 
@@ -44,8 +48,11 @@ export interface CombatConfig {
     bossName: string;
     bossHp: number;
     bossDmg: number;
+    bossArt?: BossArt;   // which guardian creature to draw
     victory: string;     // line on victory
 }
+
+export type BossArt = 'wraith' | 'golem' | 'serpent' | 'sentinel' | 'titan';
 
 export interface Destination {
     poiId: string;       // overworld POI id that opens this
@@ -56,6 +63,8 @@ export interface Destination {
     bg: [string, string]; // background gradient stops
     guide: Guide;
     lore: LoreSection[];
+    /** Unlocked on revisit after the guardian falls */
+    deepLore?: LoreSection;
     relics: Relic[];
     combat?: CombatConfig;
     puzzle?: Puzzle;
@@ -82,13 +91,15 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Fall', body: 'The fall was not a place you dropped from. It was a frequency you dropped to — from union into separation, from knowing into believing. Every lie of the world is built on that drop.' },
             { heading: 'The Way Back', body: 'You cannot climb back to Eden by effort. You return by laying down the cares of the world, one by one, until nothing stands between you and the Source.' },
         ],
-        relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.', power: { hp: 25, label: '+25 vitality' } }],
+        deepLore: { heading: 'On Second Passing', body: 'The Garden is quieter now. The cherubim do not lower their swords for everyone — only for those who remember that exile was a choice, not a sentence. Carry the leaf. It is the same tree.' },
+        relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.', power: { hp: 25, regen: 2, label: '+25 vitality · renews 2/s' } }],
         combat: {
             challenge: 'The way back is guarded. Cherubim with flaming swords bar the gate, as they have since the first exile. To pass, you must endure them.',
             enemyCount: 3,
             enemyHp: 26,
             enemyDmg: 10,
             bossName: 'The Cherub of the Flaming Sword',
+            bossArt: 'sentinel',
             bossHp: 150,
             bossDmg: 19,
             victory: 'The flaming sword lowers. For the first time since the fall, the gate of the Garden stands open to you.',
@@ -123,13 +134,15 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Light', body: 'The Fair ran on light no one could fully explain — a luminance the records soften and the photographs cannot quite hold. What was demonstrated there, and quietly retired?' },
             { heading: 'The Orphans', body: 'Children arrived by the trainload in those years, their origins blurred in the ledgers. A history is not only what is built. It is also what is conveniently forgotten.' },
         ],
-        relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.', power: { hp: 15, damage: 2, label: '+15 vitality · +2 strike' } }],
+        deepLore: { heading: 'On Second Passing', body: 'The Erased still drift, but they no longer reach for you. The Caretaker\'s ledger is ash. Walk the marble again — the light that powered this city was never electricity alone.' },
+        relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.', power: { hp: 15, damage: 2, crit: 0.14, label: '+15 vitality · +2 strike · 14% crit' } }],
         combat: {
             challenge: 'The white halls are not empty. The Erased — those the ledgers forgot — drift the corridors, and the Caretaker comes to keep his secret buried.',
             enemyCount: 4,
             enemyHp: 24,
             enemyDmg: 10,
             bossName: 'The Caretaker of the Fair',
+            bossArt: 'wraith',
             bossHp: 165,
             bossDmg: 20,
             victory: 'The Caretaker fades, his ledger spilling burned pages across the marble. What was hidden is yours to read.',
@@ -169,13 +182,15 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Hum', body: 'The King\'s Chamber answers a single note. Strike it and the whole room becomes an instrument. Whatever it was tuned to, the builders meant for it to resonate.' },
             { heading: 'The Question', body: 'The honest question is not how primitive men dragged these stones. It is why we were taught they were primitive at all.' },
         ],
-        relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.', power: { reach: 8, label: '+reach' } }],
+        deepLore: { heading: 'On Second Passing', body: 'Press your palm to the seam again. The hum is steady now — it knows you. Whatever this engine measured, it was never the dead. It was the living frequency of the world before the lie.' },
+        relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.', power: { reach: 8, damage: 2, knockback: 8, label: '+8 reach · heavy knockback' } }],
         combat: {
             challenge: 'The chamber is not empty. Shades of those who died seeking its secret still guard the stone. Defend yourself.',
             enemyCount: 3,
             enemyHp: 28,
             enemyDmg: 11,
             bossName: 'The Sentinel of Stone',
+            bossArt: 'golem',
             bossHp: 170,
             bossDmg: 20,
             victory: 'The guardian dissolves into dust and silence. The hum of the stone steadies — it has accepted you.',
@@ -214,13 +229,15 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Destroyer', body: 'A red wanderer that returns in long ages, dragging fire and flood across the sky. The Kolbrin names it where your textbooks leave only silence and superstition.' },
             { heading: 'The Pattern', body: 'Read enough forbidden books and you stop seeing contradictions. You start seeing one story, told in many tongues, guarded by many hands.' },
         ],
-        relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.', power: { damage: 4, label: '+4 strike' } }],
+        deepLore: { heading: 'On Second Passing', body: 'The water is still. WORMWOOD is not only a name — it is a cycle. The Destroyer returns when the world forgets it came before. You have not forgotten.' },
+        relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.', power: { damage: 4, lifesteal: 0.2, label: '+4 strike · 20% lifesteal' } }],
         combat: {
             challenge: 'The vault remembers the flood. Shades of the drowned rise from the black water to keep the Bronzebook from unworthy hands.',
             enemyCount: 4,
             enemyHp: 28,
             enemyDmg: 11,
             bossName: "The Destroyer's Herald",
+            bossArt: 'serpent',
             bossHp: 190,
             bossDmg: 22,
             victory: 'The herald sinks back beneath the still black water. The Bronzebook lies open, and unguarded.',
@@ -255,13 +272,15 @@ export const DESTINATIONS: Destination[] = [
             { heading: 'The Tablets', body: 'Thirteen tablets of imperishable emerald, recording a science of mind and matter older than the flood. Most who quote them have never stood where they are kept.' },
             { heading: 'The Light Within', body: 'The Source you are walking back toward was never far. It is the light the body was built to house. "Man, know thyself, and thou shalt know the All."' },
         ],
-        relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.', power: { damage: 6, label: '+6 strike' } }],
+        deepLore: { heading: 'On Second Passing', body: 'The Threshold remembers you. The seven wanderers still hang above — but now you read them as a sentence, not a scatter. As above, so below. So within.' },
+        relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.', power: { damage: 6, crit: 0.18, label: '+6 strike · 18% crit' } }],
         combat: {
             challenge: 'No one reads the Tablets unchallenged. The thought-forms of every age that ever sought them rise — and the Guardian of the Threshold rises with them.',
             enemyCount: 4,
             enemyHp: 30,
             enemyDmg: 12,
             bossName: 'The Guardian of the Threshold',
+            bossArt: 'titan',
             bossHp: 230,
             bossDmg: 24,
             victory: 'The Guardian inclines its head and unmakes itself. "Pass," says Hermes. "You have earned the All."',
@@ -305,18 +324,24 @@ export function hasAllRelics(inventory: string[]): boolean {
     return ALL_RELIC_IDS.length > 0 && ALL_RELIC_IDS.every((id) => inventory.includes(id));
 }
 
-// Sum the passive combat bonuses from the relics a soul carries.
-export function relicBonuses(inventory: string[]): { hp: number; damage: number; reach: number } {
-    let hp = 0;
-    let damage = 0;
-    let reach = 0;
+export interface CombatBonuses {
+    hp: number; damage: number; reach: number;
+    regen: number; lifesteal: number; crit: number; knockback: number;
+}
+
+// Sum the passive combat powers from the relics a soul carries.
+export function relicBonuses(inventory: string[]): CombatBonuses {
+    const b: CombatBonuses = { hp: 0, damage: 0, reach: 0, regen: 0, lifesteal: 0, crit: 0, knockback: 0 };
     for (const id of inventory) {
         const p = RELIC_BY_ID[id]?.power;
-        if (p) {
-            hp += p.hp || 0;
-            damage += p.damage || 0;
-            reach += p.reach || 0;
-        }
+        if (!p) continue;
+        b.hp += p.hp || 0;
+        b.damage += p.damage || 0;
+        b.reach += p.reach || 0;
+        b.regen += p.regen || 0;
+        b.lifesteal += p.lifesteal || 0;
+        b.crit += p.crit || 0;
+        b.knockback += p.knockback || 0;
     }
-    return { hp, damage, reach };
+    return b;
 }

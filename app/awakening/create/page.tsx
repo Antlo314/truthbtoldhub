@@ -13,6 +13,8 @@ import {
     type Build, type HairStyle, type OutfitStyle, type FaceStyle,
 } from '@/lib/game/avatar';
 import { Loader2, Shuffle } from 'lucide-react';
+import CutscenePlayer from '@/components/game/CutscenePlayer';
+import { cutscene } from '@/lib/game/cutscenes';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -35,10 +37,20 @@ export default function CreatePage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
+    const [introDone, setIntroDone] = useState(false);
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<Tab>('Body');
 
-    useEffect(() => { setMounted(true); loadFromCloud(); }, [loadFromCloud]);
+    useEffect(() => {
+        setMounted(true);
+        loadFromCloud();
+        setIntroDone(sessionStorage.getItem('tbth-cutscene-forging') === '1');
+    }, [loadFromCloud]);
+
+    const finishIntro = () => {
+        sessionStorage.setItem('tbth-cutscene-forging', '1');
+        setIntroDone(true);
+    };
 
     const av = character.avatar;
     const aura = character.appearance.aura;
@@ -56,6 +68,7 @@ export default function CreatePage() {
 
     return (
         <main className="relative bg-void text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
+            {!introDone && <CutscenePlayer scene={cutscene('forging')} onComplete={finishIntro} onSkip={finishIntro} />}
             <div className="grain-overlay" />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
