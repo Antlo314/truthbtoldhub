@@ -65,12 +65,19 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const truthImg = new Image();
         truthImg.src = '/assets/truth.png';
 
-        // the player's layered avatar — three pre-rendered walk frames
-        // (idle / left-step / right-step), rebuilt only when the look changes.
-        const buildFrames = (cfg: GameCharacter['avatar']) => [avatarOffscreen(cfg, 0), avatarOffscreen(cfg, 1), avatarOffscreen(cfg, 2)];
+        // the player's layered avatar — 4 facings × 3 walk frames (idle/L/R
+        // step), pre-rendered and rebuilt only when the look changes.
+        const DIRS = ['down', 'up', 'left', 'right'] as const;
+        type Dir = typeof DIRS[number];
+        const buildFrames = (cfg: GameCharacter['avatar']) => {
+            const m = {} as Record<Dir, HTMLCanvasElement[]>;
+            for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
+            return m;
+        };
         let avatarFrames = buildFrames(charRef.current.avatar);
         let avatarKey = JSON.stringify(charRef.current.avatar);
         let walkT = 0;
+        let facing: Dir = 'down';
 
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
@@ -319,6 +326,7 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             if (mag > 1) { ix /= mag; iy /= mag; }
             const moving = Math.hypot(ix, iy) > 0.12;
             walkT += moving ? dt : 0;
+            if (moving) facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
 
             // move with per-axis collision (feet point)
             const spd = 92;
@@ -437,7 +445,8 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             shadow(st.px, st.py);
             aura(st.px, st.py, ap.aura, 11);
             const wphase = Math.floor(walkT * 7) % 2;
-            const wframe = moving ? avatarFrames[wphase === 0 ? 1 : 2] : avatarFrames[0];
+            const dirFrames = avatarFrames[facing];
+            const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
             drawAvatar(st.px, st.py, wframe, moving && wphase === 0 ? 1 : 0);
 
             raf = requestAnimationFrame(loop);

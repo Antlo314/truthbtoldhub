@@ -69,8 +69,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         let ctx = canvas.getContext('2d')!;
         const img = new Image();
         img.src = CHAR_SHEET;
-        const avatarFrames = [avatarOffscreen(character.avatar, 0), avatarOffscreen(character.avatar, 1), avatarOffscreen(character.avatar, 2)];
+        const CDIRS = ['down', 'up', 'left', 'right'] as const;
+        type CDir = typeof CDIRS[number];
+        const avatarFrames = {} as Record<CDir, HTMLCanvasElement[]>;
+        for (const cd of CDIRS) avatarFrames[cd] = [avatarOffscreen(character.avatar, 0, cd), avatarOffscreen(character.avatar, 1, cd), avatarOffscreen(character.avatar, 2, cd)];
         let walkTimer = 0;
+        let facing: CDir = 'down';
         const cfg = d.combat!;
 
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -121,7 +125,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 const mag = Math.hypot(ix, iy);
                 if (mag > 1) { ix /= mag; iy /= mag; }
                 frameMoving = Math.hypot(ix, iy) > 0.12;
-                if (frameMoving) walkTimer += dt;
+                if (frameMoving) { walkTimer += dt; facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down'); }
                 const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
                 st.px = Math.max(lo, Math.min(hiX, st.px + ix * 84 * dt));
                 st.py = Math.max(lo, Math.min(hiY, st.py + iy * 84 * dt));
@@ -250,7 +254,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             glow(st.px, st.py, character.appearance.aura, 11);
             ctx.globalAlpha = 1;
             const wphase = Math.floor(walkTimer * 7) % 2;
-            const wframe = frameMoving ? avatarFrames[wphase === 0 ? 1 : 2] : avatarFrames[0];
+            const dirFrames = avatarFrames[facing];
+            const wframe = frameMoving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
             ctx.drawImage(wframe, st.px - 8, st.py - 19 - (frameMoving && wphase === 0 ? 1 : 0), 16, 24);
 
             ctx.restore();

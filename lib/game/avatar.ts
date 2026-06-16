@@ -59,10 +59,14 @@ function px(g: (string | null)[][], x: number, y: number, c: string) {
     if (y >= 0 && y < AV_H && x >= 0 && x < AV_W) g[y][x] = c;
 }
 
+export type Facing = 'down' | 'up' | 'left' | 'right';
+
 // Build the full character. Layers are drawn back-to-front.
-// `step` drives a 2-frame walk cycle: 0 = idle, 1 = left foot lifted,
-// 2 = right foot lifted.
-export function buildAvatarPixels(cfg: AvatarConfig, step = 0): (string | null)[][] {
+// `step` drives a 2-frame walk cycle (0 idle, 1/2 lift each foot); `dir`
+// gives 4-directional facing — down shows the face, up the back of the
+// head, left a profile (right is left mirrored).
+export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'down'): (string | null)[][] {
+    if (dir === 'right') return buildAvatarPixels(cfg, step, 'left').map((row) => [...row].reverse());
     const g = emptyGrid();
     const skin = SKIN_TONES[cfg.skin] ?? SKIN_TONES[4];
     const shade = skinShade[cfg.skin] ?? '#8d5524';
@@ -113,19 +117,55 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0): (string | null)[
     // ---- neck ----
     rect(g, 7, 9, 2, 1, shade);
 
-    // ---- head (skin) ----
-    rect(g, 5, 3, 6, 6, skin);
-    px(g, 4, 6, skin); px(g, 11, 6, skin); // ears
-    // cheek/jaw shading
-    px(g, 5, 8, shade); px(g, 10, 8, shade);
-
-    // ---- face ----
-    drawFace(g, cfg.face, shade, hair);
-
-    // ---- hair (on top) ----
-    drawHair(g, cfg.hairStyle, hair, fem);
+    // ---- head + face/hair, by facing ----
+    if (dir === 'up') {
+        rect(g, 5, 3, 6, 6, skin);                 // nape
+        drawHairBack(g, cfg.hairStyle, hair);
+    } else if (dir === 'left') {
+        rect(g, 5, 3, 6, 6, skin);
+        px(g, 4, 6, skin); px(g, 4, 7, shade);     // nose / jaw at the front edge
+        drawProfileFace(g, cfg.face, shade, hair);
+        drawHairSide(g, cfg.hairStyle, hair);
+    } else {
+        rect(g, 5, 3, 6, 6, skin);
+        px(g, 4, 6, skin); px(g, 11, 6, skin);     // ears
+        px(g, 5, 8, shade); px(g, 10, 8, shade);   // jaw shading
+        drawFace(g, cfg.face, shade, hair);
+        drawHair(g, cfg.hairStyle, hair, fem);
+    }
 
     return g;
+}
+
+// Back of the head (facing up): hair covers the crown + back; long styles flow down.
+function drawHairBack(g: (string | null)[][], style: HairStyle, hair: string) {
+    const hi = lightenHex(hair);
+    rect(g, 5, 2, 6, 5, hair);
+    rect(g, 4, 3, 1, 3, hair); rect(g, 11, 3, 1, 3, hair);
+    if (style === 'afro') { rect(g, 4, 0, 8, 4, hair); rect(g, 3, 1, 1, 3, hair); rect(g, 12, 1, 1, 3, hair); }
+    else if (style === 'bun') { rect(g, 6, 0, 4, 2, hair); }
+    if (style === 'long' || style === 'braids' || style === 'locs') rect(g, 4, 7, 8, 5, hair);
+    rect(g, 5, 2, 6, 1, hi);
+}
+
+// Profile face (facing left): a single eye toward the front, mouth + facial hair at the chin.
+function drawProfileFace(g: (string | null)[][], face: FaceStyle, shade: string, hair: string) {
+    px(g, 6, 6, '#2a2030');
+    if (face === 'keen') px(g, 6, 5, shade);
+    px(g, 5, 8, shade);
+    if (face === 'goatee') { px(g, 5, 8, hair); px(g, 5, 9, hair); }
+    if (face === 'beard') { rect(g, 5, 7, 3, 2, hair); px(g, 5, 6, hair); }
+}
+
+// Side hair (facing left): hair on top + the back (right) of the head.
+function drawHairSide(g: (string | null)[][], style: HairStyle, hair: string) {
+    const hi = lightenHex(hair);
+    rect(g, 6, 2, 5, 4, hair);
+    rect(g, 9, 3, 2, 4, hair); rect(g, 11, 3, 1, 3, hair);
+    if (style === 'afro') { rect(g, 6, 0, 6, 4, hair); rect(g, 11, 1, 2, 3, hair); }
+    else if (style === 'bun') { rect(g, 9, 0, 3, 2, hair); }
+    if (style === 'long' || style === 'braids' || style === 'locs') rect(g, 9, 6, 3, 6, hair);
+    rect(g, 6, 2, 5, 1, hi);
 }
 
 function drawFace(g: (string | null)[][], face: FaceStyle, shade: string, hair: string) {

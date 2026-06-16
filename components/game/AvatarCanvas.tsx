@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { buildAvatarPixels, AV_W, AV_H, type AvatarConfig } from '@/lib/game/avatar';
+import { buildAvatarPixels, AV_W, AV_H, type AvatarConfig, type Facing } from '@/lib/game/avatar';
 
 // ============================================================
 //  AVATAR CANVAS — paints a layered AvatarConfig (lib/game/avatar)
@@ -24,12 +24,12 @@ export function paintGrid(ctx: CanvasRenderingContext2D, grid: (string | null)[]
 // Render a config to a fresh offscreen canvas at native resolution (1px cells).
 // `step` selects a walk frame (0 idle, 1/2 stepping). The caller can
 // drawImage() it at any scale with imageSmoothing off.
-export function avatarOffscreen(config: AvatarConfig, step = 0): HTMLCanvasElement {
+export function avatarOffscreen(config: AvatarConfig, step = 0, dir: Facing = 'down'): HTMLCanvasElement {
     const c = document.createElement('canvas');
     c.width = AV_W;
     c.height = AV_H;
     const ctx = c.getContext('2d')!;
-    paintGrid(ctx, buildAvatarPixels(config, step), 1, 0, 0);
+    paintGrid(ctx, buildAvatarPixels(config, step, dir), 1, 0, 0);
     return c;
 }
 
