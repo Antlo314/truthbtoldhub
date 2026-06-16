@@ -129,6 +129,44 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
         }
     };
 
+    const handleDemoMode = () => {
+        localStorage.setItem('tbth-demo', 'true');
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `sb-access-token=demo-token; path=/; SameSite=Lax${secure}`;
+        
+        const mockSession = {
+            access_token: 'demo-token',
+            token_type: 'bearer',
+            expires_in: 3600,
+            refresh_token: 'demo-refresh-token',
+            user: {
+                id: 'demo-soul-id-12345',
+                aud: 'authenticated',
+                role: 'authenticated',
+                email: 'demo-soul@truthbtoldhub.local',
+                app_metadata: { provider: 'email' },
+                user_metadata: {
+                    username: 'DemoSoul',
+                    display_name: 'Demo Soul',
+                    aura_color: 'Neutral'
+                },
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            },
+            expires_at: Math.floor(Date.now() / 1000) + 3600
+        };
+
+        if ((window as any).__triggerDemoAuth) {
+            (window as any).__triggerDemoAuth(mockSession);
+        }
+
+        setInfoMsg("Offline signature established. Entering local Demo Mode...");
+        setTimeout(() => {
+            onClose();
+            if (onSuccess) onSuccess();
+        }, 1500);
+    };
+
     return (
         <div className={isGated ? "w-full" : "fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"}>
             <motion.div 
@@ -252,6 +290,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
                     >
                         <GoogleIcon />
                         Continue with Google
+                    </button>
+
+                    <button 
+                        onClick={handleDemoMode}
+                        className="w-full bg-amber-500/10 border border-amber-500/20 text-aether-gold py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-amber-500/20 transition-all flex items-center justify-center gap-3 active:scale-95"
+                    >
+                        <Sparkles className="w-4 h-4 text-aether-gold" />
+                        Play in Demo Mode (Offline)
                     </button>
 
                     <div className="text-center pt-2">

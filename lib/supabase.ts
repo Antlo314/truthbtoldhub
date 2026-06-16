@@ -28,8 +28,147 @@ if (typeof window !== 'undefined') {
 
     supabase.auth.onAuthStateChange((_event, session) => {
         if (session) setGate(session.access_token);
-        else clearGate();
+        else if (localStorage.getItem('tbth-demo') !== 'true') clearGate();
     });
+
+    // --- DEMO MODE OVERRIDES ---
+    const callbacks = new Set<(event: any, session: any) => void>();
+    
+    // Override getSession
+    const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
+    supabase.auth.getSession = async () => {
+        const isDemo = localStorage.getItem('tbth-demo') === 'true';
+        if (isDemo) {
+            return {
+                data: {
+                    session: {
+                        access_token: 'demo-token',
+                        token_type: 'bearer',
+                        expires_in: 3600,
+                        refresh_token: 'demo-refresh-token',
+                        user: {
+                            id: 'demo-soul-id-12345',
+                            aud: 'authenticated',
+                            role: 'authenticated',
+                            email: 'demo-soul@truthbtoldhub.local',
+                            app_metadata: { provider: 'email' },
+                            user_metadata: {
+                                username: 'DemoSoul',
+                                display_name: 'Demo Soul',
+                                aura_color: 'Neutral'
+                            },
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        },
+                        expires_at: Math.floor(Date.now() / 1000) + 3600
+                    }
+                },
+                error: null
+            } as any;
+        }
+        return originalGetSession();
+    };
+
+    // Override signOut
+    const originalSignOut = supabase.auth.signOut.bind(supabase.auth);
+    supabase.auth.signOut = async () => {
+        localStorage.removeItem('tbth-demo');
+        clearGate();
+        if ((window as any).__triggerDemoAuth) {
+            (window as any).__triggerDemoAuth(null);
+        }
+        return originalSignOut();
+    };
+
+    // Override onAuthStateChange
+    const originalOnAuthStateChange = supabase.auth.onAuthStateChange.bind(supabase.auth);
+    supabase.auth.onAuthStateChange = (callback) => {
+        callbacks.add(callback);
+        const { data: { subscription } } = originalOnAuthStateChange(callback);
+        
+        return {
+            data: {
+                subscription: {
+                    unsubscribe: () => {
+                        callbacks.delete(callback);
+                        subscription.unsubscribe();
+                    }
+                }
+            }
+        };
+    };
+
+    // Helper to trigger UI auth state changes manually in demo mode
+    (window as any).__triggerDemoAuth = (session: any) => {
+        for (const cb of callbacks) {
+            try {
+                cb(session ? 'SIGNED_IN' : 'SIGNED_OUT', session);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
+
+    // Override table queries
+    const mockProfiles = {
+        id: 'demo-soul-id-12345',
+        username: 'DemoSoul',
+        display_name: 'Demo Soul',
+        avatar_url: '',
+        soul_power: 144,
+        tier: 'Initiate',
+        alignment: 0,
+        custom_title: 'Demo Soul',
+        bio: 'Exploring the sanctum offline.',
+        is_supporter: true
+    };
+
+    const originalFrom = supabase.from.bind(supabase);
+    supabase.from = (table: string) => {
+        const isDemo = localStorage.getItem('tbth-demo') === 'true';
+        if (isDemo) {
+            const chain = {
+                select: () => chain,
+                eq: () => chain,
+                gt: () => chain,
+                order: () => chain,
+                limit: () => chain,
+                maybeSingle: async () => {
+                    if (table === 'profiles') {
+                        return { data: mockProfiles, error: null };
+                    }
+                    if (table === 'game_state') {
+                        const localJourney = localStorage.getItem('tbth-journey');
+                        if (localJourney) {
+                            try {
+                                const parsed = JSON.parse(localJourney);
+                                return {
+                                    data: {
+                                        character: parsed.state.character,
+                                        initiated: parsed.state.initiated
+                                    },
+                                    error: null
+                                };
+                            } catch (e) {}
+                        }
+                    }
+                    return { data: null, error: null };
+                },
+                single: async () => {
+                    if (table === 'profiles') return { data: mockProfiles, error: null };
+                    return { data: null, error: null };
+                },
+                update: () => chain,
+                upsert: () => chain,
+                insert: () => chain,
+                then: (resolve: any) => {
+                    resolve({ data: [], error: null });
+                }
+            };
+            return chain as any;
+        }
+        return originalFrom(table);
+    };
 }
 
 
