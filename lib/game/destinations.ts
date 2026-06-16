@@ -59,6 +59,7 @@ export interface Destination {
     relics: Relic[];
     combat?: CombatConfig;
     puzzle?: Puzzle;
+    clothing?: string;   // garment id (lib/game/clothing.ts) found here
 }
 
 export const DESTINATIONS: Destination[] = [
@@ -67,6 +68,7 @@ export const DESTINATIONS: Destination[] = [
         kind: 'portal',
         name: 'Eden — Before the Fall',
         era: 'The First Garden · Before Time',
+        clothing: 'eden_leaf',
         accent: '#34d399',
         bg: ['#0a1f17', '#04100b'],
         guide: {
@@ -107,6 +109,7 @@ export const DESTINATIONS: Destination[] = [
         kind: 'portal',
         name: 'St. Louis, 1904',
         era: 'Louisiana Purchase Exposition',
+        clothing: 'fair_coat',
         accent: '#fbbf24',
         bg: ['#1c1606', '#0a0803'],
         guide: {
@@ -152,6 +155,7 @@ export const DESTINATIONS: Destination[] = [
         kind: 'cave',
         name: 'Giza — The Engine of Stone',
         era: 'The Black Land · Age Unknown',
+        clothing: 'giza_linen',
         accent: '#22d3ee',
         bg: ['#06181c', '#030c0e'],
         guide: {
@@ -196,6 +200,7 @@ export const DESTINATIONS: Destination[] = [
         kind: 'cave',
         name: 'The Kolbrin Vault',
         era: 'Egyptian-Celtic Manuscript',
+        clothing: 'kolbrin_cloak',
         accent: '#a855f7',
         bg: ['#160a1f', '#0a0410'],
         guide: {
@@ -236,6 +241,7 @@ export const DESTINATIONS: Destination[] = [
         kind: 'portal',
         name: 'The Emerald Halls',
         era: 'Khem · Thoth the Atlantean',
+        clothing: 'emerald_vestment',
         accent: '#10b981',
         bg: ['#04140f', '#020a07'],
         guide: {

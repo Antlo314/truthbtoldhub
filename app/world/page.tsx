@@ -5,11 +5,12 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt } from 'lucide-react';
 import { QUESTS, questsFor, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
+import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
 import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
@@ -35,6 +36,8 @@ export default function WorldPage() {
     const claimRelic = useGameStore((s) => s.claimRelic);
     const saveToCloud = useGameStore((s) => s.saveToCloud);
     const equipWeapon = useGameStore((s) => s.equipWeapon);
+    const findClothing = useGameStore((s) => s.findClothing);
+    const equipClothing = useGameStore((s) => s.equipClothing);
     const markCleared = useGameStore((s) => s.markCleared);
     const markSolved = useGameStore((s) => s.markSolved);
     const claimQuest = useGameStore((s) => s.claimQuest);
@@ -112,10 +115,18 @@ export default function WorldPage() {
 
     const handleClaim = useCallback(async (relicId: string) => {
         claimRelic(relicId);
-        await saveToCloud();
         const r = RELIC_BY_ID[relicId];
-        showToast(`✦ ${r?.name || 'Relic'} claimed`);
-    }, [claimRelic, saveToCloud, showToast]);
+        let msg = `✦ ${r?.name || 'Relic'} claimed`;
+        // the destination's garment is found alongside its relic
+        const cloth = activeDest?.clothing;
+        if (cloth && !useGameStore.getState().character.wardrobe.includes(cloth)) {
+            findClothing(cloth);
+            const garment = CLOTHING_BY_ID[cloth];
+            if (garment) msg += ` · ${garment.name} found`;
+        }
+        await saveToCloud();
+        showToast(msg);
+    }, [claimRelic, findClothing, saveToCloud, showToast, activeDest]);
 
     const handleForge = useCallback((id: string) => {
         equipWeapon(id);
@@ -322,17 +333,18 @@ export default function WorldPage() {
                             <X className="w-4 h-4" />
                         </button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
-                        <h2 className="font-ritual text-2xl gold-shimmer mb-4">Satchel of Relics</h2>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-4">Your Satchel</h2>
                         {(() => {
                             // Your full combat blessing carried into every fight — relics
-                            // you bear, the attunements of your path, and your founder seal.
+                            // you bear, your path's attunements, founder seal, and garment.
                             const rb = relicBonuses(character.inventory);
                             const sb = skillBonuses(character.skills);
                             const fb = founderBonuses(founderNumber);
-                            const hp = rb.hp + sb.hp + fb.hp;
-                            const damage = rb.damage + sb.damage + fb.damage;
-                            const reach = rb.reach + sb.reach + fb.reach;
-                            const regen = sb.regen;
+                            const cb = clothingBonus(character.equipped.clothing);
+                            const hp = rb.hp + sb.hp + fb.hp + cb.hp;
+                            const damage = rb.damage + sb.damage + fb.damage + cb.damage;
+                            const reach = rb.reach + sb.reach + fb.reach + cb.reach;
+                            const regen = sb.regen + cb.regen;
                             const parts = [
                                 hp ? `+${hp} vitality` : '',
                                 damage ? `+${damage} might` : '',
@@ -341,7 +353,7 @@ export default function WorldPage() {
                             ].filter(Boolean);
                             return parts.length ? (
                                 <div className="mb-5">
-                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · relics + path + seal</p>
+                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · relics + path + seal + garment</p>
                                     <div className="flex flex-wrap gap-2">
                                         {parts.map((p) => (
                                             <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
@@ -373,6 +385,38 @@ export default function WorldPage() {
                                 })}
                             </div>
                         )}
+
+                        {/* wardrobe — garments you've found (start in the plain garment) */}
+                        <div className="mt-6 pt-5 border-t border-white/10">
+                            <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Wardrobe</p>
+                            <div className="space-y-3">
+                                {character.wardrobe.map((id) => {
+                                    const g = CLOTHING_BY_ID[id];
+                                    if (!g) return null;
+                                    const worn = character.equipped.clothing === id;
+                                    return (
+                                        <div key={id} className="glass bg-white/[0.03] border rounded-2xl p-4 flex items-start gap-3" style={{ borderColor: worn ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.1)' }}>
+                                            <div className="w-10 h-10 rounded-xl bg-aether-gold/10 border border-aether-gold/20 flex items-center justify-center text-aether-gold shrink-0">
+                                                <Shirt className="w-5 h-5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="text-sm font-bold text-white">{g.name}</h4>
+                                                <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{g.from}</p>
+                                                <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{g.desc}</p>
+                                                {g.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {g.power.label}</p>}
+                                            </div>
+                                            {worn ? (
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-aether-gold shrink-0 self-center">Worn</span>
+                                            ) : (
+                                                <button onClick={() => { equipClothing(id); saveToCloud(); showToast(`✦ ${g.name} donned`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                    Wear
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -467,16 +511,17 @@ export default function WorldPage() {
                 const rb = relicBonuses(character.inventory);
                 const sb = skillBonuses(character.skills);
                 const fb = founderBonuses(founderNumber);
+                const cb = clothingBonus(character.equipped.clothing);
                 return (
                     <CombatScene
                         destination={combatDest}
                         character={character}
                         weaponDamage={WEAPON_BY_ID[character.equipped.weapon || '']?.damage || 12}
                         weaponReach={WEAPON_BY_ID[character.equipped.weapon || '']?.reach || 30}
-                        bonusHp={rb.hp + sb.hp + fb.hp}
-                        bonusDamage={rb.damage + sb.damage + fb.damage}
-                        bonusReach={rb.reach + sb.reach + fb.reach}
-                        bonusRegen={sb.regen}
+                        bonusHp={rb.hp + sb.hp + fb.hp + cb.hp}
+                        bonusDamage={rb.damage + sb.damage + fb.damage + cb.damage}
+                        bonusReach={rb.reach + sb.reach + fb.reach + cb.reach}
+                        bonusRegen={sb.regen + cb.regen}
                         onVictory={onVictory}
                         onDefeat={onDefeat}
                         onExit={() => setCombatDest(null)}

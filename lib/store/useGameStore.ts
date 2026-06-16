@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { getFounderStatus, type FounderTier } from '@/lib/game/founders';
+import { CLOTHING_BY_ID } from '@/lib/game/clothing';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -46,6 +47,7 @@ export interface GameCharacter {
     cleared: string[];       // destination ids whose guardians are defeated
     solved: string[];        // puzzle ids solved
     questsClaimed: string[]; // quest ids whose reward was taken
+    wardrobe: string[];      // clothing ids the soul has found
     equipped: EquippedItems;
 }
 
@@ -64,6 +66,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     cleared: [],
     solved: [],
     questsClaimed: [],
+    wardrobe: ['plain'],
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
 };
 
@@ -76,6 +79,7 @@ function freshCharacter(): GameCharacter {
         cleared: [...DEFAULT_CHARACTER.cleared],
         solved: [...DEFAULT_CHARACTER.solved],
         questsClaimed: [...DEFAULT_CHARACTER.questsClaimed],
+        wardrobe: [...DEFAULT_CHARACTER.wardrobe],
         equipped: { ...DEFAULT_CHARACTER.equipped },
     };
 }
@@ -92,6 +96,8 @@ interface GameState {
     learnSkill: (id: string) => void;
     claimRelic: (id: string) => void;
     equipWeapon: (id: string) => void;
+    findClothing: (id: string) => void;
+    equipClothing: (id: string) => void;
     markCleared: (destId: string) => void;
     markSolved: (puzzleId: string) => void;
     claimQuest: (questId: string, skillPointsReward: number) => void;
@@ -139,6 +145,24 @@ export const useGameStore = create<GameState>()(
 
             equipWeapon: (id) =>
                 set((s) => ({ character: { ...s.character, equipped: { ...s.character.equipped, weapon: id } } })),
+
+            // Add a found garment to the wardrobe (and grant its one-time skill
+            // point on first find). Idempotent — re-finding does nothing.
+            findClothing: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (c.wardrobe.includes(id)) return {};
+                    const bonus = CLOTHING_BY_ID[id]?.skillPointsOnFind || 0;
+                    return { character: { ...c, wardrobe: [...c.wardrobe, id], skillPoints: c.skillPoints + bonus } };
+                }),
+
+            // Wear a garment you already own.
+            equipClothing: (id) =>
+                set((s) => {
+                    const c = s.character;
+                    if (!c.wardrobe.includes(id)) return {};
+                    return { character: { ...c, equipped: { ...c.equipped, clothing: id } } };
+                }),
 
             markCleared: (destId) =>
                 set((s) => {
@@ -269,6 +293,7 @@ export const useGameStore = create<GameState>()(
                         cleared: pc.cleared || c.character.cleared,
                         solved: pc.solved || c.character.solved,
                         questsClaimed: pc.questsClaimed || c.character.questsClaimed,
+                        wardrobe: pc.wardrobe && pc.wardrobe.length ? pc.wardrobe : c.character.wardrobe,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                     },
                 };
