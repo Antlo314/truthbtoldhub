@@ -7,8 +7,8 @@
 // ============================================================
 
 export const TILE = 16;
-export const MAP_W = 44;
-export const MAP_H = 44;
+export const MAP_W = 88;
+export const MAP_H = 88;
 
 export const ENV_SHEET = '/assets/kenney/roguelikeSheet.png';
 
@@ -55,6 +55,13 @@ function mulberry32(seed: number) {
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+}
+
+// deterministic spatial hash (0..1) for organic terrain clumping
+function h2(c: number, r: number) {
+    let x = (c * 374761393 + r * 668265263) | 0;
+    x = Math.imul(x ^ (x >>> 13), 1274126177);
+    return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
 }
 
 let cached: Overworld | null = null;
@@ -106,29 +113,38 @@ export function buildOverworld(): Overworld {
         }
     }
 
-    // a lake
-    const lakeX = 11;
-    const lakeY = 11;
+    // lakes — a few water bodies scattered across the larger map
+    const lakes = [
+        { x: 19, y: 21, r: 6.5 },
+        { x: W - 23, y: H - 27, r: 5.5 },
+        { x: cx + 19, y: 28, r: 4.2 },
+        { x: 24, y: H - 22, r: 4 },
+    ];
     for (let r = 0; r < H; r++) {
         for (let c = 0; c < W; c++) {
-            if (Math.hypot(c - lakeX, r - lakeY) < 4.2) {
-                ground[r][c] = 2;
-                decor[r][c] = 0;
-                solid[r][c] = true;
+            for (const lk of lakes) {
+                if (Math.hypot(c - lk.x, r - lk.y) < lk.r) {
+                    ground[r][c] = 2;
+                    decor[r][c] = 0;
+                    solid[r][c] = true;
+                    break;
+                }
             }
         }
     }
 
-    // scatter: solid trees (sparse) + decorative bushes (walkable) so the
-    // interior stays open to roam but feels alive
+    // scatter: trees clump into woods (denser where the coarse field is high)
+    // with open clearings between, plus walkable bushes — alive but roamable.
     for (let r = 4; r < H - 4; r++) {
         for (let c = 4; c < W - 4; c++) {
             if (ground[r][c] === 2 || decor[r][c]) continue;
+            const forest = h2(c >> 3, r >> 3) * 0.62 + h2(c >> 2, r >> 2) * 0.38;
+            const treeChance = forest > 0.6 ? 0.18 : 0.022;
             const v = rand();
-            if (v < 0.03) {
+            if (v < treeChance) {
                 decor[r][c] = 1; // tree (solid)
                 solid[r][c] = true;
-            } else if (v < 0.09) {
+            } else if (v < treeChance + 0.075) {
                 decor[r][c] = 2; // bush (walkable)
             }
         }

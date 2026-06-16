@@ -8,8 +8,6 @@ import {
     TILE,
     MAP_W,
     MAP_H,
-    GROUND,
-    DECOR,
     type POI,
     type POIType,
 } from '@/lib/game/overworld';
@@ -62,8 +60,6 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         let ctx = canvas.getContext('2d')!;
         const ow = buildOverworld();
 
-        const envImg = new Image();
-        envImg.src = '/assets/kenney/roguelikeSheet.png';
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
         const truthImg = new Image();
@@ -110,8 +106,70 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const SX = (wx: number) => Math.round(wx * Z + ox);
         const SY = (wy: number) => Math.round(wy * Z + oy);
 
-        function envTile(t: { col: number; row: number }, sx: number, sy: number, size: number) {
-            ctx.drawImage(envImg, t.col * 17, t.row * 17, 16, 16, sx, sy, size, size);
+        // deterministic per-tile hash (0..1) for terrain texture
+        function th(c: number, r: number, s = 0) {
+            let x = (c * 374761393 + r * 668265263 + s * 2246822519) | 0;
+            x = Math.imul(x ^ (x >>> 13), 1274126177);
+            return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+        }
+        const GRASS = ['#5d9e41', '#6bb04c', '#549238'];
+        const FLOWERS = ['#e85d6a', '#f2c14e', '#7aa6e8', '#e89bd0'];
+
+        // procedural ground: grass with shade variation + speckles + tufts +
+        // flowers, dirt with grain, water with a slow shimmer.
+        function drawGround(c: number, r: number, gv: number, sx: number, sy: number, size: number) {
+            const u = size / 16;
+            if (gv === 2) {
+                ctx.fillStyle = '#3f86c9'; ctx.fillRect(sx, sy, size, size);
+                ctx.fillStyle = '#5ba0db';
+                const w = Math.sin(st.t / 700 + (c + r) * 0.6) * 0.5 + 0.5;
+                if (th(c, r, 3) > 0.5) ctx.fillRect(sx + 3 * u, sy + (3 + w * 2) * u, 5 * u, u);
+                if (th(c, r, 5) > 0.6) ctx.fillRect(sx + 8 * u, sy + (9 - w * 2) * u, 4 * u, u);
+                return;
+            }
+            if (gv === 1) {
+                ctx.fillStyle = '#b58a52'; ctx.fillRect(sx, sy, size, size);
+                for (let k = 0; k < 3; k++) {
+                    ctx.fillStyle = th(c, r, k) > 0.5 ? '#9c7440' : '#c79a5e';
+                    ctx.fillRect(sx + Math.floor(th(c, r, k + 10) * 14) * u, sy + Math.floor(th(c, r, k + 20) * 14) * u, 2 * u, 2 * u);
+                }
+                return;
+            }
+            ctx.fillStyle = GRASS[Math.floor(th(c >> 2, r >> 2, 1) * 3) % 3];
+            ctx.fillRect(sx, sy, size, size);
+            for (let k = 0; k < 3; k++) {
+                ctx.fillStyle = th(c, r, k + 7) > 0.5 ? '#46802f' : '#74b855';
+                ctx.fillRect(sx + Math.floor(th(c, r, k + 30) * 15) * u, sy + Math.floor(th(c, r, k + 40) * 15) * u, u, u);
+            }
+            if (th(c, r, 9) > 0.82) {
+                const bx = sx + Math.floor(th(c, r, 11) * 10 + 3) * u, by = sy + Math.floor(th(c, r, 12) * 8 + 5) * u;
+                ctx.fillStyle = '#3f7a2b';
+                ctx.fillRect(bx, by - 2 * u, u, 3 * u); ctx.fillRect(bx - u, by - u, u, 2 * u); ctx.fillRect(bx + u, by - u, u, 2 * u);
+            }
+            if (th(c, r, 13) > 0.93) {
+                const fx = sx + Math.floor(th(c, r, 14) * 9 + 4) * u, fy = sy + Math.floor(th(c, r, 15) * 8 + 4) * u;
+                ctx.fillStyle = '#3f7a2b'; ctx.fillRect(fx, fy, u, 2 * u);
+                ctx.fillStyle = FLOWERS[Math.floor(th(c, r, 16) * FLOWERS.length) % FLOWERS.length];
+                ctx.fillRect(fx - u, fy - u, u, u); ctx.fillRect(fx + u, fy - u, u, u); ctx.fillRect(fx, fy - 2 * u, u, u); ctx.fillRect(fx, fy, u, u);
+            }
+        }
+
+        function drawTreeAt(sx: number, sy: number, size: number) {
+            const u = size / 16, mx = sx + size / 2;
+            ctx.fillStyle = 'rgba(0,0,0,0.16)';
+            ctx.beginPath(); ctx.ellipse(mx, sy + size - 2 * u, size * 0.4, size * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#6e4a28'; ctx.fillRect(mx - 1.5 * u, sy + size - 6 * u, 3 * u, 5 * u);
+            ctx.fillStyle = '#2e6a30'; ctx.beginPath(); ctx.ellipse(mx, sy + 4 * u, size * 0.46, size * 0.44, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#3c8a40'; ctx.beginPath(); ctx.ellipse(mx - 1.5 * u, sy + 2 * u, size * 0.34, size * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#56a85a'; ctx.beginPath(); ctx.ellipse(mx - 2.5 * u, sy + 0.5 * u, size * 0.18, size * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+        }
+
+        function drawBushAt(sx: number, sy: number, size: number) {
+            const u = size / 16, mx = sx + size / 2, my = sy + size * 0.62;
+            ctx.fillStyle = 'rgba(0,0,0,0.14)';
+            ctx.beginPath(); ctx.ellipse(mx, sy + size - 2 * u, size * 0.34, size * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#357a39'; ctx.beginPath(); ctx.ellipse(mx, my, size * 0.36, size * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#479a4d'; ctx.beginPath(); ctx.ellipse(mx - 1.5 * u, my - 1.5 * u, size * 0.24, size * 0.18, 0, 0, Math.PI * 2); ctx.fill();
         }
         function sprite(img: HTMLImageElement, col: number, row: number, wx: number, wy: number, alpha = 1, scale = 1.15) {
             const s = 16 * Z * scale;
@@ -321,20 +379,19 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             const r0 = clamp(Math.floor(-oy / size) - 1, 0, MAP_H - 1);
             const r1 = clamp(Math.ceil((vh - oy) / size) + 1, 0, MAP_H - 1);
 
-            // ground
+            // ground (procedural texture)
             for (let r = r0; r <= r1; r++) {
                 for (let c = c0; c <= c1; c++) {
-                    const g = ow.ground[r][c];
-                    const t = g === 1 ? GROUND.dirt : g === 2 ? GROUND.water : GROUND.grass;
-                    envTile(t, c * size + ox, r * size + oy, size);
+                    drawGround(c, r, ow.ground[r][c], c * size + ox, r * size + oy, size);
                 }
             }
-            // decor
+            // decor (trees/bushes with shadows, top-to-bottom for depth)
             for (let r = r0; r <= r1; r++) {
                 for (let c = c0; c <= c1; c++) {
                     const d = ow.decor[r][c];
                     if (!d) continue;
-                    envTile(d === 1 ? DECOR.tree : DECOR.bush, c * size + ox, r * size + oy, size);
+                    const dsx = c * size + ox, dsy = r * size + oy;
+                    if (d === 1) drawTreeAt(dsx, dsy, size); else drawBushAt(dsx, dsy, size);
                 }
             }
 
@@ -388,13 +445,12 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
 
         const tryStart = () => {
             ready += 1;
-            if (ready >= 3) {
+            if (ready >= 2) {
                 last = performance.now();
                 raf = requestAnimationFrame(loop);
             }
         };
-        if (envImg.complete) tryStart(); else envImg.onload = tryStart;
-        if (charImg.complete) tryStart(); else charImg.onload = tryStart;
+        if (charImg.complete) tryStart(); else { charImg.onload = tryStart; charImg.onerror = tryStart; }
         if (truthImg.complete) tryStart(); else { truthImg.onload = tryStart; truthImg.onerror = tryStart; }
 
         const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
