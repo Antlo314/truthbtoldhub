@@ -5,13 +5,16 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import {
     buildOverworld,
+    buildPickups,
     TILE,
     MAP_W,
     MAP_H,
     type POI,
     type POIType,
+    type Pickup,
 } from '@/lib/game/overworld';
 import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
+import { unlockAudio } from '@/lib/game/sfx';
 
 // ============================================================
 //  THE OVERWORLD ENGINE — mobile-first 2D, scrolling camera.
@@ -21,6 +24,7 @@ import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
 
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
 const SHADE_TILE = { col: 0, row: 3 };
+const ORE_COLOR = { iron: '#cbd5e1', copper: '#f59e0b', cosmic: '#34d399' } as const;
 
 function clamp(v: number, lo: number, hi: number) {
     return v < lo ? lo : v > hi ? hi : v;
@@ -36,14 +40,18 @@ interface NearPOI {
 interface WorldCanvasProps {
     character: GameCharacter;
     shadeCount?: number;
+    paused?: boolean;
     onInteract: (poi: NearPOI) => void;
     onEncounter: () => void;
+    onPickup: (p: Pickup) => void;
 }
 
-export default function WorldCanvas({ character, shadeCount = 2, onInteract, onEncounter }: WorldCanvasProps) {
+export default function WorldCanvas({ character, shadeCount = 2, paused = false, onInteract, onEncounter, onPickup }: WorldCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
+    const pausedRef = useRef(paused);
+    pausedRef.current = paused;
 
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
@@ -54,14 +62,16 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
     const baseRef = useRef<HTMLDivElement>(null);
     const JOY_R = 46;
 
-    const cbRef = useRef({ onInteract, onEncounter });
-    cbRef.current = { onInteract, onEncounter };
+    const cbRef = useRef({ onInteract, onEncounter, onPickup });
+    cbRef.current = { onInteract, onEncounter, onPickup };
 
     useEffect(() => {
         const canvas = canvasRef.current!;
         let ctx = canvas.getContext('2d')!;
         const ow = buildOverworld();
         applyHiddenClears(ow);
+        const pickups = buildPickups();
+        const justCollected = new Set<string>();
 
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
@@ -91,7 +101,7 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
                 vx: i % 2 === 0 ? 11 : -9,
                 vy: i % 2 === 0 ? 8 : 12,
             })),
-            encountered: false,
+            encCd: 0,
             t: 0,
         };
 
@@ -128,60 +138,83 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
         const FLOWERS = ['#e85d6a', '#f2c14e', '#7aa6e8', '#e89bd0'];
 
         // procedural ground: grass with shade variation + speckles + tufts +
-        // flowers, dirt with grain, water with a slow shimmer.
-        function drawGround(c: number, r: number, gv: number, sx: number, sy: number, size: number) {
+        // flowers, dirt with grain, water with a (baked) shimmer highlight.
+        function drawGround(g: CanvasRenderingContext2D, c: number, r: number, gv: number, sx: number, sy: number, size: number, t: number) {
             const u = size / 16;
             if (gv === 2) {
-                ctx.fillStyle = '#3f86c9'; ctx.fillRect(sx, sy, size, size);
-                ctx.fillStyle = '#5ba0db';
-                const w = Math.sin(st.t / 700 + (c + r) * 0.6) * 0.5 + 0.5;
-                if (th(c, r, 3) > 0.5) ctx.fillRect(sx + 3 * u, sy + (3 + w * 2) * u, 5 * u, u);
-                if (th(c, r, 5) > 0.6) ctx.fillRect(sx + 8 * u, sy + (9 - w * 2) * u, 4 * u, u);
+                g.fillStyle = '#3f86c9'; g.fillRect(sx, sy, size, size);
+                g.fillStyle = '#5ba0db';
+                const w = Math.sin(t / 700 + (c + r) * 0.6) * 0.5 + 0.5;
+                if (th(c, r, 3) > 0.5) g.fillRect(sx + 3 * u, sy + (3 + w * 2) * u, 5 * u, u);
+                if (th(c, r, 5) > 0.6) g.fillRect(sx + 8 * u, sy + (9 - w * 2) * u, 4 * u, u);
                 return;
             }
             if (gv === 1) {
-                ctx.fillStyle = '#b58a52'; ctx.fillRect(sx, sy, size, size);
+                g.fillStyle = '#b58a52'; g.fillRect(sx, sy, size, size);
                 for (let k = 0; k < 3; k++) {
-                    ctx.fillStyle = th(c, r, k) > 0.5 ? '#9c7440' : '#c79a5e';
-                    ctx.fillRect(sx + Math.floor(th(c, r, k + 10) * 14) * u, sy + Math.floor(th(c, r, k + 20) * 14) * u, 2 * u, 2 * u);
+                    g.fillStyle = th(c, r, k) > 0.5 ? '#9c7440' : '#c79a5e';
+                    g.fillRect(sx + Math.floor(th(c, r, k + 10) * 14) * u, sy + Math.floor(th(c, r, k + 20) * 14) * u, 2 * u, 2 * u);
                 }
                 return;
             }
-            ctx.fillStyle = GRASS[Math.floor(th(c >> 2, r >> 2, 1) * 3) % 3];
-            ctx.fillRect(sx, sy, size, size);
+            g.fillStyle = GRASS[Math.floor(th(c >> 2, r >> 2, 1) * 3) % 3];
+            g.fillRect(sx, sy, size, size);
             for (let k = 0; k < 3; k++) {
-                ctx.fillStyle = th(c, r, k + 7) > 0.5 ? '#46802f' : '#74b855';
-                ctx.fillRect(sx + Math.floor(th(c, r, k + 30) * 15) * u, sy + Math.floor(th(c, r, k + 40) * 15) * u, u, u);
+                g.fillStyle = th(c, r, k + 7) > 0.5 ? '#46802f' : '#74b855';
+                g.fillRect(sx + Math.floor(th(c, r, k + 30) * 15) * u, sy + Math.floor(th(c, r, k + 40) * 15) * u, u, u);
             }
             if (th(c, r, 9) > 0.82) {
                 const bx = sx + Math.floor(th(c, r, 11) * 10 + 3) * u, by = sy + Math.floor(th(c, r, 12) * 8 + 5) * u;
-                ctx.fillStyle = '#3f7a2b';
-                ctx.fillRect(bx, by - 2 * u, u, 3 * u); ctx.fillRect(bx - u, by - u, u, 2 * u); ctx.fillRect(bx + u, by - u, u, 2 * u);
+                g.fillStyle = '#3f7a2b';
+                g.fillRect(bx, by - 2 * u, u, 3 * u); g.fillRect(bx - u, by - u, u, 2 * u); g.fillRect(bx + u, by - u, u, 2 * u);
             }
             if (th(c, r, 13) > 0.93) {
                 const fx = sx + Math.floor(th(c, r, 14) * 9 + 4) * u, fy = sy + Math.floor(th(c, r, 15) * 8 + 4) * u;
-                ctx.fillStyle = '#3f7a2b'; ctx.fillRect(fx, fy, u, 2 * u);
-                ctx.fillStyle = FLOWERS[Math.floor(th(c, r, 16) * FLOWERS.length) % FLOWERS.length];
-                ctx.fillRect(fx - u, fy - u, u, u); ctx.fillRect(fx + u, fy - u, u, u); ctx.fillRect(fx, fy - 2 * u, u, u); ctx.fillRect(fx, fy, u, u);
+                g.fillStyle = '#3f7a2b'; g.fillRect(fx, fy, u, 2 * u);
+                g.fillStyle = FLOWERS[Math.floor(th(c, r, 16) * FLOWERS.length) % FLOWERS.length];
+                g.fillRect(fx - u, fy - u, u, u); g.fillRect(fx + u, fy - u, u, u); g.fillRect(fx, fy - 2 * u, u, u); g.fillRect(fx, fy, u, u);
             }
         }
 
-        function drawTreeAt(sx: number, sy: number, size: number) {
+        function drawTreeAt(g: CanvasRenderingContext2D, sx: number, sy: number, size: number) {
             const u = size / 16, mx = sx + size / 2;
-            ctx.fillStyle = 'rgba(0,0,0,0.16)';
-            ctx.beginPath(); ctx.ellipse(mx, sy + size - 2 * u, size * 0.4, size * 0.16, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#6e4a28'; ctx.fillRect(mx - 1.5 * u, sy + size - 6 * u, 3 * u, 5 * u);
-            ctx.fillStyle = '#2e6a30'; ctx.beginPath(); ctx.ellipse(mx, sy + 4 * u, size * 0.46, size * 0.44, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#3c8a40'; ctx.beginPath(); ctx.ellipse(mx - 1.5 * u, sy + 2 * u, size * 0.34, size * 0.32, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#56a85a'; ctx.beginPath(); ctx.ellipse(mx - 2.5 * u, sy + 0.5 * u, size * 0.18, size * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+            g.fillStyle = 'rgba(0,0,0,0.16)';
+            g.beginPath(); g.ellipse(mx, sy + size - 2 * u, size * 0.4, size * 0.16, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#6e4a28'; g.fillRect(mx - 1.5 * u, sy + size - 6 * u, 3 * u, 5 * u);
+            g.fillStyle = '#2e6a30'; g.beginPath(); g.ellipse(mx, sy + 4 * u, size * 0.46, size * 0.44, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#3c8a40'; g.beginPath(); g.ellipse(mx - 1.5 * u, sy + 2 * u, size * 0.34, size * 0.32, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#56a85a'; g.beginPath(); g.ellipse(mx - 2.5 * u, sy + 0.5 * u, size * 0.18, size * 0.16, 0, 0, Math.PI * 2); g.fill();
         }
 
-        function drawBushAt(sx: number, sy: number, size: number) {
+        function drawBushAt(g: CanvasRenderingContext2D, sx: number, sy: number, size: number) {
             const u = size / 16, mx = sx + size / 2, my = sy + size * 0.62;
-            ctx.fillStyle = 'rgba(0,0,0,0.14)';
-            ctx.beginPath(); ctx.ellipse(mx, sy + size - 2 * u, size * 0.34, size * 0.13, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#357a39'; ctx.beginPath(); ctx.ellipse(mx, my, size * 0.36, size * 0.28, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#479a4d'; ctx.beginPath(); ctx.ellipse(mx - 1.5 * u, my - 1.5 * u, size * 0.24, size * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+            g.fillStyle = 'rgba(0,0,0,0.14)';
+            g.beginPath(); g.ellipse(mx, sy + size - 2 * u, size * 0.34, size * 0.13, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#357a39'; g.beginPath(); g.ellipse(mx, my, size * 0.36, size * 0.28, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#479a4d'; g.beginPath(); g.ellipse(mx - 1.5 * u, my - 1.5 * u, size * 0.24, size * 0.18, 0, 0, Math.PI * 2); g.fill();
+        }
+
+        // Bake the static world (ground + trees/bushes) ONCE to an offscreen
+        // canvas at native tile resolution, then blit it in a single draw call
+        // each frame instead of re-painting thousands of tiles. Big mobile win.
+        const NATIVE = 16;
+        const groundLayer = document.createElement('canvas');
+        groundLayer.width = MAP_W * NATIVE;
+        groundLayer.height = MAP_H * NATIVE;
+        const gctx = groundLayer.getContext('2d')!;
+        gctx.imageSmoothingEnabled = false;
+        for (let r = 0; r < MAP_H; r++) {
+            for (let c = 0; c < MAP_W; c++) {
+                drawGround(gctx, c, r, ow.ground[r][c], c * NATIVE, r * NATIVE, NATIVE, 0);
+            }
+        }
+        for (let r = 0; r < MAP_H; r++) {
+            for (let c = 0; c < MAP_W; c++) {
+                const d = ow.decor[r][c];
+                if (!d) continue;
+                if (d === 1) drawTreeAt(gctx, c * NATIVE, r * NATIVE, NATIVE);
+                else drawBushAt(gctx, c * NATIVE, r * NATIVE, NATIVE);
+            }
         }
         function sprite(img: HTMLImageElement, col: number, row: number, wx: number, wy: number, alpha = 1, scale = 1.15) {
             const s = 16 * Z * scale;
@@ -220,6 +253,20 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
             ctx.beginPath();
             ctx.ellipse(SX(wx), SY(wy) + 3 * Z, 6 * Z, 2.6 * Z, 0, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // a floating essence mote (loot) — gem that bobs over a soft glow
+        function drawPickup(wx: number, wy: number, color: string) {
+            const bob = Math.sin(st.t / 380 + wx * 0.05) * 2;
+            aura(wx, wy, color, 7);
+            const x = SX(wx);
+            const y = SY(wy) + bob;
+            const s = 2.4 * Z;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.8, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.8, y); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.fillRect(x - 0.5 * Z, y - 1.1 * Z, Z, Z);
         }
 
         function drawHut(p: POI) {
@@ -315,6 +362,9 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
 
         function loop(now: number) {
             if (!running) return;
+            // an overlay (Hut, satchel, combat, dialogue…) is open — freeze the
+            // world (saves battery, holds position) and keep the loop alive.
+            if (pausedRef.current) { last = now; raf = requestAnimationFrame(loop); return; }
             const dt = Math.min(0.05, (now - last) / 1000);
             last = now;
             st.t = now;
@@ -341,16 +391,35 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
             const ny = st.py + iy * spd * dt;
             if (!solidAt(st.px, ny + fy) && !solidAt(st.px, ny)) st.py = ny;
 
-            // shades drift + bounce off solids
+            // shades — drift idly, but HOME IN when you stray near (slower than
+            // you, so you can still flee). Brushing one drags you into a fight;
+            // it then scatters far so you aren't re-caught the instant you return.
+            st.encCd = Math.max(0, st.encCd - dt);
             for (const sh of st.shades) {
-                let sxn = sh.x + sh.vx * dt;
-                let syn = sh.y + sh.vy * dt;
-                if (solidAt(sxn, sh.y)) sh.vx *= -1; else sh.x = sxn;
-                if (solidAt(sh.x, syn)) sh.vy *= -1; else sh.y = syn;
-                if (!st.encountered && Math.hypot(sh.x - st.px, sh.y - st.py) < TILE * 0.8) {
-                    st.encountered = true;
+                const dxp = st.px - sh.x, dyp = st.py - sh.y;
+                const dp = Math.hypot(dxp, dyp) || 1;
+                const aggro = dp < TILE * 6;
+                const mvx = aggro ? (dxp / dp) * 30 : sh.vx;
+                const mvy = aggro ? (dyp / dp) * 30 : sh.vy;
+                const sxn = sh.x + mvx * dt;
+                const syn = sh.y + mvy * dt;
+                if (!solidAt(sxn, sh.y)) sh.x = sxn; else if (!aggro) sh.vx *= -1;
+                if (!solidAt(sh.x, syn)) sh.y = syn; else if (!aggro) sh.vy *= -1;
+                if (st.encCd <= 0 && dp < TILE * 0.75) {
+                    st.encCd = 3;
                     cbRef.current.onEncounter();
-                    setTimeout(() => { st.encountered = false; }, 4000);
+                    sh.x = (8 + Math.floor(Math.random() * (MAP_W - 16))) * TILE;
+                    sh.y = (8 + Math.floor(Math.random() * (MAP_H - 16))) * TILE;
+                }
+            }
+
+            // gather essence motes you walk over
+            for (const pk of pickups) {
+                if (justCollected.has(pk.id) || charRef.current.discovered.includes(pk.id)) continue;
+                const pwx = (pk.x + 0.5) * TILE, pwy = (pk.y + 0.5) * TILE;
+                if (Math.hypot(pwx - st.px, pwy - st.py) < TILE * 0.7) {
+                    justCollected.add(pk.id);
+                    cbRef.current.onPickup(pk);
                 }
             }
 
@@ -387,26 +456,14 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
             ctx.fillStyle = '#0a1410';
             ctx.fillRect(0, 0, vw, vh);
 
-            const size = 16 * Z;
-            const c0 = clamp(Math.floor(-ox / size) - 1, 0, MAP_W - 1);
-            const c1 = clamp(Math.ceil((vw - ox) / size) + 1, 0, MAP_W - 1);
-            const r0 = clamp(Math.floor(-oy / size) - 1, 0, MAP_H - 1);
-            const r1 = clamp(Math.ceil((vh - oy) / size) + 1, 0, MAP_H - 1);
+            // static world (ground + trees/bushes) — baked once, blitted in a
+            // single scaled draw call (the GPU clips the off-screen remainder).
+            ctx.drawImage(groundLayer, 0, 0, groundLayer.width, groundLayer.height, ox, oy, groundLayer.width * Z, groundLayer.height * Z);
 
-            // ground (procedural texture)
-            for (let r = r0; r <= r1; r++) {
-                for (let c = c0; c <= c1; c++) {
-                    drawGround(c, r, ow.ground[r][c], c * size + ox, r * size + oy, size);
-                }
-            }
-            // decor (trees/bushes with shadows, top-to-bottom for depth)
-            for (let r = r0; r <= r1; r++) {
-                for (let c = c0; c <= c1; c++) {
-                    const d = ow.decor[r][c];
-                    if (!d) continue;
-                    const dsx = c * size + ox, dsy = r * size + oy;
-                    if (d === 1) drawTreeAt(dsx, dsy, size); else drawBushAt(dsx, dsy, size);
-                }
+            // essence motes (loot) — drawn over the ground, under the actors
+            for (const pk of pickups) {
+                if (justCollected.has(pk.id) || charRef.current.discovered.includes(pk.id)) continue;
+                drawPickup((pk.x + 0.5) * TILE, (pk.y + 0.5) * TILE, ORE_COLOR[pk.kind]);
             }
 
             // POIs (includes Seer-hidden places when attuned)
@@ -519,10 +576,10 @@ export default function WorldCanvas({ character, shadeCount = 2, onInteract, onE
             <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-[540px] pointer-events-none" style={{ height: 220 }}>
                 <div
                     ref={baseRef}
-                    onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
+                    onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
                     onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
                     onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
+                    onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
                     onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
                     onMouseUp={joyEnd}
                     onMouseLeave={joyEnd}

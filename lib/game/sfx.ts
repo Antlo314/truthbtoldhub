@@ -77,12 +77,22 @@ function noise(o: { dur: number; gain?: number; type?: BiquadFilterType; freq?: 
 export const sfx = {
     // the weapon cuts the air
     strike() { noise({ dur: 0.1, gain: 0.1, type: 'highpass', freq: 1400 }); tone({ freq: 340, to: 180, type: 'triangle', dur: 0.09, gain: 0.07 }); },
+    // a sidestep through the veil — the dodge
+    dash() { noise({ dur: 0.16, gain: 0.09, type: 'highpass', freq: 900 }); tone({ freq: 520, to: 880, type: 'sine', dur: 0.14, gain: 0.05 }); },
+    // a mote of essence gathered from the world
+    pickup() { tone({ freq: 660, to: 990, type: 'triangle', dur: 0.12, gain: 0.09 }); tone({ freq: 990, type: 'sine', dur: 0.1, gain: 0.06, delay: 0.05 }); },
     // a blade lands on a shade
     hit() { tone({ freq: 170, to: 60, type: 'square', dur: 0.11, gain: 0.16 }); noise({ dur: 0.07, gain: 0.1, freq: 500 }); },
     // a shade is undone
     enemyDown() { tone({ freq: 440, to: 70, type: 'sawtooth', dur: 0.32, gain: 0.13 }); },
     // the guardian rises
     bossSpawn() { tone({ freq: 90, to: 38, type: 'sawtooth', dur: 0.75, gain: 0.22 }); tone({ freq: 58, to: 30, type: 'square', dur: 0.75, gain: 0.12, delay: 0.05 }); },
+    // a shade hurls spectral fire
+    cast() { tone({ freq: 300, to: 620, type: 'sawtooth', dur: 0.18, gain: 0.08 }); noise({ dur: 0.1, gain: 0.05, type: 'highpass', freq: 1800 }); },
+    // a brute winds into a charge
+    charge() { tone({ freq: 70, to: 200, type: 'sawtooth', dur: 0.5, gain: 0.13 }); noise({ dur: 0.4, gain: 0.06, type: 'bandpass', freq: 220 }); },
+    // a guardian's ground slam
+    slam() { tone({ freq: 130, to: 38, type: 'square', dur: 0.32, gain: 0.22 }); noise({ dur: 0.28, gain: 0.18, type: 'lowpass', freq: 320 }); },
     // you take a wound
     hurt() { tone({ freq: 210, to: 85, type: 'square', dur: 0.17, gain: 0.17 }); noise({ dur: 0.11, gain: 0.11, freq: 320, type: 'lowpass' }); },
     // the guardian falls

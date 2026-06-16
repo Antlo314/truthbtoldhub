@@ -22,7 +22,45 @@ const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
 const SHADE_TILE = { col: 0, row: 3 };
 const PLAYER_HP = 100;
 
-interface Foe { x: number; y: number; hp: number; max: number; boss?: boolean; hurt: number; }
+// Enemy archetypes. Each reads + behaves differently so a fight is a puzzle of
+// positioning, not a stand-and-trade. grunt = lunger, caster = ranged spellshot,
+// brute = telegraphed charger, flanker = fast circling skirmisher.
+type FoeKind = 'grunt' | 'caster' | 'brute' | 'flanker';
+type FoeState = 'approach' | 'windup' | 'strike' | 'charge' | 'recover';
+
+interface Foe {
+    x: number; y: number; hp: number; max: number; boss?: boolean; hurt: number;
+    kind: FoeKind;
+    state: FoeState;
+    t: number;        // time left in the current state
+    cd: number;       // cooldown before this foe may commit to another attack
+    slot: number;     // flank index — spreads the pack around the player
+    vx: number; vy: number; // locked aim/heading for a lunge or charge
+    hasTok: boolean;  // currently holding one of the limited attack tokens
+    hit: boolean;     // already landed the current strike?
+    // boss-only fields
+    phase: number;
+    move: string;
+    moveCd: number;
+    summons: number;
+}
+
+interface Proj { x: number; y: number; vx: number; vy: number; life: number; dmg: number; color: string; r: number; }
+interface Ring { x: number; y: number; r: number; t: number; dur: number; dmg: number; done: boolean; }
+
+// Build a varied roster so larger packs aren't just clones — a flanker, then a
+// caster, then a brute get mixed in as the count grows.
+function buildKinds(n: number): FoeKind[] {
+    const out: FoeKind[] = [];
+    for (let i = 0; i < n; i++) {
+        if (i === 1) out.push('flanker');
+        else if (i === 2) out.push('caster');
+        else if (i === 3) out.push('brute');
+        else if (i >= 4) out.push(i % 2 === 0 ? 'caster' : 'flanker');
+        else out.push('grunt');
+    }
+    return out;
+}
 
 interface Props {
     destination: Destination;
@@ -78,15 +116,23 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const [muted, setMutedState] = useState(isMuted());
     const [channelCd, setChannelCd] = useState(0);
     const [blockCd, setBlockCd] = useState(0);
+    const [dodgeCd, setDodgeCd] = useState(0);
     const [weakPointActive, setWeakPointActive] = useState(false);
     const channelRef = useRef(false);
     const blockRef = useRef(false);
+    const dodgeRef = useRef(false);
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
     // last HP value pushed to the bar — guards against a render every frame
     // while the Mystic's renewal is ticking.
     const shownRef = useRef(maxHp);
+    // last cooldown second reflected to each ability button — so we set React
+    // state only when the displayed value actually changes (and always reset to
+    // 0 when ready). The loop runs in a []-effect, so it can't read live state.
+    const blockShownRef = useRef(0);
+    const channelShownRef = useRef(0);
+    const dodgeShownRef = useRef(0);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -105,9 +151,11 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const st = {
             px: W / 2, py: H - TILE * 3, php: maxHp, atk: 0, swing: 0,
             aimx: 0, aimy: 1, // attack direction (last movement; default down)
-            foes: [] as Foe[], bossSpawned: false, done: false,
+            foes: [] as Foe[], projectiles: [] as Proj[], rings: [] as Ring[],
+            bossSpawned: false, done: false,
             shake: 0, hurtFlash: 0, hurtCd: 0,
             blockT: 0, blockCd: 0,
+            dodgeT: 0, dodgeCd: 0, dashx: 0, dashy: 0,
             weakPointT: 0, weakPointActive: false, weakPointCycle: 7,
         };
         const foeHp = Math.round(cfg.enemyHp * enemyHpMult);
@@ -115,10 +163,17 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const foeDmg = cfg.enemyDmg * enemyDmgMult;
         const bossDmg = cfg.bossDmg * enemyDmgMult;
         let channelTimer = 0;
+        // only this many foes may be MID-ATTACK at once — the rest circle and
+        // wait their turn, so the pack coordinates + surrounds instead of mobbing.
+        const maxTokens = cfg.enemyCount >= 5 ? 3 : 2;
 
-        for (let i = 0; i < cfg.enemyCount; i++) {
-            st.foes.push({ x: rand(TILE * 2, W - TILE * 2), y: rand(TILE * 2, H / 2), hp: foeHp, max: foeHp, hurt: 0 });
-        }
+        const mkFoe = (kind: FoeKind, slot: number, hp: number): Foe => ({
+            x: rand(TILE * 2, W - TILE * 2), y: rand(TILE * 2, H * 0.4),
+            hp, max: hp, hurt: 0, kind, state: 'approach', t: 0, cd: rand(0.6, 2.0),
+            slot, vx: 0, vy: 0, hasTok: false, hit: false,
+            phase: 1, move: '', moveCd: 0, summons: 0,
+        });
+        buildKinds(cfg.enemyCount).forEach((k, i) => st.foes.push(mkFoe(k, i, foeHp)));
         setFoesLeft(st.foes.length);
 
         let raf = 0, last = performance.now(), running = true;
@@ -134,11 +189,89 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         resize();
         window.addEventListener('resize', resize);
 
-        const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+        // apply a wound to the player — negated entirely by an active dodge
+        // (i-frames), softened by a Sentinel block. Returns whether it landed.
+        const hurtPlayer = (amount: number) => {
+            if (st.dodgeT > 0) return false;
+            const mult = st.blockT > 0 ? Math.max(0, 1 - blockReduction) : 1;
+            st.php -= amount * mult;
+            st.hurtFlash = Math.min(1, st.hurtFlash + 0.35);
+            st.shake = Math.max(st.shake, 3.6);
+            if (st.hurtCd <= 0) { sfx.hurt(); st.hurtCd = 0.4; }
+            return true;
+        };
+        const fireProj = (x: number, y: number, ang: number, speed: number, dmg: number, color: string, rr = 3) => {
+            st.projectiles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: 3.4, dmg, color, r: rr });
+        };
+        const bossMoveCd = (phase: number) => phase === 1 ? rand(2.2, 3.0) : phase === 2 ? rand(1.6, 2.2) : rand(1.0, 1.5);
+
+        // ---- BOSS AI ---- repositions to a medium range, then commits to a
+        // telegraphed move chosen from its kit by distance + HP phase. Phase 3 is
+        // an enrage: faster cadence, radial volleys.
+        function updateBoss(f: Foe, dt: number, tsec: number) {
+            const pdx = st.px - f.x, pdy = st.py - f.y;
+            const pd = Math.hypot(pdx, pdy) || 0.001;
+            const ux = pdx / pd, uy = pdy / pd;
+            f.phase = f.hp / f.max > 0.6 ? 1 : f.hp / f.max > 0.3 ? 2 : 3;
+
+            if (f.move === '') {
+                // hover at a medium distance and strafe
+                const want = 64;
+                if (pd > want + 14) { f.x += ux * 30 * dt; f.y += uy * 30 * dt; }
+                else if (pd < want - 14) { f.x -= ux * 28 * dt; f.y -= uy * 28 * dt; }
+                f.x += -uy * 20 * dt * Math.sin(tsec * 0.8); f.y += ux * 20 * dt * Math.sin(tsec * 0.8);
+                f.moveCd -= dt;
+                if (f.moveCd <= 0) {
+                    const opts: string[] = pd < 46 ? ['slam', 'slam', 'charge'] : pd > 80 ? ['volley', 'volley', 'charge'] : ['charge', 'volley', 'slam'];
+                    if (f.phase >= 2 && f.summons < (f.phase >= 3 ? 2 : 1) && st.foes.filter((x) => !x.boss).length < 2) opts.push('summon');
+                    f.move = opts[Math.floor(Math.random() * opts.length)];
+                    f.state = 'windup';
+                    f.t = f.move === 'slam' ? 0.7 : 0.6;
+                    f.hit = false;
+                    if (f.move === 'charge') { f.vx = ux; f.vy = uy; }
+                }
+            } else if (f.state === 'windup') {
+                if (f.move === 'charge') { f.vx = ux; f.vy = uy; } // re-aim until launch
+                if (f.t <= 0) {
+                    if (f.move === 'slam') {
+                        st.rings.push({ x: st.px, y: st.py, r: 40, t: 0, dur: 0.3, dmg: bossDmg * 1.5, done: false });
+                        sfx.slam(); st.shake = Math.max(st.shake, 5);
+                        f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
+                    } else if (f.move === 'volley') {
+                        const n = f.phase === 1 ? 3 : f.phase === 2 ? 5 : 8;
+                        const base = Math.atan2(uy, ux);
+                        for (let i = 0; i < n; i++) {
+                            const a = f.phase >= 3 ? (i / n) * Math.PI * 2 : base + (i - (n - 1) / 2) * (0.95 / Math.max(1, n - 1));
+                            fireProj(f.x, f.y - 4, a, 92, bossDmg * 0.7, d.accent, 3.6);
+                        }
+                        sfx.cast(); st.shake = Math.max(st.shake, 3);
+                        f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
+                    } else if (f.move === 'charge') {
+                        f.state = 'charge'; f.t = 0.7; f.hit = false; sfx.charge();
+                    } else { // summon
+                        const a1 = mkFoe('grunt', st.foes.length, Math.round(foeHp * 0.7));
+                        const a2 = mkFoe('grunt', st.foes.length + 1, Math.round(foeHp * 0.7));
+                        a1.x = f.x - 18; a1.y = f.y + 10; a2.x = f.x + 18; a2.y = f.y + 10;
+                        st.foes.push(a1, a2); f.summons++;
+                        setFoesLeft(st.foes.filter((x) => !x.boss).length);
+                        f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
+                    }
+                }
+            } else if (f.state === 'charge') {
+                const cs = 210;
+                f.x += f.vx * cs * dt; f.y += f.vy * cs * dt;
+                if (f.x < TILE + 6 || f.x > W - TILE - 6 || f.y < TILE + 6 || f.y > H - TILE - 6) f.t = 0;
+                if (!f.hit && pd < 16 && hurtPlayer(bossDmg * 1.8)) { f.hit = true; st.px += f.vx * 10; st.py += f.vy * 10; }
+                if (f.t <= 0) { f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase); }
+            }
+            f.x = Math.max(TILE + 6, Math.min(W - TILE - 6, f.x));
+            f.y = Math.max(TILE + 6, Math.min(H - TILE - 6, f.y));
+        }
 
         function loop(now: number) {
             if (!running) return;
             const dt = Math.min(0.05, (now - last) / 1000);
+            const tsec = now / 1000;
             last = now;
 
             // juice decays run regardless of state so they settle on the banner
@@ -166,6 +299,30 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
                 st.px = Math.max(lo, Math.min(hiX, st.px + ix * 84 * dt));
                 st.py = Math.max(lo, Math.min(hiY, st.py + iy * 84 * dt));
+
+                // DODGE — a quick sidestep with brief invulnerability (i-frames)
+                // on a short cooldown. Universal to every path: the skill that
+                // turns "stand and trade hits" into "read the attack and slip it".
+                st.dodgeT = Math.max(0, st.dodgeT - dt);
+                st.dodgeCd = Math.max(0, st.dodgeCd - dt);
+                const forceDodge = dodgeRef.current || keysRef.current.has('shift') || keysRef.current.has('k');
+                dodgeRef.current = false;
+                if (st.dodgeCd <= 0 && forceDodge) {
+                    st.dodgeT = 0.4;   // i-frame window
+                    st.dodgeCd = 1.3;  // cooldown
+                    const dm = Math.hypot(ix, iy);
+                    if (dm > 0.12) { st.dashx = ix / dm; st.dashy = iy / dm; }
+                    else { st.dashx = st.aimx; st.dashy = st.aimy; }
+                    sfx.dash();
+                    st.shake = Math.max(st.shake, 2);
+                }
+                // glide during the first ~0.18s of the window
+                if (st.dodgeT > 0.22) {
+                    st.px = Math.max(lo, Math.min(hiX, st.px + st.dashx * 320 * dt));
+                    st.py = Math.max(lo, Math.min(hiY, st.py + st.dashy * 320 * dt));
+                }
+                const dOn = st.dodgeCd > 0 ? 1 : 0;
+                if (dOn !== dodgeShownRef.current) { dodgeShownRef.current = dOn; setDodgeCd(st.dodgeCd); }
 
                 // attack — MANUAL: only when you press Strike (or J / Space), on a
                 // short cooldown. The swing is DIRECTIONAL — it hits foes in front
@@ -200,16 +357,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     }
                 }
 
-                // foes act
-                const speedFor = (f: Foe) => (f.boss ? 26 : 34);
-                let contactDps = 0;
-                for (const f of st.foes) {
-                    f.hurt -= dt;
-                    const a = Math.atan2(st.py - f.y, st.px - f.x);
-                    f.x += Math.cos(a) * speedFor(f) * dt;
-                    f.y += Math.sin(a) * speedFor(f) * dt;
-                    if (dist(f, { x: st.px, y: st.py }) < (f.boss ? 14 : 10)) contactDps += f.boss ? bossDmg : foeDmg;
-                }
+                // (enemy AI runs further below — AFTER the player's defensive
+                //  abilities resolve, so this frame's block/i-frames are honoured)
+
                 // Sentinel block — brief damage reduction on cooldown
                 st.blockCd = Math.max(0, st.blockCd - dt);
                 if (canBlock && blockRef.current && st.blockCd <= 0) {
@@ -218,9 +368,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     st.blockCd = blockCooldownSec;
                 }
                 st.blockT = Math.max(0, st.blockT - dt);
-                if (Math.abs(st.blockCd - blockCd) > 0.4 || (st.blockCd === 0 && blockCd > 0)) {
-                    setBlockCd(st.blockCd);
-                }
+                const bShown = st.blockCd > 0 ? Math.ceil(st.blockCd) : 0;
+                if (bShown !== blockShownRef.current) { blockShownRef.current = bShown; setBlockCd(st.blockCd); }
 
                 // Seer weak point — periodic boss vulnerability window
                 if (canWeakPoint && st.bossSpawned) {
@@ -241,16 +390,85 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     st.shake = Math.max(st.shake, 3);
                     sfx.hit();
                 }
-                if (Math.abs(channelTimer - channelCd) > 0.4 || (channelTimer === 0 && channelCd > 0)) {
-                    setChannelCd(channelTimer);
+                const cShown = channelTimer > 0 ? Math.ceil(channelTimer) : 0;
+                if (cShown !== channelShownRef.current) { channelShownRef.current = cShown; setChannelCd(channelTimer); }
+                // ===== ENEMY AI — coordinated, telegraphed, archetype-driven =====
+                // only `maxTokens` foes may attack at once; the rest circle.
+                let committed = 0;
+                for (const f of st.foes) if (!f.boss && (f.state === 'windup' || f.state === 'strike' || f.state === 'charge')) committed++;
+                const nNon = st.foes.filter((f) => !f.boss).length || 1;
+
+                for (const f of st.foes) {
+                    f.hurt -= dt;
+                    if (f.boss) { f.t -= dt; updateBoss(f, dt, tsec); continue; }
+                    f.cd -= dt; f.t -= dt;
+
+                    const pdx = st.px - f.x, pdy = st.py - f.y;
+                    const pd = Math.hypot(pdx, pdy) || 0.001;
+                    const ux = pdx / pd, uy = pdy / pd;
+                    const isCaster = f.kind === 'caster';
+                    const ringR = isCaster ? 80 : f.kind === 'brute' ? 30 : f.kind === 'flanker' ? 36 : 24;
+                    const moveSpd = f.kind === 'flanker' ? 64 : f.kind === 'brute' ? 30 : isCaster ? 46 : 50;
+
+                    if (f.state === 'approach') {
+                        // steer to a slot spread around the player (surround); flankers
+                        // orbit fast, casters keep their distance and kite.
+                        const baseA = (f.slot / nNon) * Math.PI * 2 + tsec * (f.kind === 'flanker' ? 0.9 : 0.25);
+                        const sa = Math.atan2(st.py + Math.sin(baseA) * ringR - f.y, st.px + Math.cos(baseA) * ringR - f.x);
+                        f.x += Math.cos(sa) * moveSpd * dt;
+                        f.y += Math.sin(sa) * moveSpd * dt;
+                        if (isCaster && pd < 54) { f.x -= ux * moveSpd * dt; f.y -= uy * moveSpd * dt; }
+                        const inRange = isCaster ? (pd < 150 && pd > 44) : pd < (f.kind === 'brute' ? 112 : 28);
+                        if (f.cd <= 0 && inRange && committed < maxTokens) {
+                            f.state = 'windup'; f.hasTok = true; committed++; f.hit = false;
+                            f.t = isCaster ? 0.55 : f.kind === 'brute' ? 0.72 : f.kind === 'flanker' ? 0.3 : 0.45;
+                        }
+                    } else if (f.state === 'windup') {
+                        if (!isCaster) { f.x += ux * 16 * dt; f.y += uy * 16 * dt; } // tracks slightly
+                        if (f.t <= 0) {
+                            if (isCaster) {
+                                const shots = cfg.enemyCount >= 4 ? 3 : 1;
+                                const base = Math.atan2(uy, ux);
+                                for (let i = 0; i < shots; i++) fireProj(f.x, f.y - 4, base + (i - (shots - 1) / 2) * 0.26, 98, foeDmg * 1.25, '#c084fc', 3);
+                                sfx.cast(); f.state = 'recover'; f.t = 0.5;
+                            } else if (f.kind === 'brute') {
+                                f.state = 'charge'; f.t = 0.55; f.vx = ux; f.vy = uy; f.hit = false; sfx.charge();
+                            } else {
+                                f.state = 'strike'; f.t = f.kind === 'flanker' ? 0.16 : 0.2; f.vx = ux; f.vy = uy; f.hit = false; sfx.strike();
+                            }
+                        }
+                    } else if (f.state === 'strike') {
+                        const ls = f.kind === 'flanker' ? 185 : 150;
+                        f.x += f.vx * ls * dt; f.y += f.vy * ls * dt;
+                        if (!f.hit && pd < 13 && hurtPlayer(foeDmg * (f.kind === 'flanker' ? 1.2 : 1.5))) f.hit = true;
+                        if (f.t <= 0) { f.state = 'recover'; f.t = f.kind === 'flanker' ? 0.35 : 0.5; }
+                    } else if (f.state === 'charge') {
+                        const cs = 200;
+                        f.x += f.vx * cs * dt; f.y += f.vy * cs * dt;
+                        if (f.x < TILE + 5 || f.x > W - TILE - 5 || f.y < TILE + 5 || f.y > H - TILE - 5) f.t = 0;
+                        if (!f.hit && pd < 15 && hurtPlayer(foeDmg * 2.4)) { f.hit = true; st.px += f.vx * 8; st.py += f.vy * 8; }
+                        if (f.t <= 0) { f.state = 'recover'; f.t = 0.7; }
+                    } else { // recover — back off, drop the token, set the next cooldown
+                        f.x -= ux * 18 * dt; f.y -= uy * 18 * dt;
+                        if (f.t <= 0) { f.state = 'approach'; f.hasTok = false; f.cd = isCaster ? rand(1.5, 2.4) : f.kind === 'brute' ? rand(2.6, 3.6) : rand(1.3, 2.1); }
+                    }
+                    f.x = Math.max(TILE + 4, Math.min(W - TILE - 4, f.x));
+                    f.y = Math.max(TILE + 4, Math.min(H - TILE - 4, f.y));
                 }
-                if (contactDps > 0) {
-                    const blockMult = st.blockT > 0 ? Math.max(0, 1 - blockReduction) : 1;
-                    st.php -= contactDps * blockMult * dt;
-                    st.hurtFlash = Math.min(1, st.hurtFlash + 0.22);
-                    st.shake = Math.max(st.shake, 2.6);
-                    if (st.hurtCd <= 0) { sfx.hurt(); st.hurtCd = 0.45; }
+
+                // projectiles fly straight; a dodge phases through them
+                for (const p of st.projectiles) {
+                    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+                    if (p.life > 0 && st.dodgeT <= 0 && Math.hypot(p.x - st.px, p.y - (st.py - 6)) < 7 + p.r) { hurtPlayer(p.dmg); p.life = 0; }
                 }
+                st.projectiles = st.projectiles.filter((p) => p.life > 0 && p.x > -12 && p.x < W + 12 && p.y > -12 && p.y < H + 12);
+
+                // AoE rings (boss slam) detonate when armed
+                for (const rg of st.rings) {
+                    rg.t += dt;
+                    if (!rg.done && rg.t >= rg.dur) { rg.done = true; if (Math.hypot(rg.x - st.px, rg.y - st.py) < rg.r && st.dodgeT <= 0) hurtPlayer(rg.dmg); }
+                }
+                st.rings = st.rings.filter((rg) => rg.t < rg.dur + 0.25);
                 // renewal — the Source mends you over time, never past your max
                 if (regen > 0 && st.php > 0) st.php = Math.min(maxHp, st.php + regen * dt);
                 // reflect HP to the bar only when the rounded value changes
@@ -269,7 +487,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 // boss phase
                 if (!st.bossSpawned && st.foes.length === 0) {
                     st.bossSpawned = true;
-                    const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0 };
+                    const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0, kind: 'brute', state: 'approach', t: 0, cd: 0, slot: 0, vx: 0, vy: 0, hasTok: false, hit: false, phase: 1, move: '', moveCd: 1.2, summons: 0 };
                     st.foes.push(b);
                     setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
                     sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
@@ -277,6 +495,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 if (st.bossSpawned) {
                     const b = st.foes.find((f) => f.boss);
                     if (b) setBoss({ name: cfg.bossName, hp: Math.max(0, Math.round(b.hp)), max: b.max });
+                    else setBoss((prev) => (prev ? { ...prev, hp: 0 } : prev));
                 }
 
                 // outcomes
@@ -301,9 +520,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             ctx.fillStyle = '#00000088';
             ctx.fillRect(0, 0, W, TILE); ctx.fillRect(0, H - TILE, W, TILE); ctx.fillRect(0, 0, TILE, H); ctx.fillRect(W - TILE, 0, TILE, H);
 
-            const spriteAt = (cx: number, cy: number, sizeScale: number, alpha: number, tint?: string) => {
+            const spriteAt = (cx: number, cy: number, sizeScale: number, alpha: number) => {
                 const s = 16 * sizeScale;
-                if (tint) { ctx.save(); }
                 ctx.globalAlpha = alpha;
                 ctx.drawImage(img, SHADE_TILE.col * 17, SHADE_TILE.row * 17, 16, 16, cx - s / 2, cy - s * 0.62, s, s);
                 ctx.globalAlpha = 1;
@@ -347,24 +565,62 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 ctx.restore();
             };
 
+            // each archetype reads differently: brutes are big & orange, casters
+            // carry a violet orb, flankers are quick & green, grunts cyan. A white
+            // ring telegraphs an incoming strike; a ghost trails a lunge/charge.
+            const KIND_COLOR: Record<FoeKind, string> = { grunt: '#22d3ee', caster: '#c084fc', brute: '#f97316', flanker: '#34d399' };
+            const drawFoe = (f: Foe) => {
+                const col = KIND_COLOR[f.kind];
+                const arming = f.state === 'windup';
+                const sizeScale = f.kind === 'brute' ? 1.75 : f.kind === 'flanker' ? 1.0 : 1.25;
+                glow(f.x, f.y, arming ? '#ffffff' : col, f.kind === 'brute' ? 16 : 11);
+                if (arming) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(f.x, f.y - 4, 12, 0, Math.PI * 2); ctx.stroke();
+                }
+                if (f.state === 'charge' || f.state === 'strike') {
+                    ctx.globalAlpha = 0.3; spriteAt(f.x - f.vx * 5, f.y - f.vy * 5, sizeScale, 0.4); ctx.globalAlpha = 1;
+                }
+                spriteAt(f.x, f.y, sizeScale, f.hurt > 0 ? 0.95 : 0.7);
+                if (f.kind === 'caster') { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(f.x, f.y - 11, 2.6, 0, Math.PI * 2); ctx.fill(); }
+                if (f.kind === 'brute') { ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 11, f.y - 19, 22, 2); ctx.fillStyle = col; ctx.fillRect(f.x - 11, f.y - 19, 22 * Math.max(0, f.hp / f.max), 2); }
+            };
+
+            // AoE telegraphs (boss slam) — a red ground ring that fills as it arms
+            for (const rg of st.rings) {
+                const p = Math.min(1, rg.t / rg.dur);
+                ctx.strokeStyle = rg.done ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.85)';
+                ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = `rgba(239,68,68,${0.18 * (rg.done ? Math.max(0, 1 - (rg.t - rg.dur) / 0.25) : p)})`;
+                ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r * (rg.done ? 1 : p), 0, Math.PI * 2); ctx.fill();
+            }
+
             // foes
             for (const f of st.foes) {
                 if (f.boss) {
+                    const arming = f.state === 'windup';
+                    if (arming && f.move === 'charge') {
+                        ctx.strokeStyle = 'rgba(239,68,68,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+                        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + f.vx * 130, f.y + f.vy * 130); ctx.stroke(); ctx.setLineDash([]);
+                    }
                     if (canWeakPoint && st.weakPointActive) {
                         glow(f.x, f.y, '#22d3ee', 30);
-                        ctx.strokeStyle = '#22d3ee88';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.arc(f.x, f.y - 6, 18, 0, Math.PI * 2);
-                        ctx.stroke();
+                        ctx.strokeStyle = '#22d3ee88'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(f.x, f.y - 6, 18, 0, Math.PI * 2); ctx.stroke();
                     }
-                    drawBoss(f.x, f.y, canWeakPoint && st.weakPointActive ? '#22d3ee' : d.accent, cfg.bossArt || 'wraith', f.hurt);
+                    drawBoss(f.x, f.y, arming ? '#ffffff' : (canWeakPoint && st.weakPointActive ? '#22d3ee' : d.accent), cfg.bossArt || 'wraith', f.hurt);
                     ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 16, f.y - 28, 32, 3);
-                    ctx.fillStyle = d.accent; ctx.fillRect(f.x - 16, f.y - 28, 32 * (f.hp / f.max), 3);
+                    ctx.fillStyle = d.accent; ctx.fillRect(f.x - 16, f.y - 28, 32 * Math.max(0, f.hp / f.max), 3);
                 } else {
-                    glow(f.x, f.y, '#22d3ee', 11);
-                    spriteAt(f.x, f.y, 1.2, f.hurt > 0 ? 0.9 : 0.55);
+                    drawFoe(f);
                 }
+            }
+
+            // projectiles — glowing spectral bolts you must dodge
+            for (const p of st.projectiles) {
+                glow(p.x, p.y, p.color, 8);
+                ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.45, 0, Math.PI * 2); ctx.fill();
             }
 
             // swing — a directional slash arc in the aim direction
@@ -381,7 +637,16 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             const wphase = Math.floor(walkTimer * 7) % 2;
             const dirFrames = avatarFrames[facing];
             const wframe = frameMoving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
+            const dodging = st.dodgeT > 0;
+            if (dodging) {
+                // cyan after-images streaking behind the dash
+                ctx.globalAlpha = 0.22;
+                ctx.drawImage(dirFrames[0], st.px - 8 - st.dashx * 6, st.py - 19 - st.dashy * 6, 16, 24);
+                ctx.drawImage(dirFrames[0], st.px - 8 - st.dashx * 11, st.py - 19 - st.dashy * 11, 16, 24);
+            }
+            ctx.globalAlpha = dodging ? 0.5 : 1;
             ctx.drawImage(wframe, st.px - 8, st.py - 19 - (frameMoving && wphase === 0 ? 1 : 0), 16, 24);
+            ctx.globalAlpha = 1;
 
             ctx.restore();
 
@@ -506,6 +771,16 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         {channelCd > 0 && <span className="text-[7px] mt-0.5">{Math.ceil(channelCd)}s</span>}
                     </button>
                 )}
+                {/* Dodge — universal, stacked above Strike for the right thumb */}
+                <button
+                    onClick={() => { unlockAudio(); dodgeRef.current = true; }}
+                    onTouchStart={(e) => { e.preventDefault(); unlockAudio(); dodgeRef.current = true; }}
+                    disabled={dodgeCd > 0}
+                    className="absolute right-6 w-[4.25rem] h-[4.25rem] rounded-full text-[9px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-40"
+                    style={{ bottom: 'calc(7.9rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#67e8f9 0%,#0e7490 100%)', boxShadow: '0 0 20px rgba(34,211,238,0.4)', touchAction: 'none' }}
+                >
+                    Dodge
+                </button>
                 <button
                     onClick={() => { unlockAudio(); attackRef.current = true; }}
                     onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}

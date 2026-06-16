@@ -306,6 +306,36 @@ export const DESTINATIONS: Destination[] = [
     },
 ];
 
+// A roaming-shade skirmish — generated on the fly when a shade catches you in
+// the overworld. It scales with how many guardians you've already felled so it
+// stays a real (but quick) fight, not a dungeon. No relic/puzzle — just a brawl
+// that scatters into loot. The CombatScene only reads bg/accent/combat.
+export function wildEncounter(clearedCount: number): Destination {
+    const t = Math.min(clearedCount, 4); // 0..4 difficulty tier
+    return {
+        poiId: 'enc_wild',
+        kind: 'cave',
+        name: 'Wandering Shades',
+        era: '',
+        accent: '#22d3ee',
+        bg: ['#0a1410', '#04080a'],
+        guide: { name: 'Truth', role: '', tile: { col: 1, row: 10 }, intro: '' },
+        lore: [],
+        relics: [],
+        combat: {
+            challenge: 'The shades close in. Cut your way free.',
+            enemyCount: 2 + (t >= 2 ? 1 : 0),
+            enemyHp: 16 + t * 4,
+            enemyDmg: 8 + t,
+            bossName: 'A Greater Shade',
+            bossArt: 'wraith',
+            bossHp: 55 + t * 16,
+            bossDmg: 11 + t * 2,
+            victory: 'The shades scatter into mist — and leave something behind.',
+        },
+    };
+}
+
 export const DEST_BY_POI: Record<string, Destination> = DESTINATIONS.reduce((acc, d) => {
     acc[d.poiId] = d;
     return acc;

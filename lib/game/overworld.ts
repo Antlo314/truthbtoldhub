@@ -208,3 +208,48 @@ export function buildOverworld(): Overworld {
     cached = { width: W, height: H, ground, decor, solid, pois, spawn: { x: cx, y: cy + 3 } };
     return cached;
 }
+
+// ============================================================
+//  PICKUPS — essence/ore motes scattered across the open map so
+//  the wide mid-regions reward roaming. Deterministic (same for
+//  everyone), placed only on walkable grass away from POIs.
+//  Collected ids persist in character.discovered so they don't
+//  respawn. iron is common, copper uncommon, cosmic rare.
+// ============================================================
+
+export type MaterialKind = 'iron' | 'copper' | 'cosmic';
+export interface Pickup {
+    id: string;
+    x: number; // tile col
+    y: number; // tile row
+    kind: MaterialKind;
+    qty: number;
+}
+
+let cachedPickups: Pickup[] | null = null;
+
+export function buildPickups(): Pickup[] {
+    if (cachedPickups) return cachedPickups;
+    const ow = buildOverworld();
+    const rand = mulberry32(99001);
+    const out: Pickup[] = [];
+    const tooCloseToPoi = (c: number, r: number) =>
+        ow.pois.some((p) => Math.hypot(p.x - c, p.y - r) < 6);
+
+    for (let r = 4; r < MAP_H - 4; r++) {
+        for (let c = 4; c < MAP_W - 4; c++) {
+            // only on open, walkable grass (not water/dirt/path/tree/solid)
+            if (ow.ground[r][c] !== 0 || ow.solid[r][c] || ow.decor[r][c] === 1) continue;
+            if (tooCloseToPoi(c, r)) continue;
+            if (rand() > 0.012) continue;
+            // keep them spread out — skip if one is already within 4 tiles
+            if (out.some((p) => Math.hypot(p.x - c, p.y - r) < 4)) continue;
+            const roll = rand();
+            const kind: MaterialKind = roll < 0.6 ? 'iron' : roll < 0.88 ? 'copper' : 'cosmic';
+            const qty = kind === 'iron' ? (rand() < 0.35 ? 2 : 1) : 1;
+            out.push({ id: `ore_${c}_${r}`, x: c, y: r, kind, qty });
+        }
+    }
+    cachedPickups = out;
+    return out;
+}

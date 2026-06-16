@@ -15,7 +15,9 @@ import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulle
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
-import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, wildEncounter, type Destination } from '@/lib/game/destinations';
+import { type Pickup } from '@/lib/game/overworld';
+import { sfx } from '@/lib/game/sfx';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
 import SourceScene from '@/components/game/SourceScene';
@@ -52,6 +54,7 @@ export default function WorldPage() {
     const equipRelic = useGameStore((s) => s.equipRelic);
     const equipScroll = useGameStore((s) => s.equipScroll);
     const markDiscovered = useGameStore((s) => s.markDiscovered);
+    const addMaterial = useGameStore((s) => s.addMaterial);
     const returnToSource = useGameStore((s) => s.returnToSource);
 
     const [mounted, setMounted] = useState(false);
@@ -68,6 +71,7 @@ export default function WorldPage() {
     const [worldIntroDone, setWorldIntroDone] = useState(false);
     const [combatIntroDest, setCombatIntroDest] = useState<Destination | null>(null);
     const [combatDest, setCombatDest] = useState<Destination | null>(null);
+    const [encounter, setEncounter] = useState<Destination | null>(null);
     const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
     const [questLogOpen, setQuestLogOpen] = useState(false);
     const [sourceOpen, setSourceOpen] = useState(false);
@@ -153,9 +157,41 @@ export default function WorldPage() {
         }
     }, [markDiscovered, saveToCloud, showToast]);
 
+    // a shade catches you in the open — if you're armed, it's a real skirmish;
+    // unarmed, it's only a cold warning to go forge a weapon.
     const onEncounter = useCallback(() => {
-        showToast('A shade drifts through you — cold, and searching…');
         setHint(false);
+        const ch = useGameStore.getState().character;
+        if (!ch.equipped.weapon) {
+            showToast('A shade drifts through you — cold, and searching. Arm yourself at Truth’s Hut.');
+            return;
+        }
+        setEncounter(wildEncounter(ch.cleared.length));
+    }, [showToast]);
+
+    // walked over an essence mote in the world — bank the material for the forge
+    const onPickup = useCallback((pk: Pickup) => {
+        addMaterial(pk.kind, pk.qty);
+        markDiscovered(pk.id);
+        saveToCloud();
+        sfx.pickup();
+        const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
+        showToast(`✦ +${pk.qty} ${label}`);
+    }, [addMaterial, markDiscovered, saveToCloud, showToast]);
+
+    const onEncounterVictory = useCallback(() => {
+        setEncounter(null);
+        // the scattered shades leave a little ore behind for the forge
+        const roll = Math.random();
+        if (roll < 0.12) { addMaterial('cosmic', 1); showToast('✦ A mote of Cosmic Essence drifts free'); }
+        else if (roll < 0.5) { addMaterial('copper', 1); showToast('✦ The shades scatter — +1 Copper'); }
+        else { addMaterial('iron', 2); showToast('✦ The shades scatter — +2 Iron Ore'); }
+        saveToCloud();
+    }, [addMaterial, saveToCloud, showToast]);
+
+    const onEncounterDefeat = useCallback(() => {
+        setEncounter(null);
+        showToast('The shades overwhelm you. Rest, and return stronger.');
     }, [showToast]);
 
     const handleClaim = useCallback(async (relicId: string) => {
@@ -228,6 +264,38 @@ export default function WorldPage() {
     const pathMods = pathCombatMods(character.path, character.skills);
     const combatBlessing = combatRelicBonuses(character.inventory, character.equipped.relic);
 
+    // every combat stacks relics + path + founder seal + worn garment — computed
+    // once here and shared by both real-destination fights and wild skirmishes.
+    const cSkill = skillBonuses(character.skills);
+    const cFounder = founderBonuses(founderNumber);
+    const cCloth = clothingBonus(character.equipped.clothing);
+    const combatStatProps = {
+        bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
+        bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
+        bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
+        bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
+        bonusLifesteal: combatBlessing.lifesteal,
+        bonusCrit: combatBlessing.crit,
+        bonusKnockback: combatBlessing.knockback,
+        enemyHpMult: pathMods.enemyHpMult,
+        enemyDmgMult: pathMods.enemyDmgMult,
+        playerDamageMult: pathMods.playerDamageMult,
+        playerReachBonus: pathMods.playerReachBonus,
+        canChannel: pathMods.canChannel,
+        channelHealPct: pathMods.channelHealPct,
+        channelCooldownSec: pathMods.channelCooldownSec,
+        canBlock: pathMods.canBlock,
+        blockReduction: pathMods.blockReduction,
+        blockCooldownSec: pathMods.blockCooldownSec,
+        canWeakPoint: pathMods.canWeakPoint,
+        weakPointDamageMult: pathMods.weakPointDamageMult,
+    };
+    const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
+
+    // freeze the roaming world whenever any overlay/scene is on top of it
+    const worldPaused = !worldIntroDone || !!combatIntroDest || hutOpen || satchelOpen || !!activeDest ||
+        !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue;
+
     return (
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
             {!worldIntroDone && (
@@ -238,7 +306,7 @@ export default function WorldPage() {
                 <CutscenePlayer scene={combatPrelude} onComplete={finishCombatIntro} onSkip={finishCombatIntro} />
             )}
 
-            <WorldCanvas character={character} shadeCount={shadeCountForTier(resTier)} onInteract={onInteract} onEncounter={onEncounter} />
+            <WorldCanvas character={character} shadeCount={shadeCountForTier(resTier)} paused={worldPaused} onInteract={onInteract} onEncounter={onEncounter} onPickup={onPickup} />
 
             {/* readability scrims so the HUD + controls read against bright grass */}
             <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
@@ -687,44 +755,32 @@ export default function WorldPage() {
             {forgeOpen && <WeaponForge onForge={handleForge} onClose={() => setForgeOpen(false)} />}
 
             {/* combat encounter — relics + your path's attunements + founder blessing stack */}
-            {combatDest && combatDest.combat && (() => {
-                const rb = combatBlessing;
-                const sb = skillBonuses(character.skills);
-                const fb = founderBonuses(founderNumber);
-                const cb = clothingBonus(character.equipped.clothing);
-                const wpnId = character.equipped.weapon || 'wood_staff';
-                const wpn = WEAPON_BY_ID[wpnId] || WEAPON_BY_ID['wood_staff'];
-                return (
-                    <CombatScene
-                        destination={combatDest}
-                        character={character}
-                        weaponDamage={wpn.damage}
-                        weaponReach={wpn.reach}
-                        bonusHp={rb.hp + sb.hp + fb.hp + cb.hp}
-                        bonusDamage={rb.damage + sb.damage + fb.damage + cb.damage}
-                        bonusReach={rb.reach + sb.reach + fb.reach + cb.reach}
-                        bonusRegen={sb.regen + cb.regen + rb.regen}
-                        bonusLifesteal={rb.lifesteal}
-                        bonusCrit={rb.crit}
-                        bonusKnockback={rb.knockback}
-                        enemyHpMult={pathMods.enemyHpMult}
-                        enemyDmgMult={pathMods.enemyDmgMult}
-                        playerDamageMult={pathMods.playerDamageMult}
-                        playerReachBonus={pathMods.playerReachBonus}
-                        canChannel={pathMods.canChannel}
-                        channelHealPct={pathMods.channelHealPct}
-                        channelCooldownSec={pathMods.channelCooldownSec}
-                        canBlock={pathMods.canBlock}
-                        blockReduction={pathMods.blockReduction}
-                        blockCooldownSec={pathMods.blockCooldownSec}
-                        canWeakPoint={pathMods.canWeakPoint}
-                        weakPointDamageMult={pathMods.weakPointDamageMult}
-                        onVictory={onVictory}
-                        onDefeat={onDefeat}
-                        onExit={() => setCombatDest(null)}
-                    />
-                );
-            })()}
+            {combatDest && combatDest.combat && (
+                <CombatScene
+                    destination={combatDest}
+                    character={character}
+                    weaponDamage={wpn.damage}
+                    weaponReach={wpn.reach}
+                    {...combatStatProps}
+                    onVictory={onVictory}
+                    onDefeat={onDefeat}
+                    onExit={() => setCombatDest(null)}
+                />
+            )}
+
+            {/* wandering-shade skirmish — a shade caught you out in the open */}
+            {encounter && encounter.combat && (
+                <CombatScene
+                    destination={encounter}
+                    character={character}
+                    weaponDamage={wpn.damage}
+                    weaponReach={wpn.reach}
+                    {...combatStatProps}
+                    onVictory={onEncounterVictory}
+                    onDefeat={onEncounterDefeat}
+                    onExit={() => setEncounter(null)}
+                />
+            )}
 
             {/* the endgame — the Return to the Source */}
             {sourceOpen && (
