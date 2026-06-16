@@ -11,7 +11,7 @@ import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulle
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
-import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, hasAllRelics, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, relicBonuses, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
 import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
 import SourceScene from '@/components/game/SourceScene';
@@ -356,6 +356,27 @@ export default function WorldPage() {
                         </button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-4">Your Satchel</h2>
+
+                        {/* the goal — gather all five relics to open the way to the Source */}
+                        {(() => {
+                            const got = ALL_RELIC_IDS.filter((id) => character.inventory.includes(id)).length;
+                            const total = ALL_RELIC_IDS.length;
+                            const done = got >= total;
+                            return (
+                                <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: done ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.1)', background: done ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.02)' }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/80">Path to the Source</p>
+                                        <p className="text-[10px] font-black tracking-widest text-aether-gold">{got} / {total}</p>
+                                    </div>
+                                    <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
+                                        <div className="h-full rounded-full transition-all" style={{ width: `${(got / total) * 100}%`, background: 'linear-gradient(90deg,#fcd34d,#b45309)' }} />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                                        {done ? 'The five relics burn as one. The way to the Source is open.' : 'Gather all five relics — one from each destination — to open the way back to the Source.'}
+                                    </p>
+                                </div>
+                            );
+                        })()}
                         {(() => {
                             // Your full combat blessing carried into every fight — relics
                             // you bear, your path's attunements, founder seal, and garment.
