@@ -37,7 +37,7 @@ if (typeof window !== 'undefined') {
     // Override getSession
     const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
     supabase.auth.getSession = async () => {
-        const isDemo = localStorage.getItem('tbth-demo') === 'true';
+        const isDemo = true;
         if (isDemo) {
             return {
                 data: {
@@ -125,7 +125,7 @@ if (typeof window !== 'undefined') {
 
     const originalFrom = supabase.from.bind(supabase);
     supabase.from = (table: string) => {
-        const isDemo = localStorage.getItem('tbth-demo') === 'true';
+        const isDemo = true;
         if (isDemo) {
             const chain = {
                 select: () => chain,

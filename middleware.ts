@@ -22,10 +22,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect all other routes
-  if (!token) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  // Protect all other routes (Disabled for testing)
+  // if (!token) {
+  //   return NextResponse.redirect(new URL('/', request.url));
+  // }
 
   return NextResponse.next();
 }
