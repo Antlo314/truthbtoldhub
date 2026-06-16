@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
 import './globals.css';
-import FloatingOracle from '@/components/floating/FloatingOracle';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -53,7 +52,6 @@ export default function RootLayout({
             <body className={`${inter.variable} ${playfair.variable} font-sans bg-void text-white min-h-screen antialiased`}>
                 <div className="grain-overlay" />
                 {children}
-                <FloatingOracle />
             </body>
         </html>
     );
