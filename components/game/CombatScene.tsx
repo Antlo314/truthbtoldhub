@@ -5,6 +5,7 @@ import { Volume2, VolumeX } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
 import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
+import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 
 // ============================================================
 //  COMBAT — real-time, mobile-first. Move with the joystick,
@@ -68,6 +69,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         let ctx = canvas.getContext('2d')!;
         const img = new Image();
         img.src = CHAR_SHEET;
+        const avatarCanvas = avatarOffscreen(character.avatar);
         const cfg = d.combat!;
 
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -240,10 +242,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, 0, Math.PI * 2); ctx.stroke();
             }
 
-            // player
+            // player — the layered avatar (16x24), feet near st.py
             glow(st.px, st.py, character.appearance.aura, 11);
             ctx.globalAlpha = 1;
-            ctx.drawImage(img, character.appearance.bodyTile.col * 17, character.appearance.bodyTile.row * 17, 16, 16, st.px - 11, st.py - 14, 22, 22);
+            ctx.drawImage(avatarCanvas, st.px - 8, st.py - 19, 16, 24);
 
             ctx.restore();
 

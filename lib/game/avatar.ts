@@ -83,7 +83,6 @@ export function buildAvatarPixels(cfg: AvatarConfig): (string | null)[][] {
         // trousers + two legs with a centre gap
         rect(g, 5, 16, 6, 4, bottom);
         rect(g, 5, 20, 2, 2, bottom); rect(g, 9, 20, 2, 2, bottom);
-        px(g, 7, 20, '#00000033' === '' ? bottom : bottom); // keep block
         // boots
         rect(g, 5, 22, 2, 2, boot); rect(g, 9, 22, 2, 2, boot);
         // crotch gap shadow
@@ -222,4 +221,32 @@ export const FEM_PRESETS: AvatarConfig[] = [
 
 export function defaultAvatar(): AvatarConfig {
     return { ...MASC_PRESETS[0] };
+}
+
+// option lists for the creator UI
+export const HAIR_STYLES: HairStyle[] = ['short', 'afro', 'locs', 'long', 'bun', 'braids', 'buzz'];
+export const OUTFIT_STYLES: OutfitStyle[] = ['tunic', 'vest', 'robe', 'dress'];
+export const FACE_STYLES: FaceStyle[] = ['calm', 'keen', 'goatee', 'beard'];
+
+const randI = (n: number) => Math.floor(Math.random() * n);
+
+// A random preset of the given build (or any), with colours jittered.
+export function randomAvatar(build?: Build): AvatarConfig {
+    const pool = build === 'fem' ? FEM_PRESETS : build === 'masc' ? MASC_PRESETS : [...MASC_PRESETS, ...FEM_PRESETS];
+    const base = pool[randI(pool.length)];
+    return {
+        ...base,
+        skin: randI(SKIN_TONES.length),
+        hairColor: randI(HAIR_COLORS.length),
+        hairStyle: HAIR_STYLES[randI(HAIR_STYLES.length)],
+        top: randI(CLOTH_COLORS.length),
+        bottom: randI(CLOTH_COLORS.length),
+        boots: randI(BOOT_COLORS.length),
+    };
+}
+
+// A representative preset for a build (used by the ♂/♀ preset buttons).
+export function presetFor(build: Build): AvatarConfig {
+    const pool = build === 'fem' ? FEM_PRESETS : MASC_PRESETS;
+    return { ...pool[randI(pool.length)] };
 }

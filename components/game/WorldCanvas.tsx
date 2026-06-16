@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
+import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import {
     buildOverworld,
     TILE,
@@ -68,6 +69,11 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
         const truthImg = new Image();
         truthImg.src = '/assets/truth.png';
 
+        // the player's layered avatar, pre-rendered to an offscreen canvas and
+        // rebuilt only when the config changes.
+        let avatarCanvas = avatarOffscreen(charRef.current.avatar);
+        let avatarKey = JSON.stringify(charRef.current.avatar);
+
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
             py: (ow.spawn.y + 0.5) * TILE,
@@ -117,6 +123,12 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
             ctx.globalAlpha = alpha;
             ctx.drawImage(truthImg, 0, 0, 16, 16, SX(wx) - s / 2, SY(wy) - s * 0.74, s, s);
             ctx.globalAlpha = 1;
+        }
+        // The player's full-body avatar (16x24), feet anchored near (wx,wy).
+        function drawAvatar(wx: number, wy: number, scale = 1.05) {
+            const w = 16 * Z * scale;
+            const h = 24 * Z * scale;
+            ctx.drawImage(avatarCanvas, SX(wx) - w / 2, SY(wy) - h + 5 * Z * scale, w, h);
         }
         function aura(wx: number, wy: number, color: string, rWorld: number) {
             const x = SX(wx);
@@ -355,11 +367,13 @@ export default function WorldCanvas({ character, onInteract, onEncounter }: Worl
                 sprite(charImg, SHADE_TILE.col, SHADE_TILE.row, sh.x, sh.y, fl);
             }
 
-            // player
+            // player — rebuild the avatar canvas if the look changed, then draw it
             const ap = charRef.current.appearance;
+            const curKey = JSON.stringify(charRef.current.avatar);
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarCanvas = avatarOffscreen(charRef.current.avatar); }
             shadow(st.px, st.py);
             aura(st.px, st.py, ap.aura, 11);
-            sprite(charImg, ap.bodyTile.col, ap.bodyTile.row, st.px, st.py);
+            drawAvatar(st.px, st.py);
 
             raf = requestAnimationFrame(loop);
         }

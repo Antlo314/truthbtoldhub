@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import { getFounderStatus, type FounderTier } from '@/lib/game/founders';
 import { CLOTHING_BY_ID } from '@/lib/game/clothing';
+import { defaultAvatar, type AvatarConfig } from '@/lib/game/avatar';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -39,6 +40,7 @@ export interface EquippedItems {
 export interface GameCharacter {
     name: string;
     appearance: CharacterAppearance;
+    avatar: AvatarConfig;    // layered full-body character (skin/hair/face/outfit)
     path: GamePath | null;
     skills: string[];        // learned skill ids
     skillPoints: number;     // unspent points
@@ -59,6 +61,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
         bodyTile: { col: 1, row: 6 },
         aura: '#fbbf24',
     },
+    avatar: defaultAvatar(),
     path: null,
     skills: [],
     skillPoints: 1,
@@ -76,6 +79,7 @@ function freshCharacter(): GameCharacter {
     return {
         ...DEFAULT_CHARACTER,
         appearance: { ...DEFAULT_CHARACTER.appearance, bodyTile: { ...DEFAULT_CHARACTER.appearance.bodyTile } },
+        avatar: { ...DEFAULT_CHARACTER.avatar },
         skills: [...DEFAULT_CHARACTER.skills],
         inventory: [...DEFAULT_CHARACTER.inventory],
         cleared: [...DEFAULT_CHARACTER.cleared],
@@ -94,6 +98,7 @@ interface GameState {
 
     setName: (name: string) => void;
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
+    setAvatar: (updates: Partial<AvatarConfig>) => void;
     setPath: (path: GamePath) => void;
     learnSkill: (id: string) => void;
     claimRelic: (id: string) => void;
@@ -129,6 +134,9 @@ export const useGameStore = create<GameState>()(
                         appearance: { ...s.character.appearance, ...updates },
                     },
                 })),
+
+            setAvatar: (updates) =>
+                set((s) => ({ character: { ...s.character, avatar: { ...s.character.avatar, ...updates } } })),
 
             setPath: (path) => set((s) => ({ character: { ...s.character, path } })),
 
@@ -219,6 +227,7 @@ export const useGameStore = create<GameState>()(
                                 ...freshCharacter(),
                                 ...c,
                                 appearance: { ...DEFAULT_CHARACTER.appearance, ...(c.appearance || {}) },
+                                avatar: { ...DEFAULT_CHARACTER.avatar, ...(c.avatar || {}) },
                                 equipped: { ...DEFAULT_CHARACTER.equipped, ...(c.equipped || {}) },
                             },
                             initiated: !!data.initiated,
@@ -292,6 +301,7 @@ export const useGameStore = create<GameState>()(
                             ...(pc.appearance || {}),
                             bodyTile: pc.appearance?.bodyTile || c.character.appearance.bodyTile,
                         },
+                        avatar: { ...c.character.avatar, ...(pc.avatar || {}) },
                         skills: pc.skills || c.character.skills,
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
