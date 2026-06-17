@@ -17,6 +17,12 @@ import {
     wildEncounterMods,
     worldEventDayKey,
 } from '@/lib/game/worldEvents';
+import {
+    destinationVisitId,
+    newlyMetRoamMilestones,
+    nextRoamMilestoneHint,
+    nextWildShadeWinId,
+} from '@/lib/game/roamMilestones';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
 import { pathCombatMods } from '@/lib/game/pathPowers';
 import { hiddenPoiById } from '@/lib/game/hiddenPois';
@@ -255,6 +261,23 @@ export default function WorldPage() {
         showToast(`✦ Today's rhythm · ${worldEvent.shortLabel}`);
     }, [worldIntroDone, eventDay, worldEvent.shortLabel, showToast]);
 
+    const unlockRoamMilestones = useCallback((opts?: { silent?: boolean }) => {
+        const ch = useGameStore.getState().character;
+        const fresh = newlyMetRoamMilestones(ch);
+        if (!fresh.length) return;
+        for (const m of fresh) markDiscovered(m.id);
+        saveToCloud();
+        if (opts?.silent) return;
+        fresh.forEach((m, i) => {
+            setTimeout(() => showToast(`${m.toast} · Codex Journal`), i * 2800);
+        });
+    }, [markDiscovered, saveToCloud, showToast]);
+
+    useEffect(() => {
+        if (!worldIntroDone) return;
+        unlockRoamMilestones({ silent: true });
+    }, [worldIntroDone, unlockRoamMilestones]);
+
     const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
         hapticTap('light');
@@ -272,7 +295,11 @@ export default function WorldPage() {
             } else if (needsFight && dest.poiId !== 'dest_eden') {
                 setCombatIntroDest(dest);
             } else {
+                const visitId = destinationVisitId(dest.poiId);
+                if (!ch.discovered.includes(visitId)) markDiscovered(visitId);
                 setActiveDest(dest);
+                saveToCloud();
+                setTimeout(() => unlockRoamMilestones(), 50);
             }
             return;
         }
@@ -291,6 +318,7 @@ export default function WorldPage() {
                     }
                     saveToCloud();
                     showToast(`✦ ${hidden.name} revealed · +${hidden.rewardSkillPoints} skill point`);
+                    setTimeout(() => unlockRoamMilestones(), 100);
                 }
                 setDialogue({ speaker: hidden.name, text: hidden.lore, color: '#22d3ee' });
                 const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
@@ -314,7 +342,7 @@ export default function WorldPage() {
         } else if (poi.type === 'portal') {
             setDialogue({ speaker: 'Portal to the Past', text: 'The veil between ages shimmers, but holds. Its hour has not yet come.', color: '#a855f7' });
         }
-    }, [markDiscovered, saveToCloud, showToast]);
+    }, [markDiscovered, saveToCloud, showToast, unlockRoamMilestones]);
 
     // a shade catches you in the open — if you're armed, it's a real skirmish;
     // unarmed, it's only a cold warning to go forge a weapon.
@@ -351,7 +379,8 @@ export default function WorldPage() {
         const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
         const bonus = qty > pk.qty ? ' · bountiful day' : '';
         showToast(`✦ +${qty} ${label}${bonus}`);
-    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent]);
+        setTimeout(() => unlockRoamMilestones(), 50);
+    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent, unlockRoamMilestones]);
 
     const onEncounterVictory = useCallback(() => {
         consumeFightBonusHp();
@@ -359,6 +388,8 @@ export default function WorldPage() {
         const ch = useGameStore.getState().character;
         const firstStand = !ch.discovered.includes('shade_stood');
         if (firstStand) markDiscovered('shade_stood');
+        const winId = nextWildShadeWinId(useGameStore.getState().character);
+        if (!useGameStore.getState().character.discovered.includes(winId)) markDiscovered(winId);
         const roll = Math.random();
         let loot: string;
         const mult = worldEvent.materialMult;
@@ -393,7 +424,8 @@ export default function WorldPage() {
             });
         }, 2200);
         saveToCloud();
-    }, [addMaterial, consumeFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent.materialMult]);
+        setTimeout(() => unlockRoamMilestones(), 50);
+    }, [addMaterial, consumeFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent.materialMult, unlockRoamMilestones]);
 
     const onEncounterDefeat = useCallback(() => {
         consumeFightBonusHp();
@@ -428,7 +460,8 @@ export default function WorldPage() {
         if (relicLine) {
             setTimeout(() => setDialogue({ speaker: 'Truth', text: relicLine, color: '#f97316' }), 2800);
         }
-    }, [claimRelic, findClothing, saveToCloud, showToast, activeDest]);
+        setTimeout(() => unlockRoamMilestones(), 100);
+    }, [claimRelic, findClothing, saveToCloud, showToast, activeDest, unlockRoamMilestones]);
 
     const handleForge = useCallback((id: string) => {
         equipWeapon(id);
@@ -444,7 +477,8 @@ export default function WorldPage() {
                 color: '#f97316',
             });
         }, 2400);
-    }, [equipWeapon, saveToCloud, showToast]);
+        setTimeout(() => unlockRoamMilestones(), 100);
+    }, [equipWeapon, saveToCloud, showToast, unlockRoamMilestones]);
 
     const onVictory = useCallback(() => {
         consumeFightBonusHp();
@@ -466,11 +500,14 @@ export default function WorldPage() {
                         }
                     }, 2800);
                 }
+                const visitId = destinationVisitId(d.poiId);
+                if (!ch.discovered.includes(visitId)) markDiscovered(visitId);
                 setActiveDest(d);
+                setTimeout(() => unlockRoamMilestones(), 100);
             }
             return null;
         });
-    }, [markCleared, saveToCloud, showToast, consumeFightBonusHp]);
+    }, [markCleared, markDiscovered, saveToCloud, showToast, consumeFightBonusHp, unlockRoamMilestones]);
 
     const onDefeat = useCallback(() => {
         consumeFightBonusHp();
@@ -528,6 +565,7 @@ export default function WorldPage() {
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
     const baseShades = shadeCountForTier(resTier);
     const roamingShades = effectiveShadeCount(baseShades, worldEvent);
+    const nextMilestone = nextRoamMilestoneHint(character);
     const questWaypoint = activeQuestWaypoint(character);
     const hutQuests = questsAvailable('hut', character);
 
@@ -645,6 +683,11 @@ export default function WorldPage() {
                     <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · start at Truth&apos;s Hut</p>
                     {activeDestinationFocus(character) && (
                         <p className="mt-2 text-[9px] uppercase tracking-[0.25em] text-aether-gold/70">Current road · {DEST_BY_POI[activeDestinationFocus(character)!]?.name}</p>
+                    )}
+                    {nextMilestone && (
+                        <p className="mt-2 text-[9px] uppercase tracking-[0.2em] text-zinc-500/90 max-w-[16rem] mx-auto leading-snug">
+                            Next road · {nextMilestone.title}
+                        </p>
                     )}
                 </div>
             )}

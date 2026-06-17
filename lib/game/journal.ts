@@ -3,12 +3,14 @@ import { DEST_BY_POI } from '@/lib/game/destinations';
 import { EDEN_LORE, EDEN_GARDENER_LINES } from '@/lib/game/edenLevel';
 import { truthAccountPages } from '@/lib/game/truthLore';
 import { QUESTS } from '@/lib/game/quests';
+import { ROAM_MILESTONES } from '@/lib/game/roamMilestones';
 import { PATH_BY_ID } from '@/lib/game/paths';
 
 export type JournalCategory = 'lore' | 'quest' | 'relic' | 'path' | 'truth';
 
 export type JournalSectionId =
     | 'origin'
+    | 'roam'
     | 'truth_account'
     | 'missions'
     | 'conquests'
@@ -41,35 +43,40 @@ export const JOURNAL_SECTION_META: Record<JournalSectionId, { title: string; sub
         subtitle: 'The awakening and the road you chose',
         order: 0,
     },
+    roam: {
+        title: 'Roads Walked',
+        subtitle: 'Milestones of the open cavern — no quest-giver required',
+        order: 1,
+    },
     truth_account: {
         title: "Brother Truth's Account",
         subtitle: 'Pages opened in Ask Truth — Anthony beneath the hood',
-        order: 1,
+        order: 2,
     },
     missions: {
         title: 'Missions Fulfilled',
         subtitle: 'Quests turned in at the crossroads of the world',
-        order: 2,
+        order: 3,
     },
     conquests: {
         title: 'Places Conquered',
         subtitle: 'Guardians fallen and gates opened',
-        order: 3,
+        order: 4,
     },
     eden: {
         title: 'Garden of Eden',
         subtitle: 'Stones, wings, and the hour before the lie',
-        order: 4,
+        order: 5,
     },
     relics: {
         title: 'Relics Claimed',
         subtitle: 'Tokens carried forward from the ages',
-        order: 5,
+        order: 6,
     },
     epilogue: {
         title: 'Return to Source',
         subtitle: 'Season I — the five flames as one',
-        order: 6,
+        order: 7,
     },
 };
 
@@ -145,15 +152,15 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
         });
     }
 
-    if (character.discovered.includes('shade_stood')) {
+    for (const m of ROAM_MILESTONES) {
+        if (!character.discovered.includes(m.id)) continue;
         entries.push({
-            id: 'shade_stood',
-            title: 'Stood in the Open',
-            category: 'quest',
-            section: 'missions',
-            subtitle: 'Witnessed by Truth',
-            detail: 'The shades know your name.',
-            body: 'A shade found you in the open cavern. You met it with iron, not fear. Anthony saw it — the wilderness respects only those who stop hiding.',
+            id: m.id,
+            title: m.title,
+            category: 'truth',
+            section: 'roam',
+            subtitle: m.subtitle,
+            body: m.body,
         });
     }
 
