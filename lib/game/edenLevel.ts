@@ -5,8 +5,12 @@ import {
     EDEN_MAP_W,
     EDEN_MAP_H,
     EDEN_TILE,
+    EDEN_GATES,
+    edenGateOpen,
+    buildEdenOverworld,
     isEdenWalkable,
 } from '@/lib/game/edenOverworld';
+import type { DestinationMapGate, DestinationMapPoi } from '@/lib/game/mapReveal';
 
 // ============================================================
 //  EDEN GARDEN — open overworld-style map (smaller than the
@@ -146,16 +150,16 @@ export function freshEdenState(): EdenLevelState {
             { id: 'chest_grove', gx: 42, gy: 30, keyId: 'key_grove', label: 'Grove compartment', opened: false },
             { id: 'chest_river', gx: 40, gy: 18, keyId: 'key_river', label: 'River vault', opened: false },
             { id: 'chest_sanctum', gx: 16, gy: 12, keyId: 'key_sanctum', label: 'Forbidden vault', opened: false },
-            { id: 'chest_spring', gx: 14, gy: 28, health: 30, label: 'Hidden spring', opened: false },
-            { id: 'chest_memory', gx: 44, gy: 14, health: 25, label: 'Memory well', opened: false },
-            { id: 'chest_secret', gx: 20, gy: 16, health: 20, label: 'Compartment beneath memory', opened: false, hidden: true },
+            { id: 'chest_spring', gx: 14, gy: 28, health: 20, label: 'Hidden spring', opened: false },
+            { id: 'chest_memory', gx: 44, gy: 14, health: 18, label: 'Memory well', opened: false },
+            { id: 'chest_secret', gx: 20, gy: 16, health: 15, label: 'Compartment beneath memory', opened: false, hidden: true },
         ],
         pickups: [
-            { id: 'hp_entry', gx: 32, gy: 38, kind: 'health', amount: 25, collected: false },
-            { id: 'hp_grove', gx: 34, gy: 32, kind: 'health', amount: 25, collected: false },
-            { id: 'hp_river', gx: 42, gy: 22, kind: 'health', amount: 30, collected: false },
-            { id: 'hp_forbidden', gx: 10, gy: 18, kind: 'health', amount: 30, collected: false },
-            { id: 'hp_antechamber', gx: 30, gy: 12, kind: 'health', amount: 35, collected: false },
+            { id: 'hp_entry', gx: 32, gy: 38, kind: 'health', amount: 18, collected: false },
+            { id: 'hp_grove', gx: 34, gy: 32, kind: 'health', amount: 18, collected: false },
+            { id: 'hp_river', gx: 42, gy: 22, kind: 'health', amount: 20, collected: false },
+            { id: 'hp_forbidden', gx: 10, gy: 18, kind: 'health', amount: 20, collected: false },
+            { id: 'hp_antechamber', gx: 30, gy: 12, kind: 'health', amount: 22, collected: false },
         ],
         fights: [
             { id: 'fight_1', gx: 20, gy: 34, radius: 22, combatId: 'eden_lesson_1', cleared: false, hint: 'A lone shade roams the threshold road. Learn Strike and Dodge.' },
@@ -264,10 +268,10 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     eden_lesson_1: {
         id: 'eden_lesson_1',
         skirmish: true,
-        challenge: 'One shade bars the way. Move with the joystick, tap Strike, and Dodge to slip its lunge.',
-        enemyCount: 1,
-        enemyHp: 14,
-        enemyDmg: 6,
+        challenge: 'Two shades bar the threshold. Dodge lunges, strike between their recoveries.',
+        enemyCount: 2,
+        enemyHp: 24,
+        enemyDmg: 10,
         bossName: '',
         bossHp: 0,
         bossDmg: 0,
@@ -276,10 +280,10 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     eden_lesson_2: {
         id: 'eden_lesson_2',
         skirmish: true,
-        challenge: 'Two shades hunt together. Dodge the lunge, then strike from the side.',
-        enemyCount: 2,
-        enemyHp: 18,
-        enemyDmg: 8,
+        challenge: 'Three shades hunt the grove. Keep moving — they share attack turns.',
+        enemyCount: 3,
+        enemyHp: 28,
+        enemyDmg: 12,
         bossName: '',
         bossHp: 0,
         bossDmg: 0,
@@ -288,10 +292,10 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     eden_lesson_3: {
         id: 'eden_lesson_3',
         skirmish: true,
-        challenge: 'A caster shade keeps its distance. Close in after dodging its bolts.',
-        enemyCount: 2,
-        enemyHp: 20,
-        enemyDmg: 9,
+        challenge: 'Caster shades and flankers. Close distance after dodging bolts.',
+        enemyCount: 3,
+        enemyHp: 30,
+        enemyDmg: 13,
         bossName: '',
         bossHp: 0,
         bossDmg: 0,
@@ -300,10 +304,10 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     eden_temptation: {
         id: 'eden_temptation',
         skirmish: true,
-        challenge: 'The serpent\'s shortcut was a trap. Strike down the shade born of the lie.',
-        enemyCount: 1,
-        enemyHp: 22,
-        enemyDmg: 10,
+        challenge: 'The serpent\'s shortcut was a trap. Two shades rise from the dust of the lie.',
+        enemyCount: 2,
+        enemyHp: 32,
+        enemyDmg: 14,
         bossName: '',
         bossHp: 0,
         bossDmg: 0,
@@ -311,18 +315,82 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     },
     eden_boss: {
         id: 'eden_boss',
-        challenge: 'The Cherub bars the Tree of Life. Dodge the red ring — it telegraphs before it strikes. Walk the road back to before the lie.',
-        enemyCount: 1,
-        enemyHp: 16,
-        enemyDmg: 6,
+        challenge: 'The Cherub bars the Tree of Life. Dodge the red rings — they strike fast. Clear the shades first.',
+        enemyCount: 2,
+        enemyHp: 26,
+        enemyDmg: 9,
         bossName: 'The Cherub of the Flaming Sword',
         bossArt: 'sentinel',
-        bossHp: 82,
-        bossDmg: 9,
-        bossDifficulty: 1,
+        bossHp: 168,
+        bossDmg: 15,
+        bossDifficulty: 3,
         victory: 'The flaming sword lowers. Attune the four rivers — the Tree remembers.',
     },
 };
+
+export const EDEN_MINIMAP_TERRAIN_COLORS: Record<number, string> = {
+    0: '#3d6b35',
+    1: '#8b6914',
+    2: '#1e4d7a',
+};
+
+export function edenMinimapTerrain(): number[][] {
+    return buildEdenOverworld().ground;
+}
+
+export function edenMinimapGates(level: EdenLevelState): DestinationMapGate[] {
+    return EDEN_GATES.map((g) => ({
+        id: g.id,
+        tiles: g.tiles,
+        open: edenGateOpen(g.id, level),
+    }));
+}
+
+export function edenMinimapPois(
+    level: EdenLevelState,
+    opts: { secretVisible: boolean; riversLit: number[]; relicClaimed: boolean },
+): DestinationMapPoi[] {
+    const pois: DestinationMapPoi[] = [
+        { id: 'spawn', gx: EDEN_SPAWN.gx, gy: EDEN_SPAWN.gy, kind: 'spawn' },
+        { id: 'gardener', gx: EDEN_GARDENER.gx, gy: EDEN_GARDENER.gy, kind: 'npc' },
+        { id: 'tree', gx: EDEN_TREE.gx, gy: EDEN_TREE.gy, kind: 'tree', muted: opts.relicClaimed },
+    ];
+
+    for (const ls of level.loreStones) {
+        pois.push({ id: ls.id, gx: ls.gx, gy: ls.gy, kind: 'lore', muted: ls.read });
+    }
+    for (const ch of level.chests) {
+        if (ch.hidden && !opts.secretVisible) {
+            pois.push({ id: ch.id, gx: ch.gx, gy: ch.gy, kind: 'chest', secret: true, muted: ch.opened });
+        } else {
+            pois.push({ id: ch.id, gx: ch.gx, gy: ch.gy, kind: 'chest', muted: ch.opened });
+        }
+    }
+    for (const pk of level.pickups) {
+        pois.push({ id: pk.id, gx: pk.gx, gy: pk.gy, kind: 'health', muted: pk.collected });
+    }
+    for (const fz of level.fights) {
+        if (fz.combatId === 'eden_boss') {
+            pois.push({ id: fz.id, gx: fz.gx, gy: fz.gy, kind: 'boss', muted: fz.cleared });
+        } else if (fz.radius > 0) {
+            pois.push({ id: fz.id, gx: fz.gx, gy: fz.gy, kind: 'fight', muted: fz.cleared });
+        }
+    }
+    if (level.temptationResolved === 'none') {
+        pois.push({ id: 'temptation', gx: EDEN_TEMPTATION.gx, gy: EDEN_TEMPTATION.gy, kind: 'temptation' });
+    }
+    for (const r of EDEN_RIVERS) {
+        pois.push({
+            id: `river_${r.id}`,
+            gx: r.gx,
+            gy: r.gy,
+            kind: 'river',
+            color: r.color,
+            muted: !opts.riversLit.includes(r.id),
+        });
+    }
+    return pois;
+}
 
 export function edenDestinationStub(combatId: string) {
     const c = EDEN_COMBATS[combatId];

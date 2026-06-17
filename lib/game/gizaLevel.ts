@@ -1,5 +1,6 @@
 import type { CombatConfig } from '@/lib/game/destinations';
 import type { GameCharacter } from '@/lib/store/useGameStore';
+import type { DestinationMapGate, DestinationMapPoi } from '@/lib/game/mapReveal';
 import { canSeeHiddenPlaces } from '@/lib/game/pathPowers';
 
 // ============================================================
@@ -687,4 +688,80 @@ export function gizaGuideStep(level: GizaLevelState, ctx: GizaGuideContext): Giz
         '【Khaemwaset】 Dark granite is wall. Sandstone paths lead on — follow the pulsing markers.',
         '【Khaemwaset】 Red orbs restore vitality. Cyan ◆ stones hold lore. A crumbling block in the east may yield more.',
         '【Khaemwaset】 If a path looks sealed, you may need a key from another wing first.');
+}
+
+export const GIZA_MINIMAP_TERRAIN_COLORS: Record<number, string> = {
+    0: '#6b5a45',
+    1: '#1a1a1a',
+    2: '#7f1d1d',
+    3: '#4a4035',
+};
+
+export function gizaMinimapTerrain(): number[][] {
+    return GIZA_TILES;
+}
+
+export function gizaMinimapGates(level: GizaLevelState): DestinationMapGate[] {
+    return level.doors.map((d) => ({
+        id: d.id,
+        tiles: [[d.gx, d.gy]],
+        open: d.open,
+    }));
+}
+
+export function gizaMinimapPois(
+    level: GizaLevelState,
+    opts: { secretVisible: boolean; relicClaimed: boolean; crystalsLit: number[] },
+): DestinationMapPoi[] {
+    const pois: DestinationMapPoi[] = [
+        { id: 'spawn', gx: GIZA_SPAWN.gx, gy: GIZA_SPAWN.gy, kind: 'spawn' },
+        { id: 'relic', gx: GIZA_RELIC.gx, gy: GIZA_RELIC.gy, kind: 'relic', muted: opts.relicClaimed },
+        { id: 'slab', gx: GIZA_SLAB.gx, gy: GIZA_SLAB.gy, kind: 'fight', muted: level.slabOpen },
+    ];
+    for (const ls of level.loreStones) {
+        if (ls.hidden && !opts.secretVisible) {
+            pois.push({ id: ls.id, gx: ls.gx, gy: ls.gy, kind: 'lore', secret: true, muted: ls.read });
+        } else {
+            pois.push({ id: ls.id, gx: ls.gx, gy: ls.gy, kind: 'lore', muted: ls.read });
+        }
+    }
+    for (const ch of level.chests) {
+        if (ch.hidden && !opts.secretVisible) {
+            pois.push({ id: ch.id, gx: ch.gx, gy: ch.gy, kind: 'chest', secret: true, muted: ch.opened });
+        } else {
+            pois.push({ id: ch.id, gx: ch.gx, gy: ch.gy, kind: 'chest', muted: ch.opened });
+        }
+    }
+    for (const pk of level.pickups) {
+        pois.push({ id: pk.id, gx: pk.gx, gy: pk.gy, kind: 'health', muted: pk.collected });
+    }
+    for (const fz of level.fights) {
+        if (fz.combatId === 'giza_boss') {
+            pois.push({ id: fz.id, gx: fz.gx, gy: fz.gy, kind: 'boss', muted: fz.cleared });
+        } else if (fz.radius > 0) {
+            pois.push({ id: fz.id, gx: fz.gx, gy: fz.gy, kind: 'fight', muted: fz.cleared });
+        }
+    }
+    for (const c of GIZA_CRYSTALS) {
+        pois.push({
+            id: `crystal_${c.id}`,
+            gx: c.gx,
+            gy: c.gy,
+            kind: 'crystal',
+            muted: !opts.crystalsLit.includes(c.id),
+        });
+    }
+    for (const n of level.ironNodes) {
+        pois.push({ id: n.id, gx: n.gx, gy: n.gy, kind: 'iron', muted: n.mined });
+    }
+    for (const t of level.traps) {
+        pois.push({ id: t.id, gx: t.gx, gy: t.gy, kind: 'trap', muted: t.tripped });
+    }
+    if (level.temptationResolved === 'none') {
+        pois.push({ id: 'temptation', gx: GIZA_TEMPTATION.gx, gy: GIZA_TEMPTATION.gy, kind: 'temptation' });
+    }
+    if (!level.illusionPassed) {
+        pois.push({ id: 'illusion', gx: GIZA_ILLUSION_WALL.gx, gy: GIZA_ILLUSION_WALL.gy, kind: 'trap', secret: true });
+    }
+    return pois;
 }

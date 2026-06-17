@@ -20,12 +20,20 @@ import { useInputProfile } from '@/components/game/controls/useInputProfile';
 import { useJoystick } from '@/components/game/controls/useJoystick';
 import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
 import { loadSettings } from '@/lib/game/settings';
+import DestinationMinimap from '@/components/game/DestinationMinimap';
+import {
+    exploredChunksFromDiscovered,
+    initialRevealChunks,
+    mapRevealKey,
+    newRevealDiscoveries,
+} from '@/lib/game/mapReveal';
 import {
     GIZA_MAP_W, GIZA_MAP_H, GIZA_TILE, GIZA_TILES, GIZA_SPAWN, GIZA_RELIC, GIZA_SLAB,
     GIZA_VIEW_TILES, GIZA_CRYSTALS, GIZA_ILLUSION_WALL, GIZA_TEMPTATION, GIZA_TEMPTATION_DROP,
     hydrateGizaState, isGizaSolid, updateGizaProgress, gizaDestinationStub,
     gizaZoneLabel, gizaDiscoveriesFromState, gizaWingId, canRevealGizaSecret, canSeeGizaHiddenLore,
     gizaGuideStep, GIZA_KEEPER_LINES, GIZA_RESPAWN_LINE, GIZA_WHISPER_LINES, GIZA_HINT_DELAYS_SEC,
+    GIZA_MINIMAP_TERRAIN_COLORS, gizaMinimapTerrain, gizaMinimapGates, gizaMinimapPois,
     type GizaLevelState,
 } from '@/lib/game/gizaLevel';
 
@@ -91,6 +99,13 @@ export default function GizaWorld({
     );
     const [hintTier, setHintTier] = useState(0);
     const [showTrail, setShowTrail] = useState(false);
+    const [playerPos, setPlayerPos] = useState({
+        x: GIZA_SPAWN.gx * GIZA_TILE + 8,
+        y: GIZA_SPAWN.gy * GIZA_TILE + 8,
+    });
+    const [exploredVersion, setExploredVersion] = useState(0);
+    const exploredRef = useRef(exploredChunksFromDiscovered(character.discovered, 'giza'));
+    const mapSyncRef = useRef({ lastAt: 0 });
 
     const profile = useInputProfile();
     const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
@@ -112,6 +127,30 @@ export default function GizaWorld({
     const swingTRef = useRef(0);
 
     const slabOpen = level.slabOpen || isSolved;
+
+    const gizaTerrain = useMemo(() => gizaMinimapTerrain(), []);
+    const minimapPois = useMemo(() => gizaMinimapPois(level, {
+        secretVisible: canRevealGizaSecret(level, character) || canSeeGizaHiddenLore(level, character),
+        relicClaimed,
+        crystalsLit: crystalSeq,
+    }), [level, character, relicClaimed, crystalSeq]);
+    const minimapGates = useMemo(() => gizaMinimapGates(level), [level]);
+    const showMinimap = loadSettings().showMinimap;
+
+    useEffect(() => {
+        const explored = exploredChunksFromDiscovered(character.discovered, 'giza');
+        const toDiscover: string[] = [];
+        for (const ch of initialRevealChunks(GIZA_SPAWN.gx, GIZA_SPAWN.gy, GIZA_MAP_W, GIZA_MAP_H)) {
+            if (!explored.has(ch)) {
+                explored.add(ch);
+                const [cx, cy] = ch.split('_').map(Number);
+                toDiscover.push(mapRevealKey('giza', cx, cy));
+            }
+        }
+        exploredRef.current = explored;
+        if (toDiscover.length) onDiscover(toDiscover);
+        setExploredVersion((v) => v + 1);
+    }, [character.discovered, onDiscover]);
 
     const guideStep = useMemo(() => gizaGuideStep(level, {
         isGuardianCleared,
@@ -411,6 +450,17 @@ export default function GizaWorld({
 
             const pgx = Math.floor(state.pax / GIZA_TILE);
             const pgy = Math.floor(state.pay / GIZA_TILE);
+
+            if (now - mapSyncRef.current.lastAt > 80) {
+                mapSyncRef.current.lastAt = now;
+                const added = newRevealDiscoveries('giza', pgx, pgy, exploredRef.current, GIZA_MAP_W, GIZA_MAP_H);
+                if (added.length) {
+                    onDiscover(added);
+                    setExploredVersion((v) => v + 1);
+                }
+                setPlayerPos({ x: state.pax, y: state.pay });
+            }
+
             const zl = gizaZoneLabel(pgx, pgy);
             if (zl) setZoneLabel(zl);
 
@@ -913,6 +963,26 @@ export default function GizaWorld({
 
             <div className="relative border-4 border-cyan-600/40 rounded-2xl overflow-hidden bg-cyan-950 shadow-inner w-full max-w-[520px]">
                 <canvas ref={canvasRef} className="block w-full aspect-square" />
+                {showMinimap && !activeFight && (
+                    <div className="absolute top-2 right-2 z-10 pointer-events-none">
+                        <DestinationMinimap
+                            label="Giza"
+                            mapW={GIZA_MAP_W}
+                            mapH={GIZA_MAP_H}
+                            terrain={gizaTerrain}
+                            terrainColors={GIZA_MINIMAP_TERRAIN_COLORS}
+                            explored={exploredRef.current}
+                            exploredVersion={exploredVersion}
+                            playerX={playerPos.x}
+                            playerY={playerPos.y}
+                            tileSize={GIZA_TILE}
+                            pois={minimapPois}
+                            gates={minimapGates}
+                            questWaypoint={guideStep.waypoint ?? null}
+                            size={80}
+                        />
+                    </div>
+                )}
             </div>
 
             <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />

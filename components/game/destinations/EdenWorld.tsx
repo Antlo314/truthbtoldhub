@@ -21,11 +21,19 @@ import { useJoystick } from '@/components/game/controls/useJoystick';
 import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
 import { loadSettings } from '@/lib/game/settings';
 import { buildEdenOverworld } from '@/lib/game/edenOverworld';
+import DestinationMinimap from '@/components/game/DestinationMinimap';
+import {
+    exploredChunksFromDiscovered,
+    initialRevealChunks,
+    mapRevealKey,
+    newRevealDiscoveries,
+} from '@/lib/game/mapReveal';
 import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, EDEN_SPAWN, EDEN_TREE, EDEN_RIVERS, EDEN_GARDENER,
     hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
     edenZoneLabel, edenDiscoveriesFromState, edenWingId, canRevealEdenSecret, edenGuideStep,
     EDEN_GARDENER_LINES, EDEN_RESPAWN_LINE, EDEN_TEMPTATION, EDEN_TEMPTATION_SHORTCUT, EDEN_SERPENT_LINES,
+    EDEN_MINIMAP_TERRAIN_COLORS, edenMinimapTerrain, edenMinimapGates, edenMinimapPois,
     type EdenLevelState,
 } from '@/lib/game/edenLevel';
 
@@ -85,6 +93,13 @@ export default function EdenWorld({
             : { speaker: 'The Gardener', text: 'Welcome back. Roam the open garden — read the golden stones, clear the shades, and walk north to the Tree.', color: '#34d399' },
     );
     const [barrierActive, setBarrierActive] = useState(!isSolved);
+    const [playerPos, setPlayerPos] = useState({
+        x: (EDEN_SPAWN.gx + 0.5) * EDEN_TILE,
+        y: (EDEN_SPAWN.gy + 0.5) * EDEN_TILE,
+    });
+    const [exploredVersion, setExploredVersion] = useState(0);
+    const exploredRef = useRef(exploredChunksFromDiscovered(character.discovered, 'eden'));
+    const mapSyncRef = useRef({ lastAt: 0 });
 
     const profile = useInputProfile();
     const isDesktop = useIsDesktopLayout();
@@ -105,6 +120,15 @@ export default function EdenWorld({
     levelRef.current = level;
     const barrierRef = useRef(barrierActive);
     barrierRef.current = barrierActive;
+
+    const edenTerrain = useMemo(() => edenMinimapTerrain(), []);
+    const minimapPois = useMemo(() => edenMinimapPois(level, {
+        secretVisible: canRevealEdenSecret(level, character),
+        riversLit: sequence,
+        relicClaimed,
+    }), [level, character, sequence, relicClaimed]);
+    const minimapGates = useMemo(() => edenMinimapGates(level), [level]);
+    const showMinimap = loadSettings().showMinimap;
 
     const guideStep = useMemo(() => edenGuideStep(level, {
         isGuardianCleared, isSolved, minigameDone, barrierActive, relicClaimed,
@@ -139,10 +163,25 @@ export default function EdenWorld({
         const st = gameStateRef.current;
         st.px = (EDEN_SPAWN.gx + 0.5) * EDEN_TILE;
         st.py = (EDEN_SPAWN.gy + 0.5) * EDEN_TILE;
-        setDungeonHp(50);
+        setDungeonHp(30);
         setDialogue({ speaker: 'The Gardener', text: EDEN_RESPAWN_LINE, color: '#34d399' });
         sfx.defeat();
     }, []);
+
+    useEffect(() => {
+        const explored = exploredChunksFromDiscovered(character.discovered, 'eden');
+        const toDiscover: string[] = [];
+        for (const ch of initialRevealChunks(EDEN_SPAWN.gx, EDEN_SPAWN.gy, EDEN_MAP_W, EDEN_MAP_H)) {
+            if (!explored.has(ch)) {
+                explored.add(ch);
+                const [cx, cy] = ch.split('_').map(Number);
+                toDiscover.push(mapRevealKey('eden', cx, cy));
+            }
+        }
+        exploredRef.current = explored;
+        if (toDiscover.length) onDiscover(toDiscover);
+        setExploredVersion((v) => v + 1);
+    }, [character.discovered, onDiscover]);
 
     const gameStateRef = useRef({
         px: (EDEN_SPAWN.gx + 0.5) * EDEN_TILE,
@@ -171,7 +210,7 @@ export default function EdenWorld({
         setNearTemptation(false);
         setDialogue({ speaker: 'A whisper', text: EDEN_SERPENT_LINES.accepted, color: '#ef4444' });
         setDungeonHp((hp) => {
-            const next = hp - 25;
+            const next = hp - 35;
             if (next <= 0) { setTimeout(() => softRespawn(), 50); return 0; }
             return next;
         });
@@ -215,7 +254,7 @@ export default function EdenWorld({
         });
         fightTriggeredRef.current = null;
         setActiveFight(null);
-        setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + 20));
+        setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + 10));
     }, [onGuardianCleared, onDiscover]);
 
     const readLoreStone = useCallback((stoneId: string) => {
@@ -466,7 +505,7 @@ export default function EdenWorld({
                     if (fz.combatId === 'eden_boss' && !lvl.bossGateOpen) break;
                     const warnedAt = fightWarnRef.current[fz.id];
                     if (!warnedAt) { fightWarnRef.current[fz.id] = now; break; }
-                    if (now - warnedAt < 1800) break;
+                    if (now - warnedAt < 1200) break;
                     fightTriggeredRef.current = fz.id;
                     fightBonusRef.current = consumeFightBonusHp();
                     setActiveFight(fz.combatId);
@@ -510,6 +549,19 @@ export default function EdenWorld({
                     onClaim();
                     setDialogue({ speaker: 'The Gardener', text: 'You claim the Leaf of the Tree of Life.', color: '#34d399' });
                 }
+            }
+
+            // map reveal + minimap sync (~12 Hz)
+            if (now - mapSyncRef.current.lastAt > 80) {
+                mapSyncRef.current.lastAt = now;
+                const pgx = Math.floor(st.px / EDEN_TILE);
+                const pgy = Math.floor(st.py / EDEN_TILE);
+                const added = newRevealDiscoveries('eden', pgx, pgy, exploredRef.current, EDEN_MAP_W, EDEN_MAP_H);
+                if (added.length) {
+                    onDiscover(added);
+                    setExploredVersion((v) => v + 1);
+                }
+                setPlayerPos({ x: st.px, y: st.py });
             }
 
             // camera
@@ -800,7 +852,7 @@ export default function EdenWorld({
                         fightTriggeredRef.current = null;
                         setActiveFight(null);
                         setDungeonHp((hp) => {
-                            const next = hp - 30;
+                            const next = hp - 40;
                             if (next <= 0) { setTimeout(() => softRespawn(), 50); return 0; }
                             setDialogue({ speaker: 'The Gardener', text: 'The shades overwhelm you. Rest, gather health, and try again.', color: '#34d399' });
                             sfx.defeat();
@@ -861,6 +913,30 @@ export default function EdenWorld({
                     </button>
                 </div>
             </div>
+
+            {showMinimap && !activeFight && (
+                <div
+                    className="absolute right-3 sm:right-4 z-10 pointer-events-none"
+                    style={{ top: 'calc(3.25rem + env(safe-area-inset-top))' }}
+                >
+                    <DestinationMinimap
+                        label="Eden"
+                        mapW={EDEN_MAP_W}
+                        mapH={EDEN_MAP_H}
+                        terrain={edenTerrain}
+                        terrainColors={EDEN_MINIMAP_TERRAIN_COLORS}
+                        explored={exploredRef.current}
+                        exploredVersion={exploredVersion}
+                        playerX={playerPos.x}
+                        playerY={playerPos.y}
+                        tileSize={EDEN_TILE}
+                        pois={minimapPois}
+                        gates={minimapGates}
+                        questWaypoint={guideStep.waypoint ?? null}
+                        size={isDesktop ? 96 : 80}
+                    />
+                </div>
+            )}
 
             <div
                 key={guideStep.id}
