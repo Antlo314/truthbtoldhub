@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Trophy, Users, Crown } from 'lucide-react';
+import { Trophy, Users, Crown, Footprints } from 'lucide-react';
 import { fetchCommunityLedger, type CommunityLedger } from '@/lib/game/hut';
+import { fetchWorldPresence } from '@/lib/game/worldPresence';
 
 interface Props {
     characterName?: string;
@@ -11,13 +12,15 @@ interface Props {
 
 export default function HutLedger({ characterName }: Props) {
     const [ledger, setLedger] = useState<CommunityLedger | null>(null);
+    const [walkedToday, setWalkedToday] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let alive = true;
-        fetchCommunityLedger().then((data) => {
+        Promise.all([fetchCommunityLedger(), fetchWorldPresence()]).then(([ledgerData, presence]) => {
             if (alive) {
-                setLedger(data);
+                setLedger(ledgerData);
+                setWalkedToday(presence.walkedToday);
                 setLoading(false);
             }
         });
@@ -41,6 +44,23 @@ export default function HutLedger({ characterName }: Props) {
                 )}
                 <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
                     {characterName ? `${characterName}, you` : 'You'} walk among those who chose to return. Every soul that signs in adds another light in the cavern.
+                </p>
+            </div>
+
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.06] p-4">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                    <Footprints className="w-3.5 h-3.5 text-violet-300/80" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-violet-300/70">Walked Today</p>
+                </div>
+                {loading ? (
+                    <p className="font-ritual text-2xl text-white/40 animate-pulse text-center">—</p>
+                ) : (
+                    <p className="font-ritual text-3xl text-violet-100/95 tabular-nums text-center">
+                        {(walkedToday ?? 0).toLocaleString()}
+                    </p>
+                )}
+                <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed text-center">
+                    Souls who roamed the cavern today. Faint walkers may appear on your road — you are not alone in the wide grass.
                 </p>
             </div>
 

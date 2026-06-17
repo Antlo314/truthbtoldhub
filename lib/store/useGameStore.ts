@@ -64,6 +64,13 @@ export interface GameCharacter {
     };
     /** HP bonus from health orbs — applied at the start of the next fight. */
     fightBonusHp: number;
+    /** Last overworld position ping — co-op presence (UTC day). */
+    lastWalk?: {
+        day: string;
+        x: number;
+        y: number;
+        at: string;
+    };
 }
 
 const DEFAULT_CHARACTER: GameCharacter = {

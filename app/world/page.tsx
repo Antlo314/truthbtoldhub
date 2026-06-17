@@ -10,6 +10,9 @@ import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import HutLedger from '@/components/game/HutLedger';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
+import WorldPresenceBanner from '@/components/game/WorldPresenceBanner';
+import { fetchWorldPresence, pingWorldWalk, type WorldPresence } from '@/lib/game/worldPresence';
+import { supabase } from '@/lib/supabase';
 import {
     activeWorldEvent,
     effectiveShadeCount,
@@ -140,7 +143,10 @@ export default function WorldPage() {
     const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
     const [hutAlert, setHutAlert] = useState(false);
     const [tutorial, setTutorial] = useState<TutorialId | null>(null);
+    const [worldPresence, setWorldPresence] = useState<WorldPresence>({ walkedToday: 0, fellows: [] });
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastWalkPing = useRef(0);
+    const userIdRef = useRef<string | null>(null);
 
     const finishWorldIntro = useCallback(() => {
         sessionStorage.setItem('tbth-cutscene-world', '1');
@@ -226,6 +232,25 @@ export default function WorldPage() {
     }, [worldIntroDone]);
 
     useEffect(() => {
+        supabase.auth.getSession().then(({ data }) => {
+            userIdRef.current = data.session?.user?.id ?? null;
+        });
+    }, []);
+
+    useEffect(() => {
+        if (!worldIntroDone) return;
+        let alive = true;
+        const refresh = () => {
+            fetchWorldPresence(userIdRef.current).then((data) => {
+                if (alive) setWorldPresence(data);
+            });
+        };
+        refresh();
+        const t = setInterval(refresh, 90_000);
+        return () => { alive = false; clearInterval(t); };
+    }, [worldIntroDone]);
+
+    useEffect(() => {
         if (hutOpen && bulletins[0]) {
             localStorage.setItem('tbth-hut-seen', bulletins[0].id);
             setHutAlert(false);
@@ -239,7 +264,12 @@ export default function WorldPage() {
 
     const onPositionUpdate = useCallback((x: number, y: number) => {
         setPlayerPos({ x, y });
-    }, []);
+        if (!worldIntroDone) return;
+        const now = Date.now();
+        if (now - lastWalkPing.current < 45_000) return;
+        lastWalkPing.current = now;
+        void pingWorldWalk(x, y);
+    }, [worldIntroDone]);
 
     const onTruthLine = useCallback((line: string) => {
         setDialogue({ speaker: 'Truth', text: line, color: '#f97316' });
@@ -597,6 +627,7 @@ export default function WorldPage() {
                 onPickup={onPickup}
                 onPositionUpdate={onPositionUpdate}
                 onTruthLine={onTruthLine}
+                fellowSouls={worldPresence.fellows}
                 hideControls={!!dialogue && !isDesktop}
             />
 
@@ -671,10 +702,14 @@ export default function WorldPage() {
 
             {worldIntroDone && !worldPaused && (
                 <div
-                    className="absolute left-1/2 -translate-x-1/2 z-[9] pointer-events-none"
+                    className="absolute left-1/2 -translate-x-1/2 z-[9] pointer-events-none flex flex-col items-center gap-1.5"
                     style={{ top: 'calc(5.75rem + env(safe-area-inset-top))' }}
                 >
                     <WorldEventBanner event={worldEvent} />
+                    <WorldPresenceBanner
+                        walkedToday={worldPresence.walkedToday}
+                        fellowCount={worldPresence.fellows.length}
+                    />
                 </div>
             )}
 

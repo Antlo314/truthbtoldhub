@@ -27,6 +27,7 @@ import { useJoystick } from '@/components/game/controls/useJoystick';
 import WorldControlPad from '@/components/game/controls/WorldControlPad';
 import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
 import { loadSettings } from '@/lib/game/settings';
+import type { FellowSoul } from '@/lib/game/worldPresence';
 
 const RESONANCE_TINTS = [
     '',
@@ -72,6 +73,8 @@ interface WorldCanvasProps {
     onPickup: (p: Pickup) => void;
     onPositionUpdate?: (x: number, y: number) => void;
     onTruthLine?: (line: string) => void;
+    /** Other souls who walked today — faint ghosts on the road. */
+    fellowSouls?: FellowSoul[];
     /** Hide thumb controls while speech is on screen (mobile) */
     hideControls?: boolean;
 }
@@ -89,6 +92,7 @@ export default function WorldCanvas({
     onPickup,
     onPositionUpdate,
     onTruthLine,
+    fellowSouls = [],
     hideControls = false,
 }: WorldCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,6 +119,8 @@ export default function WorldCanvas({
     shadeCountRef.current = shadeCount;
     const shadeAggroRef = useRef(shadeAggroMult);
     shadeAggroRef.current = shadeAggroMult;
+    const fellowSoulsRef = useRef(fellowSouls);
+    fellowSoulsRef.current = fellowSouls;
 
     const cbRef = useRef({ onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine });
     cbRef.current = { onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine };
@@ -660,6 +666,20 @@ export default function WorldCanvas({
                 const fl = 0.4 + Math.sin(st.t / 240 + sh.x) * 0.12;
                 aura(sh.x, sh.y, '#22d3ee', 11);
                 sprite(charImg, SHADE_TILE.col, SHADE_TILE.row, sh.x, sh.y, fl);
+            }
+
+            // fellow souls — faint walkers who roamed today
+            for (const f of fellowSoulsRef.current) {
+                const bob = Math.sin(st.t / 520 + f.x * 0.02) * 0.8;
+                const ghostX = f.x + Math.sin(st.t / 900 + f.y * 0.01) * 2;
+                const ghostY = f.y + bob;
+                aura(ghostX, ghostY, f.pathColor || f.aura, 10);
+                shadow(ghostX, ghostY);
+                sprite(charImg, f.bodyCol, f.bodyRow, ghostX, ghostY, 0.38);
+                ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                ctx.font = `bold ${6 * Z}px serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(f.name, SX(ghostX), SY(ghostY) - 18 * Z);
             }
 
             // player — rebuild the avatar frames if the look changed, then draw
