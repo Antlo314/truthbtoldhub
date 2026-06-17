@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
@@ -37,6 +37,15 @@ import GameSettingsPanel from '@/components/game/GameSettingsPanel';
 import TutorialOverlay from '@/components/game/TutorialOverlay';
 import SourceEpilogue from '@/components/game/SourceEpilogue';
 import DonationSection from '@/components/DonationSection';
+import TruthQA from '@/components/game/TruthQA';
+import {
+    truthCombatLine,
+    truthDestClearLine,
+    truthBulletinPing,
+    truthNpcEcho,
+    truthRelicLine,
+    truthForgeLine,
+} from '@/lib/game/truthVoice';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -88,7 +97,7 @@ export default function WorldPage() {
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
-    const [hutTab, setHutTab] = useState<'dispatch' | 'patron'>('dispatch');
+    const [hutTab, setHutTab] = useState<'dispatch' | 'patron' | 'truth'>('dispatch');
 
     const [toast, setToast] = useState<string | null>(null);
     const [hint, setHint] = useState(true);
@@ -137,7 +146,16 @@ export default function WorldPage() {
             setBulletins(bs);
             if (bs.length > 0) {
                 const lastSeen = localStorage.getItem('tbth-hut-seen');
-                if (!lastSeen || lastSeen !== bs[0].id) setHutAlert(true);
+                if (!lastSeen || lastSeen !== bs[0].id) {
+                    setHutAlert(true);
+                    setTimeout(() => {
+                        setDialogue({
+                            speaker: 'Truth',
+                            text: truthBulletinPing(bs[0].title),
+                            color: '#f97316',
+                        });
+                    }, 4500);
+                }
             }
         });
         fetchMedia(16).then(setMedia);
@@ -154,9 +172,10 @@ export default function WorldPage() {
             gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
         }
         const params = new URLSearchParams(window.location.search);
-        if (params.get('hut') === 'patron') {
+        const hutParam = params.get('hut');
+        if (hutParam === 'patron' || hutParam === 'truth') {
             setHutOpen(true);
-            setHutTab('patron');
+            setHutTab(hutParam);
             window.history.replaceState({}, '', '/world');
         }
         const t = setTimeout(() => setHint(false), 5000);
@@ -254,12 +273,18 @@ export default function WorldPage() {
                     showToast(`✦ ${hidden.name} revealed · +${hidden.rewardSkillPoints} skill point`);
                 }
                 setDialogue({ speaker: hidden.name, text: hidden.lore, color: '#22d3ee' });
+                const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
+                if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             } else if (questsAvailable(poi.id, useGameStore.getState().character).length > 0) {
                 setQuestNpc({ id: poi.id, name: poi.name });
             } else if (poi.detail) {
                 setDialogue({ speaker: poi.name, text: poi.detail });
+                const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
+                if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             } else {
                 setDialogue({ speaker: poi.name, text: 'The road to their missions is not yet open. Walk the prior age to its end.' });
+                const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
+                if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             }
         } else if (poi.type === 'cave') {
             setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
@@ -276,7 +301,11 @@ export default function WorldPage() {
         if (!tutorialsSeen().includes('combat')) setTutorial('combat');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
-            showToast('A shade drifts through you — cold, and searching. Arm yourself at Truth’s Hut.');
+            setDialogue({
+                speaker: 'Truth',
+                text: truthCombatLine(ch, 'unarmedShade'),
+                color: '#f97316',
+            });
             return;
         }
         setEncounter(wildEncounter(ch.cleared.length));
@@ -301,19 +330,43 @@ export default function WorldPage() {
     const onEncounterVictory = useCallback(() => {
         consumeFightBonusHp();
         setEncounter(null);
-        // the scattered shades leave a little ore behind for the forge
+        const ch = useGameStore.getState().character;
+        const firstStand = !ch.discovered.includes('shade_stood');
+        if (firstStand) markDiscovered('shade_stood');
         const roll = Math.random();
-        if (roll < 0.12) { addMaterial('cosmic', 1); showToast('✦ A mote of Cosmic Essence drifts free'); }
-        else if (roll < 0.5) { addMaterial('copper', 1); showToast('✦ The shades scatter — +1 Copper'); }
-        else { addMaterial('iron', 2); showToast('✦ The shades scatter — +2 Iron Ore'); }
+        let loot: string;
+        if (roll < 0.12) { addMaterial('cosmic', 1); loot = '+1 Cosmic Essence'; }
+        else if (roll < 0.5) { addMaterial('copper', 1); loot = '+1 Copper'; }
+        else { addMaterial('iron', 2); loot = '+2 Iron Ore'; }
+        showToast(
+            firstStand
+                ? `✦ You stood against the shade · ${loot}`
+                : roll < 0.12
+                    ? '✦ A mote of Cosmic Essence drifts free'
+                    : roll < 0.5
+                        ? '✦ The shades scatter — +1 Copper'
+                        : '✦ The shades scatter — +2 Iron Ore',
+        );
+        setTimeout(() => {
+            setDialogue({
+                speaker: 'Truth',
+                text: truthCombatLine(useGameStore.getState().character, firstStand ? 'wildWinFirst' : 'wildWin'),
+                color: '#f97316',
+            });
+        }, 2200);
         saveToCloud();
-    }, [addMaterial, consumeFightBonusHp, saveToCloud, showToast]);
+    }, [addMaterial, consumeFightBonusHp, markDiscovered, saveToCloud, showToast]);
 
     const onEncounterDefeat = useCallback(() => {
         consumeFightBonusHp();
         setEncounter(null);
-        showToast('The shades overwhelm you. Rest, and return stronger.');
-    }, [showToast, consumeFightBonusHp]);
+        const ch = useGameStore.getState().character;
+        setDialogue({
+            speaker: 'Truth',
+            text: truthCombatLine(ch, 'wildLose'),
+            color: '#f97316',
+        });
+    }, [consumeFightBonusHp]);
 
     const handleClaim = useCallback(async (relicId: string) => {
         const beforeTier = resonanceTier(useGameStore.getState().character.inventory);
@@ -333,6 +386,10 @@ export default function WorldPage() {
         await saveToCloud();
         hapticTap('heavy');
         showToast(msg);
+        const relicLine = truthRelicLine(useGameStore.getState().character);
+        if (relicLine) {
+            setTimeout(() => setDialogue({ speaker: 'Truth', text: relicLine, color: '#f97316' }), 2800);
+        }
     }, [claimRelic, findClothing, saveToCloud, showToast, activeDest]);
 
     const handleForge = useCallback((id: string) => {
@@ -342,6 +399,13 @@ export default function WorldPage() {
         hapticTap('medium');
         if (!tutorialsSeen().includes('forge')) setTutorial('forge');
         showToast(`✦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged — you are armed`);
+        setTimeout(() => {
+            setDialogue({
+                speaker: 'Truth',
+                text: truthForgeLine(useGameStore.getState().character, true),
+                color: '#f97316',
+            });
+        }, 2400);
     }, [equipWeapon, saveToCloud, showToast]);
 
     const onVictory = useCallback(() => {
@@ -354,7 +418,15 @@ export default function WorldPage() {
                 saveToCloud();
                 showToast(d.combat?.victory || 'The guardian falls.');
                 if (freshClear) {
-                    setTimeout(() => showToast(`✦ Guardian defeated! Visit Truth's Forge to upgrade your weapon using gathered resources.`), 2800);
+                    setTimeout(() => {
+                        const now = useGameStore.getState().character;
+                        const deep = truthDestClearLine(now, d.poiId);
+                        if (deep) {
+                            setDialogue({ speaker: 'Truth', text: deep, color: '#f97316' });
+                        } else {
+                            showToast(truthCombatLine(now, 'guardianWin'));
+                        }
+                    }, 2800);
                 }
                 setActiveDest(d);
             }
@@ -365,8 +437,13 @@ export default function WorldPage() {
     const onDefeat = useCallback(() => {
         consumeFightBonusHp();
         setCombatDest(null);
-        showToast('The shades overwhelm you. Rest, and return stronger.');
-    }, [showToast, consumeFightBonusHp]);
+        const ch = useGameStore.getState().character;
+        setDialogue({
+            speaker: 'Truth',
+            text: truthCombatLine(ch, 'guardianLose'),
+            color: '#f97316',
+        });
+    }, [consumeFightBonusHp]);
 
     const handleSolve = useCallback((puzzleId: string) => {
         markSolved(puzzleId);
@@ -572,7 +649,7 @@ export default function WorldPage() {
                             <button
                                 type="button"
                                 onClick={() => setHutTab('dispatch')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
                                     hutTab === 'dispatch' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
                                 }`}
                             >
@@ -581,8 +658,18 @@ export default function WorldPage() {
                             </button>
                             <button
                                 type="button"
+                                onClick={() => setHutTab('truth')}
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
+                                    hutTab === 'truth' ? 'bg-orange-500/20 text-orange-400' : 'text-zinc-500 hover:text-white'
+                                }`}
+                            >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                Ask Truth
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => setHutTab('patron')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
                                     hutTab === 'patron' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
                                 }`}
                             >
@@ -593,6 +680,11 @@ export default function WorldPage() {
 
                         {hutTab === 'patron' ? (
                             <DonationSection variant="hut" showFundingBar />
+                        ) : hutTab === 'truth' ? (
+                            <TruthQA
+                                character={character}
+                                onJournalUnlock={(title) => showToast(`✦ Recorded in Codex Journal · ${title}`)}
+                            />
                         ) : (
                         <>
                         {/* latest bulletin */}
@@ -612,7 +704,7 @@ export default function WorldPage() {
                                     <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60 mb-2">Today · From Truth</p>
                                     <p className="font-ritual text-white/90 leading-relaxed">
                                         Welcome home, {character.name || 'initiate'}. You stand at the center of all things. Each day I will leave word here —
-                                        a truth unearthed, a scroll to study, a mission to walk. Return often. The world is waking with you.
+                                        a truth unearthed, a scroll to study, a mission to walk. If you would know the brother behind the hood, open <strong className="text-orange-400/90">Ask Truth</strong> and pry gently. Return often. The world is waking with you.
                                     </p>
                                 </>
                             )}

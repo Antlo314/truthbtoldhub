@@ -1,6 +1,8 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { DEST_BY_POI } from '@/lib/game/destinations';
 import { EDEN_LORE } from '@/lib/game/edenLevel';
+import { truthAccountPages } from '@/lib/game/truthLore';
+import { QUESTS } from '@/lib/game/quests';
 
 export interface JournalEntry {
     id: string;
@@ -47,7 +49,13 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
     }
 
     for (const qid of character.questsClaimed) {
-        entries.push({ id: `quest_${qid}`, title: 'Mission fulfilled', category: 'quest', body: `Quest ${qid} — turned in at the crossroads of the world.` });
+        const q = QUESTS.find((x) => x.id === qid);
+        entries.push({
+            id: `quest_${qid}`,
+            title: q?.title || 'Mission fulfilled',
+            category: 'quest',
+            body: q?.completeText || `Quest turned in at the crossroads of the world.`,
+        });
     }
 
     for (const discId of character.discovered) {
@@ -70,6 +78,24 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
 
     if (character.sourceReturned) {
         entries.push({ id: 'source', title: 'Return to the Source', category: 'truth', body: 'The five relics burned as one. You did not come back to the Source — you woke and found you had never left it. Season II awaits those who carry the light forward.' });
+    }
+
+    for (const page of truthAccountPages(character)) {
+        entries.push({
+            id: `truth_account_${page.questionId}`,
+            title: page.title,
+            category: 'truth',
+            body: page.body,
+        });
+    }
+
+    if (character.questsClaimed.includes('q_truth_last_run')) {
+        entries.push({
+            id: 'truth_last_run_witness',
+            title: 'Witness to the Last Run',
+            category: 'truth',
+            body: 'You walked Anthony\'s road with him — pried the hood, took up iron, stood against the shades, and returned. He calls you witness, not follower.',
+        });
     }
 
     return entries;

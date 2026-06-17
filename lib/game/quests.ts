@@ -1,5 +1,6 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { isNpcQuestActive, EDEN_SEALED } from '@/lib/game/progression';
+import { truthDepth } from '@/lib/game/truthLore';
 
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
@@ -15,7 +16,10 @@ export type QuestObjective =
     | { kind: 'collect'; relicId: string }
     | { kind: 'collectCount'; count: number }
     | { kind: 'materials'; iron?: number; copper?: number; cosmic?: number }
-    | { kind: 'anyProgress' };
+    | { kind: 'anyProgress' }
+    | { kind: 'truthThreads'; count: number }
+    | { kind: 'armed' }
+    | { kind: 'discovered'; id: string };
 
 export interface Quest {
     id: string;
@@ -42,6 +46,54 @@ export const QUESTS: Quest[] = [
         objective: { kind: 'anyProgress' },
         reward: { skillPoints: 1, text: '+1 skill point; the chamber knows your name.' },
         completeText: 'Good. You have begun to move. Speak with the souls at the edges of this world — their missions will sharpen you.',
+    },
+    {
+        id: 'q_truth_pry',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'Pry the Hood',
+        requires: ['q_hut_begin'],
+        intro: 'You have walked — now sit with me. I do not give my whole account to passersby. Ask three threads in Ask Truth, and I will know you are not merely touring the chamber.',
+        objectiveText: 'Open three threads in Ask Truth.',
+        objective: { kind: 'truthThreads', count: 3 },
+        reward: { skillPoints: 1, text: '+1 skill point; Brother Truth remembers you.' },
+        completeText: 'You pried, and I answered. What you heard is written in your Codex Journal. The hood is lighter when someone listens.',
+    },
+    {
+        id: 'q_truth_arm',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'Take Up Iron',
+        requires: ['q_truth_pry'],
+        intro: 'Shades roam the open cavern. I walked unarmed in my wilderness — do not imitate that folly. Forge your first weapon here, and carry it into the road.',
+        objectiveText: 'Forge and equip a weapon at Truth\'s Hut.',
+        objective: { kind: 'armed' },
+        reward: { skillPoints: 1, text: '+1 skill point; you are armed for the last run.' },
+        completeText: 'Iron in hand. Now stand in the open where the shades hunt — and do not run.',
+    },
+    {
+        id: 'q_truth_stand',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'Stand in the Open',
+        requires: ['q_truth_arm'],
+        intro: 'A shade will find you if you roam long enough. Meet it with your weapon — not with fear. I will know you stood when the journal records it.',
+        objectiveText: 'Defeat a shade in the overworld.',
+        objective: { kind: 'discovered', id: 'shade_stood' },
+        reward: { skillPoints: 1, text: '+1 skill point; the shades know your name.' },
+        completeText: 'You stood. I saw it. The wilderness respects only those who stop hiding.',
+    },
+    {
+        id: 'q_truth_last_run',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'Witness the Last Run',
+        requires: ['q_truth_stand'],
+        intro: 'This is my final circuit. Walk it with me — open five threads of my account, and claim your place as witness. What we build here must outlive my weakness.',
+        objectiveText: 'Open five threads in Ask Truth.',
+        objective: { kind: 'truthThreads', count: 5 },
+        reward: { skillPoints: 2, text: '+2 skill points; Witness to the Last Run — recorded in your Codex Journal.' },
+        completeText: 'Witness. Not follower — witness. Anthony\'s last run has your name beside it now. Give it back to the Source, and go all the way with me.',
     },
     {
         id: 'q_cipher_welcome',
@@ -225,6 +277,9 @@ export function objectiveMet(q: Quest, c: GameCharacter): boolean {
     if (o.kind === 'anyProgress') {
         return c.cleared.length > 0 || c.discovered.length > 0 || c.inventory.length > 0 || c.solved.length > 0;
     }
+    if (o.kind === 'truthThreads') return truthDepth(c) >= o.count;
+    if (o.kind === 'armed') return !!c.equipped.weapon;
+    if (o.kind === 'discovered') return c.discovered.includes(o.id);
     return false;
 }
 
@@ -239,5 +294,10 @@ export function objectiveProgress(q: Quest, c: GameCharacter): string {
         if (o.cosmic) parts.push(`cosmic ${Math.min(m.cosmic, o.cosmic)}/${o.cosmic}`);
         return parts.join(' · ') || 'Complete';
     }
+    if (o.kind === 'truthThreads') {
+        return `${Math.min(truthDepth(c), o.count)} / ${o.count} threads`;
+    }
+    if (o.kind === 'armed') return c.equipped.weapon ? 'Armed' : 'Forge at the Hut';
+    if (o.kind === 'discovered') return c.discovered.includes(o.id) ? 'Complete' : 'Not yet';
     return objectiveMet(q, c) ? 'Complete' : 'Not yet';
 }

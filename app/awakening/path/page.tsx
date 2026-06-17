@@ -9,6 +9,8 @@ import AttunementPanel from '@/components/game/AttunementPanel';
 import { CINEMA } from '@/lib/game/cutscenes';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
+import { SceneGuide } from '@/components/game/SceneGuide';
+import { truthAwakeningLine } from '@/lib/game/truthVoice';
 
 // ============================================================
 //  CHAPTER III — THE FOUR PATHS
@@ -79,11 +81,12 @@ export default function PathPage() {
             <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-4"
                 style={{ paddingTop: 'calc(0.7rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.7rem + env(safe-area-inset-bottom))' }}>
 
-                <div className="shrink-0 text-center">
-                    <p className="text-[9px] tracking-[0.4em] uppercase text-aether-gold/70">Chapter III · The Crossroads</p>
-                    <p className="text-[12px] text-zinc-400 italic mt-1 leading-snug">
-                        Four roads lie before you{character.name ? `, ${character.name}` : ''}. Choose with care — your strengths and weaknesses are born here.
-                    </p>
+                <div className="shrink-0">
+                    <p className="text-[9px] tracking-[0.4em] uppercase text-aether-gold/70 text-center mb-2">Chapter III · The Crossroads</p>
+                    <SceneGuide
+                        line={truthAwakeningLine('path', character, selected ?? undefined)}
+                        accent={selected ? PATH_BY_ID[selected].color : '#fbbf24'}
+                    />
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar mt-3 grid grid-cols-2 gap-2.5 content-start">

@@ -1,4 +1,6 @@
 import { TILE } from '@/lib/game/overworld';
+import type { GameCharacter } from '@/lib/store/useGameStore';
+import { truthDepthTier } from '@/lib/game/truthLore';
 
 const FOLLOW_DIST = TILE * 2.2;
 const CATCHUP_SPD = 78;
@@ -43,9 +45,8 @@ export function updateTruthCompanion(
     return { x: nx, y: ny };
 }
 
-/** Contextual Truth lines when near POIs */
-export const TRUTH_PROXIMITY_LINES: Record<string, string> = {
-    hut: 'The Hut is where the living word meets the road. Return when the world stirs.',
+const BASE_POI_LINES: Record<string, string> = {
+    hut: 'The Hut holds my dispatch — and if you dare to ask, my account. Enter, and open Ask Truth.',
     dest_eden: 'Eden sleeps behind a veil for now. Return to the Hut — the garden\'s hour is not yet.',
     dest_fair: 'Twelve hundred palaces of white — raised in a season, torn down the next.',
     dest_giza: 'The stone still hums. Listen before you strike.',
@@ -54,3 +55,71 @@ export const TRUTH_PROXIMITY_LINES: Record<string, string> = {
     npc_gardener: 'The Gardener waits at Eden\'s gate. The portal is sealed until the missions are ready.',
     npc_mabel: 'Mabel chronicled what they erased from the Fair.',
 };
+
+const HUT_LINES_BY_TIER: Record<0 | 1 | 2 | 3, string[]> = {
+    0: [BASE_POI_LINES.hut],
+    1: [
+        'You have begun to pry. Good. The hood does not mean I have nothing to say.',
+        'Return to Ask Truth when the road grows heavy. I am not only a guide — I am a man in recovery.',
+    ],
+    2: [
+        'You know my name now. Few do. Do not wield it as gossip — wield it as prayer.',
+        'The wilderness is where I stand. Your steps beside me are not small to the Source.',
+        'Ask about the thorn if you are ready. Some sorrows are only healed at the Source.',
+    ],
+    3: [
+        'Anthony walks with you — not only Truth. What you have heard, carry it as light.',
+        'This may be my last run. If you finish what I could not, the world will see givers — not takers.',
+    ],
+};
+
+/** Lines Truth speaks while following — tiered by how much the soul has pried */
+const WANDER_LINES: Record<0 | 1 | 2 | 3, string[]> = {
+    0: [
+        'Stay on the road. The shades test what is unarmed.',
+        'The Hut is center. Return when you need the word.',
+        'I follow — not to watch you fail, but to witness you rise.',
+    ],
+    1: [
+        'Each question you asked lives in me. Ask more when you are ready.',
+        'I was weak once. I am still imperfect. Keep walking anyway.',
+        'The Source did not leave you alone. Neither will I.',
+    ],
+    2: [
+        'Seven years in a cell carved the mission into me. I ran anyway. Do not repeat my detour.',
+        'My family is why I fight. Your interest fuels what the wilderness tried to kill.',
+        'Transparency is the only freedom I trust now.',
+        'Sorrow once had me reaching for the cup. The Source\'s water is the only drink that quenches.',
+        'Fasting broke the cup for me — uneven at first, faithful over time. Forgiveness and prayer still arm me.',
+        'Every day is a fight. Empty the flesh, or the monster wins by default.',
+    ],
+    3: [
+        'We are givers of light on this run — or we are nothing.',
+        'I do not know why the burden fell on me. I know I must go all the way.',
+        'When you give it back to the Source, you will be made strong in the very place you were ashamed.',
+        'You cannot drink your thirst away. Go back to the Source — I am still learning that road with you.',
+        'The shades you strike teach what I learned in fasting — empty the flesh, and the spirit can stand.',
+        'Share the vision. Fuel it if you can. Learn from my mishaps — that is how you honor me.',
+        'The 400 Series must breathe. Buried wisdom does not recover itself.',
+        'Some nights I fight alone in a foreign land. Your steps beside me are not small.',
+    ],
+};
+
+/** @deprecated use getTruthProximityLine */
+export const TRUTH_PROXIMITY_LINES: Record<string, string> = BASE_POI_LINES;
+
+export function getTruthProximityLine(poiId: string, c: GameCharacter): string | null {
+    if (poiId === 'hut') {
+        const tier = truthDepthTier(c);
+        const pool = HUT_LINES_BY_TIER[tier];
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+    return BASE_POI_LINES[poiId] ?? null;
+}
+
+/** Occasional line while Truth trails the player */
+export function getTruthWanderLine(c: GameCharacter): string {
+    const tier = truthDepthTier(c);
+    const pool = WANDER_LINES[tier];
+    return pool[Math.floor(Math.random() * pool.length)];
+}

@@ -16,6 +16,8 @@ import { Loader2, Shuffle } from 'lucide-react';
 import { CINEMA } from '@/lib/game/cutscenes';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
+import { SceneGuide } from '@/components/game/SceneGuide';
+import { truthAwakeningLine } from '@/lib/game/truthVoice';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -71,10 +73,9 @@ export default function CreatePage() {
             <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-4"
                 style={{ paddingTop: 'calc(0.6rem + env(safe-area-inset-top))', paddingBottom: 'calc(0.6rem + env(safe-area-inset-bottom))' }}>
 
-                {/* slim guide header */}
-                <div className="shrink-0 rounded-2xl border border-[rgba(251,191,36,0.15)] bg-black/35 backdrop-blur-sm px-3.5 py-2.5">
-                    <p className="text-[8px] tracking-[0.35em] uppercase text-aether-gold/70">Chapter II · Forging of Self</p>
-                    <p className="font-ritual text-sm text-white/90 leading-tight mt-0.5">“Forge the vessel you will carry into the world.”</p>
+                <div className="shrink-0">
+                    <p className="text-[8px] tracking-[0.35em] uppercase text-aether-gold/70 text-center mb-2">Chapter II · Forging of Self</p>
+                    <SceneGuide line={truthAwakeningLine('create', character)} accent="#fbbf24" />
                 </div>
 
                 {/* preview + name / presets */}

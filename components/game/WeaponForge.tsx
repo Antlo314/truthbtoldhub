@@ -6,6 +6,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { WEAPON_TIERS, WEAPON_BY_ID, type Weapon } from '@/lib/game/weapons';
 import { Hammer, X, Gem, Flame } from 'lucide-react';
 import { sfx } from '@/lib/game/sfx';
+import { truthForgeLine } from '@/lib/game/truthVoice';
 
 export default function WeaponForge({ onForge, onClose }: { onForge: (id: string) => void; onClose?: () => void }) {
     const character = useGameStore((s) => s.character);
@@ -74,10 +75,7 @@ export default function WeaponForge({ onForge, onClose }: { onForge: (id: string
                     <div className="min-w-0">
                         <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/70">Truth</p>
                         <p className="font-ritual italic text-white/90 text-sm leading-relaxed mt-1">
-                            {currentWeapon 
-                                ? `“You hold the ${currentWeapon.name}. Gather raw ore and shards from the portal worlds to smelt and temper your edge. A stronger blade bites deeper into the shadows.”`
-                                : `“You are unarmed. Cut a branch from the Tree of Life in Eden or select the Wooden Staff to begin your forging. You cannot face the guardians empty-handed.”`
-                            }
+                            {truthForgeLine(character, !!currentWeapon)}
                         </p>
                     </div>
                 </div>

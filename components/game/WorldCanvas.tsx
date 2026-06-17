@@ -17,7 +17,7 @@ import {
 } from '@/lib/game/overworld';
 import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
 import { unlockAudio } from '@/lib/game/sfx';
-import { initTruthCompanion, updateTruthCompanion, TRUTH_PROXIMITY_LINES } from '@/lib/game/truthCompanion';
+import { initTruthCompanion, updateTruthCompanion, getTruthProximityLine, getTruthWanderLine } from '@/lib/game/truthCompanion';
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import type { QuestWaypoint } from '@/lib/game/questWaypoint';
@@ -139,7 +139,9 @@ export default function WorldCanvas({
         let truth = initTruthCompanion(hutPoi.x, hutPoi.y);
         let posTick = 0;
         let proxTick = 0;
+        let wanderTick = 0;
         let lastProxId = '';
+        const TRUTH_FOLLOW_MIN = TILE * 2.2 * 0.6;
 
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
@@ -547,14 +549,26 @@ export default function WorldCanvas({
                     const pwx = (p.x + 0.5) * TILE;
                     const pwy = (p.y + 0.5) * TILE;
                     const d = Math.hypot(pwx - st.px, pwy - st.py);
-                    if (d < TILE * 3.5 && d < proxD && TRUTH_PROXIMITY_LINES[p.id]) {
+                    if (d < TILE * 3.5 && d < proxD && getTruthProximityLine(p.id, charRef.current)) {
                         proxD = d;
                         proxPoi = p;
                     }
                 }
-                if (proxPoi && proxPoi.id !== lastProxId) {
+                if (!proxPoi) {
+                    lastProxId = '';
+                } else if (proxPoi.id !== lastProxId) {
                     lastProxId = proxPoi.id;
-                    cbRef.current.onTruthLine(TRUTH_PROXIMITY_LINES[proxPoi.id]);
+                    const line = getTruthProximityLine(proxPoi.id, charRef.current);
+                    if (line) cbRef.current.onTruthLine(line);
+                }
+            }
+
+            wanderTick += dt;
+            if (wanderTick >= 45 && cbRef.current.onTruthLine) {
+                const trailDist = Math.hypot(st.px - truth.x, st.py - truth.y);
+                if (trailDist >= TRUTH_FOLLOW_MIN) {
+                    wanderTick = 0;
+                    cbRef.current.onTruthLine(getTruthWanderLine(charRef.current));
                 }
             }
 
