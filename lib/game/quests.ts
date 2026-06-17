@@ -4,6 +4,9 @@ import { truthDepth } from '@/lib/game/truthLore';
 import { buildWorldQuests } from '@/lib/game/worldMissions';
 import type { MissionPhase } from '@/lib/game/worldMissions';
 
+/** Set false to hide all mission UI while focusing on open-world exploration. */
+export const QUESTS_ENABLED = false;
+
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
 //  the Hut is a community info hub). Each objective is checked
@@ -147,6 +150,7 @@ export const QUESTS: Quest[] = [
 const EDEN_QUEST_IDS = new Set(QUESTS.filter((q) => q.destId === 'dest_eden').map((q) => q.id));
 
 export function questsAvailable(giver: string, c: GameCharacter): Quest[] {
+    if (!QUESTS_ENABLED) return [];
     return QUESTS.filter((q) => {
         if (q.giver !== giver) return false;
         if (EDEN_SEALED && EDEN_QUEST_IDS.has(q.id)) return false;

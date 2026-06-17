@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Settings } from 'lucide-react';
 import { loadSettings, saveSettings, applyMusicSetting, type GameSettings } from '@/lib/game/settings';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
+import { QUESTS_ENABLED } from '@/lib/game/quests';
 
 interface Props {
     onClose: () => void;
@@ -52,7 +53,9 @@ export default function GameSettingsPanel({ onClose, onChange }: Props) {
                 <Toggle label="Reduced motion" desc="Disable floating animations and Ken Burns effects" on={s.reducedMotion} onChange={(v) => update({ reducedMotion: v })} />
                 <Toggle label="Haptic feedback" desc="Vibration on relic claims and combat hits" on={s.haptics} onChange={(v) => update({ haptics: v })} />
                 <Toggle label="Minimap" desc="Show corner world map" on={s.showMinimap} onChange={(v) => update({ showMinimap: v })} />
-                <Toggle label="Quest trail" desc="Golden waypoint toward active mission" on={s.showQuestTrail} onChange={(v) => update({ showQuestTrail: v })} />
+                {QUESTS_ENABLED && (
+                    <Toggle label="Quest trail" desc="Golden waypoint toward active mission" on={s.showQuestTrail} onChange={(v) => update({ showQuestTrail: v })} />
+                )}
                 <Toggle label="Subtitles" desc="Show captions on cinematic videos" on={s.subtitles} onChange={(v) => update({ subtitles: v })} />
                 <div className="mt-4 pt-3 border-t border-white/10 space-y-3">
                     <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600">Controls</p>

@@ -1,5 +1,5 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
-import { QUESTS, questsAvailable, objectiveMet } from '@/lib/game/quests';
+import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet } from '@/lib/game/quests';
 import { buildOverworld, TILE, type POI } from '@/lib/game/overworld';
 import { isDestinationUnlocked, activeDestinationFocus } from '@/lib/game/progression';
 
@@ -26,6 +26,7 @@ function poiCenter(poi: POI) {
 
 /** First active (unclaimed, unmet) quest target for waypoint UI. */
 export function activeQuestWaypoint(character: GameCharacter): QuestWaypoint | null {
+    if (!QUESTS_ENABLED) return null;
     const focus = activeDestinationFocus(character);
     const ow = buildOverworld();
     const pois = ow.pois;

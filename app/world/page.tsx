@@ -5,9 +5,10 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle, Trophy } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
-import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
+import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
+import HutLedger from '@/components/game/HutLedger';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
 import { pathCombatMods } from '@/lib/game/pathPowers';
 import { hiddenPoiById } from '@/lib/game/hiddenPois';
@@ -100,7 +101,7 @@ export default function WorldPage() {
     const isDesktop = useIsDesktopLayout();
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
-    const [hutTab, setHutTab] = useState<'dispatch' | 'patron' | 'truth'>('dispatch');
+    const [hutTab, setHutTab] = useState<'dispatch' | 'ledger' | 'patron' | 'truth'>('dispatch');
 
     const [toast, setToast] = useState<string | null>(null);
     const [hint, setHint] = useState(true);
@@ -283,7 +284,10 @@ export default function WorldPage() {
                 const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
                 if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             } else {
-                setDialogue({ speaker: poi.name, text: 'The road to their missions is not yet open. Walk the prior age to its end.' });
+                setDialogue({
+                    speaker: poi.name,
+                    text: 'The roads are open. Roam the cavern, enter the portals, gather relics, and return to Truth\'s Hut when you need word from home.',
+                });
                 const echo = truthNpcEcho(poi.id, useGameStore.getState().character);
                 if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             }
@@ -449,7 +453,7 @@ export default function WorldPage() {
     const handleSolve = useCallback((puzzleId: string) => {
         markSolved(puzzleId);
         saveToCloud();
-        showToast('✦ The quest is solved — the relic is yours to claim');
+        showToast('✦ The seal breaks — the relic is yours to claim');
     }, [markSolved, saveToCloud, showToast]);
 
     const handleClaimQuest = useCallback((q: Quest) => {
@@ -512,8 +516,8 @@ export default function WorldPage() {
                 shadeCount={shadeCountForTier(resTier)}
                 paused={worldPaused}
                 resonanceTier={resTier}
-                showQuestTrail={settings.showQuestTrail}
-                questWaypoint={questWaypoint}
+                showQuestTrail={QUESTS_ENABLED && settings.showQuestTrail}
+                questWaypoint={QUESTS_ENABLED ? questWaypoint : null}
                 onInteract={onInteract}
                 onEncounter={onEncounter}
                 onPickup={onPickup}
@@ -532,10 +536,12 @@ export default function WorldPage() {
                     <Link href="/awakening/path" className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" title="Return">
                         <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
                     </Link>
-                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Missions">
-                        <ScrollText className="w-4 h-4" />
-                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Missions</span>
-                    </button>
+                    {QUESTS_ENABLED && (
+                        <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Missions">
+                            <ScrollText className="w-4 h-4" />
+                            <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Missions</span>
+                        </button>
+                    )}
                     <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Codex Journal">
                         <BookOpen className="w-4 h-4" />
                         <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Journal</span>
@@ -579,7 +585,7 @@ export default function WorldPage() {
                         playerX={playerPos.x}
                         playerY={playerPos.y}
                         character={character}
-                        questWaypoint={settings.showQuestTrail ? questWaypoint : null}
+                        questWaypoint={QUESTS_ENABLED && settings.showQuestTrail ? questWaypoint : null}
                         hutAlert={hutAlert}
                     />
                 </div>
@@ -646,36 +652,46 @@ export default function WorldPage() {
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Truth's Hut</p>
                         <h2 className="font-ritual text-2xl md:text-3xl gold-shimmer mb-4">The Living Word</h2>
 
-                        <div className="flex rounded-xl border border-white/10 bg-black/30 p-1 mb-5">
+                        <div className="flex rounded-xl border border-white/10 bg-black/30 p-1 mb-5 gap-0.5">
                             <button
                                 type="button"
                                 onClick={() => setHutTab('dispatch')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
                                     hutTab === 'dispatch' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
                                 }`}
                             >
-                                <Scroll className="w-3.5 h-3.5" />
-                                Dispatch
+                                <Scroll className="w-3 h-3 shrink-0" />
+                                Word
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setHutTab('ledger')}
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
+                                    hutTab === 'ledger' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
+                                }`}
+                            >
+                                <Trophy className="w-3 h-3 shrink-0" />
+                                Ledger
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setHutTab('truth')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
                                     hutTab === 'truth' ? 'bg-orange-500/20 text-orange-400' : 'text-zinc-500 hover:text-white'
                                 }`}
                             >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                Ask Truth
+                                <MessageCircle className="w-3 h-3 shrink-0" />
+                                Ask
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setHutTab('patron')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[8px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
                                     hutTab === 'patron' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
                                 }`}
                             >
-                                <Heart className="w-3.5 h-3.5" />
-                                Patronage
+                                <Heart className="w-3 h-3 shrink-0" />
+                                Patron
                             </button>
                         </div>
 
@@ -686,6 +702,8 @@ export default function WorldPage() {
                                 character={character}
                                 onJournalUnlock={(title) => showToast(`✦ Recorded in Codex Journal · ${title}`)}
                             />
+                        ) : hutTab === 'ledger' ? (
+                            <HutLedger characterName={character.name} />
                         ) : (
                         <>
                         {/* latest bulletin */}
@@ -705,7 +723,7 @@ export default function WorldPage() {
                                     <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60 mb-2">Today · From Truth</p>
                                     <p className="font-ritual text-white/90 leading-relaxed">
                                         Welcome home, {character.name || 'initiate'}. You stand at the center of all things. Each day I will leave word here —
-                                        a truth unearthed, a scroll to study, a mission to walk. If you would know the brother behind the hood, open <strong className="text-orange-400/90">Ask Truth</strong> and pry gently. Return often. The world is waking with you.
+                                        a truth unearthed, a scroll to study. Open the <strong className="text-aether-gold/90">Ledger</strong> to see how many souls walk with you. If you would know the brother behind the hood, open <strong className="text-orange-400/90">Ask Truth</strong> and pry gently. Return often. The world is waking with you.
                                     </p>
                                 </>
                             )}
@@ -762,7 +780,7 @@ export default function WorldPage() {
                         )}
 
                         {/* cipher referral mission from Truth */}
-                        {hutQuests.length > 0 && (
+                        {QUESTS_ENABLED && hutQuests.length > 0 && (
                             <div className="mb-5 space-y-3">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Missions from Truth</p>
                                 {hutQuests.map((q) => {
@@ -1029,7 +1047,7 @@ export default function WorldPage() {
             )}
 
             {/* NPC mission dialog */}
-            {questNpc && (
+            {QUESTS_ENABLED && questNpc && (
                 <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestNpc(null)}>
                     <div className="w-full max-w-lg glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[85dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setQuestNpc(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
@@ -1074,7 +1092,7 @@ export default function WorldPage() {
             )}
 
             {/* quest log */}
-            {questLogOpen && (
+            {QUESTS_ENABLED && questLogOpen && (
                 <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestLogOpen(false)}>
                     <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[82dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setQuestLogOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>

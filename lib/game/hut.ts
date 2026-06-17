@@ -133,6 +133,30 @@ export async function deleteMedia(item: DispatchMedia): Promise<void> {
 }
 
 // ---------- admin check ----------
+export interface LedgerLeader {
+    rank: number;
+    id: string;
+    name: string;
+    soulPower: number;
+    founderNumber: number | null;
+    tier: string | null;
+}
+
+export interface CommunityLedger {
+    totalSouls: number;
+    leaders: LedgerLeader[];
+}
+
+export async function fetchCommunityLedger(): Promise<CommunityLedger> {
+    try {
+        const res = await fetch('/api/community/ledger', { cache: 'no-store' });
+        if (!res.ok) return { totalSouls: 0, leaders: [] };
+        return (await res.json()) as CommunityLedger;
+    } catch {
+        return { totalSouls: 0, leaders: [] };
+    }
+}
+
 export async function getArchitectStatus(): Promise<{ signedIn: boolean; isArchitect: boolean; email: string | null }> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { signedIn: false, isArchitect: false, email: null };
