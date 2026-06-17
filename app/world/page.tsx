@@ -202,9 +202,7 @@ export default function WorldPage() {
             gameMusic.crossfadeBgm('eden_garden', 2200, gameMusic.pickVariant('eden_garden'));
             return;
         }
-        if (!activeDest) {
-            gameMusic.crossfadeBgm('world_cavern', 2000, gameMusic.pickVariant('world_cavern'));
-        }
+        gameMusic.crossfadeBgm('world_cavern', 2000, gameMusic.pickVariant('world_cavern'));
     }, [mounted, worldIntroDone, activeDest, combatDest, encounter]);
 
     useEffect(() => {
@@ -1126,6 +1124,7 @@ export default function WorldPage() {
                     character={character}
                     weaponDamage={wpn.damage}
                     weaponReach={wpn.reach}
+                    exploreBgm={combatDest.poiId === 'dest_eden' ? 'eden_garden' : 'world_cavern'}
                     {...combatStatProps}
                     onVictory={onVictory}
                     onDefeat={onDefeat}
@@ -1140,6 +1139,7 @@ export default function WorldPage() {
                     character={character}
                     weaponDamage={wpn.damage}
                     weaponReach={wpn.reach}
+                    exploreBgm="world_cavern"
                     {...combatStatProps}
                     onVictory={onEncounterVictory}
                     onDefeat={onEncounterDefeat}

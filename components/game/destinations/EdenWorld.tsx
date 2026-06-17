@@ -788,6 +788,7 @@ export default function EdenWorld({
                     character={character}
                     weaponDamage={wpn.damage}
                     weaponReach={wpn.reach}
+                    exploreBgm="eden_garden"
                     {...combatStatProps}
                     bonusHp={combatStatProps.bonusHp + fightBonusRef.current}
                     onVictory={() => {

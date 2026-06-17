@@ -850,6 +850,7 @@ export default function GizaWorld({
                     character={character}
                     weaponDamage={wpn.damage}
                     weaponReach={wpn.reach}
+                    exploreBgm="world_cavern"
                     {...combatStatProps}
                     bonusHp={combatStatProps.bonusHp + fightBonusRef.current}
                     onVictory={() => {

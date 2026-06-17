@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useEffect, useState, useMemo } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { Volume2, VolumeX, Heart } from 'lucide-react';
+import { gameMusic, type BgmId } from '@/lib/game/music';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
 import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
@@ -91,6 +92,8 @@ interface Props {
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
+    /** BGM to restore when combat ends (defeat, victory, or flee). */
+    exploreBgm?: BgmId;
 }
 
 function weakPointMult(character: GameCharacter): number {
@@ -100,7 +103,7 @@ function weakPointMult(character: GameCharacter): number {
     return 2;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, onVictory, onDefeat, onExit }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, onVictory, onDefeat, onExit, exploreBgm = 'world_cavern' }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
     const dmg = Math.round((weaponDamage + bonusDamage) * playerDamageMult);
     const reach = weaponReach + bonusReach + playerReachBonus;
@@ -142,6 +145,19 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     // 0 when ready). The loop runs in a []-effect, so it can't read live state.
     const dodgeShownRef = useRef(0);
     const abilityCdShownRef = useRef<Record<string, number>>({});
+    const musicRestoredRef = useRef(false);
+
+    const restoreExploreBgm = useCallback(() => {
+        if (musicRestoredRef.current) return;
+        musicRestoredRef.current = true;
+        gameMusic.crossfadeBgm(exploreBgm, 1100, gameMusic.pickVariant(exploreBgm));
+    }, [exploreBgm]);
+
+    useEffect(() => {
+        if (outcome === 'won' || outcome === 'lost') restoreExploreBgm();
+    }, [outcome, restoreExploreBgm]);
+
+    useEffect(() => () => restoreExploreBgm(), [restoreExploreBgm]);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -174,6 +190,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const bossHp = Math.round(cfg.bossHp * enemyHpMult);
         const foeDmg = cfg.enemyDmg * enemyDmgMult;
         const bossDmg = cfg.bossDmg * enemyDmgMult;
+        const bossTier = cfg.bossDifficulty ?? (cfg.bossHp <= 95 ? 1 : cfg.bossHp <= 150 ? 2 : 3);
         // only this many foes may be MID-ATTACK at once — the rest circle and
         // wait their turn, so the pack coordinates + surrounds instead of mobbing.
         const maxTokens = cfg.enemyCount >= 5 ? 3 : 2;
@@ -216,7 +233,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const fireProj = (x: number, y: number, ang: number, speed: number, dmg: number, color: string, rr = 3) => {
             st.projectiles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: 3.4, dmg, color, r: rr });
         };
-        const bossMoveCd = (phase: number) => phase === 1 ? rand(2.2, 3.0) : phase === 2 ? rand(1.6, 2.2) : rand(1.0, 1.5);
+        const bossMoveCd = (phase: number) => {
+            const base = phase === 1 ? rand(2.2, 3.0) : phase === 2 ? rand(1.6, 2.2) : rand(1.0, 1.5);
+            return bossTier === 1 ? base * 1.4 : base;
+        };
 
         const nearestFoe = () => {
             let best: Foe | null = null, nd = Infinity;
@@ -360,7 +380,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     if (f.phase >= 2 && f.summons < (f.phase >= 3 ? 2 : 1) && st.foes.filter((x) => !x.boss).length < 2) opts.push('summon');
                     f.move = opts[Math.floor(Math.random() * opts.length)];
                     f.state = 'windup';
-                    f.t = f.move === 'slam' ? 0.7 : 0.6;
+                    f.t = f.move === 'slam' ? (bossTier === 1 ? 0.95 : 0.7) : 0.6;
                     f.hit = false;
                     if (f.move === 'charge') { f.vx = ux; f.vy = uy; }
                 }
@@ -368,7 +388,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 if (f.move === 'charge') { f.vx = ux; f.vy = uy; } // re-aim until launch
                 if (f.t <= 0) {
                     if (f.move === 'slam') {
-                        st.rings.push({ x: st.px, y: st.py, r: 40, t: 0, dur: 0.3, dmg: bossDmg * 1.5, done: false });
+                        const slamR = bossTier === 1 ? 26 : bossTier === 2 ? 34 : 40;
+                        const slamDur = bossTier === 1 ? 0.58 : bossTier === 2 ? 0.42 : 0.3;
+                        const slamMult = bossTier === 1 ? 0.75 : bossTier === 2 ? 1.1 : 1.5;
+                        st.rings.push({ x: st.px, y: st.py, r: slamR, t: 0, dur: slamDur, dmg: bossDmg * slamMult, done: false });
                         sfx.slam(); st.shake = Math.max(st.shake, 5);
                         f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
                     } else if (f.move === 'volley') {
@@ -836,7 +859,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             {/* top bars — full width on desktop, centred frame on mobile */}
             <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] lg:max-w-none px-4 lg:px-8 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center justify-between">
-                    <button onClick={onExit} className="pointer-events-auto text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white">‹ Flee</button>
+                    <button type="button" onClick={() => { restoreExploreBgm(); onExit(); }} className="pointer-events-auto text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white">‹ Flee</button>
                     <div className="flex items-center gap-3 pointer-events-auto">
                         <span className="text-[10px] uppercase tracking-[0.2em] text-white/60">{boss ? 'Guardian' : `Shades · ${foesLeft}`}</span>
                         <button onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'} className="text-white/50 hover:text-white">
@@ -844,9 +867,35 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         </button>
                     </div>
                 </div>
-                {/* player hp */}
-                <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${(hp / maxHp) * 100}%`, background: hp > maxHp * 0.3 ? '#34d399' : '#ef4444' }} />
+                {/* player vitality — bar + hearts */}
+                <div className="rounded-xl bg-black/55 border border-white/10 px-3 py-2 backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[8px] font-black uppercase tracking-[0.22em] text-emerald-300/90">Vitality</span>
+                        <span className="text-[9px] font-mono tabular-nums text-zinc-400">{hp} / {maxHp}</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-black/60 overflow-hidden border border-white/10 mb-1.5">
+                        <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.max(0, (hp / maxHp) * 100)}%`, background: hp > maxHp * 0.35 ? '#34d399' : hp > maxHp * 0.15 ? '#fbbf24' : '#ef4444' }}
+                        />
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-wrap" aria-hidden>
+                        {Array.from({ length: 10 }, (_, i) => {
+                            const threshold = ((i + 1) / 10) * maxHp;
+                            const filled = hp >= threshold - maxHp * 0.05;
+                            const partial = hp > i * (maxHp / 10) && !filled;
+                            return (
+                                <Heart
+                                    key={i}
+                                    className="w-3 h-3 shrink-0"
+                                    style={{
+                                        color: filled ? '#34d399' : partial ? '#fbbf24' : '#3f3f46',
+                                        fill: filled ? '#34d399' : partial ? '#fbbf2488' : 'transparent',
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
                 {boss && weakPointActive && (
                     <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 animate-pulse">Weak point revealed — strike now</p>

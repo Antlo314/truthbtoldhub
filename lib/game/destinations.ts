@@ -54,6 +54,8 @@ export interface CombatConfig {
     victory: string;     // line on victory
     /** No boss phase — shades only (tutorial skirmishes). */
     skirmish?: boolean;
+    /** 1 = tutorial boss (slower, softer AoE). Higher ages use 2–5. */
+    bossDifficulty?: number;
 }
 
 export type BossArt = 'wraith' | 'golem' | 'serpent' | 'sentinel' | 'titan';

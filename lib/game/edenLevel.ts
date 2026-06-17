@@ -257,6 +257,7 @@ export function edenWingId(gx: number, gy: number): string | null {
 export interface EdenCombatDef extends CombatConfig {
     id: string;
     skirmish?: boolean;
+    bossDifficulty?: number;
 }
 
 export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
@@ -310,14 +311,15 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     },
     eden_boss: {
         id: 'eden_boss',
-        challenge: 'The Cherub bars the Tree of Life. Walk the road back to before the lie.',
-        enemyCount: 2,
-        enemyHp: 20,
-        enemyDmg: 9,
+        challenge: 'The Cherub bars the Tree of Life. Dodge the red ring — it telegraphs before it strikes. Walk the road back to before the lie.',
+        enemyCount: 1,
+        enemyHp: 16,
+        enemyDmg: 6,
         bossName: 'The Cherub of the Flaming Sword',
         bossArt: 'sentinel',
-        bossHp: 120,
-        bossDmg: 16,
+        bossHp: 82,
+        bossDmg: 9,
+        bossDifficulty: 1,
         victory: 'The flaming sword lowers. Attune the four rivers — the Tree remembers.',
     },
 };
