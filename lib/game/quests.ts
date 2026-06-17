@@ -13,7 +13,8 @@ export type QuestObjective =
     | { kind: 'solve'; puzzleId: string }
     | { kind: 'collect'; relicId: string }
     | { kind: 'collectCount'; count: number }
-    | { kind: 'materials'; iron?: number; copper?: number; cosmic?: number };
+    | { kind: 'materials'; iron?: number; copper?: number; cosmic?: number }
+    | { kind: 'anyProgress' };
 
 export interface Quest {
     id: string;
@@ -30,6 +31,17 @@ export interface Quest {
 }
 
 export const QUESTS: Quest[] = [
+    {
+        id: 'q_cipher_welcome',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'A Soul Sent You',
+        intro: 'Someone spoke your name into the wind before you arrived. The cipher still hums in the air — walk the world once and claim what they set aside for you.',
+        objectiveText: 'Roam the cavern and discover one hidden place or clear one guardian.',
+        objective: { kind: 'anyProgress' },
+        reward: { skillPoints: 1, text: '+1 skill point; the referral seal awakens.' },
+        completeText: 'The cipher fades — but its intent remains. You were expected. Walk forward.',
+    },
     {
         id: 'q_eden_gate',
         giver: 'npc_gardener',
@@ -167,6 +179,10 @@ export const QUESTS: Quest[] = [
 export function questsAvailable(giver: string, c: GameCharacter): Quest[] {
     return QUESTS.filter((q) => {
         if (q.giver !== giver) return false;
+        if (q.id === 'q_cipher_welcome') {
+            if (typeof window === 'undefined') return false;
+            if (!localStorage.getItem('cipher_referral')) return false;
+        }
         if (!q.requires?.length) return true;
         return q.requires.every((id) => c.questsClaimed.includes(id));
     });
@@ -189,6 +205,9 @@ export function objectiveMet(q: Quest, c: GameCharacter): boolean {
         if (o.copper && m.copper < o.copper) return false;
         if (o.cosmic && m.cosmic < o.cosmic) return false;
         return true;
+    }
+    if (o.kind === 'anyProgress') {
+        return c.cleared.length > 0 || c.discovered.length > 0 || c.inventory.length > 0 || c.solved.length > 0;
     }
     return false;
 }

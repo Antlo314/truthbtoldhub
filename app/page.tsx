@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
@@ -10,11 +11,11 @@ import { countFounders, FOUNDER_CAP } from '@/lib/game/founders';
 import { CINEMA } from '@/lib/game/cutscenes';
 
 function TitleCardInner() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const [authOpen, setAuthOpen] = useState(false);
     const [hasSession, setHasSession] = useState(false);
     const [founders, setFounders] = useState<number | null>(null);
+    const [continueHref, setContinueHref] = useState<string | null>(null);
 
     useEffect(() => {
         const cipher = searchParams.get('cipher');
@@ -24,6 +25,16 @@ function TitleCardInner() {
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
         countFounders().then(setFounders);
+        try {
+            const raw = localStorage.getItem('tbth-journey');
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            const st = parsed?.state;
+            if (!st?.initiated) return;
+            if (st.character?.path) setContinueHref('/world');
+            else if (st.character?.name?.trim()) setContinueHref('/awakening/path');
+            else setContinueHref('/awakening/create');
+        } catch { /* ignore */ }
     }, []);
 
     return (
@@ -41,13 +52,31 @@ function TitleCardInner() {
                 </h1>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 pointer-events-auto">
-                    <button
-                        onClick={() => router.push('/awakening')}
-                        className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
-                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
-                    >
-                        Begin the Awakening →
-                    </button>
+                    {continueHref ? (
+                        <Link
+                            href={continueHref}
+                            className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
+                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
+                        >
+                            Continue the Journey →
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/awakening"
+                            className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
+                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
+                        >
+                            Begin the Awakening →
+                        </Link>
+                    )}
+                    {continueHref && (
+                        <Link
+                            href="/awakening"
+                            className="px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.25em] text-white/70 border border-white/20 hover:border-aether-gold/40 hover:text-white transition-colors"
+                        >
+                            New Soul
+                        </Link>
+                    )}
                 </div>
 
                 {founders !== null && (

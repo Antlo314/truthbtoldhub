@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { truthOffscreen } from '@/lib/game/truth';
 import {
     buildOverworld,
     buildPickups,
@@ -15,6 +16,19 @@ import {
 } from '@/lib/game/overworld';
 import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
 import { unlockAudio } from '@/lib/game/sfx';
+import { initTruthCompanion, updateTruthCompanion, TRUTH_PROXIMITY_LINES } from '@/lib/game/truthCompanion';
+import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
+import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import type { QuestWaypoint } from '@/lib/game/questWaypoint';
+
+const RESONANCE_TINTS = [
+    '',
+    'rgba(34,211,238,0.06)',
+    'rgba(34,211,238,0.10)',
+    'rgba(251,191,36,0.08)',
+    'rgba(251,191,36,0.12)',
+    'rgba(252,211,77,0.18)',
+] as const;
 
 // ============================================================
 //  THE OVERWORLD ENGINE — mobile-first 2D, scrolling camera.
@@ -41,12 +55,29 @@ interface WorldCanvasProps {
     character: GameCharacter;
     shadeCount?: number;
     paused?: boolean;
+    resonanceTier?: number;
+    showQuestTrail?: boolean;
+    questWaypoint?: QuestWaypoint | null;
     onInteract: (poi: NearPOI) => void;
     onEncounter: () => void;
     onPickup: (p: Pickup) => void;
+    onPositionUpdate?: (x: number, y: number) => void;
+    onTruthLine?: (line: string) => void;
 }
 
-export default function WorldCanvas({ character, shadeCount = 2, paused = false, onInteract, onEncounter, onPickup }: WorldCanvasProps) {
+export default function WorldCanvas({
+    character,
+    shadeCount = 2,
+    paused = false,
+    resonanceTier = 0,
+    showQuestTrail = false,
+    questWaypoint = null,
+    onInteract,
+    onEncounter,
+    onPickup,
+    onPositionUpdate,
+    onTruthLine,
+}: WorldCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -62,8 +93,15 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
     const baseRef = useRef<HTMLDivElement>(null);
     const JOY_R = 46;
 
-    const cbRef = useRef({ onInteract, onEncounter, onPickup });
-    cbRef.current = { onInteract, onEncounter, onPickup };
+    const questTrailRef = useRef(showQuestTrail);
+    questTrailRef.current = showQuestTrail;
+    const waypointRef = useRef(questWaypoint);
+    waypointRef.current = questWaypoint;
+    const resTierRef = useRef(resonanceTier);
+    resTierRef.current = resonanceTier;
+
+    const cbRef = useRef({ onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine });
+    cbRef.current = { onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine };
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -75,8 +113,7 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
 
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
-        const truthImg = new Image();
-        truthImg.src = '/assets/truth.png';
+        const truthFrame = truthOffscreen(0, 'down');
 
         // the player's layered avatar — 4 facings × 3 walk frames (idle/L/R
         // step), pre-rendered and rebuilt only when the look changes.
@@ -91,6 +128,12 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
         let avatarKey = JSON.stringify(charRef.current.avatar);
         let walkT = 0;
         let facing: Dir = 'down';
+
+        const hutPoi = ow.pois.find((p) => p.type === 'hut')!;
+        let truth = initTruthCompanion(hutPoi.x, hutPoi.y);
+        let posTick = 0;
+        let proxTick = 0;
+        let lastProxId = '';
 
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
@@ -222,12 +265,9 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
             ctx.drawImage(img, col * 17, row * 17, 16, 16, SX(wx) - s / 2, SY(wy) - s * 0.74, s, s);
             ctx.globalAlpha = 1;
         }
-        // Truth uses his own standalone sprite (not a sheet crop), drawn a touch larger.
-        function truthSprite(wx: number, wy: number, alpha = 1, scale = 1.3) {
-            const s = 16 * Z * scale;
-            ctx.globalAlpha = alpha;
-            ctx.drawImage(truthImg, 0, 0, 16, 16, SX(wx) - s / 2, SY(wy) - s * 0.74, s, s);
-            ctx.globalAlpha = 1;
+        // Truth — full-body sage, same anchor as the player avatar.
+        function truthSprite(wx: number, wy: number, bob = 0, scale = 1.05) {
+            drawAvatar(wx, wy, truthFrame, bob, scale);
         }
         // The player's full-body avatar (16x24), feet anchored near (wx,wy).
         // `bob` lifts the body a pixel on the step beat.
@@ -253,6 +293,23 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
             ctx.beginPath();
             ctx.ellipse(SX(wx), SY(wy) + 3 * Z, 6 * Z, 2.6 * Z, 0, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        function drawQuestTrail(wx: number, wy: number, tx: number, ty: number) {
+            const dx = tx - wx;
+            const dy = ty - wy;
+            const dist = Math.hypot(dx, dy) || 1;
+            const steps = Math.min(14, Math.floor(dist / (TILE * 1.8)));
+            for (let i = 0; i < steps; i++) {
+                const t = (i + 0.5) / steps + Math.sin(st.t / 400 + i) * 0.04;
+                const px = wx + dx * t;
+                const py = wy + dy * t;
+                const alpha = 0.35 + Math.sin(st.t / 300 + i * 0.8) * 0.25;
+                ctx.fillStyle = `rgba(251,191,36,${alpha})`;
+                ctx.beginPath();
+                ctx.arc(SX(px), SY(py) - 8 * Z, 2.2 * Z, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // a floating essence mote (loot) — gem that bobs over a soft glow
@@ -442,6 +499,34 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
                 setNear(found);
             }
 
+            truth = updateTruthCompanion(truth, st.px, st.py, dt, solidAt);
+
+            posTick += dt;
+            if (posTick >= 0.1) {
+                posTick = 0;
+                cbRef.current.onPositionUpdate?.(st.px, st.py);
+            }
+
+            proxTick += dt;
+            if (proxTick >= 3 && cbRef.current.onTruthLine) {
+                proxTick = 0;
+                let proxPoi: POI | null = null;
+                let proxD = Infinity;
+                for (const p of allVisiblePois(ow.pois, charRef.current)) {
+                    const pwx = (p.x + 0.5) * TILE;
+                    const pwy = (p.y + 0.5) * TILE;
+                    const d = Math.hypot(pwx - st.px, pwy - st.py);
+                    if (d < TILE * 3.5 && d < proxD && TRUTH_PROXIMITY_LINES[p.id]) {
+                        proxD = d;
+                        proxPoi = p;
+                    }
+                }
+                if (proxPoi && proxPoi.id !== lastProxId) {
+                    lastProxId = proxPoi.id;
+                    cbRef.current.onTruthLine(TRUTH_PROXIMITY_LINES[proxPoi.id]);
+                }
+            }
+
             // ---- camera ----
             const vw = canvas.clientWidth;
             const vh = canvas.clientHeight;
@@ -486,13 +571,17 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
                 }
             }
 
-            // Truth at the hut door
-            const hut = ow.pois.find((p) => p.type === 'hut')!;
-            const twx = (hut.x + 0.5) * TILE;
-            const twy = (hut.y + 1.7) * TILE + Math.sin(st.t / 600) * 1.2;
-            aura(twx, twy, '#fbbf24', 12);
-            shadow(twx, twy);
-            truthSprite(twx, twy);
+            // quest trail — golden motes toward active mission
+            const wp = waypointRef.current;
+            if (questTrailRef.current && wp) {
+                drawQuestTrail(st.px, st.py, wp.worldX, wp.worldY);
+            }
+
+            // Truth companion — follows the player from the Hut
+            const truthBob = Math.sin(st.t / 600) * 0.6;
+            aura(truth.x, truth.y, '#fbbf24', 12);
+            shadow(truth.x, truth.y);
+            truthSprite(truth.x, truth.y, truthBob);
 
             // shades
             for (const sh of st.shades) {
@@ -510,8 +599,25 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
             aura(st.px, st.py, ap.aura, 11);
             const wphase = Math.floor(walkT * 7) % 2;
             const dirFrames = avatarFrames[facing];
+            const bob = moving && wphase === 0 ? 1 : 0;
+            const pScale = 1.05;
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
-            drawAvatar(st.px, st.py, wframe, moving && wphase === 0 ? 1 : 0);
+            drawAvatar(st.px, st.py, wframe, bob, pScale);
+
+            const eqId = charRef.current.equipped.weapon;
+            const wKind = eqId ? WEAPON_BY_ID[eqId]?.kind : null;
+            if (wKind) {
+                const pw = 16 * Z * pScale;
+                const ph = 24 * Z * pScale;
+                drawWeaponOverlay(ctx, wKind, facing, SX(st.px) - pw / 2, SY(st.py) - ph + (5 - bob) * Z * pScale, Z * pScale);
+            }
+
+            const tier = Math.min(5, Math.max(0, resTierRef.current));
+            const tint = RESONANCE_TINTS[tier];
+            if (tint) {
+                ctx.fillStyle = tint;
+                ctx.fillRect(0, 0, vw, vh);
+            }
 
             raf = requestAnimationFrame(loop);
         }
@@ -523,8 +629,8 @@ export default function WorldCanvas({ character, shadeCount = 2, paused = false,
                 raf = requestAnimationFrame(loop);
             }
         };
+        tryStart(); // Truth is procedurally drawn — no image load needed
         if (charImg.complete) tryStart(); else { charImg.onload = tryStart; charImg.onerror = tryStart; }
-        if (truthImg.complete) tryStart(); else { truthImg.onload = tryStart; truthImg.onerror = tryStart; }
 
         const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());

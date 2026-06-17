@@ -67,8 +67,8 @@ export default function WeaponForge({ onForge, onClose }: { onForge: (id: string
 
                 {/* Guide Dialogue */}
                 <div className="glass-panel rounded-2xl p-4 flex items-start gap-4 mb-7 border border-[rgba(251,191,36,0.2)] bg-amber-950/10">
-                    <div className="relative flex items-center justify-center shrink-0" style={{ width: 64, height: 64 }}>
-                        <div className="absolute rounded-full" style={{ width: 64, height: 64, background: 'radial-gradient(circle, rgba(251,191,36,0.3), transparent 68%)' }} />
+                    <div className="relative flex items-center justify-center shrink-0" style={{ width: 64, height: 96 }}>
+                        <div className="absolute rounded-full" style={{ width: 72, height: 72, top: '10%', background: 'radial-gradient(circle, rgba(251,191,36,0.3), transparent 68%)' }} />
                         <TruthSprite scale={4} style={{ position: 'relative' }} />
                     </div>
                     <div className="min-w-0">

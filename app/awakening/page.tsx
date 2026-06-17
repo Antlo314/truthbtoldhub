@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store/useGameStore';
 import CinematicVideo from '@/components/game/CinematicVideo';
+import TruthSprite from '@/components/game/TruthSprite';
 import { CINEMA } from '@/lib/game/cutscenes';
 
 interface Line {
@@ -134,10 +135,10 @@ export default function AwakeningPage() {
         setReveal(true);
     };
 
-    if (!mounted) return <div className="fixed inset-0 bg-black" />;
+    if (!mounted) return <div className="bg-black" style={{ height: '100dvh' }} />;
 
     return (
-        <div className="fixed inset-0 bg-black select-none">
+        <main className="relative bg-black text-white overflow-hidden flex flex-col select-none" style={{ height: '100dvh' }}>
             <CinematicVideo src={CINEMA.awakening} overlay="medium" showMuteControl />
 
             {!named && (
@@ -149,35 +150,40 @@ export default function AwakeningPage() {
                 </button>
             )}
 
-            <AnimatePresence>
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.8 }}
-                    className="absolute inset-0 z-30"
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                className="relative z-30 flex flex-1 min-h-0 flex-col justify-end px-4 pb-7"
+            >
+                <div
+                    onClick={advance}
+                    className="w-full max-w-2xl mx-auto glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)] bg-black/40 backdrop-blur-md"
                 >
-                    <div className="absolute bottom-0 left-0 right-0 px-4 pb-7 flex justify-center">
-                        <div
-                            onClick={advance}
-                            className="w-full max-w-2xl glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)] bg-black/40 backdrop-blur-md"
-                        >
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
-                                <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
+                            <div className="flex items-start gap-3 sm:gap-4">
+                                <div className="relative shrink-0 truth-float" style={{ width: 48, height: 72 }}>
+                                    <div className="absolute left-1/2 top-1/2 rounded-full pointer-events-none" style={{ width: 56, height: 56, transform: 'translate(-50%,-45%)', background: 'radial-gradient(circle, rgba(251,191,36,0.25) 0%, transparent 68%)' }} />
+                                    <TruthSprite scale={3} style={{ position: 'relative', margin: '0 auto', display: 'block' }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
+                                    </div>
+                                    <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
+                                        {!named ? (
+                                            <Typewriter key={lineIndex} text={current.t} reveal={reveal} onDone={() => setTypingDone(true)} />
+                                        ) : (
+                                            <Typewriter
+                                                key="post"
+                                                text={`${finalName}. Yes — that name will mean something before the end.`}
+                                                reveal={reveal}
+                                                onDone={() => setTypingDone(true)}
+                                            />
+                                        )}
+                                    </p>
+                                </div>
                             </div>
-
-                            <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
-                                {!named ? (
-                                    <Typewriter key={lineIndex} text={current.t} reveal={reveal} onDone={() => setTypingDone(true)} />
-                                ) : (
-                                    <Typewriter
-                                        key="post"
-                                        text={`${finalName}. Yes — that name will mean something before the end.`}
-                                        reveal={reveal}
-                                        onDone={() => setTypingDone(true)}
-                                    />
-                                )}
-                            </p>
 
                             {!named && current?.name && typingDone && (
                                 <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
@@ -212,10 +218,8 @@ export default function AwakeningPage() {
                                     Step into the light →
                                 </button>
                             )}
-                        </div>
-                    </div>
-                </motion.div>
-            </AnimatePresence>
-        </div>
+                </div>
+            </motion.div>
+        </main>
     );
 }

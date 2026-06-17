@@ -10,6 +10,8 @@ interface Props {
     overlay?: 'dark' | 'medium' | 'light' | 'none';
     startMuted?: boolean;
     showMuteControl?: boolean;
+    subtitle?: string;
+    showSubtitles?: boolean;
     onEnded?: () => void;
 }
 
@@ -27,6 +29,8 @@ export default function CinematicVideo({
     overlay = 'medium',
     startMuted = true,
     showMuteControl = true,
+    subtitle,
+    showSubtitles = false,
     onEnded,
 }: Props) {
     const ref = useRef<HTMLVideoElement>(null);
@@ -61,8 +65,11 @@ export default function CinematicVideo({
         play();
     };
 
+    const ambience = 'radial-gradient(ellipse at 50% 20%, #1c1810 0%, #0a0805 50%, #000 100%)';
+
     return (
         <div className={`absolute inset-0 overflow-hidden bg-black ${className}`}>
+            <div className="absolute inset-0" style={{ background: ambience }} />
             {!failed ? (
                 <video
                     ref={ref}
@@ -76,10 +83,13 @@ export default function CinematicVideo({
                     onEnded={onEnded}
                     onError={() => setFailed(true)}
                 />
-            ) : (
-                <div className="absolute inset-0 bg-black" />
-            )}
+            ) : null}
             {overlay !== 'none' && <div className="absolute inset-0 pointer-events-none" style={{ background: OVERLAY[overlay] }} />}
+            {showSubtitles && subtitle && (
+                <div className="absolute bottom-0 inset-x-0 p-6 pb-10 flex justify-center pointer-events-none z-10">
+                    <p className="font-ritual text-base md:text-xl text-white/90 leading-relaxed max-w-xl text-center drop-shadow-lg">{subtitle}</p>
+                </div>
+            )}
             {showMuteControl && !failed && (
                 <>
                     <button

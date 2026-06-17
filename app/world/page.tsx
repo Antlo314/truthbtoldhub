@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal } from 'lucide-react';
 import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
 import { pathCombatMods } from '@/lib/game/pathPowers';
@@ -25,8 +25,29 @@ import WeaponForge from '@/components/game/WeaponForge';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import { activeQuestWaypoint } from '@/lib/game/questWaypoint';
+import { loadSettings, type GameSettings } from '@/lib/game/settings';
+import { hapticTap } from '@/lib/game/haptics';
+import Minimap from '@/components/game/Minimap';
+import JournalPanel from '@/components/game/JournalPanel';
+import GameSettingsPanel from '@/components/game/GameSettingsPanel';
+import TutorialOverlay from '@/components/game/TutorialOverlay';
+import SourceEpilogue from '@/components/game/SourceEpilogue';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
+
+const TUTORIAL_KEY = 'tbth-tutorials-seen';
+type TutorialId = 'roam' | 'interact' | 'satchel' | 'forge' | 'combat';
+
+function tutorialsSeen(): string[] {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(localStorage.getItem(TUTORIAL_KEY) || '[]'); } catch { return []; }
+}
+
+function markTutorialSeen(id: TutorialId) {
+    const seen = tutorialsSeen();
+    if (!seen.includes(id)) localStorage.setItem(TUTORIAL_KEY, JSON.stringify([...seen, id]));
+}
 
 const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 
@@ -75,6 +96,13 @@ export default function WorldPage() {
     const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
     const [questLogOpen, setQuestLogOpen] = useState(false);
     const [sourceOpen, setSourceOpen] = useState(false);
+    const [journalOpen, setJournalOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [epilogueOpen, setEpilogueOpen] = useState(false);
+    const [settings, setSettings] = useState<GameSettings>(loadSettings);
+    const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
+    const [hutAlert, setHutAlert] = useState(false);
+    const [tutorial, setTutorial] = useState<TutorialId | null>(null);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const finishWorldIntro = useCallback(() => {
@@ -91,9 +119,16 @@ export default function WorldPage() {
 
     useEffect(() => {
         setMounted(true);
+        setSettings(loadSettings());
         setWorldIntroDone(sessionStorage.getItem('tbth-cutscene-world') === '1');
         loadFromCloud();
-        fetchBulletins(8).then(setBulletins);
+        fetchBulletins(8).then((bs) => {
+            setBulletins(bs);
+            if (bs.length > 0) {
+                const lastSeen = localStorage.getItem('tbth-hut-seen');
+                if (!lastSeen || lastSeen !== bs[0].id) setHutAlert(true);
+            }
+        });
         fetchMedia(16).then(setMedia);
         getArchitectStatus().then((a) => setIsArchitect(a.isArchitect));
         loadFounder().then((tier) => {
@@ -107,6 +142,31 @@ export default function WorldPage() {
         return () => clearTimeout(t);
     }, [loadFromCloud]);
 
+    useEffect(() => {
+        if (!worldIntroDone) return;
+        if (!tutorialsSeen().includes('roam')) setTutorial('roam');
+    }, [worldIntroDone]);
+
+    useEffect(() => {
+        if (hutOpen && bulletins[0]) {
+            localStorage.setItem('tbth-hut-seen', bulletins[0].id);
+            setHutAlert(false);
+        }
+    }, [hutOpen, bulletins]);
+
+    const dismissTutorial = useCallback((id: TutorialId) => {
+        markTutorialSeen(id);
+        setTutorial(null);
+    }, []);
+
+    const onPositionUpdate = useCallback((x: number, y: number) => {
+        setPlayerPos({ x, y });
+    }, []);
+
+    const onTruthLine = useCallback((line: string) => {
+        setDialogue({ speaker: 'Truth', text: line, color: '#f97316' });
+    }, []);
+
     const showToast = useCallback((msg: string) => {
         setToast(msg);
         if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -115,6 +175,8 @@ export default function WorldPage() {
 
     const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
+        hapticTap('light');
+        if (!tutorialsSeen().includes('interact')) setTutorial('interact');
         const dest = DEST_BY_POI[poi.id];
         if (dest) {
             const ch = useGameStore.getState().character;
@@ -161,6 +223,8 @@ export default function WorldPage() {
     // unarmed, it's only a cold warning to go forge a weapon.
     const onEncounter = useCallback(() => {
         setHint(false);
+        hapticTap('medium');
+        if (!tutorialsSeen().includes('combat')) setTutorial('combat');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
             showToast('A shade drifts through you — cold, and searching. Arm yourself at Truth’s Hut.');
@@ -175,6 +239,7 @@ export default function WorldPage() {
         markDiscovered(pk.id);
         saveToCloud();
         sfx.pickup();
+        hapticTap('light');
         const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
         showToast(`✦ +${pk.qty} ${label}`);
     }, [addMaterial, markDiscovered, saveToCloud, showToast]);
@@ -209,6 +274,7 @@ export default function WorldPage() {
             if (garment) msg += ` · ${garment.name} found`;
         }
         await saveToCloud();
+        hapticTap('heavy');
         showToast(msg);
     }, [claimRelic, findClothing, saveToCloud, showToast, activeDest]);
 
@@ -216,6 +282,8 @@ export default function WorldPage() {
         equipWeapon(id);
         saveToCloud();
         setForgeOpen(false);
+        hapticTap('medium');
+        if (!tutorialsSeen().includes('forge')) setTutorial('forge');
         showToast(`✦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged — you are armed`);
     }, [equipWeapon, saveToCloud, showToast]);
 
@@ -251,6 +319,7 @@ export default function WorldPage() {
         claimQuest(q.id, q.reward.skillPoints);
         if (q.grantsScroll) grantScroll(q.grantsScroll);
         saveToCloud();
+        hapticTap('medium');
         const scrollName = q.grantsScroll ? SCROLL_BY_ID[q.grantsScroll]?.name : null;
         showToast(`✦ Mission complete · ${q.reward.text}${scrollName ? ` · ${scrollName}` : ''}`);
     }, [claimQuest, grantScroll, saveToCloud, showToast]);
@@ -291,10 +360,13 @@ export default function WorldPage() {
         weakPointDamageMult: pathMods.weakPointDamageMult,
     };
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
+    const questWaypoint = activeQuestWaypoint(character);
+    const hutQuests = questsAvailable('hut', character);
 
     // freeze the roaming world whenever any overlay/scene is on top of it
     const worldPaused = !worldIntroDone || !!combatIntroDest || hutOpen || satchelOpen || !!activeDest ||
-        !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue;
+        !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue ||
+        journalOpen || settingsOpen || epilogueOpen;
 
     return (
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
@@ -306,7 +378,19 @@ export default function WorldPage() {
                 <CutscenePlayer scene={combatPrelude} onComplete={finishCombatIntro} onSkip={finishCombatIntro} />
             )}
 
-            <WorldCanvas character={character} shadeCount={shadeCountForTier(resTier)} paused={worldPaused} onInteract={onInteract} onEncounter={onEncounter} onPickup={onPickup} />
+            <WorldCanvas
+                character={character}
+                shadeCount={shadeCountForTier(resTier)}
+                paused={worldPaused}
+                resonanceTier={resTier}
+                showQuestTrail={settings.showQuestTrail}
+                questWaypoint={questWaypoint}
+                onInteract={onInteract}
+                onEncounter={onEncounter}
+                onPickup={onPickup}
+                onPositionUpdate={onPositionUpdate}
+                onTruthLine={onTruthLine}
+            />
 
             {/* readability scrims so the HUD + controls read against bright grass */}
             <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
@@ -321,6 +405,12 @@ export default function WorldPage() {
                     <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Missions">
                         <ScrollText className="w-4 h-4" />
                     </button>
+                    <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Codex Journal">
+                        <BookOpen className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setSettingsOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Settings">
+                        <SlidersHorizontal className="w-4 h-4" />
+                    </button>
                 </div>
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0">
                     <FounderBadge founderNumber={founderNumber} size={18} />
@@ -329,11 +419,30 @@ export default function WorldPage() {
                         <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
                     )}
                 </div>
-                <button onClick={() => setSatchelOpen(true)} className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40">
+                <button
+                    onClick={() => { setSatchelOpen(true); if (!tutorialsSeen().includes('satchel')) setTutorial('satchel'); }}
+                    className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40"
+                >
                     <Gem className="w-3.5 h-3.5 text-aether-gold" />
                     <span className="text-xs font-black text-aether-gold">{character.inventory.length}</span>
                 </button>
             </div>
+
+            {settings.showMinimap && worldIntroDone && !worldPaused && (
+                <div className="absolute right-4 z-10 pointer-events-none" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
+                    <Minimap
+                        playerX={playerPos.x}
+                        playerY={playerPos.y}
+                        character={character}
+                        questWaypoint={settings.showQuestTrail ? questWaypoint : null}
+                        hutAlert={hutAlert}
+                    />
+                </div>
+            )}
+
+            {tutorial && worldIntroDone && !worldPaused && (
+                <TutorialOverlay id={tutorial} onDismiss={() => dismissTutorial(tutorial)} />
+            )}
 
             {hint && (
                 <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none">
@@ -462,6 +571,41 @@ export default function WorldPage() {
                                 <p className="text-[10px] text-zinc-600 text-center mt-4 font-mono uppercase tracking-widest">No dispatches yet — return soon.</p>
                             </>
                         )}
+
+                        {/* cipher referral mission from Truth */}
+                        {hutQuests.length > 0 && (
+                            <div className="mb-5 space-y-3">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">A word for you</p>
+                                {hutQuests.map((q) => {
+                                    const claimed = character.questsClaimed.includes(q.id);
+                                    const met = objectiveMet(q, character);
+                                    return (
+                                        <div key={q.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                            <h3 className="font-ritual text-base text-white mb-1">{q.title}</h3>
+                                            <p className="text-sm text-white/80 italic leading-relaxed mb-3">"{claimed || met ? q.completeText : q.intro}"</p>
+                                            {claimed ? (
+                                                <span className="text-[10px] text-aether-gold flex items-center gap-1"><Check className="w-3 h-3" /> Completed</span>
+                                            ) : met ? (
+                                                <button onClick={() => handleClaimQuest(q)} className="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                    Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
+                                                </button>
+                                            ) : (
+                                                <p className="text-[10px] text-zinc-500">{q.objectiveText} ({objectiveProgress(q, character)})</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div className="flex gap-2 mb-4">
+                            <Link href="/codex" className="flex-1 text-center py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10 text-zinc-400 hover:border-aether-gold/30 hover:text-aether-gold transition-colors">
+                                Codex ↗
+                            </Link>
+                            <Link href="/cinema" className="flex-1 text-center py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10 text-zinc-400 hover:border-aether-gold/30 hover:text-aether-gold transition-colors">
+                                Cinema ↗
+                            </Link>
+                        </div>
 
                         {/* first weapon */}
                         {!character.equipped.weapon ? (
@@ -786,8 +930,30 @@ export default function WorldPage() {
             {sourceOpen && (
                 <SourceScene
                     character={character}
-                    onComplete={() => { returnToSource(); saveToCloud(); setSourceOpen(false); showToast('✦ You have returned to the Source'); }}
+                    onComplete={() => {
+                        returnToSource();
+                        saveToCloud();
+                        setSourceOpen(false);
+                        setEpilogueOpen(true);
+                        hapticTap('heavy');
+                    }}
                     onExit={() => setSourceOpen(false)}
+                />
+            )}
+
+            {journalOpen && (
+                <JournalPanel character={character} initiated={!!character.name} onClose={() => setJournalOpen(false)} />
+            )}
+
+            {settingsOpen && (
+                <GameSettingsPanel onClose={() => setSettingsOpen(false)} onChange={setSettings} />
+            )}
+
+            {epilogueOpen && (
+                <SourceEpilogue
+                    character={character}
+                    founderNumber={founderNumber}
+                    onClose={() => { setEpilogueOpen(false); showToast('✦ You have returned to the Source'); }}
                 />
             )}
         </div>

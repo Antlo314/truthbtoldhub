@@ -41,9 +41,59 @@ export const HIDDEN_POIS: HiddenPOI[] = [
     },
 ];
 
+export const PATH_HIDDEN_POIS: HiddenPOI[] = [
+    {
+        id: 'sentinel_wall',
+        type: 'npc',
+        x: 72,
+        y: 38,
+        name: 'The Ancient Wall',
+        discoverId: 'sentinel_wall',
+        detail: 'Stone older than the forest. The Sentinel path remembers how to hold a line.',
+        npcTile: { col: 1, row: 6 },
+        lore: 'You stand where others broke. The wall did not move — and neither will you, when the dark comes.',
+        rewardSkillPoints: 1,
+    },
+    {
+        id: 'scribe_archive',
+        type: 'npc',
+        x: 18,
+        y: 68,
+        name: 'Buried Archive',
+        discoverId: 'scribe_archive',
+        detail: 'Pages sealed in clay. The Scribe path reads what empires tried to bury.',
+        npcTile: { col: 0, row: 6 },
+        lore: 'Every empire writes its own epitaph. The archive keeps the rough drafts.',
+        rewardSkillPoints: 1,
+    },
+    {
+        id: 'mystic_stone',
+        type: 'npc',
+        x: 48,
+        y: 18,
+        name: 'Meditation Stone',
+        discoverId: 'mystic_stone',
+        detail: 'Warm to the touch. The Mystic path channels what the stone still holds.',
+        npcTile: { col: 1, row: 9 },
+        lore: 'Sit long enough and the stone stops being stone. It becomes a door.',
+        rewardSkillPoints: 1,
+    },
+];
+
+function pathHiddenFor(c: GameCharacter): HiddenPOI[] {
+    if (!c.path || c.path === 'seer') return [];
+    const map: Record<Exclude<GameCharacter['path'], null | 'seer'>, string> = {
+        sentinel: 'sentinel_wall',
+        scribe: 'scribe_archive',
+        mystic: 'mystic_stone',
+    };
+    const id = map[c.path];
+    return PATH_HIDDEN_POIS.filter((p) => p.discoverId === id);
+}
+
 export function visibleHiddenPois(c: GameCharacter): HiddenPOI[] {
-    if (!canSeeHiddenPlaces(c)) return [];
-    return HIDDEN_POIS;
+    const seer = canSeeHiddenPlaces(c) ? HIDDEN_POIS : [];
+    return [...seer, ...pathHiddenFor(c)];
 }
 
 export function allVisiblePois(base: POI[], c: GameCharacter): POI[] {

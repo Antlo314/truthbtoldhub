@@ -1,15 +1,15 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import type { CSSProperties } from 'react';
+import { paintGrid } from '@/components/game/AvatarCanvas';
+import { buildTruthPixels } from '@/lib/game/truth';
+import { AV_W, AV_H } from '@/lib/game/avatar';
 
-// Truth's bespoke 16x16 pixel sprite — a hooded mystic with a young
-// visage and a goatee, drawn to sit naturally beside the Kenney tiles.
-// Lives at public/assets/truth.png (the whole sprite, not a sheet crop).
-
-export const TRUTH_SPRITE_SRC = '/assets/truth.png';
+// Truth — full-body hooded sage (16×24), same scale system as the player.
 
 export default function TruthSprite({
-    scale = 12,
+    scale = 8,
     className,
     style,
 }: {
@@ -17,18 +17,30 @@ export default function TruthSprite({
     className?: string;
     style?: CSSProperties;
 }) {
-    const size = 16 * scale;
+    const ref = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = ref.current;
+        if (!canvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = AV_W * scale * dpr;
+        canvas.height = AV_H * scale * dpr;
+        const ctx = canvas.getContext('2d')!;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, AV_W * scale, AV_H * scale);
+        paintGrid(ctx, buildTruthPixels(), scale);
+    }, [scale]);
+
     return (
-        <div
+        <canvas
+            ref={ref}
             className={className}
             role="img"
             aria-label="Truth"
             style={{
-                width: size,
-                height: size,
-                backgroundImage: `url(${TRUTH_SPRITE_SRC})`,
-                backgroundSize: '100% 100%',
-                backgroundRepeat: 'no-repeat',
+                width: AV_W * scale,
+                height: AV_H * scale,
                 imageRendering: 'pixelated',
                 ...style,
             }}

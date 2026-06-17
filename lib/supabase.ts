@@ -34,10 +34,11 @@ if (typeof window !== 'undefined') {
     // --- DEMO MODE OVERRIDES ---
     const callbacks = new Set<(event: any, session: any) => void>();
     
+    const isDemo = process.env.NEXT_PUBLIC_TBTH_DEMO === 'true';
+
     // Override getSession
     const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
     supabase.auth.getSession = async () => {
-        const isDemo = true;
         if (isDemo) {
             return {
                 data: {
@@ -89,6 +90,7 @@ if (typeof window !== 'undefined') {
         return {
             data: {
                 subscription: {
+                    ...subscription,
                     unsubscribe: () => {
                         callbacks.delete(callback);
                         subscription.unsubscribe();
@@ -100,13 +102,13 @@ if (typeof window !== 'undefined') {
 
     // Helper to trigger UI auth state changes manually in demo mode
     (window as any).__triggerDemoAuth = (session: any) => {
-        for (const cb of callbacks) {
+        callbacks.forEach((cb) => {
             try {
                 cb(session ? 'SIGNED_IN' : 'SIGNED_OUT', session);
             } catch (e) {
                 console.error(e);
             }
-        }
+        });
     };
 
     // Override table queries
@@ -125,7 +127,6 @@ if (typeof window !== 'undefined') {
 
     const originalFrom = supabase.from.bind(supabase);
     supabase.from = (table: string) => {
-        const isDemo = true;
         if (isDemo) {
             const chain = {
                 select: () => chain,

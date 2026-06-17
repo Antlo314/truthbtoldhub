@@ -6,6 +6,8 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
 import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
+import { WEAPON_BY_ID } from '@/lib/game/weapons';
 
 // ============================================================
 //  COMBAT — real-time, mobile-first. Move with the joystick,
@@ -645,7 +647,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 ctx.drawImage(dirFrames[0], st.px - 8 - st.dashx * 11, st.py - 19 - st.dashy * 11, 16, 24);
             }
             ctx.globalAlpha = dodging ? 0.5 : 1;
-            ctx.drawImage(wframe, st.px - 8, st.py - 19 - (frameMoving && wphase === 0 ? 1 : 0), 16, 24);
+            const pBob = frameMoving && wphase === 0 ? 1 : 0;
+            const pOx = st.px - 8;
+            const pOy = st.py - 19 - pBob;
+            ctx.drawImage(wframe, pOx, pOy, 16, 24);
+            const wKind = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff']?.kind || 'staff';
+            drawWeaponOverlay(ctx, wKind, facing, pOx, pOy, 1);
             ctx.globalAlpha = 1;
 
             ctx.restore();

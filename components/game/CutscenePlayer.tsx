@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CutsceneDef } from '@/lib/game/cutscenes';
 import CinematicVideo from '@/components/game/CinematicVideo';
+import { loadSettings } from '@/lib/game/settings';
 
 // ============================================================
 //  CUTSCENE PLAYER — video only (no still slideshow).
@@ -57,10 +58,19 @@ export default function CutscenePlayer({ scene, onComplete, onSkip, className = 
             onClick={skip}
             role="presentation"
         >
-            <CinematicVideo src={scene.video} loop={false} overlay="light" showMuteControl onEnded={finish} className="z-0" />
+            <CinematicVideo
+                src={scene.video}
+                loop={false}
+                overlay="light"
+                showMuteControl
+                onEnded={finish}
+                className="z-0"
+                subtitle={scene.line}
+                showSubtitles={loadSettings().subtitles}
+            />
 
             <div className="absolute bottom-0 inset-x-0 p-6 pb-10 flex flex-col items-center text-center pointer-events-none z-10">
-                {scene.line && (
+                {!loadSettings().subtitles && scene.line && (
                     <p className="font-ritual text-lg md:text-2xl text-white/90 leading-relaxed max-w-xl">{scene.line}</p>
                 )}
                 <p className="mt-4 text-[9px] uppercase tracking-[0.35em] text-white/30">tap to skip · unmute top-left</p>
