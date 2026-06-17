@@ -54,6 +54,34 @@ export default function GameSettingsPanel({ onClose, onChange }: Props) {
                 <Toggle label="Minimap" desc="Show corner world map" on={s.showMinimap} onChange={(v) => update({ showMinimap: v })} />
                 <Toggle label="Quest trail" desc="Golden waypoint toward active mission" on={s.showQuestTrail} onChange={(v) => update({ showQuestTrail: v })} />
                 <Toggle label="Subtitles" desc="Show captions on cinematic videos" on={s.subtitles} onChange={(v) => update({ subtitles: v })} />
+                <div className="mt-4 pt-3 border-t border-white/10 space-y-3">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600">Controls</p>
+                    <label className="block">
+                        <span className="text-sm text-white">Control scheme</span>
+                        <p className="text-[10px] text-zinc-500 mt-0.5 mb-1.5">Auto detects phone vs PC. Touch keeps on-screen joystick.</p>
+                        <select
+                            value={s.controlScheme}
+                            onChange={(e) => update({ controlScheme: e.target.value as GameSettings['controlScheme'] })}
+                            className="w-full rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm text-white"
+                        >
+                            <option value="auto">Auto (recommended)</option>
+                            <option value="touch">Touch — joystick + buttons</option>
+                            <option value="keyboard">Keyboard — WASD + keys</option>
+                        </select>
+                    </label>
+                    <label className="block">
+                        <span className="text-sm text-white">Touch control size</span>
+                        <p className="text-[10px] text-zinc-500 mt-0.5 mb-1.5">Larger joystick and action buttons on mobile.</p>
+                        <select
+                            value={s.controlSize}
+                            onChange={(e) => update({ controlSize: e.target.value as GameSettings['controlSize'] })}
+                            className="w-full rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm text-white"
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="large">Large (easier thumbs)</option>
+                        </select>
+                    </label>
+                </div>
                 <div className="mt-5 pt-4 border-t border-white/10">
                     <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600 mb-2">Journey</p>
                     <RestartJourneyButton variant="danger" label="Start a New Soul" onRestart={onClose} />

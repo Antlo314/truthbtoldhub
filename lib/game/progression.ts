@@ -4,7 +4,10 @@ import { DEST_BY_POI } from '@/lib/game/destinations';
 // ============================================================
 //  DESTINATION PROGRESSION — linear unlock chain.
 //  Eden first, fully complete, then Giza → Fair → Kolbrin → Emerald.
+//  Eden is temporarily sealed while quests are built out.
 // ============================================================
+
+export const EDEN_SEALED = true;
 
 export const DESTINATION_ORDER = [
     'dest_eden',
@@ -24,12 +27,27 @@ export const NPC_DESTINATION: Record<string, DestinationId> = {
     npc_eli: 'dest_kolbrin',
 };
 
+export function isEdenSealed(): boolean {
+    return EDEN_SEALED;
+}
+
+export function edenSealedMessage(): string {
+    return 'The garden portal is veiled for now. I am still weaving the missions of Eden — roam the chamber, speak with the souls here, and return to Truth\'s Hut. When the hour comes, the flaming sword will lower.';
+}
+
+/** Playable chain — skips Eden while sealed. */
+export function playableDestinationOrder(): DestinationId[] {
+    if (!EDEN_SEALED) return [...DESTINATION_ORDER];
+    return DESTINATION_ORDER.filter((id) => id !== 'dest_eden');
+}
+
 export function destinationIndex(poiId: string): number {
-    return DESTINATION_ORDER.indexOf(poiId as DestinationId);
+    return playableDestinationOrder().indexOf(poiId as DestinationId);
 }
 
 export function isDestinationPOI(poiId: string): boolean {
-    return destinationIndex(poiId) >= 0;
+    if (poiId === 'dest_eden' && EDEN_SEALED) return true;
+    return DESTINATION_ORDER.indexOf(poiId as DestinationId) >= 0;
 }
 
 /** Guardian beaten + trial passed + puzzle solved + relic claimed. */
@@ -46,16 +64,22 @@ export function isDestinationComplete(poiId: string, c: GameCharacter): boolean 
 }
 
 export function isDestinationUnlocked(poiId: string, c: GameCharacter): boolean {
-    const idx = destinationIndex(poiId);
+    if (poiId === 'dest_eden' && EDEN_SEALED) return false;
+
+    const order = playableDestinationOrder();
+    const idx = order.indexOf(poiId as DestinationId);
     if (idx < 0) return true;
     if (idx === 0) return true;
-    return isDestinationComplete(DESTINATION_ORDER[idx - 1], c);
+    return isDestinationComplete(order[idx - 1], c);
 }
 
 export function unlockBlockMessage(poiId: string): string {
-    const idx = destinationIndex(poiId);
+    if (poiId === 'dest_eden' && EDEN_SEALED) return edenSealedMessage();
+
+    const order = playableDestinationOrder();
+    const idx = order.indexOf(poiId as DestinationId);
     if (idx <= 0) return '';
-    const prevId = DESTINATION_ORDER[idx - 1];
+    const prevId = order[idx - 1];
     const prev = DEST_BY_POI[prevId];
     const next = DEST_BY_POI[poiId];
     return `The way to ${next?.name || 'this place'} is sealed. Walk ${prev?.name || 'the prior road'} to its end — guardian, trial, riddle, and relic — and the veil will part.`;
@@ -63,7 +87,7 @@ export function unlockBlockMessage(poiId: string): string {
 
 /** First destination the soul should focus on (incomplete + unlocked). */
 export function activeDestinationFocus(c: GameCharacter): DestinationId | null {
-    for (const id of DESTINATION_ORDER) {
+    for (const id of playableDestinationOrder()) {
         if (!isDestinationUnlocked(id, c)) return null;
         if (!isDestinationComplete(id, c)) return id;
     }
@@ -71,8 +95,12 @@ export function activeDestinationFocus(c: GameCharacter): DestinationId | null {
 }
 
 export function isNpcQuestActive(npcId: string, c: GameCharacter): boolean {
+    if (npcId === 'npc_gardener' && EDEN_SEALED) return false;
     if (npcId === 'npc_mara') {
-        return c.inventory.length > 0 || isDestinationComplete('dest_eden', c);
+        return c.inventory.length > 0
+            || c.cleared.length > 0
+            || c.discovered.length > 0
+            || c.solved.length > 0;
     }
     const dest = NPC_DESTINATION[npcId];
     if (!dest) return true;

@@ -15,6 +15,11 @@ import { combatRelicBonuses } from '@/lib/game/resonance';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus } from '@/lib/game/clothing';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import DestinationControlPad from '@/components/game/controls/DestinationControlPad';
+import { useInputProfile } from '@/components/game/controls/useInputProfile';
+import { useJoystick } from '@/components/game/controls/useJoystick';
+import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
+import { loadSettings } from '@/lib/game/settings';
 import {
     GIZA_MAP_W, GIZA_MAP_H, GIZA_TILE, GIZA_TILES, GIZA_SPAWN, GIZA_RELIC, GIZA_SLAB,
     GIZA_VIEW_TILES, GIZA_CRYSTALS, GIZA_ILLUSION_WALL, GIZA_TEMPTATION, GIZA_TEMPTATION_DROP,
@@ -87,13 +92,12 @@ export default function GizaWorld({
     const [hintTier, setHintTier] = useState(0);
     const [showTrail, setShowTrail] = useState(false);
 
-    const joyRef = useRef({ x: 0, y: 0 });
+    const profile = useInputProfile();
+    const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const joy = useJoystick(joyR);
+    const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
     const attackRef = useRef(false);
-    const [knob, setKnob] = useState({ x: 0, y: 0 });
-    const joyActive = useRef(false);
-    const baseRef = useRef<HTMLDivElement>(null);
-    const JOY_R = 46;
     const fightTriggeredRef = useRef<string | null>(null);
     const fightBonusRef = useRef(0);
     const touchedRef = useRef(new Set<string>());
@@ -928,41 +932,16 @@ export default function GizaWorld({
                 </div>
             )}
 
-            <div className="w-full max-w-[520px] h-28 mt-2 relative pointer-events-none flex items-center justify-between">
-                <div
-                    ref={baseRef}
-                    onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) joyMove(e.touches[0].clientX, e.touches[0].clientY); }}
-                    onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                    onMouseUp={joyEnd}
-                    onMouseLeave={joyEnd}
-                    className="rounded-full border border-white/10 bg-black/40 pointer-events-auto"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, touchAction: 'none' }}
-                >
-                    <div className="absolute rounded-full" style={{ width: '40%', height: '40%', left: '30%', top: '30%', background: 'rgba(34, 211, 238, 0.6)', border: '1px solid rgba(34, 211, 238, 0.85)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
-                </div>
-                <button
-                    onClick={handleAction}
-                    onTouchStart={(e) => { e.preventDefault(); handleAction(); }}
-                    disabled={!nearLore && nearCrystal === null && !character.equipped.weapon}
-                    className="w-16 h-16 rounded-full text-[9px] font-black uppercase tracking-widest text-black bg-cyan-400 border border-cyan-500 hover:bg-cyan-300 pointer-events-auto flex items-center justify-center active:scale-95 transition-transform disabled:opacity-35"
-                    style={{ touchAction: 'none' }}
-                >
-                    {nearLore ? 'Read' : nearCrystal !== null && level.chamberOpen ? 'Strike' : 'Strike'}
-                </button>
-            </div>
-            <p className="text-[8px] uppercase tracking-widest text-zinc-500 text-center px-2 -mt-1">◆ read stones · strike crystals Low→Mid→High · mine iron · crumbling east wall hides the Orion vault</p>
+            <DestinationControlPad
+                profile={profile}
+                joy={joy}
+                joyRadius={joyR}
+                accent="rgba(34, 211, 238, 0.65)"
+                actionLabel={nearLore ? 'Read' : nearCrystal !== null && level.chamberOpen ? 'Strike' : 'Strike'}
+                actionDisabled={!nearLore && nearCrystal === null && !character.equipped.weapon}
+                onAction={handleAction}
+                hint="◆ read stones · strike crystals Low→Mid→High · mine iron · crumbling east wall hides the Orion vault"
+            />
         </div>
     );
-
-    function joyMove(cx: number, cy: number) {
-        const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2), dy = cy - (rect.top + rect.height / 2);
-        const d = Math.hypot(dx, dy) || 1, m = Math.min(d, JOY_R), a = Math.atan2(dy, dx);
-        setKnob({ x: Math.cos(a) * m, y: Math.sin(a) * m });
-        joyRef.current = { x: Math.cos(a) * m / JOY_R, y: Math.sin(a) * m / JOY_R };
-    }
-    function joyEnd() { joyActive.current = false; setKnob({ x: 0, y: 0 }); joyRef.current = { x: 0, y: 0 }; }
 }

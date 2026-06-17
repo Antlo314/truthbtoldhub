@@ -46,11 +46,11 @@ export function updateTruthCompanion(
 /** Contextual Truth lines when near POIs */
 export const TRUTH_PROXIMITY_LINES: Record<string, string> = {
     hut: 'The Hut is where the living word meets the road. Return when the world stirs.',
-    dest_eden: 'Eden remembers before the serpent spoke. Read the stones.',
+    dest_eden: 'Eden sleeps behind a veil for now. Return to the Hut — the garden\'s hour is not yet.',
     dest_fair: 'Twelve hundred palaces of white — raised in a season, torn down the next.',
     dest_giza: 'The stone still hums. Listen before you strike.',
     dest_kolbrin: 'Books the kings tried to burn. The ink outlives the fire.',
     dest_emerald: 'Thrice-great — in life, in death, and in what lies beyond both.',
-    npc_gardener: 'The Gardener keeps missions for those who would walk Eden.',
+    npc_gardener: 'The Gardener waits at Eden\'s gate. The portal is sealed until the missions are ready.',
     npc_mabel: 'Mabel chronicled what they erased from the Fair.',
 };

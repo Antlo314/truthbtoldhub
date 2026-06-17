@@ -7,6 +7,11 @@ import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import MiniWorldInsight from '@/components/game/MiniWorldInsight';
+import DestinationControlPad from '@/components/game/controls/DestinationControlPad';
+import { useInputProfile } from '@/components/game/controls/useInputProfile';
+import { useJoystick } from '@/components/game/controls/useJoystick';
+import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
+import { loadSettings } from '@/lib/game/settings';
 
 const MAP_SIZE = 16;
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
@@ -39,12 +44,12 @@ export default function EmeraldWorld({ character, isSolved, minigameDone = true,
     const [relicClaimed, setRelicClaimed] = useState(character.inventory.includes('relic_emerald_fragment'));
     const [activeChain, setActiveChain] = useState<number[]>([]);
 
-    const joyRef = useRef({ x: 0, y: 0 });
+    const profile = useInputProfile();
+    const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const joy = useJoystick(joyR);
+    const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
-    const [knob, setKnob] = useState({ x: 0, y: 0 });
-    const joyActive = useRef(false);
-    const baseRef = useRef<HTMLDivElement>(null);
-    const JOY_R = 46;
+    const handleActionRef = useRef<() => void>(() => {});
 
     // Game loop state
     const gameState = useRef({
@@ -108,7 +113,10 @@ export default function EmeraldWorld({ character, isSolved, minigameDone = true,
 
     // Setup input listeners
     useEffect(() => {
-        const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
+        const kd = (e: KeyboardEvent) => {
+            keysRef.current.add(e.key.toLowerCase());
+            if (e.key === 'j' || e.key === ' ') { e.preventDefault(); handleActionRef.current(); }
+        };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
@@ -490,7 +498,7 @@ export default function EmeraldWorld({ character, isSolved, minigameDone = true,
     }, [isSolved, relicClaimed, resetConstellation, onClaim, onSolve, isSolid]);
 
     // Handle Action interaction
-    const handleAction = () => {
+    const handleAction = useCallback(() => {
         const state = gameState.current;
 
         // Check Emerald Shard (col 2, row 2)
@@ -506,27 +514,9 @@ export default function EmeraldWorld({ character, isSolved, minigameDone = true,
             sfx.hit();
             return;
         }
-    };
+    }, []);
 
-    // Mobile touch joystick
-    const joyMove = (cx: number, cy: number) => {
-        const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2);
-        const dy = cy - (rect.top + rect.height / 2);
-        const d = Math.hypot(dx, dy) || 1;
-        const m = Math.min(d, JOY_R);
-        const a = Math.atan2(dy, dx);
-        const kx = Math.cos(a) * m;
-        const ky = Math.sin(a) * m;
-        setKnob({ x: kx, y: ky });
-        joyRef.current = { x: kx / JOY_R, y: ky / JOY_R };
-    };
-    
-    const joyEnd = () => {
-        joyActive.current = false;
-        setKnob({ x: 0, y: 0 });
-        joyRef.current = { x: 0, y: 0 };
-    };
+    handleActionRef.current = handleAction;
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[80vh] w-full text-white bg-slate-950 p-4 rounded-3xl border border-emerald-500/20 shadow-2xl relative select-none">
@@ -557,40 +547,15 @@ export default function EmeraldWorld({ character, isSolved, minigameDone = true,
                 </div>
             )}
 
-            {/* Virtual Joystick controls for mobile */}
-            <div className="w-full max-w-[480px] h-32 mt-2 relative pointer-events-none flex items-center justify-between">
-                <div
-                    ref={baseRef}
-                    onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
-                    onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                    onMouseUp={joyEnd}
-                    onMouseLeave={joyEnd}
-                    className="rounded-full border border-white/10 bg-black/40 pointer-events-auto relative"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, boxShadow: 'inset 0 0 16px rgba(0,0,0,0.6)', touchAction: 'none' }}
-                >
-                    <div
-                        className="absolute rounded-full"
-                        style={{
-                            width: '40%', height: '40%', left: '30%', top: '30%',
-                            background: 'rgba(16, 185, 129, 0.6)', border: '1px solid rgba(16, 185, 129, 0.85)',
-                            transform: `translate(${knob.x}px, ${knob.y}px)`,
-                            transition: joyActive.current ? 'none' : 'transform 0.15s ease'
-                        }}
-                    />
-                </div>
-
-                <button
-                    onClick={handleAction}
-                    onTouchStart={(e) => { e.preventDefault(); handleAction(); }}
-                    className="w-16 h-16 rounded-full text-[10px] font-black uppercase tracking-widest text-black bg-emerald-400 border border-emerald-500 hover:bg-emerald-300 pointer-events-auto flex items-center justify-center active:scale-95 transition-transform"
-                    style={{ touchAction: 'none' }}
-                >
-                    Action
-                </button>
-            </div>
+            <DestinationControlPad
+                profile={profile}
+                joy={joy}
+                joyRadius={joyR}
+                accent="rgba(16, 185, 129, 0.65)"
+                actionLabel="Read"
+                onAction={handleAction}
+                hint="link shrines Saturn→Moon · dodge astral orbs · read inscriptions"
+            />
         </div>
     );
 }

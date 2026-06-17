@@ -1,5 +1,5 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
-import { isNpcQuestActive } from '@/lib/game/progression';
+import { isNpcQuestActive, EDEN_SEALED } from '@/lib/game/progression';
 
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
@@ -32,6 +32,17 @@ export interface Quest {
 }
 
 export const QUESTS: Quest[] = [
+    {
+        id: 'q_hut_begin',
+        giver: 'hut',
+        giverName: 'Truth',
+        title: 'Walk the Chamber',
+        intro: 'The cavern is wide and the souls within have words for you. Roam once, forge your first weapon here at the Hut, and return when the road stirs.',
+        objectiveText: 'Discover a hidden place, defeat a shade, or forge your first weapon.',
+        objective: { kind: 'anyProgress' },
+        reward: { skillPoints: 1, text: '+1 skill point; the chamber knows your name.' },
+        completeText: 'Good. You have begun to move. Speak with the souls at the edges of this world — their missions will sharpen you.',
+    },
     {
         id: 'q_cipher_welcome',
         giver: 'hut',
@@ -95,8 +106,8 @@ export const QUESTS: Quest[] = [
         giver: 'npc_hana',
         giverName: 'Hana',
         title: 'Ore of the Engine',
-        requires: ['q_eden_gate'],
-        intro: 'You have seen a portal. Now learn the forge. Descend into Giza and strike the iron nodes in the tomb — three pieces are enough to temper your first upgrade at Truth\'s Hut.',
+        requires: ['q_hut_begin'],
+        intro: 'You have walked the chamber. Now learn the forge. Descend into Giza and strike the iron nodes in the tomb — three pieces are enough to temper your first upgrade at Truth\'s Hut.',
         objectiveText: 'Gather 3 Iron Ore from Giza.',
         objective: { kind: 'materials', iron: 3 },
         reward: { skillPoints: 1, text: '+1 skill point; carry the ore to Truth\'s Forge.' },
@@ -177,9 +188,12 @@ export const QUESTS: Quest[] = [
     },
 ];
 
+const EDEN_QUEST_IDS = new Set(['q_eden_gate', 'q_eden_rivers']);
+
 export function questsAvailable(giver: string, c: GameCharacter): Quest[] {
     return QUESTS.filter((q) => {
         if (q.giver !== giver) return false;
+        if (EDEN_SEALED && EDEN_QUEST_IDS.has(q.id)) return false;
         if (q.id === 'q_cipher_welcome') {
             if (typeof window === 'undefined') return false;
             if (!localStorage.getItem('cipher_referral')) return false;

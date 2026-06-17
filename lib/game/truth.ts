@@ -2,14 +2,14 @@ import { AV_W, AV_H, type Facing } from '@/lib/game/avatar';
 
 // ============================================================
 //  TRUTH — bespoke full-body pixel character (16×24).
-//  Hooded mystic sage with goatee and gold-trimmed robe.
+//  Hooded African American mystic sage with goatee and gold-trimmed robe.
 //  Same dimensions as the player avatar so he reads as a person
 //  in the world, not a floating head.
 // ============================================================
 
-const SKIN = '#c68642';
-const SKIN_SH = '#a96d3c';
-const HAIR = '#3d2817';
+const SKIN = '#7a4a22';
+const SKIN_SH = '#523015';
+const HAIR = '#1b1b1f';
 const ROBE = '#1a1610';
 const ROBE_SH = '#100e0a';
 const HOOD = '#2a2218';

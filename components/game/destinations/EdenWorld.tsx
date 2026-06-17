@@ -15,6 +15,11 @@ import { combatRelicBonuses } from '@/lib/game/resonance';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus } from '@/lib/game/clothing';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import DestinationControlPad from '@/components/game/controls/DestinationControlPad';
+import { useInputProfile } from '@/components/game/controls/useInputProfile';
+import { useJoystick } from '@/components/game/controls/useJoystick';
+import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
+import { loadSettings } from '@/lib/game/settings';
 import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, EDEN_TILES, EDEN_SPAWN, EDEN_RIVERS, EDEN_TREE,
     EDEN_VIEW_TILES, hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
@@ -76,12 +81,11 @@ export default function EdenWorld({
     const [showTrail, setShowTrail] = useState(false);
     const [barrierActive, setBarrierActive] = useState(!isSolved);
 
-    const joyRef = useRef({ x: 0, y: 0 });
+    const profile = useInputProfile();
+    const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const joy = useJoystick(joyR);
+    const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
-    const [knob, setKnob] = useState({ x: 0, y: 0 });
-    const joyActive = useRef(false);
-    const baseRef = useRef<HTMLDivElement>(null);
-    const JOY_R = 46;
     const fightTriggeredRef = useRef<string | null>(null);
     const fightBonusRef = useRef(0);
     const touchedRef = useRef(new Set<string>());
@@ -776,14 +780,7 @@ export default function EdenWorld({
         return () => { running = false; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
     }, [activeFight, level, barrierActive, isSolved, minigameDone, relicClaimed, isSolid, onSolve, onClaim, resetSequence, consumeFightBonusHp, onDiscover, nearLore, nearTemptation, grantSkillPoint, character.equipped.weapon, guideStep, showTrail, hintTier, setGuideDialogue]);
 
-    const joyMove = (cx: number, cy: number) => {
-        const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2), dy = cy - (rect.top + rect.height / 2);
-        const d = Math.hypot(dx, dy) || 1, m = Math.min(d, JOY_R), a = Math.atan2(dy, dx);
-        setKnob({ x: Math.cos(a) * m, y: Math.sin(a) * m });
-        joyRef.current = { x: Math.cos(a) * m / JOY_R, y: Math.sin(a) * m / JOY_R };
-    };
-    const joyEnd = () => { joyActive.current = false; setKnob({ x: 0, y: 0 }); joyRef.current = { x: 0, y: 0 }; };
+    const handleRead = () => { if (nearLore) readLoreStone(nearLore); };
 
     const activeFightZone = level.fights.find((f) => f.combatId === activeFight && !f.cleared);
     const fightDest = activeFight ? edenDestinationStub(activeFight) : null;
@@ -894,31 +891,16 @@ export default function EdenWorld({
                 </div>
             )}
 
-            <div className="w-full max-w-[520px] h-28 mt-2 relative pointer-events-none flex items-center justify-between">
-                <div
-                    ref={baseRef}
-                    onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) joyMove(e.touches[0].clientX, e.touches[0].clientY); }}
-                    onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                    onMouseUp={joyEnd}
-                    onMouseLeave={joyEnd}
-                    className="rounded-full border border-white/10 bg-black/40 pointer-events-auto"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, touchAction: 'none' }}
-                >
-                    <div className="absolute rounded-full" style={{ width: '40%', height: '40%', left: '30%', top: '30%', background: 'rgba(16,185,129,0.6)', border: '1px solid rgba(16,185,129,0.85)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
-                </div>
-                <button
-                    onClick={() => nearLore && readLoreStone(nearLore)}
-                    disabled={!nearLore}
-                    className="w-16 h-16 rounded-full text-[9px] font-black uppercase tracking-widest text-black bg-amber-400 border border-amber-500 hover:bg-amber-300 pointer-events-auto flex items-center justify-center active:scale-95 transition-transform disabled:opacity-35"
-                    style={{ touchAction: 'none' }}
-                >
-                    {nearLore ? 'Read' : '—'}
-                </button>
-            </div>
-            <p className="text-[8px] uppercase tracking-widest text-zinc-500 text-center px-2 -mt-1">◆ read stones · gold chests hold keys · brown gates open with keys · dashed circles are trials</p>
+            <DestinationControlPad
+                profile={profile}
+                joy={joy}
+                joyRadius={joyR}
+                accent="rgba(16,185,129,0.65)"
+                actionLabel={nearLore ? 'Read' : '—'}
+                actionDisabled={!nearLore}
+                onAction={handleRead}
+                hint="◆ read stones · gold chests hold keys · brown gates open with keys · dashed circles are trials"
+            />
         </div>
     );
 }

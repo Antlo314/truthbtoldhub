@@ -10,6 +10,11 @@ import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import { ABILITY_BY_ID, combatAbilities, type AbilityDef } from '@/lib/game/abilities';
 import { PATH_BY_ID } from '@/lib/game/paths';
+import { useInputProfile } from '@/components/game/controls/useInputProfile';
+import { useJoystick } from '@/components/game/controls/useJoystick';
+import CombatControlPad from '@/components/game/controls/CombatControlPad';
+import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
+import { loadSettings } from '@/lib/game/settings';
 
 // ============================================================
 //  COMBAT — real-time, mobile-first. Move with the joystick,
@@ -104,13 +109,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const crit = bonusCrit;
     const knockbackBonus = bonusKnockback;
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const joyRef = useRef({ x: 0, y: 0 });
+    const profile = useInputProfile();
+    const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const joy = useJoystick(joyR);
+    const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
     const attackRef = useRef(false);
-    const [knob, setKnob] = useState({ x: 0, y: 0 });
-    const joyActive = useRef(false);
-    const baseRef = useRef<HTMLDivElement>(null);
-    const JOY_R = 46;
 
     const [hp, setHp] = useState(maxHp);
     const [boss, setBoss] = useState<{ name: string; hp: number; max: number } | null>(null);
@@ -805,7 +809,14 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const start = () => { last = performance.now(); raf = requestAnimationFrame(loop); };
         if (img.complete) start(); else img.onload = start;
 
-        const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
+        const kd = (e: KeyboardEvent) => {
+            keysRef.current.add(e.key.toLowerCase());
+            const slot = parseInt(e.key, 10);
+            if (slot >= 1 && slot <= 4) {
+                const ab = abilitiesRef.current[slot - 1];
+                if (ab) abilityTriggerRef.current = ab.id;
+            }
+        };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
@@ -816,22 +827,14 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         };
     }, []);
 
-    const joyMove = (cx: number, cy: number) => {
-        const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2), dy = cy - (rect.top + rect.height / 2);
-        const dd = Math.hypot(dx, dy) || 1, m = Math.min(dd, JOY_R), a = Math.atan2(dy, dx);
-        const kx = Math.cos(a) * m, ky = Math.sin(a) * m;
-        setKnob({ x: kx, y: ky }); joyRef.current = { x: kx / JOY_R, y: ky / JOY_R };
-    };
-    const joyEnd = () => { joyActive.current = false; setKnob({ x: 0, y: 0 }); joyRef.current = { x: 0, y: 0 }; };
     const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m); };
 
     return (
         <div className="absolute inset-0 z-40 bg-black select-none" style={{ touchAction: 'none' }}>
-            <canvas ref={canvasRef} className="world-canvas" />
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full world-canvas" />
 
-            {/* top bars — centred phone-width frame, safe-area aware */}
-            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] px-4 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
+            {/* top bars — full width on desktop, centred frame on mobile */}
+            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] lg:max-w-none px-4 lg:px-8 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center justify-between">
                     <button onClick={onExit} className="pointer-events-auto text-[10px] uppercase tracking-[0.2em] text-white/50 hover:text-white">‹ Flee</button>
                     <div className="flex items-center gap-3 pointer-events-auto">
@@ -867,69 +870,17 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 </div>
             )}
 
-            {/* controls — centred phone-width frame; joystick and Strike sit at
-                the same height (safe-area aware) so they're balanced for thumbs */}
-            <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[540px] pointer-events-none" style={{ height: 220 }}>
-                <div
-                    ref={baseRef}
-                    onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
-                    onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                    onMouseUp={joyEnd} onMouseLeave={joyEnd}
-                    className="absolute left-6 rounded-full border border-white/15 bg-black/30 backdrop-blur-md pointer-events-auto"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', boxShadow: 'inset 0 0 18px rgba(0,0,0,0.4)', touchAction: 'none' }}
-                >
-                    <div className="absolute rounded-full" style={{ width: '44%', height: '44%', left: '28%', top: '28%', background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)', boxShadow: '0 0 12px rgba(251,191,36,0.5)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
-                </div>
-
-                {abilities.length > 0 && (
-                    <div
-                        className="absolute flex gap-2 items-end pointer-events-auto max-w-[58%] overflow-x-auto custom-scrollbar"
-                        style={{ right: '5.75rem', bottom: 'calc(2rem + env(safe-area-inset-bottom))', touchAction: 'none' }}
-                    >
-                        {abilities.map((ab) => {
-                            const cd = abilityCds[ab.id] || 0;
-                            const isSuper = ab.cooldownSec >= 22;
-                            return (
-                                <button
-                                    key={ab.id}
-                                    onClick={() => { unlockAudio(); abilityTriggerRef.current = ab.id; }}
-                                    disabled={cd > 0}
-                                    className="shrink-0 w-[3.75rem] h-[3.75rem] rounded-full text-[7px] font-black uppercase tracking-wide text-white flex flex-col items-center justify-center active:scale-95 transition-transform disabled:opacity-35 px-1 text-center leading-tight"
-                                    style={{
-                                        background: isSuper ? `linear-gradient(135deg, ${pathColor} 0%, ${pathColor}88 100%)` : `linear-gradient(135deg, ${pathColor}cc 0%, ${pathColor}66 100%)`,
-                                        boxShadow: `0 0 16px ${pathColor}44`,
-                                        color: isSuper ? '#0a0a0a' : '#fff',
-                                    }}
-                                >
-                                    {ab.name}
-                                    {cd > 0 && <span className="text-[6px] mt-0.5 opacity-80">{Math.ceil(cd)}s</span>}
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
-                {/* Dodge — universal, stacked above Strike for the right thumb */}
-                <button
-                    onClick={() => { unlockAudio(); dodgeRef.current = true; }}
-                    onTouchStart={(e) => { e.preventDefault(); unlockAudio(); dodgeRef.current = true; }}
-                    disabled={dodgeCd > 0}
-                    className="absolute right-6 w-[4.25rem] h-[4.25rem] rounded-full text-[9px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-40"
-                    style={{ bottom: 'calc(7.9rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#67e8f9 0%,#0e7490 100%)', boxShadow: '0 0 20px rgba(34,211,238,0.4)', touchAction: 'none' }}
-                >
-                    Dodge
-                </button>
-                <button
-                    onClick={() => { unlockAudio(); attackRef.current = true; }}
-                    onTouchStart={(e) => { e.preventDefault(); unlockAudio(); attackRef.current = true; }}
-                    className="absolute right-6 w-[5.5rem] h-[5.5rem] rounded-full text-[11px] font-black uppercase tracking-widest text-black flex items-center justify-center active:scale-95 transition-transform pointer-events-auto"
-                    style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 28px rgba(251,191,36,0.45)', touchAction: 'none' }}
-                >
-                    Strike
-                </button>
-            </div>
+            <CombatControlPad
+                profile={profile}
+                joy={joy}
+                joyRadius={joyR}
+                pathColor={pathColor}
+                abilities={abilities.map((ab) => ({ id: ab.id, name: ab.name, cooldownSec: ab.cooldownSec, cd: abilityCds[ab.id] || 0 }))}
+                dodgeCd={dodgeCd}
+                onStrike={() => { attackRef.current = true; }}
+                onDodge={() => { dodgeRef.current = true; }}
+                onAbility={(id) => { abilityTriggerRef.current = id; }}
+            />
         </div>
     );
 }

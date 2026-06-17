@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { truthOffscreen } from '@/lib/game/truth';
+import { npcOffscreen, NPC_AVATARS } from '@/lib/game/npcs';
 import {
     buildOverworld,
     buildPickups,
@@ -20,7 +21,12 @@ import { initTruthCompanion, updateTruthCompanion, TRUTH_PROXIMITY_LINES } from 
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import type { QuestWaypoint } from '@/lib/game/questWaypoint';
-import { isDestinationPOI, isDestinationUnlocked } from '@/lib/game/progression';
+import { isDestinationPOI, isDestinationUnlocked, isEdenSealed } from '@/lib/game/progression';
+import { useInputProfile } from '@/components/game/controls/useInputProfile';
+import { useJoystick } from '@/components/game/controls/useJoystick';
+import WorldControlPad from '@/components/game/controls/WorldControlPad';
+import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
+import { loadSettings } from '@/lib/game/settings';
 
 const RESONANCE_TINTS = [
     '',
@@ -85,14 +91,13 @@ export default function WorldCanvas({
     const pausedRef = useRef(paused);
     pausedRef.current = paused;
 
-    const joyRef = useRef({ x: 0, y: 0 });
+    const profile = useInputProfile();
+    const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const joy = useJoystick(joyR);
+    const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
     const nearRef = useRef<NearPOI | null>(null);
     const [near, setNear] = useState<NearPOI | null>(null);
-    const [knob, setKnob] = useState({ x: 0, y: 0 });
-    const joyActive = useRef(false);
-    const baseRef = useRef<HTMLDivElement>(null);
-    const JOY_R = 46;
 
     const questTrailRef = useRef(showQuestTrail);
     questTrailRef.current = showQuestTrail;
@@ -153,7 +158,9 @@ export default function WorldCanvas({
         function computeZoom() {
             const vw = canvas.clientWidth;
             const vh = canvas.clientHeight;
-            Z = clamp(Math.round(Math.min(vw, vh) / (12 * TILE)), 2, 4);
+            const desktop = vw >= 1024;
+            const viewTiles = desktop ? 10 : 12;
+            Z = clamp(Math.round(Math.min(vw, vh) / (viewTiles * TILE)), 2, desktop ? 5 : 4);
         }
         function resize() {
             const dpr = window.devicePixelRatio || 1;
@@ -578,15 +585,17 @@ export default function WorldCanvas({
             // POIs (includes Seer-hidden places when attuned)
             const drawPois = allVisiblePois(ow.pois, charRef.current);
             for (const p of drawPois) {
-                const locked = isDestinationPOI(p.id) && !isDestinationUnlocked(p.id, charRef.current);
+                const locked = (p.id === 'dest_eden' && isEdenSealed())
+                    || (isDestinationPOI(p.id) && !isDestinationUnlocked(p.id, charRef.current));
                 if (p.type === 'hut') drawHut(p);
                 else if (p.type === 'cave') drawCave(p, locked);
                 else if (p.type === 'portal') drawPortal(p, locked);
-                else if (p.type === 'npc' && p.npcTile) {
+                else if (p.type === 'npc' && (NPC_AVATARS[p.id] || p.npcTile)) {
                     const wx = (p.x + 0.5) * TILE;
                     const wy = (p.y + 0.9) * TILE;
                     shadow(wx, wy);
-                    sprite(charImg, p.npcTile.col, p.npcTile.row, wx, wy);
+                    if (NPC_AVATARS[p.id]) drawAvatar(wx, wy, npcOffscreen(p.id), 0, 1.05);
+                    else sprite(charImg, p.npcTile!.col, p.npcTile!.row, wx, wy);
                     if (p.detail) {
                         ctx.fillStyle = '#fbbf24';
                         ctx.font = `bold ${7 * Z}px serif`;
@@ -657,7 +666,12 @@ export default function WorldCanvas({
         tryStart(); // Truth is procedurally drawn — no image load needed
         if (charImg.complete) tryStart(); else { charImg.onload = tryStart; charImg.onerror = tryStart; }
 
-        const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
+        const kd = (e: KeyboardEvent) => {
+            keysRef.current.add(e.key.toLowerCase());
+            if ((e.key === 'e' || e.key === 'Enter') && nearRef.current) {
+                cbRef.current.onInteract(nearRef.current);
+            }
+        };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
@@ -671,24 +685,6 @@ export default function WorldCanvas({
         };
     }, []);
 
-    // joystick
-    const joyMove = (cx: number, cy: number) => {
-        const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2);
-        const dy = cy - (rect.top + rect.height / 2);
-        const d = Math.hypot(dx, dy) || 1;
-        const m = Math.min(d, JOY_R);
-        const a = Math.atan2(dy, dx);
-        const kx = Math.cos(a) * m;
-        const ky = Math.sin(a) * m;
-        setKnob({ x: kx, y: ky });
-        joyRef.current = { x: kx / JOY_R, y: ky / JOY_R };
-    };
-    const joyEnd = () => {
-        joyActive.current = false;
-        setKnob({ x: 0, y: 0 });
-        joyRef.current = { x: 0, y: 0 };
-    };
     // Fire interact straight from the tap using the POI the loop keeps current
     // in nearRef — no waiting for the rAF loop to read a flag, so the very
     // first tap after entering the world lands (no more "tap twice").
@@ -699,49 +695,8 @@ export default function WorldCanvas({
 
     return (
         <>
-            <canvas ref={canvasRef} className="world-canvas" />
-
-            {/* on-screen controls — held in a centred phone-width frame so they
-                stay thumb-reachable on mobile and don't fly to the far corners
-                on wide screens. Both sit at the same height (safe-area aware). */}
-            <div className="absolute inset-x-0 bottom-0 z-10 mx-auto w-full max-w-[540px] pointer-events-none" style={{ height: 220 }}>
-                <div
-                    ref={baseRef}
-                    onTouchStart={(e) => { unlockAudio(); joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
-                    onTouchEnd={joyEnd}
-                    onMouseDown={(e) => { unlockAudio(); joyActive.current = true; joyMove(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
-                    onMouseUp={joyEnd}
-                    onMouseLeave={joyEnd}
-                    className="absolute left-6 rounded-full border border-white/15 bg-black/30 backdrop-blur-md pointer-events-auto"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', boxShadow: 'inset 0 0 18px rgba(0,0,0,0.4)', touchAction: 'none' }}
-                >
-                    <div
-                        className="absolute rounded-full"
-                        style={{
-                            width: '44%', height: '44%', left: '28%', top: '28%',
-                            background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)',
-                            boxShadow: '0 0 12px rgba(251,191,36,0.5)',
-                            transform: `translate(${knob.x}px, ${knob.y}px)`,
-                        }}
-                    />
-                </div>
-
-                {near && (
-                    <button
-                        onClick={doInteract}
-                        onTouchStart={(e) => { e.preventDefault(); doInteract(); }}
-                        className="absolute right-6 w-[5.5rem] h-[5.5rem] rounded-full text-[10px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center text-center animate-pulse pointer-events-auto active:scale-95 transition-transform"
-                        style={{ bottom: 'calc(1.75rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 28px rgba(251,191,36,0.45)', touchAction: 'none' }}
-                    >
-                        <span className="text-[8px] opacity-70 leading-none mb-0.5">
-                            {near.type === 'hut' ? 'Enter' : near.type === 'cave' ? 'Descend' : near.type === 'portal' ? 'Step through' : 'Speak'}
-                        </span>
-                        <span className="leading-tight">{near.name}</span>
-                    </button>
-                )}
-            </div>
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full world-canvas" />
+            <WorldControlPad profile={profile} joy={joy} joyRadius={joyR} near={near} onInteract={doInteract} />
         </>
     );
 }

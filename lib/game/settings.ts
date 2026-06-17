@@ -1,5 +1,8 @@
 // Client-side game settings (localStorage, not cloud-synced).
 
+export type ControlScheme = 'auto' | 'touch' | 'keyboard';
+export type ControlSize = 'normal' | 'large';
+
 export interface GameSettings {
     reducedMotion: boolean;
     haptics: boolean;
@@ -8,6 +11,9 @@ export interface GameSettings {
     showQuestTrail: boolean;
     subtitles: boolean;
     textScale: 'normal' | 'large';
+    /** auto = detect device; touch = on-screen controls; keyboard = WASD + keys only */
+    controlScheme: ControlScheme;
+    controlSize: ControlSize;
 }
 
 const KEY = 'tbth-game-settings';
@@ -20,6 +26,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
     showQuestTrail: true,
     subtitles: true,
     textScale: 'normal',
+    controlScheme: 'auto',
+    controlSize: 'normal',
 };
 
 export function loadSettings(): GameSettings {

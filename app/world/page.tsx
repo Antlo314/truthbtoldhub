@@ -438,51 +438,55 @@ export default function WorldPage() {
             <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
             <div className="absolute bottom-0 inset-x-0 h-44 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.45), transparent)' }} />
 
-            {/* HUD — centred phone-width frame, safe-area aware */}
-            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] flex items-center justify-between gap-2 px-4 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
-                <div className="flex items-center gap-2">
-                    <Link href="/awakening/path" className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white">
-                        <ArrowLeft className="w-4 h-4" />
+            {/* HUD — compact on mobile, full-width desktop bar with larger targets */}
+            <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] lg:max-w-none flex items-center justify-between gap-2 px-4 lg:px-8 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
+                <div className="flex items-center gap-1.5 lg:gap-2">
+                    <Link href="/awakening/path" className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" title="Return">
+                        <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
                     </Link>
-                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Missions">
+                    <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Missions">
                         <ScrollText className="w-4 h-4" />
+                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Missions</span>
                     </button>
-                    <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Codex Journal">
+                    <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Codex Journal">
                         <BookOpen className="w-4 h-4" />
+                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Journal</span>
                     </button>
                     <button
                         onClick={() => setAttunementOpen(true)}
-                        className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative"
+                        className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative min-h-[44px] flex items-center gap-2"
                         title="Attunement Tree"
                         style={path ? { color: path.color } : undefined}
                     >
                         <Sparkles className="w-4 h-4" />
+                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Attune</span>
                         {character.skillPoints > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
+                            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
                         )}
                     </button>
-                    <button onClick={() => setSettingsOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Settings">
+                    <button onClick={() => setSettingsOpen(true)} className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-w-[44px] min-h-[44px] flex items-center justify-center" title="Settings">
                         <SlidersHorizontal className="w-4 h-4" />
                     </button>
                 </div>
-                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0">
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0 lg:px-5">
                     <FounderBadge founderNumber={founderNumber} size={18} />
-                    <span className="font-ritual text-sm text-white truncate">{character.name || 'Soul'}</span>
+                    <span className="font-ritual text-sm lg:text-base text-white truncate">{character.name || 'Soul'}</span>
                     {path && (
-                        <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
+                        <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
                     )}
                 </div>
                 <button
                     onClick={() => { setSatchelOpen(true); if (!tutorialsSeen().includes('satchel')) setTutorial('satchel'); }}
-                    className="pointer-events-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40"
+                    className="pointer-events-auto flex items-center gap-1.5 px-3.5 lg:px-5 py-2.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40 min-h-[44px]"
                 >
-                    <Gem className="w-3.5 h-3.5 text-aether-gold" />
-                    <span className="text-xs font-black text-aether-gold">{character.inventory.length}</span>
+                    <Gem className="w-4 h-4 text-aether-gold" />
+                    <span className="text-xs lg:text-sm font-black text-aether-gold">{character.inventory.length}</span>
+                    <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-aether-gold/80">Relics</span>
                 </button>
             </div>
 
             {settings.showMinimap && worldIntroDone && !worldPaused && (
-                <div className="absolute right-4 z-10 pointer-events-none" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
+                <div className="absolute right-4 lg:right-8 z-10 pointer-events-none" style={{ top: 'calc(4.5rem + env(safe-area-inset-top))' }}>
                     <Minimap
                         playerX={playerPos.x}
                         playerY={playerPos.y}
@@ -499,7 +503,7 @@ export default function WorldPage() {
 
             {hint && (
                 <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none text-center">
-                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · Eden opens first</p>
+                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · start at Truth&apos;s Hut</p>
                     {activeDestinationFocus(character) && (
                         <p className="mt-2 text-[9px] uppercase tracking-[0.25em] text-aether-gold/70">Current road · {DEST_BY_POI[activeDestinationFocus(character)!]?.name}</p>
                     )}
@@ -631,7 +635,7 @@ export default function WorldPage() {
                         {/* cipher referral mission from Truth */}
                         {hutQuests.length > 0 && (
                             <div className="mb-5 space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">A word for you</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Missions from Truth</p>
                                 {hutQuests.map((q) => {
                                     const claimed = character.questsClaimed.includes(q.id);
                                     const met = objectiveMet(q, character);
