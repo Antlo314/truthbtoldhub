@@ -1,8 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
@@ -15,8 +14,9 @@ import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 
 function TitleCardInner() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [authOpen, setAuthOpen] = useState(false);
-    const [hasSession, setHasSession] = useState(false);
+    const [pendingHref, setPendingHref] = useState('/awakening');
     const [founders, setFounders] = useState<number | null>(null);
     const [continueHref, setContinueHref] = useState<string | null>(null);
 
@@ -29,7 +29,6 @@ function TitleCardInner() {
 
     useEffect(() => {
         applyMusicSetting(loadSettings().music);
-        supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
         countFounders().then(setFounders);
         try {
             const raw = localStorage.getItem('tbth-journey');
@@ -42,6 +41,19 @@ function TitleCardInner() {
             else setContinueHref('/awakening/create');
         } catch { /* ignore */ }
     }, []);
+
+    // Login is required to play. Check the session at click time; with one we go
+    // straight in, without one we open the AuthModal and only proceed to the
+    // target route after a session exists (sign-in / sign-up / demo).
+    const enter = async (href: string) => {
+        const { data } = await supabase.auth.getSession();
+        // the gate cookie is what middleware actually checks — covers demo mode
+        // (no real session) without bouncing it at /world
+        const hasGate = typeof document !== 'undefined' && /(?:^|;\s*)sb-access-token=[^;]+/.test(document.cookie);
+        if (data.session || hasGate) { router.push(href); return; }
+        setPendingHref(href);
+        setAuthOpen(true);
+    };
 
     return (
         <main className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
@@ -59,21 +71,21 @@ function TitleCardInner() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 pointer-events-auto">
                     {continueHref ? (
-                        <Link
-                            href={continueHref}
+                        <button
+                            onClick={() => enter(continueHref)}
                             className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
                             style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
                         >
                             Continue the Journey →
-                        </Link>
+                        </button>
                     ) : (
-                        <Link
-                            href="/awakening"
+                        <button
+                            onClick={() => enter('/awakening')}
                             className="px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
                             style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
                         >
                             Begin the Awakening →
-                        </Link>
+                        </button>
                     )}
                     {continueHref && (
                         <RestartJourneyButton
@@ -98,6 +110,12 @@ function TitleCardInner() {
             <p className="absolute bottom-6 z-10 text-[8px] uppercase tracking-[0.4em] text-white/20 pointer-events-none">
                 Truth B Told Hub © {new Date().getFullYear()}
             </p>
+
+            <AuthModal
+                isOpen={authOpen}
+                onClose={() => setAuthOpen(false)}
+                onSuccess={() => router.push(pendingHref)}
+            />
         </main>
     );
 }

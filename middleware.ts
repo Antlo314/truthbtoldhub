@@ -22,10 +22,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect all other routes (Disabled for testing)
-  // if (!token) {
-  //   return NextResponse.redirect(new URL('/', request.url));
-  // }
+  // Protect every other route — login is required to play. The gate cookie is
+  // kept in lock-step with the real Supabase session in lib/supabase.ts (and is
+  // rebuilt from the stored session on load), so a logged-in soul always carries
+  // it. Onboarding (/ and /awakening*) stays public above so a cookie race can
+  // never strand a new player mid-flow.
+  if (!token) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
 
   return NextResponse.next();
 }
