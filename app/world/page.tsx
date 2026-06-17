@@ -9,6 +9,7 @@ import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Setti
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import HutLedger from '@/components/game/HutLedger';
+import HutPortalBoard from '@/components/game/HutPortalBoard';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
 import WorldPresenceBanner from '@/components/game/WorldPresenceBanner';
 import { fetchWorldPresence, pingWorldWalk, type WorldPresence } from '@/lib/game/worldPresence';
@@ -844,6 +845,8 @@ export default function WorldPage() {
                             <p className="text-sm text-zinc-300 leading-relaxed">{worldEvent.hutBody}</p>
                             <p className="text-xs text-orange-300/90 italic mt-3 leading-relaxed">"{worldEvent.truthLine}"</p>
                         </div>
+
+                        <HutPortalBoard character={character} />
 
                         {/* latest bulletin */}
                         <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-4">
