@@ -6,6 +6,14 @@ import { CLOTHING_BY_ID } from '@/lib/game/clothing';
 import { defaultAvatar, type AvatarConfig } from '@/lib/game/avatar';
 import { PATH_BY_ID } from '@/lib/game/paths';
 import { migrateSkillIds } from '@/lib/game/abilities';
+import {
+    canCraftConsumable,
+    CONSUMABLE_BY_ID,
+    consumableStock,
+    MAX_CONSUMABLE_STACK,
+    MAX_FIGHT_BONUS_DAMAGE,
+    MAX_FIGHT_BONUS_HP,
+} from '@/lib/game/consumables';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -62,8 +70,12 @@ export interface GameCharacter {
         copper: number;
         cosmic: number;
     };
-    /** HP bonus from health orbs — applied at the start of the next fight. */
+    /** HP bonus from health orbs / consumables — next fight only. */
     fightBonusHp: number;
+    /** Damage bonus from consumables — next fight only. */
+    fightBonusDamage: number;
+    /** Crafted hut tonics carried in the satchel. */
+    consumables: Record<string, number>;
     /** Last overworld position ping — co-op presence (UTC day). */
     lastWalk?: {
         day: string;
@@ -97,6 +109,8 @@ const DEFAULT_CHARACTER: GameCharacter = {
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
     materials: { iron: 0, copper: 0, cosmic: 0 },
     fightBonusHp: 0,
+    fightBonusDamage: 0,
+    consumables: {},
 };
 
 function freshCharacter(): GameCharacter {
@@ -150,6 +164,8 @@ interface GameState {
     spendMaterials: (costs: { iron?: number; copper?: number; cosmic?: number }) => void;
     addFightBonusHp: (amount: number) => void;
     consumeFightBonusHp: () => number;
+    craftConsumable: (id: string) => boolean;
+    useConsumable: (id: string) => boolean;
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
@@ -319,13 +335,61 @@ export const useGameStore = create<GameState>()(
 
             addFightBonusHp: (amount) =>
                 set((s) => ({
-                    character: { ...s.character, fightBonusHp: Math.min(60, s.character.fightBonusHp + amount) },
+                    character: {
+                        ...s.character,
+                        fightBonusHp: Math.min(MAX_FIGHT_BONUS_HP, s.character.fightBonusHp + amount),
+                    },
                 })),
 
             consumeFightBonusHp: () => {
                 const bonus = get().character.fightBonusHp;
-                if (bonus > 0) set((s) => ({ character: { ...s.character, fightBonusHp: 0 } }));
+                if (bonus > 0 || get().character.fightBonusDamage > 0) {
+                    set((s) => ({
+                        character: { ...s.character, fightBonusHp: 0, fightBonusDamage: 0 },
+                    }));
+                }
                 return bonus;
+            },
+
+            craftConsumable: (id) => {
+                const ch = get().character;
+                if (!canCraftConsumable(ch, id)) return false;
+                const def = CONSUMABLE_BY_ID[id];
+                if (!def) return false;
+                get().spendMaterials(def.cost);
+                set((s) => {
+                    const stock = { ...s.character.consumables };
+                    stock[id] = Math.min(MAX_CONSUMABLE_STACK, (stock[id] ?? 0) + 1);
+                    return { character: { ...s.character, consumables: stock } };
+                });
+                return true;
+            },
+
+            useConsumable: (id) => {
+                const ch = get().character;
+                if (consumableStock(ch, id) <= 0) return false;
+                const def = CONSUMABLE_BY_ID[id];
+                if (!def) return false;
+                set((s) => {
+                    const stock = { ...s.character.consumables };
+                    stock[id] = Math.max(0, (stock[id] ?? 0) - 1);
+                    if (stock[id] === 0) delete stock[id];
+                    const hp = def.effect.hp
+                        ? Math.min(MAX_FIGHT_BONUS_HP, s.character.fightBonusHp + def.effect.hp)
+                        : s.character.fightBonusHp;
+                    const damage = def.effect.damage
+                        ? Math.min(MAX_FIGHT_BONUS_DAMAGE, s.character.fightBonusDamage + def.effect.damage)
+                        : s.character.fightBonusDamage;
+                    return {
+                        character: {
+                            ...s.character,
+                            consumables: stock,
+                            fightBonusHp: hp,
+                            fightBonusDamage: damage,
+                        },
+                    };
+                });
+                return true;
             },
 
             spendMaterials: (costs) =>
@@ -457,6 +521,8 @@ export const useGameStore = create<GameState>()(
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                         materials: pc.materials || c.character.materials,
                         fightBonusHp: typeof pc.fightBonusHp === 'number' ? pc.fightBonusHp : c.character.fightBonusHp,
+                        fightBonusDamage: typeof pc.fightBonusDamage === 'number' ? pc.fightBonusDamage : c.character.fightBonusDamage,
+                        consumables: pc.consumables && typeof pc.consumables === 'object' ? pc.consumables : c.character.consumables,
                     },
                 };
             },

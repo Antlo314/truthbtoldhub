@@ -5,11 +5,12 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle, Trophy } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle, Trophy, FlaskConical } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import HutLedger from '@/components/game/HutLedger';
 import HutPortalBoard from '@/components/game/HutPortalBoard';
+import HutConsumableCraft from '@/components/game/HutConsumableCraft';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
 import WorldPresenceBanner from '@/components/game/WorldPresenceBanner';
 import { fetchWorldPresence, pingWorldWalk, type WorldPresence } from '@/lib/game/worldPresence';
@@ -37,6 +38,7 @@ import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
 import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
 import { rollWildArchetype, wildEncounter, wildShadeDiscoverId } from '@/lib/game/wildShades';
+import { CONSUMABLE_BY_ID, consumableStock, formatConsumableEffect } from '@/lib/game/consumables';
 import { type Pickup } from '@/lib/game/overworld';
 import { sfx } from '@/lib/game/sfx';
 import DestinationScene from '@/components/game/DestinationScene';
@@ -114,6 +116,7 @@ export default function WorldPage() {
     const equipScroll = useGameStore((s) => s.equipScroll);
     const markDiscovered = useGameStore((s) => s.markDiscovered);
     const addMaterial = useGameStore((s) => s.addMaterial);
+    const useConsumable = useGameStore((s) => s.useConsumable);
     const returnToSource = useGameStore((s) => s.returnToSource);
 
     const [mounted, setMounted] = useState(false);
@@ -588,7 +591,7 @@ export default function WorldPage() {
     const cCloth = clothingBonus(character.equipped.clothing);
     const combatStatProps = {
         bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp + character.fightBonusHp,
-        bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
+        bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage + (character.fightBonusDamage ?? 0),
         bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
         bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
         bonusLifesteal: combatBlessing.lifesteal,
@@ -854,6 +857,11 @@ export default function WorldPage() {
 
                         <HutPortalBoard character={character} />
 
+                        <HutConsumableCraft
+                            onOpenForge={() => { setHutOpen(false); setForgeOpen(true); }}
+                            onCrafted={(name, effect) => showToast(`✦ ${name} brewed · ${effect}`)}
+                        />
+
                         {/* latest bulletin */}
                         <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-4">
                             {bulletins.length > 0 ? (
@@ -968,9 +976,18 @@ export default function WorldPage() {
                                 <Swords className="w-3.5 h-3.5" /> Forge your first weapon
                             </button>
                         ) : (
-                            <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-zinc-500 flex items-center justify-center gap-2">
-                                <Swords className="w-3 h-3 text-aether-gold" /> Armed · {WEAPON_BY_ID[character.equipped.weapon]?.name}
-                            </p>
+                            <div className="mt-6 flex flex-col gap-2">
+                                <p className="text-center text-[10px] uppercase tracking-widest text-zinc-500 flex items-center justify-center gap-2">
+                                    <Swords className="w-3 h-3 text-aether-gold" /> Armed · {WEAPON_BY_ID[character.equipped.weapon]?.name}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => { setHutOpen(false); setForgeOpen(true); }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-aether-gold/30 text-aether-gold hover:bg-aether-gold/10 transition-colors"
+                                >
+                                    <Swords className="w-3.5 h-3.5" /> Upgrade at the Forge
+                                </button>
+                            </div>
                         )}
 
                         {/* architect access */}
@@ -1019,6 +1036,56 @@ export default function WorldPage() {
                                 </span>
                             </div>
                         </div>
+
+                        {(() => {
+                            const stocked = Object.keys(character.consumables || {}).filter((id) => consumableStock(character, id) > 0);
+                            if (!stocked.length) return null;
+                            return (
+                                <div className="mb-5">
+                                    <p className="text-[9px] uppercase tracking-[0.3em] text-emerald-400/80 mb-2 flex items-center gap-1.5">
+                                        <FlaskConical className="w-3 h-3" /> Road tonics
+                                    </p>
+                                    <div className="space-y-2">
+                                        {stocked.map((id) => {
+                                            const def = CONSUMABLE_BY_ID[id];
+                                            if (!def) return null;
+                                            const qty = consumableStock(character, id);
+                                            return (
+                                                <div key={id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border" style={{ borderColor: `${def.accent}44`, background: `${def.accent}14` }}>
+                                                        <FlaskConical className="w-4 h-4" style={{ color: def.accent }} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-white">{def.name}</p>
+                                                        <p className="text-[9px] text-zinc-500">×{qty} · {formatConsumableEffect(def.effect)}</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (useConsumable(id)) {
+                                                                saveToCloud();
+                                                                showToast(`✦ ${def.name} taken · ${formatConsumableEffect(def.effect)} for next fight`);
+                                                            }
+                                                        }}
+                                                        className="shrink-0 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-black"
+                                                        style={{ background: 'linear-gradient(135deg,#6ee7b7 0%,#059669 100%)' }}
+                                                    >
+                                                        Drink
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {(character.fightBonusHp > 0 || (character.fightBonusDamage ?? 0) > 0) && (
+                                        <p className="text-[9px] text-emerald-400/80 mt-2 leading-relaxed">
+                                            Active for next fight
+                                            {character.fightBonusHp > 0 ? ` · +${character.fightBonusHp} vitality` : ''}
+                                            {(character.fightBonusDamage ?? 0) > 0 ? ` · +${character.fightBonusDamage} might` : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* the goal — gather all five relics to open the way to the Source */}
                         {(() => {
