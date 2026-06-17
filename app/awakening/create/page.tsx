@@ -12,7 +12,7 @@ import {
     randomAvatar, presetFor,
     type Build, type HairStyle, type OutfitStyle, type FaceStyle,
 } from '@/lib/game/avatar';
-import { Loader2, Shuffle } from 'lucide-react';
+import { Loader2, Shuffle, Pencil } from 'lucide-react';
 import { CINEMA } from '@/lib/game/cutscenes';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
@@ -36,19 +36,21 @@ export default function CreatePage() {
     const setAvatar = useGameStore((s) => s.setAvatar);
     const setAppearance = useGameStore((s) => s.setAppearance);
     const completeAwakening = useGameStore((s) => s.completeAwakening);
-    const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<Tab>('Body');
+    const [editingName, setEditingName] = useState(false);
 
     usePageMusic('forging_self');
 
+    // No loadFromCloud here: the player arrives from the intro with their name
+    // already set locally, and a cloud SELECT racing the intro's save could
+    // clobber the freshly-typed name. (Cross-device resume happens on /world.)
     useEffect(() => {
         setMounted(true);
-        loadFromCloud();
-    }, [loadFromCloud]);
+    }, []);
 
     const av = character.avatar;
     const aura = character.appearance.aura;
@@ -87,13 +89,26 @@ export default function CreatePage() {
                         <div className="absolute pointer-events-none" style={{ bottom: 14, width: 88, height: 16, borderRadius: '50%', background: `radial-gradient(ellipse at center, ${aura}55 0%, transparent 72%)` }} />
                     </div>
                     <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
-                        <p className="font-ritual text-lg text-white truncate">{character.name || <span className="text-zinc-600 italic">Unnamed Soul</span>}</p>
-                        <input
-                            value={character.name}
-                            onChange={(e) => setName(e.target.value.slice(0, 24))}
-                            placeholder="speak your name"
-                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-ritual tracking-wide focus:outline-none focus:border-aether-gold transition-colors"
-                        />
+                        {editingName || !character.name.trim() ? (
+                            <input
+                                value={character.name}
+                                onChange={(e) => setName(e.target.value.slice(0, 24))}
+                                onBlur={() => setEditingName(false)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') setEditingName(false); }}
+                                placeholder="speak your name"
+                                autoFocus
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-ritual tracking-wide focus:outline-none focus:border-aether-gold transition-colors"
+                            />
+                        ) : (
+                            <button
+                                onClick={() => setEditingName(true)}
+                                className="text-left font-ritual text-lg text-white truncate flex items-center gap-1.5 hover:text-aether-gold transition-colors"
+                                title="Rename"
+                            >
+                                <span className="truncate">{character.name}</span>
+                                <Pencil className="w-3 h-3 text-zinc-500 shrink-0" />
+                            </button>
+                        )}
                         <div className="flex gap-1.5">
                             <button onClick={() => setAvatar(presetFor('masc'))} className="flex-1 py-2 rounded-lg text-sm font-black border bg-white/5 border-white/10 text-zinc-300 hover:border-white/25">♂</button>
                             <button onClick={() => setAvatar(presetFor('fem'))} className="flex-1 py-2 rounded-lg text-sm font-black border bg-white/5 border-white/10 text-zinc-300 hover:border-white/25">♀</button>

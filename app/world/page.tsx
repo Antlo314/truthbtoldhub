@@ -325,7 +325,6 @@ export default function WorldPage() {
     const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
         hapticTap('light');
-        if (!tutorialsSeen().includes('interact')) setTutorial('interact');
         const dest = DEST_BY_POI[poi.id];
         if (dest) {
             const ch = useGameStore.getState().character;
@@ -393,7 +392,6 @@ export default function WorldPage() {
     const onEncounter = useCallback(() => {
         setHint(false);
         hapticTap('medium');
-        if (!tutorialsSeen().includes('combat')) setTutorial('combat');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
             setDialogue({
@@ -699,7 +697,7 @@ export default function WorldPage() {
                     )}
                 </div>
                 <button
-                    onClick={() => { setSatchelOpen(true); if (!tutorialsSeen().includes('satchel')) setTutorial('satchel'); }}
+                    onClick={() => setSatchelOpen(true)}
                     className="pointer-events-auto flex items-center gap-1.5 px-3.5 lg:px-5 py-2.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40 min-h-[44px]"
                 >
                     <Gem className="w-4 h-4 text-aether-gold" />

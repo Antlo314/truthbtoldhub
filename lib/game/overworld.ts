@@ -200,6 +200,10 @@ export function buildOverworld(): Overworld {
         carvePath(cx, cy, p.x, p.y);
     }
 
+    // short south apron from the hut door through the spawn, so the player's
+    // very first step lands on a road that visibly leads back to the Hut.
+    carvePath(cx, cy, cx, cy + 4);
+
     // hut footprint solid (3 wide x 2 tall), door (south-centre) stays open
     for (let r = cy - 1; r <= cy; r++) {
         for (let c = cx - 1; c <= cx + 1; c++) {
