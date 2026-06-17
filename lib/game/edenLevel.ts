@@ -136,6 +136,18 @@ function buildEdenTiles(): EdenTile[][] {
     // rubble patches (walkable, visual tone)
     for (const [x, y] of [[12, 14], [14, 15], [6, 14], [25, 14]] as const) if (g[y][x] === 0) g[y][x] = 3;
 
+    // door passages — floor under gates (open/closed handled by door state, not tile type)
+    for (const [x, y] of [[16, 22], [17, 20], [22, 16], [24, 8]] as const) g[y][x] = 0;
+
+    // threshold ↔ outer grove (spawn was sealed behind row-20 wall)
+    for (const x of [10, 11, 12, 13]) g[20][x] = 0;
+
+    // east corridor along threshold row 24
+    for (const x of [10, 11, 12]) g[24][x] = 0;
+
+    // outer grove ↔ eastern garden (west edge gap when grove gate is closed)
+    g[21][17] = 0;
+
     return g;
 }
 
@@ -407,14 +419,15 @@ export function edenDestinationStub(combatId: string) {
 
 export function isEdenSolid(gx: number, gy: number, level: EdenLevelState, barrierActive: boolean): boolean {
     if (gx < 0 || gx >= EDEN_MAP_W || gy < 0 || gy >= EDEN_MAP_H) return true;
+
+    // doors must be checked before wall tiles — gates sit on former wall cells
+    const door = level.doors.find((d) => d.gx === gx && d.gy === gy);
+    if (door) return !door.open;
+
     const t = EDEN_TILES[gy][gx];
     if (t === 1) return true;
     if (t === 2 && barrierActive) return true;
     if (gx === EDEN_TREE.gx && gy === EDEN_TREE.gy) return true;
-
-    for (const d of level.doors) {
-        if (d.gx === gx && d.gy === gy && !d.open) return true;
-    }
     // boss antechamber gate (between warren and cherub hall)
     if (!level.bossGateOpen && gx >= 23 && gx <= 24 && gy >= 9 && gy <= 11) return true;
     // sanctum pool edge until boss beaten

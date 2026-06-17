@@ -482,15 +482,15 @@ export function gizaDestinationStub(combatId: string) {
 
 export function isGizaSolid(gx: number, gy: number, level: GizaLevelState): boolean {
     if (gx < 0 || gx >= GIZA_MAP_W || gy < 0 || gy >= GIZA_MAP_H) return true;
+
+    const door = level.doors.find((d) => d.gx === gx && d.gy === gy);
+    if (door) return !door.open;
+
     const t = GIZA_TILES[gy][gx];
     if (t === 1) return true;
 
     // illusion wall (passable after discovered or seer)
     if (gx === GIZA_ILLUSION_WALL.gx && gy === GIZA_ILLUSION_WALL.gy && !level.illusionPassed) return true;
-
-    for (const d of level.doors) {
-        if (d.gx === gx && d.gy === gy && !d.open) return true;
-    }
 
     // granite slab blocks King's Chamber approach
     if (!level.slabOpen && gx === GIZA_SLAB.gx && gy === GIZA_SLAB.gy) return true;
