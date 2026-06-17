@@ -24,6 +24,7 @@ export const NPC_DESTINATION: Record<string, DestinationId> = {
     npc_hana: 'dest_giza',
     npc_mabel: 'dest_fair',
     npc_eli: 'dest_kolbrin',
+    npc_hermes: 'dest_emerald',
 };
 
 export function isEdenSealed(): boolean {

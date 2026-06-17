@@ -3,6 +3,7 @@ import { QUESTS, questsAvailable, objectiveMet } from '@/lib/game/quests';
 import { buildOverworld, TILE, type POI } from '@/lib/game/overworld';
 import { isDestinationUnlocked, activeDestinationFocus } from '@/lib/game/progression';
 
+
 export interface QuestWaypoint {
     questId: string;
     title: string;
@@ -43,6 +44,14 @@ export function activeQuestWaypoint(character: GameCharacter): QuestWaypoint | n
         } else if (o.kind === 'solve') {
             const puzzleDest = o.puzzleId.replace('puz_', 'dest_');
             targetPoi = pois.find((p) => p.id === puzzleDest) || giverPoi;
+        } else if (o.kind === 'minigame' || o.kind === 'materials' || o.kind === 'discovered' || o.kind === 'discoveredAll' || o.kind === 'discoveredCount') {
+            const destId = q.destId;
+            if (destId && DEST_TO_POI[destId]) {
+                targetPoi = pois.find((p) => p.id === DEST_TO_POI[destId]) || giverPoi;
+            }
+        } else if (o.kind === 'collect') {
+            const poiId = q.destId ? DEST_TO_POI[q.destId] : undefined;
+            if (poiId) targetPoi = pois.find((p) => p.id === poiId) || giverPoi;
         }
 
         if (!targetPoi) continue;

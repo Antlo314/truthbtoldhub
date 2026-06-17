@@ -1043,7 +1043,15 @@ export default function WorldPage() {
                                 const met = objectiveMet(q, character);
                                 return (
                                     <div key={q.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                                        <h3 className="font-ritual text-lg text-white mb-2">{q.title}</h3>
+                                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                                            <h3 className="font-ritual text-lg text-white">{q.title}</h3>
+                                            {q.missionStep != null && q.missionTotal != null && (
+                                                <span className="text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-aether-gold/30 text-aether-gold/90 shrink-0">
+                                                    Mission {q.missionStep} / {q.missionTotal}
+                                                    {q.missionPhase === 'boss' ? ' · Boss' : q.missionPhase === 'relic' ? ' · Relic' : ''}
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="font-ritual italic text-white/85 text-sm leading-relaxed mb-4">“{claimed || met ? q.completeText : q.intro}”</p>
                                         <div className="text-[11px] mb-3">
                                             {claimed ? (
@@ -1084,7 +1092,14 @@ export default function WorldPage() {
                                 return (
                                     <div key={q.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                                         <div className="flex items-center justify-between gap-2">
-                                            <h3 className="text-sm font-bold text-white">{q.title}</h3>
+                                            <div className="min-w-0">
+                                                <h3 className="text-sm font-bold text-white break-words">{q.title}</h3>
+                                                {q.missionStep != null && q.missionTotal != null && (
+                                                    <p className="text-[8px] uppercase tracking-[0.18em] text-zinc-500 mt-0.5">
+                                                        {q.giverName} · Mission {q.missionStep}/{q.missionTotal}
+                                                    </p>
+                                                )}
+                                            </div>
                                             <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color }}>{status}</span>
                                         </div>
                                         <p className="text-[10px] text-zinc-500 mt-0.5">{q.giverName} · {q.objectiveText} ({objectiveProgress(q, character)})</p>

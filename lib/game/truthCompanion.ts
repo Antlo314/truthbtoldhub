@@ -54,6 +54,7 @@ const BASE_POI_LINES: Record<string, string> = {
     dest_emerald: 'Thrice-great — in life, in death, and in what lies beyond both.',
     npc_gardener: 'The Gardener waits by Eden\'s gate. Speak with him — then step through and walk the open garden.',
     npc_mabel: 'Mabel chronicled what they erased from the Fair.',
+    npc_hermes: 'Hermes keeps the Emerald Tablets. Speak with him — then step through when the seven spheres align.',
 };
 
 const HUT_LINES_BY_TIER: Record<0 | 1 | 2 | 3, string[]> = {

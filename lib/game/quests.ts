@@ -1,6 +1,8 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { isNpcQuestActive, EDEN_SEALED } from '@/lib/game/progression';
 import { truthDepth } from '@/lib/game/truthLore';
+import { buildWorldQuests } from '@/lib/game/worldMissions';
+import type { MissionPhase } from '@/lib/game/worldMissions';
 
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
@@ -19,7 +21,10 @@ export type QuestObjective =
     | { kind: 'anyProgress' }
     | { kind: 'truthThreads'; count: number }
     | { kind: 'armed' }
-    | { kind: 'discovered'; id: string };
+    | { kind: 'discovered'; id: string }
+    | { kind: 'discoveredAll'; ids: string[] }
+    | { kind: 'discoveredCount'; prefix: string; count: number }
+    | { kind: 'minigame'; minigameId: string };
 
 export interface Quest {
     id: string;
@@ -33,6 +38,12 @@ export interface Quest {
     completeText: string; // on turn-in
     requires?: string[];  // quest ids that must be claimed first
     grantsScroll?: string;
+    /** World mission chain metadata */
+    missionStep?: number;
+    missionTotal?: number;
+    destId?: string;
+    missionPhase?: MissionPhase;
+    tier?: number;
 }
 
 export const QUESTS: Quest[] = [
@@ -106,114 +117,7 @@ export const QUESTS: Quest[] = [
         reward: { skillPoints: 1, text: '+1 skill point; the referral seal awakens.' },
         completeText: 'The cipher fades — but its intent remains. You were expected. Walk forward.',
     },
-    {
-        id: 'q_eden_gate',
-        giver: 'npc_gardener',
-        giverName: 'The Gardener',
-        title: 'Before the Fall',
-        intro: 'The deep garden still remembers those who walked beside the Source — before the serpent spoke. Walk its stones, learn to fight the shades, and face the cherub at the inner gate. Only the armed may pass.',
-        objectiveText: 'Walk the garden and defeat the cherub at the inner gate.',
-        objective: { kind: 'clear', destId: 'dest_eden' },
-        reward: { skillPoints: 1, text: '+1 skill point and the Gardener\'s blessing.' },
-        completeText: 'The flaming sword lowers. The sanctum opens — attune the four rivers and claim what the Tree of Life keeps.',
-    },
-    {
-        id: 'q_eden_rivers',
-        giver: 'npc_gardener',
-        giverName: 'The Gardener',
-        title: 'The Four Rivers',
-        requires: ['q_eden_gate'],
-        intro: 'A river went out of Eden and parted into four heads. Attune them in the order the first book gives, and I will entrust you a page of the old tongue.',
-        objectiveText: 'Solve the riddle of Eden — attune the four rivers.',
-        objective: { kind: 'solve', puzzleId: 'puz_eden' },
-        reward: { skillPoints: 1, text: '+1 skill point and the Scroll of the Four Rivers.' },
-        completeText: 'Pishon, Gihon, Hiddekel, Euphrates — they run as one again. Take this scroll; other seals will yield to its memory.',
-        grantsScroll: 'scroll_rivers',
-    },
-    {
-        id: 'q_fair_city',
-        giver: 'npc_mabel',
-        giverName: 'Mabel Hart',
-        title: 'The Year of the White City',
-        intro: 'Twelve hundred palaces of plaster and light — and a turnstile locked to the year they rose. Walk the Fair and set the dials.',
-        objectiveText: 'Solve the riddle of St. Louis — set the year of the Fair.',
-        objective: { kind: 'solve', puzzleId: 'puz_fair' },
-        reward: { skillPoints: 1, text: '+1 skill point and Mabel\'s chronicle.' },
-        completeText: 'Nineteen hundred and four. The gates swing wide, and the Erased drift aside. The Caretaker still waits deeper in.',
-    },
-    {
-        id: 'q_fair_guardian',
-        giver: 'npc_mabel',
-        giverName: 'Mabel Hart',
-        title: 'The Erased Ledger',
-        requires: ['q_fair_city'],
-        intro: 'The Caretaker keeps his ledger of forgotten souls. Break his hold on the Fair, and brass truth is yours.',
-        objectiveText: 'Defeat the Caretaker of the Fair.',
-        objective: { kind: 'clear', destId: 'dest_fair' },
-        reward: { skillPoints: 1, text: '+1 skill point; the ivory city remembers you.' },
-        completeText: 'His ledger burns. What was hidden in the white halls is yours to read — and the copper sheets scattered there are yours to gather.',
-    },
-    {
-        id: 'q_smelt',
-        giver: 'npc_hana',
-        giverName: 'Hana',
-        title: 'Ore of the Engine',
-        requires: ['q_hut_begin'],
-        intro: 'You have walked the chamber. Now learn the forge. Descend into Giza and strike the iron nodes in the tomb — three pieces are enough to temper your first upgrade at Truth\'s Hut.',
-        objectiveText: 'Gather 3 Iron Ore from Giza.',
-        objective: { kind: 'materials', iron: 3 },
-        reward: { skillPoints: 1, text: '+1 skill point; carry the ore to Truth\'s Forge.' },
-        completeText: 'Good. The ore is hot with memory. Return to Truth\'s Hut, open the forge, and smelt your staff into ironwood.',
-    },
-    {
-        id: 'q_giza',
-        giver: 'npc_hana',
-        giverName: 'Hana',
-        title: 'The Engine of Stone',
-        intro: 'You have the look of one who will not be lied to — good. Descend into Giza, face what guards the great machine, and come back to tell me it is no tomb.',
-        objectiveText: 'Defeat the guardian within Giza.',
-        objective: { kind: 'clear', destId: 'dest_giza' },
-        reward: { skillPoints: 1, text: '+1 skill point and Hana’s trust.' },
-        completeText: 'No king — only a machine, and a guardian set to keep its secret. You begin to see. Take this; you have earned a measure of power.',
-    },
-    {
-        id: 'q_hana_echo',
-        giver: 'npc_hana',
-        giverName: 'Hana',
-        title: 'The Measure of the Stone',
-        requires: ['q_giza'],
-        intro: 'You have seen the chamber. Now hear what it measures. Set the order of its faces and shafts — the stone will teach you if you listen.',
-        objectiveText: 'Solve the riddle of Giza — set the measure of the stone.',
-        objective: { kind: 'solve', puzzleId: 'puz_giza' },
-        reward: { skillPoints: 1, text: '+1 skill point and the Scroll of Measure.' },
-        completeText: 'The granite slides aside in your memory. Take this page — it will open other seals of number and year.',
-        grantsScroll: 'scroll_measure',
-    },
-    {
-        id: 'q_kolbrin',
-        giver: 'npc_eli',
-        giverName: 'Eli',
-        title: 'The Bitter Star',
-        intro: 'I am a scribe of buried books. In the Kolbrin Vault sleeps the true name of the Destroyer. Solve the runes, speak it, and the hidden histories will open to you.',
-        objectiveText: 'Solve the riddle of the Kolbrin — name the Destroyer.',
-        objective: { kind: 'solve', puzzleId: 'puz_kolbrin' },
-        reward: { skillPoints: 1, text: '+1 skill point and a page of forbidden history.' },
-        completeText: 'WORMWOOD — you spoke it. The same star, in every tongue, in every age. Here. Knowledge is its own kind of power.',
-        grantsScroll: 'scroll_wormwood',
-    },
-    {
-        id: 'q_eli_cross',
-        giver: 'npc_eli',
-        giverName: 'Eli',
-        title: 'The Emerald Word',
-        requires: ['q_kolbrin'],
-        intro: 'The Bronzebook points beyond itself — to halls of green glass where Thoth kept the All. Walk there, and bring me proof the threshold let you pass.',
-        objectiveText: 'Defeat the guardian of the Emerald Halls.',
-        objective: { kind: 'clear', destId: 'dest_emerald' },
-        reward: { skillPoints: 1, text: '+1 skill point and the Scroll of the Seven Wanderers.' },
-        completeText: 'Hermes inclined his head to you — I felt it from here. The wanderers are yours to trace.',
-        grantsScroll: 'scroll_stars',
-    },
+    ...buildWorldQuests(),
     {
         id: 'q_relics',
         giver: 'npc_mara',
@@ -240,7 +144,7 @@ export const QUESTS: Quest[] = [
     },
 ];
 
-const EDEN_QUEST_IDS = new Set(['q_eden_gate', 'q_eden_rivers']);
+const EDEN_QUEST_IDS = new Set(QUESTS.filter((q) => q.destId === 'dest_eden').map((q) => q.id));
 
 export function questsAvailable(giver: string, c: GameCharacter): Quest[] {
     return QUESTS.filter((q) => {
@@ -280,6 +184,12 @@ export function objectiveMet(q: Quest, c: GameCharacter): boolean {
     if (o.kind === 'truthThreads') return truthDepth(c) >= o.count;
     if (o.kind === 'armed') return !!c.equipped.weapon;
     if (o.kind === 'discovered') return c.discovered.includes(o.id);
+    if (o.kind === 'discoveredAll') return o.ids.every((id) => c.discovered.includes(id));
+    if (o.kind === 'discoveredCount') {
+        const n = c.discovered.filter((d) => d.startsWith(o.prefix)).length;
+        return n >= o.count;
+    }
+    if (o.kind === 'minigame') return (c.minigamesCleared || []).includes(o.minigameId);
     return false;
 }
 
@@ -299,5 +209,21 @@ export function objectiveProgress(q: Quest, c: GameCharacter): string {
     }
     if (o.kind === 'armed') return c.equipped.weapon ? 'Armed' : 'Forge at the Hut';
     if (o.kind === 'discovered') return c.discovered.includes(o.id) ? 'Complete' : 'Not yet';
+    if (o.kind === 'discoveredAll') {
+        const done = o.ids.filter((id) => c.discovered.includes(id)).length;
+        return `${done} / ${o.ids.length}`;
+    }
+    if (o.kind === 'discoveredCount') {
+        const n = c.discovered.filter((d) => d.startsWith(o.prefix)).length;
+        return `${Math.min(n, o.count)} / ${o.count}`;
+    }
+    if (o.kind === 'minigame') {
+        return (c.minigamesCleared || []).includes(o.minigameId) ? 'Trial passed' : 'Not yet';
+    }
     return objectiveMet(q, c) ? 'Complete' : 'Not yet';
+}
+
+/** Active world mission chains for quest log grouping. */
+export function worldMissionsForGiver(giver: string, c: GameCharacter): Quest[] {
+    return questsAvailable(giver, c).filter((q) => q.missionStep != null);
 }

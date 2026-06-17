@@ -23,12 +23,13 @@ interface Props {
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    onDiscover?: (ids: string[]) => void;
     puzzleId?: string;
     puzzleHint?: string;
     accent?: string;
 }
 
-export default function KolbrinWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#a855f7' }: Props) {
+export default function KolbrinWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, onDiscover, puzzleId, puzzleHint, accent = '#a855f7' }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -47,6 +48,7 @@ export default function KolbrinWorld({ character, isSolved, minigameDone = true,
     const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
     const handleActionRef = useRef<() => void>(() => {});
+    const runesMarkedRef = useRef(character.discovered.includes('kolbrin_runes_gathered'));
 
     // Game loop state
     const gameState = useRef({
@@ -227,6 +229,10 @@ export default function KolbrinWorld({ character, isSolved, minigameDone = true,
                         sfx.strike();
                         const gathered = state.runes.filter(x => x.collected).map(x => x.char).join('');
                         setDialogue(`You gathered the letter '${r.char}'! Encrypted runes gathered so far: ${gathered}`);
+                        if (state.runes.every((x) => x.collected) && !runesMarkedRef.current) {
+                            runesMarkedRef.current = true;
+                            onDiscover?.(['kolbrin_runes_gathered']);
+                        }
                     }
                 }
             });
