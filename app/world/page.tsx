@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
@@ -36,6 +36,7 @@ import JournalPanel from '@/components/game/JournalPanel';
 import GameSettingsPanel from '@/components/game/GameSettingsPanel';
 import TutorialOverlay from '@/components/game/TutorialOverlay';
 import SourceEpilogue from '@/components/game/SourceEpilogue';
+import DonationSection from '@/components/DonationSection';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
 
@@ -87,6 +88,8 @@ export default function WorldPage() {
     const [mounted, setMounted] = useState(false);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
+    const [hutTab, setHutTab] = useState<'dispatch' | 'patron'>('dispatch');
+
     const [toast, setToast] = useState<string | null>(null);
     const [hint, setHint] = useState(true);
     const [bulletins, setBulletins] = useState<Bulletin[]>([]);
@@ -149,6 +152,12 @@ export default function WorldPage() {
         applyMusicSetting(loadSettings().music);
         if (sessionStorage.getItem('tbth-cutscene-world') === '1') {
             gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
+        }
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('hut') === 'patron') {
+            setHutOpen(true);
+            setHutTab('patron');
+            window.history.replaceState({}, '', '/world');
         }
         const t = setTimeout(() => setHint(false), 5000);
         return () => {
@@ -551,14 +560,41 @@ export default function WorldPage() {
 
             {/* Truth's Hut — live daily dispatch */}
             {hutOpen && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setHutOpen(false)}>
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => { setHutOpen(false); setHutTab('dispatch'); }}>
                     <div className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 border border-[rgba(251,191,36,0.2)] relative max-h-[88dvh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setHutOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white z-10">
+                        <button onClick={() => { setHutOpen(false); setHutTab('dispatch'); }} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white z-10">
                             <X className="w-4 h-4" />
                         </button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Truth's Hut</p>
-                        <h2 className="font-ritual text-2xl md:text-3xl gold-shimmer mb-5">The Daily Dispatch</h2>
+                        <h2 className="font-ritual text-2xl md:text-3xl gold-shimmer mb-4">The Living Word</h2>
 
+                        <div className="flex rounded-xl border border-white/10 bg-black/30 p-1 mb-5">
+                            <button
+                                type="button"
+                                onClick={() => setHutTab('dispatch')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                                    hutTab === 'dispatch' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
+                                }`}
+                            >
+                                <Scroll className="w-3.5 h-3.5" />
+                                Dispatch
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setHutTab('patron')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                                    hutTab === 'patron' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
+                                }`}
+                            >
+                                <Heart className="w-3.5 h-3.5" />
+                                Patronage
+                            </button>
+                        </div>
+
+                        {hutTab === 'patron' ? (
+                            <DonationSection variant="hut" showFundingBar />
+                        ) : (
+                        <>
                         {/* latest bulletin */}
                         <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-4">
                             {bulletins.length > 0 ? (
@@ -683,6 +719,8 @@ export default function WorldPage() {
                             <Link href="/hut-admin" className="mt-6 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                 <Settings className="w-3.5 h-3.5" /> Tend the Hut
                             </Link>
+                        )}
+                        </>
                         )}
                     </div>
                 </div>

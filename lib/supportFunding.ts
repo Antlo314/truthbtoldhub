@@ -2,7 +2,8 @@ export const FUNDING_RAISED = 1000;
 export const FUNDING_GOAL = 10000;
 export const PRODUCTION_RESUME_AT = 5000;
 
-export const CASH_APP_URL = 'https://cash.app/$truufbtold';
+export const CASH_TAG = '$truufbtold';
+export const CASH_APP_URL = `https://cash.app/${CASH_TAG}`;
 export const STRIPE_URL = 'https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01';
 
 export function formatFunding(amount: number): string {

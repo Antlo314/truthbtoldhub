@@ -1,12 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Play, Clapperboard, Lock, ShieldCheck, Eye, Music, ChevronRight, Zap, X, Pause, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
-import { fundingProgressLabel, fundingProgressPercent, PRODUCTION_RESUME_AT, formatFunding } from '@/lib/supportFunding';
+import { fundingProgressLabel, fundingProgressPercent, PRODUCTION_RESUME_AT, formatFunding, STRIPE_URL } from '@/lib/supportFunding';
 
 let uiHoverSfx: Howl | null = null;
 let uiClickSfx: Howl | null = null;
@@ -96,7 +97,7 @@ export default function CinemaClient() {
                                 </p>
                             </div>
                             <button
-                                onClick={() => { playClick(); window.open('https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01', '_blank'); }}
+                                onClick={() => { playClick(); window.open(STRIPE_URL, '_blank'); }}
                                 className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:scale-110 transition-transform"
                             >
                                 <Zap className="w-8 h-8 fill-current" />
@@ -186,15 +187,14 @@ export default function CinemaClient() {
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-                                    <a 
-                                        href="https://donate.stripe.com/3cIdRabXw4MW8kzf7v8EM01" 
-                                        target="_blank" 
+                                    <Link
+                                        href="/world?hut=patron"
                                         onClick={() => playClick()}
                                         className="flex-1 flex items-center justify-center gap-3 py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-[1.02] transition-transform active:scale-95"
                                     >
                                         <Zap className="w-4 h-4" />
                                         Fuel the Mission
-                                    </a>
+                                    </Link>
                                     <button
                                         onClick={() => { playClick(); router.push('/'); }}
                                         className="flex-1 py-5 bg-white/5 border border-white/15 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all"

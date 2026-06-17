@@ -71,6 +71,35 @@ export const CLOTHING: ClothingItem[] = [
         from: 'The Emerald Halls',
         power: { hp: 22, damage: 2, regen: 1, label: '+22 vitality, +2 might, +1 renewal/s' },
     },
+    // Supporter garments — granted via Stripe patronage (lib/donationTiers.ts)
+    {
+        id: 'supporter_frequency',
+        name: 'Frequency Vest',
+        desc: 'Woven for patrons who keep the 400 frequency alive. The threads hum with the soundtrack of the movement.',
+        from: 'Patron Gift',
+        power: { hp: 10, damage: 1, label: '+10 vitality, +1 might' },
+    },
+    {
+        id: 'supporter_chronicle',
+        name: 'Chronicle Cloak',
+        desc: 'A chronicler\'s cloak — inked with storyboard stills and frames the world has not yet seen.',
+        from: 'Patron Gift',
+        power: { hp: 15, damage: 2, label: '+15 vitality, +2 might' },
+    },
+    {
+        id: 'supporter_oracle',
+        name: 'Oracle Mantle',
+        desc: 'Gold-threaded mantle of the Vision Supporters. Those who wear it are seen in the sanctum.',
+        from: 'Patron Gift',
+        power: { hp: 22, damage: 3, label: '+22 vitality, +3 might' },
+    },
+    {
+        id: 'supporter_prophetic',
+        name: 'Prophetic Vestment',
+        desc: 'The inner-circle weave — prophetic gold and renewal. Truth Circle souls carry this into every fight.',
+        from: 'Patron Gift',
+        power: { hp: 30, damage: 5, regen: 1, label: '+30 vitality, +5 might, +1 renewal/s' },
+    },
 ];
 
 export const CLOTHING_BY_ID: Record<string, ClothingItem> = CLOTHING.reduce((acc, c) => {
