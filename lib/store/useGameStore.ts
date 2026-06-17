@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { getFounderStatus, type FounderTier } from '@/lib/game/founders';
 import { CLOTHING_BY_ID } from '@/lib/game/clothing';
 import { defaultAvatar, type AvatarConfig } from '@/lib/game/avatar';
+import { PATH_BY_ID } from '@/lib/game/paths';
+import { migrateSkillIds } from '@/lib/game/abilities';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -49,6 +51,7 @@ export interface GameCharacter {
     scrolls: string[];       // knowledge scrolls from quests
     cleared: string[];       // destination ids whose guardians are defeated
     solved: string[];        // puzzle ids solved
+    minigamesCleared: string[]; // score-gated trials passed
     questsClaimed: string[]; // quest ids whose reward was taken
     discovered: string[];    // hidden POIs found, etc.
     wardrobe: string[];      // clothing ids the soul has found
@@ -59,6 +62,8 @@ export interface GameCharacter {
         copper: number;
         cosmic: number;
     };
+    /** HP bonus from health orbs — applied at the start of the next fight. */
+    fightBonusHp: number;
 }
 
 const DEFAULT_CHARACTER: GameCharacter = {
@@ -77,12 +82,14 @@ const DEFAULT_CHARACTER: GameCharacter = {
     scrolls: [],
     cleared: [],
     solved: [],
+    minigamesCleared: [],
     questsClaimed: [],
     discovered: [],
     wardrobe: ['plain'],
     sourceReturned: false,
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
     materials: { iron: 0, copper: 0, cosmic: 0 },
+    fightBonusHp: 0,
 };
 
 function freshCharacter(): GameCharacter {
@@ -95,6 +102,7 @@ function freshCharacter(): GameCharacter {
         scrolls: [...DEFAULT_CHARACTER.scrolls],
         cleared: [...DEFAULT_CHARACTER.cleared],
         solved: [...DEFAULT_CHARACTER.solved],
+        minigamesCleared: [...DEFAULT_CHARACTER.minigamesCleared],
         questsClaimed: [...DEFAULT_CHARACTER.questsClaimed],
         discovered: [...DEFAULT_CHARACTER.discovered],
         wardrobe: [...DEFAULT_CHARACTER.wardrobe],
@@ -124,12 +132,15 @@ interface GameState {
     equipClothing: (id: string) => void;
     markCleared: (destId: string) => void;
     markSolved: (puzzleId: string) => void;
+    markMinigameCleared: (minigameId: string) => void;
     claimQuest: (questId: string, skillPointsReward: number) => void;
     returnToSource: () => void;
     completeAwakening: () => void;
     reset: () => void;
     addMaterial: (type: 'iron' | 'copper' | 'cosmic', qty: number) => void;
     spendMaterials: (costs: { iron?: number; copper?: number; cosmic?: number }) => void;
+    addFightBonusHp: (amount: number) => void;
+    consumeFightBonusHp: () => number;
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
@@ -162,7 +173,11 @@ export const useGameStore = create<GameState>()(
             learnSkill: (id) =>
                 set((s) => {
                     const c = s.character;
-                    if (c.skills.includes(id) || c.skillPoints <= 0) return {};
+                    if (!c.path || c.skills.includes(id) || c.skillPoints <= 0) return {};
+                    const node = PATH_BY_ID[c.path].skills.find((sk) => sk.id === id);
+                    if (!node) return {};
+                    const prereqs = node.requires || [];
+                    if (!prereqs.every((r) => c.skills.includes(r))) return {};
                     return { character: { ...c, skills: [...c.skills, id], skillPoints: c.skillPoints - 1 } };
                 }),
 
@@ -238,6 +253,14 @@ export const useGameStore = create<GameState>()(
                     return { character: { ...c, solved: [...c.solved, puzzleId] } };
                 }),
 
+            markMinigameCleared: (minigameId) =>
+                set((s) => {
+                    const c = s.character;
+                    const cleared = c.minigamesCleared || [];
+                    if (cleared.includes(minigameId)) return {};
+                    return { character: { ...c, minigamesCleared: [...cleared, minigameId] } };
+                }),
+
             claimQuest: (questId, skillPointsReward) =>
                 set((s) => {
                     const c = s.character;
@@ -265,6 +288,17 @@ export const useGameStore = create<GameState>()(
                         }
                     };
                 }),
+
+            addFightBonusHp: (amount) =>
+                set((s) => ({
+                    character: { ...s.character, fightBonusHp: Math.min(60, s.character.fightBonusHp + amount) },
+                })),
+
+            consumeFightBonusHp: () => {
+                const bonus = get().character.fightBonusHp;
+                if (bonus > 0) set((s) => ({ character: { ...s.character, fightBonusHp: 0 } }));
+                return bonus;
+            },
 
             spendMaterials: (costs) =>
                 set((s) => {
@@ -307,6 +341,7 @@ export const useGameStore = create<GameState>()(
                                 appearance: { ...DEFAULT_CHARACTER.appearance, ...(c.appearance || {}) },
                                 avatar: { ...DEFAULT_CHARACTER.avatar, ...(c.avatar || {}) },
                                 equipped: { ...DEFAULT_CHARACTER.equipped, ...(c.equipped || {}) },
+                                skills: migrateSkillIds(c.skills || []),
                             },
                             initiated: !!data.initiated,
                             cloudLoaded: true,
@@ -380,7 +415,7 @@ export const useGameStore = create<GameState>()(
                             bodyTile: pc.appearance?.bodyTile || c.character.appearance.bodyTile,
                         },
                         avatar: { ...c.character.avatar, ...(pc.avatar || {}) },
-                        skills: pc.skills || c.character.skills,
+                        skills: migrateSkillIds(pc.skills || c.character.skills),
                         skillPoints: typeof pc.skillPoints === 'number' ? pc.skillPoints : c.character.skillPoints,
                         founderClaimed: typeof pc.founderClaimed === 'boolean' ? pc.founderClaimed : c.character.founderClaimed,
                         inventory: pc.inventory || c.character.inventory,
@@ -393,6 +428,7 @@ export const useGameStore = create<GameState>()(
                         sourceReturned: typeof pc.sourceReturned === 'boolean' ? pc.sourceReturned : c.character.sourceReturned,
                         equipped: { ...c.character.equipped, ...(pc.equipped || {}) },
                         materials: pc.materials || c.character.materials,
+                        fightBonusHp: typeof pc.fightBonusHp === 'number' ? pc.fightBonusHp : c.character.fightBonusHp,
                     },
                 };
             },

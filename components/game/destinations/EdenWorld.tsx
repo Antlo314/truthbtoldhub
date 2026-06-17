@@ -1,41 +1,76 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
+import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
-import { Volume2, VolumeX, ArrowLeft } from 'lucide-react';
+import { Volume2, VolumeX, ArrowLeft, Key, Heart } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import MiniWorldInsight from '@/components/game/MiniWorldInsight';
+import CombatScene from '@/components/game/CombatScene';
+import { skillBonuses } from '@/lib/game/paths';
+import { pathCombatMods } from '@/lib/game/pathPowers';
+import { combatRelicBonuses } from '@/lib/game/resonance';
+import { founderBonuses } from '@/lib/game/founders';
+import { clothingBonus } from '@/lib/game/clothing';
+import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import {
+    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, EDEN_TILES, EDEN_SPAWN, EDEN_RIVERS, EDEN_TREE,
+    EDEN_VIEW_TILES, hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
+    edenZoneLabel, edenDiscoveriesFromState, edenWingId, canRevealEdenSecret,
+    EDEN_GARDENER_LINES, EDEN_RESPAWN_LINE, EDEN_TEMPTATION, EDEN_TEMPTATION_SHORTCUT, EDEN_SERPENT_LINES,
+    type EdenLevelState,
+} from '@/lib/game/edenLevel';
 
-const TILE_COUNT = 16;
-const MAP_SIZE = TILE_COUNT;
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
-const TILE = 16;
+const MAX_DUNGEON_HP = 100;
 
 interface Props {
     character: GameCharacter;
     isSolved: boolean;
+    minigameDone?: boolean;
+    isGuardianCleared: boolean;
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
+    onGuardianCleared: () => void;
+    onDiscover: (ids: string[]) => void;
     puzzleId?: string;
     puzzleHint?: string;
     accent?: string;
 }
 
-export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#34d399' }: Props) {
+export default function EdenWorld({
+    character, isSolved, minigameDone = true, isGuardianCleared,
+    onSolve, onClaim, onExit, onGuardianCleared, onDiscover, puzzleId, puzzleHint, accent = '#34d399',
+}: Props) {
+    const founderNumber = useGameStore((s) => s.founderNumber);
+    const consumeFightBonusHp = useGameStore((s) => s.consumeFightBonusHp);
+    const grantSkillPoint = useCallback(() => {
+        useGameStore.setState((s) => ({
+            character: { ...s.character, skillPoints: s.character.skillPoints + 1 },
+        }));
+    }, []);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
 
     const [muted, setMutedState] = useState(isMuted());
-    const [dialogue, setDialogue] = useState<string | null>(
-        isSolved 
-            ? "The four rivers flow. The Garden of Eden remembers. The Leaf is yours." 
-            : "Welcome to Eden, child. Attune the four rivers in order: Pishon (North-West), Gihon (North-East), Hiddekel (South-West), and Euphrates (South-East) to lower the central barrier."
-    );
+    const [dungeonHp, setDungeonHp] = useState(MAX_DUNGEON_HP);
+    const [level, setLevel] = useState<EdenLevelState>(() => hydrateEdenState(character));
+    const [zoneLabel, setZoneLabel] = useState('The Threshold');
+    const [nearLore, setNearLore] = useState<string | null>(null);
+    const [nearTemptation, setNearTemptation] = useState(false);
     const [sequence, setSequence] = useState<number[]>([]);
     const [relicClaimed, setRelicClaimed] = useState(character.inventory.includes('relic_eden_leaf'));
+    const [activeFight, setActiveFight] = useState<string | null>(null);
+    const [dialogue, setDialogue] = useState(
+        isGuardianCleared
+            ? 'The cherub has fallen. Attune the four rivers and claim the Leaf — the hour before the lie.'
+            : 'Walk the deep garden back to where man still walked beside the Source — before he listened to the serpent. Read the stones. Find the keys. Learn to fight.',
+    );
+    const [barrierActive, setBarrierActive] = useState(!isSolved);
 
     const joyRef = useRef({ x: 0, y: 0 });
     const keysRef = useRef<Set<string>>(new Set());
@@ -43,550 +78,703 @@ export default function EdenWorld({ character, isSolved, onSolve, onClaim, onExi
     const joyActive = useRef(false);
     const baseRef = useRef<HTMLDivElement>(null);
     const JOY_R = 46;
+    const fightTriggeredRef = useRef<string | null>(null);
+    const fightBonusRef = useRef(0);
+    const touchedRef = useRef(new Set<string>());
+    const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
+    const lastWingRef = useRef<string | null>(null);
+    const riverParticlesRef = useRef<{ x: number; y: number; color: string; t: number; speed: number }[]>([]);
+    const temptOfferShownRef = useRef(false);
 
-    // Game loop state
     const gameState = useRef({
-        px: 8, // Grid column
-        py: 12, // Grid row
-        pax: 8 * 16 + 8, // Sub-pixel X
-        pay: 12 * 16 + 8, // Sub-pixel Y
+        px: EDEN_SPAWN.gx * EDEN_TILE + 8,
+        py: EDEN_SPAWN.gy * EDEN_TILE + 8,
+        pax: EDEN_SPAWN.gx * EDEN_TILE + 8,
+        pay: EDEN_SPAWN.gy * EDEN_TILE + 8,
         facing: 'up' as 'down' | 'up' | 'left' | 'right',
         walkT: 0,
-        distractTimer: 0,
-        shades: [
-            { x: 3 * 16, y: 4 * 16, tx: 3 * 16, ty: 4 * 16, wait: 0 },
-            { x: 12 * 16, y: 4 * 16, tx: 12 * 16, ty: 4 * 16, wait: 0 }
-        ],
-        rivers: [
-            { id: 0, name: 'Pishon', gx: 2, gy: 2, active: false, color: '#22d3ee' },
-            { id: 1, name: 'Gihon', gx: 13, gy: 2, active: false, color: '#fbbf24' },
-            { id: 2, name: 'Hiddekel', gx: 2, gy: 13, active: false, color: '#a855f7' },
-            { id: 3, name: 'Euphrates', gx: 13, gy: 13, active: false, color: '#10b981' }
-        ],
-        treeX: 8,
-        treeY: 7,
-        barrierActive: !isSolved,
-        t: 0
+        rivers: EDEN_RIVERS.map((r) => ({ ...r, active: false })),
+        t: 0,
     });
 
-    const toggleMute = () => {
-        const m = !muted;
-        setMuted(m);
-        setMutedState(m);
-    };
+    const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
+    const combatStatProps = useMemo(() => {
+        const cSkill = skillBonuses(character.skills);
+        const cFounder = founderBonuses(founderNumber);
+        const cCloth = clothingBonus(character.equipped.clothing);
+        const combatBlessing = combatRelicBonuses(character.inventory, character.equipped.relic);
+        const pathMods = pathCombatMods(character.path, character.skills);
+        return {
+            bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
+            bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
+            bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
+            bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
+            bonusLifesteal: combatBlessing.lifesteal,
+            bonusCrit: combatBlessing.crit,
+            bonusKnockback: combatBlessing.knockback,
+            enemyHpMult: pathMods.enemyHpMult,
+            enemyDmgMult: pathMods.enemyDmgMult,
+            playerDamageMult: pathMods.playerDamageMult,
+            playerReachBonus: pathMods.playerReachBonus,
+        };
+    }, [character, founderNumber]);
 
-    // Reset sequence
-    const resetSequence = useCallback(() => {
-        setSequence([]);
-        gameState.current.rivers.forEach(r => r.active = false);
-        setDialogue("The resonance breaks. The rivers reset. Try again from the North-West (Pishon).");
+    const toggleMute = () => { const m = !muted; setMuted(m); setMutedState(m); };
+
+    const softRespawn = useCallback(() => {
+        const st = gameState.current;
+        st.pax = EDEN_SPAWN.gx * EDEN_TILE + 8;
+        st.pay = EDEN_SPAWN.gy * EDEN_TILE + 8;
+        st.px = st.pax;
+        st.py = st.pay;
+        setDungeonHp(50);
+        setDialogue(`【The Gardener】 ${EDEN_RESPAWN_LINE}`);
         sfx.defeat();
     }, []);
 
-    // Collision check
-    const isSolid = useCallback((gx: number, gy: number) => {
-        if (gx < 0 || gx >= MAP_SIZE || gy < 0 || gy >= MAP_SIZE) return true;
-        // Central pool / Tree of Life
-        if (gx >= 7 && gx <= 9 && gy >= 6 && gy <= 8) {
-            // If barrier is active, cannot enter
-            if (gameState.current.barrierActive) return true;
-            // Tree trunk itself is solid
-            if (gx === 8 && gy === 7) return true;
+    const acceptTemptation = useCallback(() => {
+        if (level.temptationResolved !== 'none') return;
+        const st = gameState.current;
+        st.pax = EDEN_TEMPTATION_SHORTCUT.gx * EDEN_TILE + 8;
+        st.pay = EDEN_TEMPTATION_SHORTCUT.gy * EDEN_TILE + 8;
+        setLevel((prev) => {
+            const next = { ...prev, temptationResolved: 'accepted' as const };
+            onDiscover(edenDiscoveriesFromState(next));
+            return next;
+        });
+        setNearTemptation(false);
+        setDialogue(EDEN_SERPENT_LINES.accepted);
+        setDungeonHp((hp) => {
+            const next = hp - 25;
+            if (next <= 0) {
+                setTimeout(() => softRespawn(), 50);
+                return 0;
+            }
+            return next;
+        });
+        const temptFight = level.fights.find((f) => f.combatId === 'eden_temptation');
+        if (temptFight && !temptFight.cleared && character.equipped.weapon) {
+            fightTriggeredRef.current = temptFight.id;
+            fightBonusRef.current = consumeFightBonusHp();
+            setActiveFight('eden_temptation');
         }
-        // Fountains
-        if ((gx === 2 && gy === 2) || (gx === 13 && gy === 2) || 
-            (gx === 2 && gy === 13) || (gx === 13 && gy === 13)) return true;
-        
-        return false;
+        sfx.hit();
+    }, [level.temptationResolved, level.fights, character.equipped.weapon, onDiscover, consumeFightBonusHp, softRespawn]);
+
+    const resistTemptation = useCallback(() => {
+        if (level.temptationResolved !== 'none') return;
+        setLevel((prev) => {
+            const next = { ...prev, temptationResolved: 'resisted' as const };
+            onDiscover(edenDiscoveriesFromState(next));
+            return next;
+        });
+        setNearTemptation(false);
+        setDialogue(EDEN_SERPENT_LINES.resisted);
+        sfx.strike();
+    }, [level.temptationResolved, onDiscover]);
+
+    const resetSequence = useCallback(() => {
+        setSequence([]);
+        gameState.current.rivers.forEach((r) => { r.active = false; });
+        setDialogue('The resonance breaks. Begin again from Pishon in the north-west.');
+        sfx.defeat();
     }, []);
 
-    // Setup input listeners
+    const markFightCleared = useCallback((fightId: string, combatId: string) => {
+        setLevel((prev) => {
+            const next = updateEdenProgress({
+                ...prev,
+                fights: prev.fights.map((f) => (f.id === fightId ? { ...f, cleared: true } : f)),
+            });
+            onDiscover(edenDiscoveriesFromState(next));
+            if (combatId === 'eden_boss') onGuardianCleared();
+            return next;
+        });
+        fightTriggeredRef.current = null;
+        setActiveFight(null);
+        setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + 20));
+    }, [onGuardianCleared, onDiscover]);
+
+    const readLoreStone = useCallback((stoneId: string) => {
+        const stone = level.loreStones.find((s) => s.id === stoneId);
+        if (!stone || stone.read) return;
+        setLevel((prev) => {
+            const next = {
+                ...prev,
+                loreStones: prev.loreStones.map((s) => (s.id === stoneId ? { ...s, read: true } : s)),
+            };
+            onDiscover(edenDiscoveriesFromState(next));
+            return next;
+        });
+        setDialogue(`【${stone.title}】 ${stone.text}`);
+        sfx.hit();
+    }, [level.loreStones, onDiscover]);
+
+    const isSolid = useCallback((gx: number, gy: number) => {
+        return isEdenSolid(gx, gy, level, barrierActive);
+    }, [level, barrierActive]);
+
     useEffect(() => {
         const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
-
-        return () => {
-            window.removeEventListener('keydown', kd);
-            window.removeEventListener('keyup', ku);
-        };
+        return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
     }, []);
 
-    // Primary Game Loop
     useEffect(() => {
+        if (activeFight) return;
         const canvas = canvasRef.current!;
         let ctx = canvas.getContext('2d')!;
-
-        // Particles system
-        const particles: { x: number; y: number; vx: number; vy: number; size: number; color: string; alpha: number; type: 'leaf' | 'pollen' }[] = [];
-        for (let i = 0; i < 22; i++) {
-            particles.push({
-                x: Math.random() * (MAP_SIZE * TILE),
-                y: Math.random() * (MAP_SIZE * TILE),
-                vx: -12 - Math.random() * 16,
-                vy: 8 + Math.random() * 12,
-                size: 1.5 + Math.random() * 2,
-                color: Math.random() > 0.4 ? '#15803d' : '#fcd34d',
-                alpha: 0.3 + Math.random() * 0.5,
-                type: Math.random() > 0.4 ? 'leaf' : 'pollen'
-            });
-        }
-
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
-
-        // Build animation frames
         const DIRS = ['down', 'up', 'left', 'right'] as const;
         type Dir = typeof DIRS[number];
         const buildFrames = (cfg: GameCharacter['avatar']) => {
             const m = {} as Record<Dir, HTMLCanvasElement[]>;
-            for (const d of DIRS) {
-                m[d] = [
-                    avatarOffscreen(cfg, 0, d),
-                    avatarOffscreen(cfg, 1, d),
-                    avatarOffscreen(cfg, 2, d)
-                ];
-            }
+            for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
             return m;
         };
         let avatarFrames = buildFrames(charRef.current.avatar);
         let avatarKey = JSON.stringify(charRef.current.avatar);
-
+        const state = gameState.current;
         let raf = 0;
         let last = performance.now();
         let running = true;
+        let Z = 2.5;
 
-        // Scale tiles dynamically to fit viewport
-        let Z = 3;
         function resize() {
             if (!canvas.parentElement) return;
-            const size = Math.min(canvas.parentElement.clientWidth || 400, 480);
+            const size = Math.min(canvas.parentElement.clientWidth || 400, 520);
             canvas.width = size;
             canvas.height = size;
-            Z = size / (MAP_SIZE * TILE);
+            Z = size / (EDEN_VIEW_TILES * EDEN_TILE);
             ctx.imageSmoothingEnabled = false;
         }
         resize();
         window.addEventListener('resize', resize);
 
-        const state = gameState.current;
-
-        function loop(now: number) {
+        const loop = (now: number) => {
             if (!running) return;
             const dt = Math.min(0.05, (now - last) / 1000);
             last = now;
             state.t = now;
 
-            // Player speed and input handling
-            let speed = state.distractTimer > 0 ? 32 : 72; // slowed when distracted
-            if (state.distractTimer > 0) state.distractTimer -= dt;
-
-            let ix = joyRef.current.x;
-            let iy = joyRef.current.y;
+            let ix = joyRef.current.x, iy = joyRef.current.y;
             const k = keysRef.current;
             if (k.has('arrowleft') || k.has('a')) ix = -1;
             if (k.has('arrowright') || k.has('d')) ix = 1;
             if (k.has('arrowup') || k.has('w')) iy = -1;
             if (k.has('arrowdown') || k.has('s')) iy = 1;
-
             const mag = Math.hypot(ix, iy);
             if (mag > 1) { ix /= mag; iy /= mag; }
             const moving = Math.hypot(ix, iy) > 0.15;
 
             if (moving) {
                 state.walkT += dt;
-                state.facing = Math.abs(ix) > Math.abs(iy) 
-                    ? (ix < 0 ? 'left' : 'right') 
-                    : (iy < 0 ? 'up' : 'down');
-
-                // Try moving X
-                const nx = state.pax + ix * speed * dt;
-                const ngx = Math.floor(nx / TILE);
-                if (!isSolid(ngx, state.py)) state.pax = nx;
-
-                // Try moving Y
-                const ny = state.pay + iy * speed * dt;
-                const ngy = Math.floor(ny / TILE);
-                if (!isSolid(state.px, ngy)) state.pay = ny;
-
-                state.px = Math.floor(state.pax / TILE);
-                state.py = Math.floor(state.pay / TILE);
+                state.facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
+                const nx = state.pax + ix * 78 * dt;
+                const ngx = Math.floor(nx / EDEN_TILE);
+                if (!isSolid(ngx, Math.floor(state.pay / EDEN_TILE))) state.pax = nx;
+                const ny = state.pay + iy * 78 * dt;
+                const ngy = Math.floor(ny / EDEN_TILE);
+                if (!isSolid(Math.floor(state.pax / EDEN_TILE), ngy)) state.pay = ny;
             }
 
-            // Patrol shades logic
-            for (const s of state.shades) {
-                if (s.wait > 0) {
-                    s.wait -= dt;
-                } else {
-                    const dx = s.tx - s.x;
-                    const dy = s.ty - s.y;
-                    const d = Math.hypot(dx, dy);
-                    if (d < 1) {
-                        // Pick new random adjacent cell that is not solid
-                        const directions = [
-                            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
-                            { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
-                        ];
-                        const valid = directions.map(dir => {
-                            const gx = Math.floor(s.x / TILE) + dir.dx;
-                            const gy = Math.floor(s.y / TILE) + dir.dy;
-                            return { gx, gy, x: gx * TILE, y: gy * TILE };
-                        }).filter(pos => !isSolid(pos.gx, pos.gy));
+            const pgx = Math.floor(state.pax / EDEN_TILE);
+            const pgy = Math.floor(state.pay / EDEN_TILE);
+            const zl = edenZoneLabel(pgx, pgy);
+            if (zl) setZoneLabel(zl);
 
-                        if (valid.length > 0) {
-                            const next = valid[Math.floor(Math.random() * valid.length)];
-                            s.tx = next.x;
-                            s.ty = next.y;
-                        }
-                        s.wait = Math.random() * 1.5;
-                    } else {
-                        const step = 28 * dt;
-                        s.x += (dx / d) * Math.min(step, d);
-                        s.y += (dy / d) * Math.min(step, d);
-                    }
-                }
-
-                // Check collision with player
-                const pWorldX = state.pax;
-                const pWorldY = state.pay;
-                if (Math.hypot(s.x + 8 - pWorldX, s.y + 8 - pWorldY) < 12) {
-                    if (state.distractTimer <= 0) {
-                        state.distractTimer = 2.5; // 2.5 seconds distraction
-                        sfx.hurt();
-                        setDialogue("An Apple Shade drifts through you! Your mind wanders... you are slowed.");
-                    }
+            const wingId = edenWingId(pgx, pgy);
+            if (wingId && wingId !== lastWingRef.current) {
+                lastWingRef.current = wingId;
+                const discId = `eden_${wingId}`;
+                if (!wingsSeenRef.current.has(discId)) {
+                    wingsSeenRef.current.add(discId);
+                    onDiscover([discId]);
+                    setDialogue(`【The Gardener】 ${EDEN_GARDENER_LINES[wingId]}`);
                 }
             }
 
-            // Check river triggers
-            for (const r of state.rivers) {
-                const rx = r.gx * TILE + 8;
-                const ry = r.gy * TILE + 8;
-                const pWorldX = state.pax;
-                const pWorldY = state.pay;
-                
-                // Stepped near a fountain button (1 tile radius)
-                if (Math.hypot(rx - pWorldX, ry - pWorldY) < 16 && !r.active && !isSolved) {
-                    r.active = true;
+            const temptNear = level.temptationResolved === 'none'
+                && Math.hypot(EDEN_TEMPTATION.gx * EDEN_TILE + 8 - state.pax, EDEN_TEMPTATION.gy * EDEN_TILE + 8 - state.pay) < 20;
+            if (temptNear !== nearTemptation) setNearTemptation(temptNear);
+            if (temptNear && !temptOfferShownRef.current) {
+                temptOfferShownRef.current = true;
+                setDialogue(EDEN_SERPENT_LINES.offer);
+            }
+            if (!temptNear) temptOfferShownRef.current = false;
+
+            let closestLore: string | null = null;
+            let closestLoreD = Infinity;
+            for (const ls of level.loreStones) {
+                const d = Math.hypot(ls.gx * EDEN_TILE + 8 - state.pax, ls.gy * EDEN_TILE + 8 - state.pay);
+                if (d < 22 && d < closestLoreD) { closestLoreD = d; closestLore = ls.id; }
+            }
+            if (closestLore !== nearLore) setNearLore(closestLore);
+
+            // health pickups
+            for (const pk of level.pickups) {
+                if (pk.collected || touchedRef.current.has(pk.id)) continue;
+                if (Math.hypot(pk.gx * EDEN_TILE + 8 - state.pax, pk.gy * EDEN_TILE + 8 - state.pay) < 14) {
+                    touchedRef.current.add(pk.id);
+                    setLevel((prev) => {
+                        const next = { ...prev, pickups: prev.pickups.map((p) => (p.id === pk.id ? { ...p, collected: true } : p)) };
+                        onDiscover(edenDiscoveriesFromState(next));
+                        return next;
+                    });
+                    setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + pk.amount));
+                    sfx.pickup();
+                    setDialogue(`Vitality restored · +${pk.amount}`);
+                }
+            }
+
+            const secretVisible = canRevealEdenSecret(level, charRef.current);
+
+            // chests / compartments
+            for (const ch of level.chests) {
+                if (ch.opened || touchedRef.current.has(ch.id)) continue;
+                if (ch.hidden && !secretVisible) continue;
+                if (pgx === ch.gx && pgy === ch.gy) {
+                    touchedRef.current.add(ch.id);
+                    setLevel((prev) => {
+                        const next = updateEdenProgress({
+                            ...prev,
+                            chests: prev.chests.map((c) => (c.id === ch.id ? { ...c, opened: true } : c)),
+                            keysFound: ch.keyId && !prev.keysFound.includes(ch.keyId) ? [...prev.keysFound, ch.keyId] : prev.keysFound,
+                            doors: ch.keyId ? prev.doors.map((d) => (d.keyId === ch.keyId ? { ...d, open: true } : d)) : prev.doors,
+                        });
+                        onDiscover(edenDiscoveriesFromState(next));
+                        return next;
+                    });
+                    if (ch.id === 'chest_secret') {
+                        onDiscover(['eden_lore_secret']);
+                        grantSkillPoint();
+                        setDialogue(`${ch.label} — +${ch.health} vitality and a skill point. The Gardener hid this for those who read every stone.`);
+                    } else if (ch.keyId) setDialogue(`${ch.label} — you found the ${ch.keyId.replace('key_', '')} key.`);
+                    else if (ch.health) setDialogue(`${ch.label} — +${ch.health} vitality.`);
+                    if (ch.health) setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + ch.health!));
+                    sfx.pickup();
+                }
+            }
+
+            // doors (auto-open when key held and adjacent)
+            for (const d of level.doors) {
+                if (d.open || !level.keysFound.includes(d.keyId) || touchedRef.current.has(`door_${d.id}`)) continue;
+                if (Math.abs(pgx - d.gx) + Math.abs(pgy - d.gy) <= 1) {
+                    touchedRef.current.add(`door_${d.id}`);
+                    setLevel((prev) => {
+                        const next = updateEdenProgress({
+                            ...prev,
+                            doors: prev.doors.map((door) => (door.id === d.id ? { ...door, open: true } : door)),
+                        });
+                        onDiscover(edenDiscoveriesFromState(next));
+                        return next;
+                    });
+                    setDialogue('The sealed door yields to your key.');
                     sfx.strike();
-                    
-                    setSequence(prev => {
-                        const next = [...prev, r.id];
-                        // Validate order
-                        const expected = [0, 1, 2, 3];
-                        const isCorrectSoFar = next.every((val, idx) => val === expected[idx]);
-                        
-                        if (!isCorrectSoFar) {
-                            setTimeout(() => resetSequence(), 100);
-                            return [];
-                        } else {
-                            setDialogue(`The river ${r.name} starts to glow and flow into the garden!`);
+                }
+            }
+
+            // fight zones (temptation fight is triggered only by accepting the serpent offer)
+            for (const fz of level.fights) {
+                if (fz.cleared || fightTriggeredRef.current === fz.id || fz.radius <= 0) continue;
+                const dist = Math.hypot(fz.gx * EDEN_TILE + 8 - state.pax, fz.gy * EDEN_TILE + 8 - state.pay);
+                if (dist < fz.radius) {
+                    if (!character.equipped.weapon) {
+                        setDialogue('Arm yourself at Truth\'s Hut before facing the shades.');
+                        break;
+                    }
+                    if (fz.combatId === 'eden_boss' && !level.bossGateOpen) {
+                        setDialogue('The cherub gate is sealed. Clear all three shade trials and find the grove and river keys.');
+                        break;
+                    }
+                    fightTriggeredRef.current = fz.id;
+                    fightBonusRef.current = consumeFightBonusHp();
+                    setDialogue(fz.hint);
+                    setActiveFight(fz.combatId);
+                    break;
+                }
+            }
+
+            // river attunement (sanctum only)
+            if (level.sanctumOpen && !isSolved) {
+                for (const r of state.rivers) {
+                    if (r.active) continue;
+                    if (Math.hypot(r.gx * EDEN_TILE + 8 - state.pax, r.gy * EDEN_TILE + 8 - state.pay) < 16) {
+                        if (!minigameDone) {
+                            setDialogue('Pass the Trial of Memory in Records before the rivers will answer.');
+                            break;
+                        }
+                        r.active = true;
+                        sfx.strike();
+                        const ox = r.gx * EDEN_TILE + 8;
+                        const oy = r.gy * EDEN_TILE + 8;
+                        for (let i = 0; i < 6; i++) {
+                            riverParticlesRef.current.push({
+                                x: ox, y: oy, color: r.color, t: i * 0.12, speed: 0.35 + Math.random() * 0.15,
+                            });
+                        }
+                        setSequence((prev) => {
+                            const next = [...prev, r.id];
+                            const expected = [0, 1, 2, 3];
+                            if (!next.every((v, i) => v === expected[i])) {
+                                setTimeout(() => resetSequence(), 100);
+                                return [];
+                            }
+                            setDialogue(`The river ${r.name} flows into the garden.`);
                             if (next.length === 4) {
-                                state.barrierActive = false;
+                                setBarrierActive(false);
                                 onSolve();
-                                setDialogue("The four rivers converge! Pishon, Gihon, Hiddekel, and Euphrates flow together. The central gold barrier dissolves. Claim the Leaf!");
+                                setDialogue('The four rivers converge. The Tree of Life opens.');
                                 sfx.victory();
                             }
                             return next;
-                        }
-                    });
+                        });
+                    }
                 }
             }
 
-            // Check relic collection
-            if (!relicClaimed && !state.barrierActive) {
-                const tx = state.treeX * TILE + 8;
-                const ty = (state.treeY + 1) * TILE + 8; // stand in front of the tree
+            // relic
+            if (!relicClaimed && !barrierActive && level.sanctumOpen) {
+                const tx = EDEN_TREE.gx * EDEN_TILE + 8;
+                const ty = (EDEN_TREE.gy + 1) * EDEN_TILE + 8;
                 if (Math.hypot(tx - state.pax, ty - state.pay) < 14) {
                     setRelicClaimed(true);
                     onClaim();
-                    setDialogue("You reach into the hollow of the ancient tree and retrieve the Leaf of the Tree of Life. You feel a deep tranquility.");
+                    setDialogue('You claim the Leaf of the Tree of Life.');
                     sfx.hit();
                 }
             }
 
-            // ---- RENDER ----
+            // ---- render with camera ----
+            const camX = state.pax - (EDEN_VIEW_TILES * EDEN_TILE) / 2;
+            const camY = state.pay - (EDEN_VIEW_TILES * EDEN_TILE) / 2;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.scale(Z, Z);
+            ctx.translate(-camX + (canvas.width / Z - EDEN_VIEW_TILES * EDEN_TILE) / 2, -camY + (canvas.height / Z - EDEN_VIEW_TILES * EDEN_TILE) / 2);
 
-            // 1. Draw Ground
-            for (let r = 0; r < MAP_SIZE; r++) {
-                for (let c = 0; c < MAP_SIZE; c++) {
-                    const isRiverSrc = (c === 2 && r === 2) || (c === 13 && r === 2) || 
-                                       (c === 2 && r === 13) || (c === 13 && r === 13);
-                    const isPool = c >= 7 && c <= 9 && r >= 6 && r <= 8;
-
-                    if (isPool) {
-                        ctx.fillStyle = '#1e3a8a'; // Blue water pool
-                    } else if (isRiverSrc) {
-                        ctx.fillStyle = '#475569'; // Stone fountain base
-                    } else {
-                        // Grass checkerboard
-                        ctx.fillStyle = (c + r) % 2 === 0 ? '#3f6212' : '#365314'; 
-                    }
-                    ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-
-                    // Draw stone paths leading to center
-                    if (!isPool && !isRiverSrc && (c === 8 || r === 7)) {
+            for (let r = 0; r < EDEN_MAP_H; r++) {
+                for (let c = 0; c < EDEN_MAP_W; c++) {
+                    const cell = EDEN_TILES[r][c];
+                    const x = c * EDEN_TILE, y = r * EDEN_TILE;
+                    if (cell === 1) ctx.fillStyle = '#1c1917';
+                    else if (cell === 2) ctx.fillStyle = '#1e3a8a';
+                    else if (cell === 3) ctx.fillStyle = '#44403c';
+                    else ctx.fillStyle = (c + r) % 2 === 0 ? '#3f6212' : '#365314';
+                    ctx.fillRect(x, y, EDEN_TILE, EDEN_TILE);
+                    if (cell === 0 && (c === 8 || r % 5 === 0)) {
                         ctx.fillStyle = '#52525b';
-                        ctx.fillRect(c * TILE + 3, r * TILE + 3, 10, 10);
+                        ctx.fillRect(x + 3, y + 3, 10, 10);
                     }
                 }
             }
 
-            // 2. Draw Fountains / Rivers
-            state.rivers.forEach(r => {
-                // Draw river flow line to center if active
-                if (r.active || isSolved) {
-                    ctx.strokeStyle = r.color;
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(r.gx * TILE + 8, r.gy * TILE + 8);
-                    ctx.lineTo(8 * TILE + 8, 7 * TILE + 8);
-                    ctx.stroke();
-
-                    // Active fountain glow
-                    ctx.fillStyle = r.color;
-                    ctx.beginPath();
-                    ctx.arc(r.gx * TILE + 8, r.gy * TILE + 8, 6, 0, Math.PI * 2);
-                    ctx.fill();
+            // doors
+            for (const d of level.doors) {
+                const x = d.gx * EDEN_TILE, y = d.gy * EDEN_TILE;
+                ctx.fillStyle = d.open ? '#34d39944' : '#78350f';
+                ctx.fillRect(x, y, EDEN_TILE, EDEN_TILE);
+                if (!d.open) {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(x + 5, y + 4, 6, 8);
                 }
+            }
 
-                // Draw physical stone fountain
+            // lore stones
+            for (const ls of level.loreStones) {
+                const pulse = 0.5 + Math.sin(state.t / 300 + ls.gx) * 0.2;
+                ctx.fillStyle = ls.read ? 'rgba(52,211,153,0.35)' : `rgba(251,191,36,${pulse})`;
+                ctx.fillRect(ls.gx * EDEN_TILE + 3, ls.gy * EDEN_TILE + 2, 10, 12);
+                ctx.fillStyle = ls.read ? '#34d399' : '#fcd34d';
+                ctx.font = 'bold 7px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('◆', ls.gx * EDEN_TILE + 8, ls.gy * EDEN_TILE + 11);
+            }
+
+            // boss gate
+            if (!level.bossGateOpen) {
+                ctx.fillStyle = 'rgba(251,191,36,0.35)';
+                ctx.fillRect(23 * EDEN_TILE, 9 * EDEN_TILE, EDEN_TILE * 2, EDEN_TILE * 3);
+            }
+
+            // chests
+            for (const ch of level.chests) {
+                if (ch.opened || (ch.hidden && !secretVisible)) continue;
+                ctx.fillStyle = '#92400e';
+                ctx.fillRect(ch.gx * EDEN_TILE + 2, ch.gy * EDEN_TILE + 4, 12, 10);
+                ctx.fillStyle = '#fcd34d';
+                ctx.fillRect(ch.gx * EDEN_TILE + 4, ch.gy * EDEN_TILE + 2, 8, 4);
+            }
+
+            // health orbs
+            for (const pk of level.pickups) {
+                if (pk.collected) continue;
+                const bob = Math.sin(state.t / 200 + pk.gx) * 2;
+                const px = pk.gx * EDEN_TILE + 8, py = pk.gy * EDEN_TILE + 8 + bob;
+                ctx.fillStyle = '#f8717188';
+                ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fecaca';
+                ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+            }
+
+            const treeCx = EDEN_TREE.gx * EDEN_TILE + 8;
+            const treeCy = EDEN_TREE.gy * EDEN_TILE + 8;
+
+            // fountains + converging river streams
+            state.rivers.forEach((r) => {
                 ctx.fillStyle = '#64748b';
-                ctx.fillRect(r.gx * TILE + 2, r.gy * TILE + 2, 12, 12);
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(r.gx * TILE + 4, r.gy * TILE + 4, 8, 8);
+                ctx.fillRect(r.gx * EDEN_TILE + 2, r.gy * EDEN_TILE + 2, 12, 12);
+                if (r.active || isSolved) {
+                    const fx = r.gx * EDEN_TILE + 8;
+                    const fy = r.gy * EDEN_TILE + 8;
+                    const flow = 0.5 + Math.sin(state.t / 280 + r.id) * 0.35;
+                    ctx.strokeStyle = r.color;
+                    ctx.lineWidth = 2 + flow;
+                    ctx.globalAlpha = 0.55 + flow * 0.35;
+                    ctx.beginPath();
+                    ctx.moveTo(fx, fy);
+                    ctx.lineTo(treeCx, treeCy);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = r.color;
+                    ctx.beginPath(); ctx.arc(fx, fy, 5 + flow, 0, Math.PI * 2); ctx.fill();
+                }
             });
 
-            // 3. Draw Central Barrier
-            if (state.barrierActive) {
-                const pulse = 0.5 + Math.sin(state.t / 200) * 0.2;
-                ctx.strokeStyle = `rgba(251, 191, 36, ${pulse})`;
-                ctx.lineWidth = 4;
+            // river particles flowing toward the tree
+            const parts = riverParticlesRef.current;
+            for (let i = parts.length - 1; i >= 0; i--) {
+                const p = parts[i];
+                p.t += dt * p.speed;
+                if (p.t >= 1) { parts.splice(i, 1); continue; }
+                const px = p.x + (treeCx - p.x) * p.t;
+                const py = p.y + (treeCy - p.y) * p.t;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = 1 - p.t * 0.6;
                 ctx.beginPath();
-                ctx.arc(8 * TILE + 8, 7 * TILE + 8, 24, 0, Math.PI * 2);
+                ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            if (isSolved) {
+                for (let i = 0; i < 2; i++) {
+                    const src = state.rivers[i % 4];
+                    parts.push({
+                        x: src.gx * EDEN_TILE + 8,
+                        y: src.gy * EDEN_TILE + 8,
+                        color: src.color,
+                        t: Math.random() * 0.4,
+                        speed: 0.25 + Math.random() * 0.2,
+                    });
+                }
+                if (parts.length > 48) parts.splice(0, parts.length - 48);
+            }
+
+            // serpent temptation marker
+            if (level.temptationResolved === 'none') {
+                const pulse = 0.4 + Math.sin(state.t / 350) * 0.25;
+                ctx.fillStyle = `rgba(239,68,68,${pulse})`;
+                ctx.fillRect(EDEN_TEMPTATION.gx * EDEN_TILE + 4, EDEN_TEMPTATION.gy * EDEN_TILE + 4, 8, 8);
+            }
+
+            // secret compartment shimmer
+            const secretChest = level.chests.find((c) => c.id === 'chest_secret');
+            if (secretChest && !secretChest.opened && secretVisible) {
+                const shimmer = 0.35 + Math.sin(state.t / 220) * 0.25;
+                ctx.fillStyle = `rgba(251,191,36,${shimmer})`;
+                ctx.fillRect(secretChest.gx * EDEN_TILE + 1, secretChest.gy * EDEN_TILE + 3, 14, 12);
+            }
+
+            // tree
+            if (level.sanctumOpen) {
+                const relicReady = !relicClaimed && !barrierActive;
+                if (relicReady) {
+                    const pulse = 0.65 + Math.sin(state.t / 400) * 0.35;
+                    ctx.strokeStyle = `rgba(52,211,153,${pulse * 0.7})`;
+                    ctx.lineWidth = 2 + pulse * 2;
+                    ctx.beginPath();
+                    ctx.arc(treeCx, treeCy - 2, 18 + pulse * 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(EDEN_TREE.gx * EDEN_TILE + 4, EDEN_TREE.gy * EDEN_TILE + 2, 8, 14);
+                ctx.fillStyle = '#166534';
+                ctx.beginPath();
+                ctx.arc(treeCx, EDEN_TREE.gy * EDEN_TILE - 4, 14, 0, Math.PI * 2);
+                ctx.fill();
+                if (relicReady) {
+                    const bounce = Math.sin(state.t / 150) * 2;
+                    ctx.fillStyle = '#10b981';
+                    ctx.beginPath();
+                    ctx.ellipse(treeCx, EDEN_TREE.gy * EDEN_TILE + 16 + bounce, 4, 6, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // fight zone hints
+            for (const fz of level.fights) {
+                if (fz.cleared) continue;
+                ctx.strokeStyle = fz.combatId === 'eden_boss' ? '#ef444466' : '#fbbf2466';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.arc(fz.gx * EDEN_TILE + 8, fz.gy * EDEN_TILE + 8, fz.radius, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.setLineDash([]);
             }
 
-            // 4. Draw Central Tree of Life
-            ctx.fillStyle = '#78350f'; // Trunk
-            ctx.fillRect(8 * TILE + 4, 7 * TILE + 2, 8, 14);
-            ctx.fillStyle = '#166534'; // Leaves
-            ctx.beginPath();
-            ctx.arc(8 * TILE + 8, 7 * TILE - 4, 16, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 5. Draw Relic (Leaf) if not claimed
-            if (!relicClaimed && !state.barrierActive) {
-                const bounce = Math.sin(state.t / 150) * 2;
-                ctx.fillStyle = '#10b981'; // Green leaf relic
-                ctx.beginPath();
-                ctx.ellipse(8 * TILE + 8, 7 * TILE + 16 + bounce, 4, 6, Math.PI / 4, 0, Math.PI * 2);
-                ctx.fill();
-                // Glow
-                ctx.shadowColor = '#10b981';
-                ctx.shadowBlur = 8;
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(8 * TILE + 8, 7 * TILE + 16 + bounce, 2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0; // reset
-            }
-
-            // 6. Draw Apple Shades (Enemies)
-            for (const s of state.shades) {
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.beginPath();
-                ctx.ellipse(s.x + 8, s.y + 14, 5, 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw red apple ghost
-                const bounce = Math.sin(state.t / 180 + s.x) * 2.5;
-                ctx.drawImage(charImg, 0 * 17, 3 * 17, 16, 16, s.x, s.y + bounce, 16, 16);
-                
-                // Red tint glow
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-                ctx.beginPath();
-                ctx.arc(s.x + 8, s.y + 8 + bounce, 8, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // 7. Draw Serpent (Easter Egg) in forbidden tree top-left
-            const sx = 4 * TILE + 8;
-            const sy = 3 * TILE + 8;
-            // Draw a small serpent snake tile
-            ctx.drawImage(charImg, 6 * 17, 3 * 17, 16, 16, sx - 8, sy - 8, 16, 16);
-            if (Math.hypot(state.pax - sx, state.pay - sy) < 22) {
-                ctx.fillStyle = '#10b981';
-                ctx.font = 'bold 8px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Speak', sx, sy - 10 + Math.sin(state.t / 200) * 1.5);
-            }
-
-            // 8. Draw Player Avatar
+            // player
             const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) {
-                avatarKey = curKey;
-                avatarFrames = buildFrames(charRef.current.avatar);
-            }
-            
-            // Draw player shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath();
-            ctx.ellipse(state.pax, state.pay + 5, 6, 2.5, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Player aura
-            const ap = charRef.current.appearance;
-            const ag = ctx.createRadialGradient(state.pax, state.pay - 4, 0, state.pax, state.pay - 4, 10);
-            ag.addColorStop(0, ap.aura + '66');
-            ag.addColorStop(1, ap.aura + '00');
-            ctx.fillStyle = ag;
-            ctx.beginPath();
-            ctx.arc(state.pax, state.pay - 4, 10, 0, Math.PI * 2);
-            ctx.fill();
-
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
             const wphase = Math.floor(state.walkT * 7) % 2;
             const dirFrames = avatarFrames[state.facing];
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
-            ctx.drawImage(wframe, state.pax - 8, state.pay - 19 - (moving && wphase === 0 ? 1 : 0), 16, 24);
-
-            // 9. Draw and Update Particles
-            particles.forEach(p => {
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                if (p.x < 0) p.x = MAP_SIZE * TILE;
-                if (p.y > MAP_SIZE * TILE) p.y = 0;
-
-                ctx.save();
-                ctx.globalAlpha = p.alpha;
-                ctx.fillStyle = p.color;
-                if (p.type === 'leaf') {
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(Math.PI / 4 + Math.sin(state.t / 300) * 0.1);
-                    ctx.fillRect(-p.size, -p.size / 2, p.size * 2, p.size);
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.restore();
-            });
+            ctx.drawImage(wframe, state.pax - 8, state.pay - 19, 16, 24);
 
             ctx.restore();
-
             raf = requestAnimationFrame(loop);
-        }
-
-        running = true;
-        raf = requestAnimationFrame(loop);
-
-        return () => {
-            running = false;
-            cancelAnimationFrame(raf);
-            window.removeEventListener('resize', resize);
         };
-    }, [isSolved, relicClaimed, resetSequence, onClaim, onSolve, isSolid]);
 
-    // Handle Tap interaction (Serpent)
-    const handleAction = () => {
-        const state = gameState.current;
-        const sx = 4 * TILE_COUNT + 8;
-        const sy = 3 * TILE_COUNT + 8;
-        if (Math.hypot(state.pax - sx, state.pay - sy) < 26) {
-            setDialogue("The Serpent whispers: 'Did the Source really say you would perish if you took of the knowledge? It was a lie. True freedom lies in defining your own good and evil. Ssskip the rules...'");
-            sfx.hit();
-        }
-    };
+        raf = requestAnimationFrame(loop);
+        return () => { running = false; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    }, [activeFight, level, barrierActive, isSolved, minigameDone, relicClaimed, isSolid, onSolve, onClaim, resetSequence, consumeFightBonusHp, onDiscover, nearLore, nearTemptation, grantSkillPoint, character.equipped.weapon]);
 
-    // Mobile touch joystick
     const joyMove = (cx: number, cy: number) => {
         const rect = baseRef.current!.getBoundingClientRect();
-        const dx = cx - (rect.left + rect.width / 2);
-        const dy = cy - (rect.top + rect.height / 2);
-        const d = Math.hypot(dx, dy) || 1;
-        const m = Math.min(d, JOY_R);
-        const a = Math.atan2(dy, dx);
-        const kx = Math.cos(a) * m;
-        const ky = Math.sin(a) * m;
-        setKnob({ x: kx, y: ky });
-        joyRef.current = { x: kx / JOY_R, y: ky / JOY_R };
+        const dx = cx - (rect.left + rect.width / 2), dy = cy - (rect.top + rect.height / 2);
+        const d = Math.hypot(dx, dy) || 1, m = Math.min(d, JOY_R), a = Math.atan2(dy, dx);
+        setKnob({ x: Math.cos(a) * m, y: Math.sin(a) * m });
+        joyRef.current = { x: Math.cos(a) * m / JOY_R, y: Math.sin(a) * m / JOY_R };
     };
-    
-    const joyEnd = () => {
-        joyActive.current = false;
-        setKnob({ x: 0, y: 0 });
-        joyRef.current = { x: 0, y: 0 };
-    };
+    const joyEnd = () => { joyActive.current = false; setKnob({ x: 0, y: 0 }); joyRef.current = { x: 0, y: 0 }; };
+
+    const activeFightZone = level.fights.find((f) => f.combatId === activeFight && !f.cleared);
+    const fightDest = activeFight ? edenDestinationStub(activeFight) : null;
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[80vh] w-full text-white bg-slate-950 p-4 rounded-3xl border border-emerald-500/20 shadow-2xl relative select-none">
-            {/* Header controls */}
-            <div className="flex justify-between items-center w-full max-w-[480px] mb-3">
-                <button onClick={onExit} className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Return to Chamber
+        <div className="flex flex-col items-center w-full text-white select-none relative">
+            {activeFight && fightDest?.combat && (
+                <CombatScene
+                    destination={fightDest}
+                    character={character}
+                    weaponDamage={wpn.damage}
+                    weaponReach={wpn.reach}
+                    {...combatStatProps}
+                    bonusHp={combatStatProps.bonusHp + fightBonusRef.current}
+                    onVictory={() => {
+                        if (activeFightZone) markFightCleared(activeFightZone.id, activeFight);
+                        setDialogue(fightDest.combat!.victory);
+                        sfx.victory();
+                    }}
+                    onDefeat={() => {
+                        fightTriggeredRef.current = null;
+                        setActiveFight(null);
+                        setDungeonHp((hp) => {
+                            const next = hp - 30;
+                            if (next <= 0) {
+                                setTimeout(() => softRespawn(), 50);
+                                return 0;
+                            }
+                            if (next < 30) {
+                                setTimeout(() => softRespawn(), 50);
+                                return 50;
+                            }
+                            setDialogue('The shades overwhelm you. Rest, gather health, and try again.');
+                            sfx.defeat();
+                            return next;
+                        });
+                    }}
+                    onExit={() => {
+                        fightTriggeredRef.current = null;
+                        setActiveFight(null);
+                    }}
+                />
+            )}
+
+            <div className="flex justify-between items-center w-full max-w-[520px] mb-2 gap-2">
+                <button onClick={onExit} className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white">
+                    <ArrowLeft className="w-4 h-4" /> Return
                 </button>
-                <div className="flex items-center gap-3">
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-400">Eden Overworld</span>
-                    <button onClick={toggleMute} className="text-zinc-400 hover:text-white transition-colors">
-                        {muted ? <VolumeX className="w-4.5 h-4.5" /> : <Volume2 className="w-4.5 h-4.5" />}
-                    </button>
+                <div className="text-center min-w-0">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-400 block">Eden — Before the Lie</span>
+                    <span className="text-[8px] uppercase tracking-widest text-zinc-500 block truncate">{zoneLabel}</span>
                 </div>
+                <button onClick={toggleMute} className="text-zinc-400 hover:text-white">{muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
             </div>
 
-            {/* Main Canvas Container */}
-            <div className="relative border-4 border-emerald-600/40 rounded-2xl overflow-hidden bg-emerald-950 shadow-inner">
-                <canvas ref={canvasRef} className="block w-full max-w-[480px] aspect-square" />
+            {/* Life bar + keys */}
+            <div className="w-full max-w-[520px] mb-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                    <Heart className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <div className="flex-1 h-2.5 rounded-full bg-black/50 border border-white/10 overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${(dungeonHp / MAX_DUNGEON_HP) * 100}%`, background: dungeonHp > 35 ? '#34d399' : '#ef4444' }} />
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400 w-14 text-right">{dungeonHp}/{MAX_DUNGEON_HP}</span>
+                </div>
+                {level.keysFound.length > 0 && (
+                    <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest text-amber-400/90">
+                        <Key className="w-3 h-3" />
+                        {level.keysFound.map((k) => k.replace('key_', '')).join(' · ')}
+                    </div>
+                )}
+            </div>
+
+            <div className="relative border-4 border-emerald-600/40 rounded-2xl overflow-hidden bg-emerald-950 shadow-inner w-full max-w-[520px]">
+                <canvas ref={canvasRef} className="block w-full aspect-square" />
             </div>
 
             <MiniWorldInsight character={character} puzzleId={puzzleId} baseHint={puzzleHint} accent={accent} isSolved={isSolved} />
 
-            {/* Dialogue text box */}
             {dialogue && (
-                <div className="w-full max-w-[480px] mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/45 backdrop-blur-sm text-center">
+                <div className="w-full max-w-[520px] mt-3 p-3 rounded-xl border border-emerald-500/20 bg-emerald-950/45 text-center">
                     <p className="font-ritual text-sm leading-relaxed text-zinc-200">{dialogue}</p>
+                    {nearTemptation && level.temptationResolved === 'none' && !activeFight && (
+                        <div className="flex gap-2 justify-center mt-3">
+                            <button
+                                onClick={acceptTemptation}
+                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-900/60 border border-red-500/40 text-red-200 hover:bg-red-800/70"
+                            >
+                                Listen
+                            </button>
+                            <button
+                                onClick={resistTemptation}
+                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-emerald-900/60 border border-emerald-500/40 text-emerald-200 hover:bg-emerald-800/70"
+                            >
+                                Walk on
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* Virtual Joystick controls for mobile */}
-            <div className="w-full max-w-[480px] h-32 mt-2 relative pointer-events-none flex items-center justify-between">
-                {/* Left Joystick */}
+            <div className="w-full max-w-[520px] h-28 mt-2 relative pointer-events-none flex items-center justify-between">
                 <div
                     ref={baseRef}
                     onTouchStart={(e) => { joyActive.current = true; const t = e.touches[0]; joyMove(t.clientX, t.clientY); }}
-                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) { const t = e.touches[0]; joyMove(t.clientX, t.clientY); } }}
+                    onTouchMove={(e) => { e.preventDefault(); if (joyActive.current) joyMove(e.touches[0].clientX, e.touches[0].clientY); }}
                     onTouchEnd={joyEnd}
                     onMouseDown={(e) => { joyActive.current = true; joyMove(e.clientX, e.clientY); }}
                     onMouseMove={(e) => { if (joyActive.current) joyMove(e.clientX, e.clientY); }}
                     onMouseUp={joyEnd}
                     onMouseLeave={joyEnd}
-                    className="rounded-full border border-white/10 bg-black/40 pointer-events-auto relative"
-                    style={{ width: JOY_R * 2, height: JOY_R * 2, boxShadow: 'inset 0 0 16px rgba(0,0,0,0.6)', touchAction: 'none' }}
+                    className="rounded-full border border-white/10 bg-black/40 pointer-events-auto"
+                    style={{ width: JOY_R * 2, height: JOY_R * 2, touchAction: 'none' }}
                 >
-                    <div
-                        className="absolute rounded-full"
-                        style={{
-                            width: '40%', height: '40%', left: '30%', top: '30%',
-                            background: 'rgba(16, 185, 129, 0.6)', border: '1px solid rgba(16, 185, 129, 0.85)',
-                            transform: `translate(${knob.x}px, ${knob.y}px)`,
-                            transition: joyActive.current ? 'none' : 'transform 0.15s ease'
-                        }}
-                    />
+                    <div className="absolute rounded-full" style={{ width: '40%', height: '40%', left: '30%', top: '30%', background: 'rgba(16,185,129,0.6)', border: '1px solid rgba(16,185,129,0.85)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
                 </div>
-
-                {/* Right Action Button */}
                 <button
-                    onClick={handleAction}
-                    onTouchStart={(e) => { e.preventDefault(); handleAction(); }}
-                    className="w-16 h-16 rounded-full text-[10px] font-black uppercase tracking-widest text-black bg-emerald-400 border border-emerald-500 hover:bg-emerald-300 pointer-events-auto flex items-center justify-center active:scale-95 transition-transform"
+                    onClick={() => nearLore && readLoreStone(nearLore)}
+                    disabled={!nearLore}
+                    className="w-16 h-16 rounded-full text-[9px] font-black uppercase tracking-widest text-black bg-amber-400 border border-amber-500 hover:bg-amber-300 pointer-events-auto flex items-center justify-center active:scale-95 transition-transform disabled:opacity-35"
                     style={{ touchAction: 'none' }}
                 >
-                    Action
+                    {nearLore ? 'Read' : '—'}
                 </button>
             </div>
+            <p className="text-[8px] uppercase tracking-widest text-zinc-500 text-center px-2 -mt-1">◆ stones hold memory · red zones are fights</p>
         </div>
     );
 }

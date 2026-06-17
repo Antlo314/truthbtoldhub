@@ -16,6 +16,7 @@ const TILE = 16;
 interface Props {
     character: GameCharacter;
     isSolved: boolean;
+    minigameDone?: boolean;
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
@@ -24,7 +25,7 @@ interface Props {
     accent?: string;
 }
 
-export default function StLouisWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#fbbf24' }: Props) {
+export default function StLouisWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#fbbf24' }: Props) {
     const addMaterial = useGameStore(s => s.addMaterial);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -466,6 +467,10 @@ export default function StLouisWorld({ character, isSolved, onSolve, onClaim, on
                 // Validate year solution
                 const code = state.dynamos.map(x => x.val).join('');
                 if (code === '1904') {
+                    if (!minigameDone) {
+                        setDialogue('The turnstile stays locked until you clear the White Blocks trial — open Records.');
+                        return;
+                    }
                     state.gateOpen = true;
                     onSolve();
                     setDialogue("Success! The year is set to 1904. The electromagnetic gates drop. The Fairgrounds Token is unlocked!");

@@ -15,6 +15,7 @@ const TILE = 16;
 interface Props {
     character: GameCharacter;
     isSolved: boolean;
+    minigameDone?: boolean;
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
@@ -23,7 +24,7 @@ interface Props {
     accent?: string;
 }
 
-export default function EmeraldWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#10b981' }: Props) {
+export default function EmeraldWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#10b981' }: Props) {
     const addMaterial = useGameStore(s => s.addMaterial);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -222,6 +223,10 @@ export default function EmeraldWorld({ character, isSolved, onSolve, onClaim, on
                             } else {
                                 setDialogue(`Attuned ${s.name} sphere. Orbit path forming.`);
                                 if (next.length === 7) {
+                                    if (!minigameDone) {
+                                        setDialogue('The spheres will not align until you pass the Seven Spheres trial — open Records.');
+                                        return prev;
+                                    }
                                     state.solved = true;
                                     onSolve();
                                     setDialogue("The alignment runs true! The seven spheres unite as one. The Emerald Tablet Fragment emerges at the center!");

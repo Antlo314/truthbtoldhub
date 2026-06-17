@@ -7,6 +7,8 @@
 // ============================================================
 
 import type { Puzzle } from '@/lib/game/puzzles';
+import type { MinigameDef } from '@/lib/game/minigames';
+import { MINIGAME_BY_ID } from '@/lib/game/minigames';
 
 export type DestinationKind = 'portal' | 'cave';
 
@@ -50,6 +52,8 @@ export interface CombatConfig {
     bossDmg: number;
     bossArt?: BossArt;   // which guardian creature to draw
     victory: string;     // line on victory
+    /** No boss phase — shades only (tutorial skirmishes). */
+    skirmish?: boolean;
 }
 
 export type BossArt = 'wraith' | 'golem' | 'serpent' | 'sentinel' | 'titan';
@@ -67,6 +71,8 @@ export interface Destination {
     deepLore?: LoreSection;
     relics: Relic[];
     combat?: CombatConfig;
+    /** Score-gated trial before the riddle (difficulty rises per age). */
+    minigame?: MinigameDef;
     puzzle?: Puzzle;
     clothing?: string;   // garment id (lib/game/clothing.ts) found here
 }
@@ -84,15 +90,17 @@ export const DESTINATIONS: Destination[] = [
             name: 'The Gardener',
             role: 'Keeper of the First Garden',
             tile: { col: 0, row: 8 },
-            intro: 'You have come a long way to stand where it began. Walk softly — the ground here still remembers a man who walked with the Source and was not ashamed.',
+            intro: 'You have come to walk the garden back to its beginning — before shame, before exile, before man listened to the serpent. The stones remember. So does the ground.',
         },
         lore: [
             { heading: 'The Walk', body: 'Before the fall, Adam did not pray toward the Source — he walked beside it. There was no veil, no distance, no shame. This is the state you are trying to return to.' },
-            { heading: 'The Fall', body: 'The fall was not a place you dropped from. It was a frequency you dropped to — from union into separation, from knowing into believing. Every lie of the world is built on that drop.' },
+            { heading: 'Before the Voice', body: 'There was a tree of knowing good and evil, and a voice that asked whether the Source had truly spoken. The fall was not a pit — it was the hour he stopped walking beside the Source and listened to another counsel.' },
+            { heading: 'The Ordering', body: 'A river went out to water the garden — four heads, four directions. Abundance was laid out before need. The four rivers you will attune are the memory of that ordering.' },
             { heading: 'The Way Back', body: 'You cannot climb back to Eden by effort. You return by laying down the cares of the world, one by one, until nothing stands between you and the Source.' },
         ],
         deepLore: { heading: 'On Second Passing', body: 'The Garden is quieter now. The cherubim do not lower their swords for everyone — only for those who remember that exile was a choice, not a sentence. Carry the leaf. It is the same tree.' },
         relics: [{ id: 'relic_eden_leaf', name: 'Leaf of the Tree of Life', desc: 'A leaf that never withers. Carried by those who remember the Garden.', power: { hp: 25, regen: 2, label: '+25 vitality · renews 2/s' } }],
+        minigame: MINIGAME_BY_ID['mg_eden_match'],
         combat: {
             challenge: 'The way back is guarded. Cherubim with flaming swords bar the gate, as they have since the first exile. To pass, you must endure them.',
             enemyCount: 3,
@@ -136,6 +144,7 @@ export const DESTINATIONS: Destination[] = [
         ],
         deepLore: { heading: 'On Second Passing', body: 'The Erased still drift, but they no longer reach for you. The Caretaker\'s ledger is ash. Walk the marble again — the light that powered this city was never electricity alone.' },
         relics: [{ id: 'relic_fair_token', name: 'Fairgrounds Token', desc: 'Brass stamped with a building that no record admits ever stood.', power: { hp: 15, damage: 2, crit: 0.14, label: '+15 vitality · +2 strike · 14% crit' } }],
+        minigame: MINIGAME_BY_ID['mg_fair_stack'],
         combat: {
             challenge: 'The white halls are not empty. The Erased — those the ledgers forgot — drift the corridors, and the Caretaker comes to keep his secret buried.',
             enemyCount: 4,
@@ -184,6 +193,7 @@ export const DESTINATIONS: Destination[] = [
         ],
         deepLore: { heading: 'On Second Passing', body: 'Press your palm to the seam again. The hum is steady now — it knows you. Whatever this engine measured, it was never the dead. It was the living frequency of the world before the lie.' },
         relics: [{ id: 'relic_giza_shard', name: 'Shard of Casing Stone', desc: 'A sliver of the white limestone skin that once made the pyramid blaze like a mirror.', power: { reach: 8, damage: 2, knockback: 8, label: '+8 reach · heavy knockback' } }],
+        minigame: MINIGAME_BY_ID['mg_giza_snake'],
         combat: {
             challenge: 'The chamber is not empty. Shades of those who died seeking its secret still guard the stone. Defend yourself.',
             enemyCount: 3,
@@ -231,6 +241,7 @@ export const DESTINATIONS: Destination[] = [
         ],
         deepLore: { heading: 'On Second Passing', body: 'The water is still. WORMWOOD is not only a name — it is a cycle. The Destroyer returns when the world forgets it came before. You have not forgotten.' },
         relics: [{ id: 'relic_kolbrin_folio', name: 'Folio of the Bronzebook', desc: 'A single page, bronze-leafed, warm to the touch as if recently read.', power: { damage: 4, lifesteal: 0.2, label: '+4 strike · 20% lifesteal' } }],
+        minigame: MINIGAME_BY_ID['mg_kolbrin_snake'],
         combat: {
             challenge: 'The vault remembers the flood. Shades of the drowned rise from the black water to keep the Bronzebook from unworthy hands.',
             enemyCount: 4,
@@ -274,6 +285,7 @@ export const DESTINATIONS: Destination[] = [
         ],
         deepLore: { heading: 'On Second Passing', body: 'The Threshold remembers you. The seven wanderers still hang above — but now you read them as a sentence, not a scatter. As above, so below. So within.' },
         relics: [{ id: 'relic_emerald_fragment', name: 'Fragment of the Emerald Tablet', desc: 'Green glass that holds light long after the room goes dark.', power: { damage: 6, crit: 0.18, label: '+6 strike · 18% crit' } }],
+        minigame: MINIGAME_BY_ID['mg_emerald_stack'],
         combat: {
             challenge: 'No one reads the Tablets unchallenged. The thought-forms of every age that ever sought them rise — and the Guardian of the Threshold rises with them.',
             enemyCount: 4,

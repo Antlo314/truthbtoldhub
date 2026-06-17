@@ -1,6 +1,7 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { QUESTS, questsAvailable, objectiveMet } from '@/lib/game/quests';
 import { buildOverworld, TILE, type POI } from '@/lib/game/overworld';
+import { isDestinationUnlocked, activeDestinationFocus } from '@/lib/game/progression';
 
 export interface QuestWaypoint {
     questId: string;
@@ -24,6 +25,7 @@ function poiCenter(poi: POI) {
 
 /** First active (unclaimed, unmet) quest target for waypoint UI. */
 export function activeQuestWaypoint(character: GameCharacter): QuestWaypoint | null {
+    const focus = activeDestinationFocus(character);
     const ow = buildOverworld();
     const pois = ow.pois;
 
@@ -44,6 +46,17 @@ export function activeQuestWaypoint(character: GameCharacter): QuestWaypoint | n
         }
 
         if (!targetPoi) continue;
+        if (!isDestinationUnlocked(targetPoi.id, character)) continue;
+        if (focus && targetPoi.id !== focus && !targetPoi.id.startsWith('npc_')) {
+            // Prefer quests on the current age in the chain
+            const focusQuests = QUESTS.filter((fq) => {
+                const giver = pois.find((p) => p.id === fq.giver);
+                if (fq.objective.kind === 'clear') return fq.objective.destId === focus;
+                if (fq.objective.kind === 'solve') return fq.objective.puzzleId.replace('puz_', 'dest_') === focus;
+                return giver && (giver.id === focus || giver.id.startsWith('npc_'));
+            });
+            if (focusQuests.length > 0 && !focusQuests.some((fq) => fq.id === q.id)) continue;
+        }
         const c = poiCenter(targetPoi);
         return { questId: q.id, title: q.title, worldX: c.x, worldY: c.y, poiName: targetPoi.name };
     }

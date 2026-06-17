@@ -14,6 +14,7 @@ const TILE = 16;
 interface Props {
     character: GameCharacter;
     isSolved: boolean;
+    minigameDone?: boolean;
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
@@ -22,7 +23,7 @@ interface Props {
     accent?: string;
 }
 
-export default function KolbrinWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#a855f7' }: Props) {
+export default function KolbrinWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#a855f7' }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
     charRef.current = character;
@@ -462,6 +463,10 @@ export default function KolbrinWorld({ character, isSolved, onSolve, onClaim, on
                 setDialogue(`You only have ${collected.length}/8 runes. Gather all of them before turning the wheel!`);
                 sfx.defeat();
             } else {
+                if (!minigameDone) {
+                    setDialogue('The cipher wheel will not turn until you pass the Drowned Maze trial — open Records.');
+                    return;
+                }
                 state.solved = true;
                 onSolve();
                 setDialogue("You turn the Cipher Wheel three steps: ZRUPZRRG becomes WORMWOOD. The vault library slides open, revealing the Bronzebook folio!");

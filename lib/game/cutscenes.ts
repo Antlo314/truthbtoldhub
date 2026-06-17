@@ -61,7 +61,7 @@ export const CUTSCENES: Record<string, CutsceneDef> = {
         line: 'The five relics burn as one.',
     },
 
-    dest_eden: still('dest-eden', 'Eden — Before the Fall', 'Walk softly — the ground here still remembers the Garden.'),
+    dest_eden: still('dest-eden', 'Eden — Before the Fall', 'Walk the garden back to the hour before the lie — before man listened to the serpent.'),
     dest_fair: still('dest-fair', 'St. Louis, 1904', 'Twelve hundred palaces of white, raised in a season — and torn down the next.'),
     dest_giza: still('dest-giza', 'Giza — The Engine of Stone', 'It has not stopped humming in five thousand years.'),
     dest_kolbrin: still('dest-kolbrin', 'The Kolbrin Vault', 'The monks hid these books from fire and from kings.'),

@@ -1,5 +1,6 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { DEST_BY_POI } from '@/lib/game/destinations';
+import { EDEN_LORE } from '@/lib/game/edenLevel';
 
 export interface JournalEntry {
     id: string;
@@ -47,6 +48,24 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
 
     for (const qid of character.questsClaimed) {
         entries.push({ id: `quest_${qid}`, title: 'Mission fulfilled', category: 'quest', body: `Quest ${qid} — turned in at the crossroads of the world.` });
+    }
+
+    for (const discId of character.discovered) {
+        if (!discId.startsWith('eden_lore_')) continue;
+        const loreKey = discId.replace('eden_', '');
+        const lore = EDEN_LORE[loreKey as keyof typeof EDEN_LORE];
+        if (lore) {
+            entries.push({ id: discId, title: lore.title, category: 'lore', body: lore.text });
+        }
+    }
+
+    if (character.discovered.includes('eden_temptation_resisted')) {
+        entries.push({
+            id: 'eden_temptation_resisted',
+            title: 'The Road Chosen',
+            category: 'lore',
+            body: 'In the Forbidden Verge you heard the serpent\'s whisper — a shortcut promising knowledge without walking. You walked on. That is how man once knew the Source.',
+        });
     }
 
     if (character.sourceReturned) {

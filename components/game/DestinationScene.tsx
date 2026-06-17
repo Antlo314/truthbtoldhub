@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import KenneySprite, { ROGUELIKE_CHAR } from '@/components/game/KenneySprite';
 import PuzzleScene from '@/components/game/PuzzleScene';
+import MiniGameScene from '@/components/game/MiniGameScene';
 import type { Destination } from '@/lib/game/destinations';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { puzzleHintFor } from '@/lib/game/pathPowers';
@@ -22,14 +23,20 @@ interface Props {
     onClaim: (relicId: string) => void;
     onSolve: (puzzleId: string) => void;
     onExit: () => void;
+    onGuardianCleared?: (poiId: string) => void;
+    onDiscover?: (ids: string[]) => void;
 }
 
-export default function DestinationScene({ destination: d, inventory, solved, onClaim, onSolve, onExit }: Props) {
+export default function DestinationScene({ destination: d, inventory, solved, onClaim, onSolve, onExit, onGuardianCleared, onDiscover }: Props) {
     const character = useGameStore((s) => s.character);
+    const markMinigameCleared = useGameStore((s) => s.markMinigameCleared);
+    const saveToCloud = useGameStore((s) => s.saveToCloud);
     const [open, setOpen] = useState<number>(0);
     const [puzzleOpen, setPuzzleOpen] = useState(false);
+    const [trialOpen, setTrialOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'world' | 'lore'>('world');
-    const questDone = !d.puzzle || solved.includes(d.puzzle.id);
+    const trialDone = !d.minigame || (character.minigamesCleared || []).includes(d.minigame.id);
+    const questDone = trialDone && (!d.puzzle || solved.includes(d.puzzle.id));
     const cleared = character.cleared;
 
     // Map POIs to respective components
@@ -37,6 +44,8 @@ export default function DestinationScene({ destination: d, inventory, solved, on
         const props = {
             character,
             isSolved: questDone,
+            minigameDone: trialDone,
+            isGuardianCleared: cleared.includes(d.poiId),
             onSolve: () => {
                 if (d.puzzle) onSolve(d.puzzle.id);
             },
@@ -44,6 +53,8 @@ export default function DestinationScene({ destination: d, inventory, solved, on
                 onClaim(d.relics[0].id);
             },
             onExit: onExit,
+            onGuardianCleared: () => onGuardianCleared?.(d.poiId),
+            onDiscover: (ids: string[]) => onDiscover?.(ids),
             puzzleId: d.puzzle?.id,
             puzzleHint: d.puzzle?.hint,
             accent: d.accent,
@@ -151,26 +162,41 @@ export default function DestinationScene({ destination: d, inventory, solved, on
                     </div>
                 )}
 
-                {/* quest gate, then relics */}
-                    {d.puzzle && !questDone ? (
+                {/* trial → riddle → relics (gradual) */}
+                    {!questDone ? (
                         <>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">The Quest</p>
-                            <button
-                                onClick={() => setPuzzleOpen(true)}
-                                className="w-full text-left rounded-2xl border p-5 transition-transform hover:scale-[1.01]"
-                                style={{ borderColor: d.accent + '44', background: d.accent + '0d' }}
-                            >
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <PuzzleIcon className="w-4 h-4" style={{ color: d.accent }} />
-                                        <h4 className="font-ritual text-lg text-white">{d.puzzle.title}</h4>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">The Path Deepens</p>
+                            {!trialDone && d.minigame ? (
+                                <button
+                                    onClick={() => setTrialOpen(true)}
+                                    className="w-full text-left rounded-2xl border p-5 transition-transform hover:scale-[1.01] mb-3"
+                                    style={{ borderColor: d.accent + '44', background: d.accent + '0d' }}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h4 className="font-ritual text-lg text-white">{d.minigame.title}</h4>
+                                        <span className="text-[10px] uppercase tracking-widest shrink-0" style={{ color: d.accent }}>Begin →</span>
                                     </div>
-                                    <span className="text-[10px] uppercase tracking-widest shrink-0" style={{ color: d.accent }}>Solve →</span>
-                                </div>
-                                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">A riddle of this place guards its relic. Solve it, and what lies here is yours.</p>
-                            </button>
+                                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">{d.minigame.prompt}</p>
+                                    <p className="text-[10px] mt-2" style={{ color: d.accent }}>Reach {d.minigame.targetScore} to open the riddle</p>
+                                </button>
+                            ) : d.puzzle ? (
+                                <button
+                                    onClick={() => setPuzzleOpen(true)}
+                                    className="w-full text-left rounded-2xl border p-5 transition-transform hover:scale-[1.01]"
+                                    style={{ borderColor: d.accent + '44', background: d.accent + '0d' }}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <PuzzleIcon className="w-4 h-4" style={{ color: d.accent }} />
+                                            <h4 className="font-ritual text-lg text-white">{d.puzzle.title}</h4>
+                                        </div>
+                                        <span className="text-[10px] uppercase tracking-widest shrink-0" style={{ color: d.accent }}>Solve →</span>
+                                    </div>
+                                    <p className="text-xs text-zinc-400 mt-2 leading-relaxed">The trial is passed. Now attune the seal of this place.</p>
+                                </button>
+                            ) : null}
                             <div className="mt-3 flex items-center gap-2 text-zinc-600 text-[11px]">
-                                <Lock className="w-3.5 h-3.5" /> {d.relics.length} relic{d.relics.length === 1 ? '' : 's'} locked behind the quest
+                                <Lock className="w-3.5 h-3.5" /> Relic locked until trial and riddle are complete
                             </div>
                         </>
                     ) : (
@@ -211,7 +237,20 @@ export default function DestinationScene({ destination: d, inventory, solved, on
             )}
 
             {/* the puzzle quest backup */}
-            {puzzleOpen && d.puzzle && (
+            {trialOpen && d.minigame && (
+                <MiniGameScene
+                    game={d.minigame}
+                    accent={d.accent}
+                    onWin={() => {
+                        markMinigameCleared(d.minigame!.id);
+                        saveToCloud();
+                        setTrialOpen(false);
+                    }}
+                    onExit={() => setTrialOpen(false)}
+                />
+            )}
+
+            {puzzleOpen && d.puzzle && trialDone && (
                 <PuzzleScene
                     puzzle={d.puzzle}
                     accent={d.accent}

@@ -92,7 +92,7 @@ export function buildOverworld(): Overworld {
     const pois: POI[] = [
         { id: 'hut', type: 'hut', x: cx, y: cy, name: "Truth's Hut", detail: 'The centerpiece — daily dispatches and scrolls.' },
         { id: 'dest_eden', type: 'portal', x: 8, y: 8, name: 'Eden — Before the Fall' },
-        { id: 'npc_gardener', type: 'npc', x: 12, y: 11, name: 'The Gardener', npcTile: { col: 0, row: 8 }, detail: 'Keeper of the First Garden — missions for Eden.' },
+        { id: 'npc_gardener', type: 'npc', x: 12, y: 11, name: 'The Gardener', npcTile: { col: 0, row: 8 }, detail: 'Keeper of the First Garden — walk Eden back to before the lie.' },
         { id: 'dest_emerald', type: 'portal', x: cx, y: 7, name: 'The Emerald Halls' },
         { id: 'dest_fair', type: 'portal', x: W - 8, y: 8, name: 'St. Louis, 1904' },
         { id: 'npc_mabel', type: 'npc', x: W - 12, y: 11, name: 'Mabel Hart', npcTile: { col: 0, row: 5 }, detail: 'Chronicler of the vanished Fair.' },
@@ -218,11 +218,12 @@ export function buildOverworld(): Overworld {
 // ============================================================
 
 export type MaterialKind = 'iron' | 'copper' | 'cosmic';
+export type PickupKind = MaterialKind | 'health';
 export interface Pickup {
     id: string;
     x: number; // tile col
     y: number; // tile row
-    kind: MaterialKind;
+    kind: PickupKind;
     qty: number;
 }
 
@@ -241,11 +242,16 @@ export function buildPickups(): Pickup[] {
             // only on open, walkable grass (not water/dirt/path/tree/solid)
             if (ow.ground[r][c] !== 0 || ow.solid[r][c] || ow.decor[r][c] === 1) continue;
             if (tooCloseToPoi(c, r)) continue;
-            if (rand() > 0.012) continue;
+            if (rand() > 0.014) continue;
             // keep them spread out — skip if one is already within 4 tiles
             if (out.some((p) => Math.hypot(p.x - c, p.y - r) < 4)) continue;
             const roll = rand();
-            const kind: MaterialKind = roll < 0.6 ? 'iron' : roll < 0.88 ? 'copper' : 'cosmic';
+            if (roll < 0.08) {
+                out.push({ id: `health_${c}_${r}`, x: c, y: r, kind: 'health', qty: 20 });
+                continue;
+            }
+            const matRoll = rand();
+            const kind: MaterialKind = matRoll < 0.6 ? 'iron' : matRoll < 0.88 ? 'copper' : 'cosmic';
             const qty = kind === 'iron' ? (rand() < 0.35 ? 2 : 1) : 1;
             out.push({ id: `ore_${c}_${r}`, x: c, y: r, kind, qty });
         }

@@ -1,4 +1,5 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
+import { isNpcQuestActive } from '@/lib/game/progression';
 
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
@@ -47,11 +48,11 @@ export const QUESTS: Quest[] = [
         giver: 'npc_gardener',
         giverName: 'The Gardener',
         title: 'Before the Fall',
-        intro: 'The Garden still remembers those who walked beside the Source. Face the cherub at the gate — only the armed may pass.',
-        objectiveText: 'Defeat the cherub guarding Eden.',
+        intro: 'The deep garden still remembers those who walked beside the Source — before the serpent spoke. Walk its stones, learn to fight the shades, and face the cherub at the inner gate. Only the armed may pass.',
+        objectiveText: 'Walk the garden and defeat the cherub at the inner gate.',
         objective: { kind: 'clear', destId: 'dest_eden' },
         reward: { skillPoints: 1, text: '+1 skill point and the Gardener\'s blessing.' },
-        completeText: 'The flaming sword lowers for you. The gate stands open — now walk the rivers within and claim what the tree keeps.',
+        completeText: 'The flaming sword lowers. The sanctum opens — attune the four rivers and claim what the Tree of Life keeps.',
     },
     {
         id: 'q_eden_rivers',
@@ -183,6 +184,7 @@ export function questsAvailable(giver: string, c: GameCharacter): Quest[] {
             if (typeof window === 'undefined') return false;
             if (!localStorage.getItem('cipher_referral')) return false;
         }
+        if (!isNpcQuestActive(q.giver, c)) return false;
         if (!q.requires?.length) return true;
         return q.requires.every((id) => c.questsClaimed.includes(id));
     });

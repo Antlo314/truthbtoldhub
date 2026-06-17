@@ -20,6 +20,7 @@ import { initTruthCompanion, updateTruthCompanion, TRUTH_PROXIMITY_LINES } from 
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import type { QuestWaypoint } from '@/lib/game/questWaypoint';
+import { isDestinationPOI, isDestinationUnlocked } from '@/lib/game/progression';
 
 const RESONANCE_TINTS = [
     '',
@@ -38,7 +39,7 @@ const RESONANCE_TINTS = [
 
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
 const SHADE_TILE = { col: 0, row: 3 };
-const ORE_COLOR = { iron: '#cbd5e1', copper: '#f59e0b', cosmic: '#34d399' } as const;
+const ORE_COLOR = { iron: '#cbd5e1', copper: '#f59e0b', cosmic: '#34d399', health: '#f87171' } as const;
 
 function clamp(v: number, lo: number, hi: number) {
     return v < lo ? lo : v > hi ? hi : v;
@@ -361,48 +362,71 @@ export default function WorldCanvas({
             ctx.fillRect(hx - 7 * u, hy + 2 * u, 14 * u, 2 * u);
         }
 
-        function drawCave(p: POI) {
+        function drawCave(p: POI, locked = false) {
             const wx = (p.x + 0.5) * TILE;
             const wy = (p.y + 0.5) * TILE;
             const u = Z;
             const x = SX(wx);
             const y = SY(wy);
-            ctx.fillStyle = '#3b3b46';
+            ctx.fillStyle = locked ? '#2a2a30' : '#3b3b46';
             ctx.beginPath();
             ctx.ellipse(x, y, 17 * u, 12 * u, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#2a2a33';
+            ctx.fillStyle = locked ? '#1f1f26' : '#2a2a33';
             ctx.beginPath();
             ctx.ellipse(x, y - 2 * u, 12 * u, 8 * u, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#050509';
-            ctx.beginPath();
-            ctx.ellipse(x, y + 2 * u, 7 * u, 8 * u, 0, Math.PI, Math.PI * 2);
-            ctx.fillRect(x - 7 * u, y + 2 * u, 14 * u, 7 * u);
-            ctx.fill();
+            if (locked) {
+                ctx.strokeStyle = 'rgba(251,191,36,0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 8 * u, y - 6 * u);
+                ctx.lineTo(x + 8 * u, y + 6 * u);
+                ctx.moveTo(x + 8 * u, y - 6 * u);
+                ctx.lineTo(x - 8 * u, y + 6 * u);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = '#050509';
+                ctx.beginPath();
+                ctx.ellipse(x, y + 2 * u, 7 * u, 8 * u, 0, Math.PI, Math.PI * 2);
+                ctx.fillRect(x - 7 * u, y + 2 * u, 14 * u, 7 * u);
+                ctx.fill();
+            }
         }
 
-        function drawPortal(p: POI) {
+        function drawPortal(p: POI, locked = false) {
             const wx = (p.x + 0.5) * TILE;
             const wy = (p.y + 0.5) * TILE;
             const u = Z;
             const x = SX(wx);
             const y = SY(wy);
-            const pulse = 0.7 + Math.sin(st.t / 360) * 0.3;
-            // stone ring
-            ctx.fillStyle = '#2c2c38';
+            const pulse = locked ? 0.35 : 0.7 + Math.sin(st.t / 360) * 0.3;
+            ctx.fillStyle = locked ? '#1a1a22' : '#2c2c38';
             ctx.beginPath();
             ctx.ellipse(x, y, 14 * u, 16 * u, 0, 0, Math.PI * 2);
             ctx.fill();
-            // swirling glow
-            const g = ctx.createRadialGradient(x, y - 2 * u, 0, x, y - 2 * u, 12 * u * pulse);
-            g.addColorStop(0, 'rgba(168,85,247,0.95)');
-            g.addColorStop(0.6, 'rgba(34,211,238,0.5)');
-            g.addColorStop(1, 'rgba(34,211,238,0)');
-            ctx.fillStyle = g;
-            ctx.beginPath();
-            ctx.ellipse(x, y - 2 * u, 10 * u, 12 * u, 0, 0, Math.PI * 2);
-            ctx.fill();
+            if (locked) {
+                ctx.strokeStyle = 'rgba(251,191,36,0.45)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 4]);
+                ctx.beginPath();
+                ctx.ellipse(x, y - 2 * u, 11 * u, 13 * u, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = `bold ${8 * u}px serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('✦', x, y - 4 * u);
+            } else {
+                const g = ctx.createRadialGradient(x, y - 2 * u, 0, x, y - 2 * u, 12 * u * pulse);
+                g.addColorStop(0, 'rgba(168,85,247,0.95)');
+                g.addColorStop(0.6, 'rgba(34,211,238,0.5)');
+                g.addColorStop(1, 'rgba(34,211,238,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.ellipse(x, y - 2 * u, 10 * u, 12 * u, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         function solidAt(wx: number, wy: number) {
@@ -554,9 +578,10 @@ export default function WorldCanvas({
             // POIs (includes Seer-hidden places when attuned)
             const drawPois = allVisiblePois(ow.pois, charRef.current);
             for (const p of drawPois) {
+                const locked = isDestinationPOI(p.id) && !isDestinationUnlocked(p.id, charRef.current);
                 if (p.type === 'hut') drawHut(p);
-                else if (p.type === 'cave') drawCave(p);
-                else if (p.type === 'portal') drawPortal(p);
+                else if (p.type === 'cave') drawCave(p, locked);
+                else if (p.type === 'portal') drawPortal(p, locked);
                 else if (p.type === 'npc' && p.npcTile) {
                     const wx = (p.x + 0.5) * TILE;
                     const wy = (p.y + 0.9) * TILE;

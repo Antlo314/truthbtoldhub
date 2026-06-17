@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles } from 'lucide-react';
+import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
 import { pathCombatMods } from '@/lib/game/pathPowers';
@@ -26,6 +27,7 @@ import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import { activeQuestWaypoint } from '@/lib/game/questWaypoint';
+import { isDestinationUnlocked, unlockBlockMessage, activeDestinationFocus } from '@/lib/game/progression';
 import { loadSettings, type GameSettings } from '@/lib/game/settings';
 import { hapticTap } from '@/lib/game/haptics';
 import Minimap from '@/components/game/Minimap';
@@ -71,6 +73,9 @@ export default function WorldPage() {
     const markCleared = useGameStore((s) => s.markCleared);
     const markSolved = useGameStore((s) => s.markSolved);
     const claimQuest = useGameStore((s) => s.claimQuest);
+    const learnSkill = useGameStore((s) => s.learnSkill);
+    const addFightBonusHp = useGameStore((s) => s.addFightBonusHp);
+    const consumeFightBonusHp = useGameStore((s) => s.consumeFightBonusHp);
     const grantScroll = useGameStore((s) => s.grantScroll);
     const equipRelic = useGameStore((s) => s.equipRelic);
     const equipScroll = useGameStore((s) => s.equipScroll);
@@ -97,6 +102,7 @@ export default function WorldPage() {
     const [questLogOpen, setQuestLogOpen] = useState(false);
     const [sourceOpen, setSourceOpen] = useState(false);
     const [journalOpen, setJournalOpen] = useState(false);
+    const [attunementOpen, setAttunementOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [epilogueOpen, setEpilogueOpen] = useState(false);
     const [settings, setSettings] = useState<GameSettings>(loadSettings);
@@ -180,10 +186,14 @@ export default function WorldPage() {
         const dest = DEST_BY_POI[poi.id];
         if (dest) {
             const ch = useGameStore.getState().character;
+            if (!isDestinationUnlocked(poi.id, ch)) {
+                setDialogue({ speaker: 'Truth', text: unlockBlockMessage(poi.id), color: '#f97316' });
+                return;
+            }
             const needsFight = !!dest.combat && !ch.cleared.includes(dest.poiId);
             if (needsFight && !ch.equipped.weapon) {
                 setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truth’s Hut and forge your first weapon.', color: dest.accent });
-            } else if (needsFight) {
+            } else if (needsFight && dest.poiId !== 'dest_eden') {
                 setCombatIntroDest(dest);
             } else {
                 setActiveDest(dest);
@@ -209,8 +219,10 @@ export default function WorldPage() {
                 setDialogue({ speaker: hidden.name, text: hidden.lore, color: '#22d3ee' });
             } else if (questsAvailable(poi.id, useGameStore.getState().character).length > 0) {
                 setQuestNpc({ id: poi.id, name: poi.name });
+            } else if (poi.detail) {
+                setDialogue({ speaker: poi.name, text: poi.detail });
             } else {
-                setDialogue({ speaker: poi.name, text: poi.detail || '…' });
+                setDialogue({ speaker: poi.name, text: 'The road to their missions is not yet open. Walk the prior age to its end.' });
             }
         } else if (poi.type === 'cave') {
             setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
@@ -235,16 +247,22 @@ export default function WorldPage() {
 
     // walked over an essence mote in the world — bank the material for the forge
     const onPickup = useCallback((pk: Pickup) => {
-        addMaterial(pk.kind, pk.qty);
         markDiscovered(pk.id);
         saveToCloud();
         sfx.pickup();
         hapticTap('light');
+        if (pk.kind === 'health') {
+            addFightBonusHp(pk.qty);
+            showToast(`✦ +${pk.qty} vitality · bonus HP for your next fight`);
+            return;
+        }
+        addMaterial(pk.kind, pk.qty);
         const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
         showToast(`✦ +${pk.qty} ${label}`);
-    }, [addMaterial, markDiscovered, saveToCloud, showToast]);
+    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast]);
 
     const onEncounterVictory = useCallback(() => {
+        consumeFightBonusHp();
         setEncounter(null);
         // the scattered shades leave a little ore behind for the forge
         const roll = Math.random();
@@ -252,12 +270,13 @@ export default function WorldPage() {
         else if (roll < 0.5) { addMaterial('copper', 1); showToast('✦ The shades scatter — +1 Copper'); }
         else { addMaterial('iron', 2); showToast('✦ The shades scatter — +2 Iron Ore'); }
         saveToCloud();
-    }, [addMaterial, saveToCloud, showToast]);
+    }, [addMaterial, consumeFightBonusHp, saveToCloud, showToast]);
 
     const onEncounterDefeat = useCallback(() => {
+        consumeFightBonusHp();
         setEncounter(null);
         showToast('The shades overwhelm you. Rest, and return stronger.');
-    }, [showToast]);
+    }, [showToast, consumeFightBonusHp]);
 
     const handleClaim = useCallback(async (relicId: string) => {
         const beforeTier = resonanceTier(useGameStore.getState().character.inventory);
@@ -288,6 +307,7 @@ export default function WorldPage() {
     }, [equipWeapon, saveToCloud, showToast]);
 
     const onVictory = useCallback(() => {
+        consumeFightBonusHp();
         setCombatDest((d) => {
             if (d) {
                 const ch = useGameStore.getState().character;
@@ -302,12 +322,13 @@ export default function WorldPage() {
             }
             return null;
         });
-    }, [markCleared, saveToCloud, showToast]);
+    }, [markCleared, saveToCloud, showToast, consumeFightBonusHp]);
 
     const onDefeat = useCallback(() => {
+        consumeFightBonusHp();
         setCombatDest(null);
         showToast('The shades overwhelm you. Rest, and return stronger.');
-    }, [showToast]);
+    }, [showToast, consumeFightBonusHp]);
 
     const handleSolve = useCallback((puzzleId: string) => {
         markSolved(puzzleId);
@@ -339,7 +360,7 @@ export default function WorldPage() {
     const cFounder = founderBonuses(founderNumber);
     const cCloth = clothingBonus(character.equipped.clothing);
     const combatStatProps = {
-        bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
+        bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp + character.fightBonusHp,
         bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
         bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
         bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
@@ -350,14 +371,6 @@ export default function WorldPage() {
         enemyDmgMult: pathMods.enemyDmgMult,
         playerDamageMult: pathMods.playerDamageMult,
         playerReachBonus: pathMods.playerReachBonus,
-        canChannel: pathMods.canChannel,
-        channelHealPct: pathMods.channelHealPct,
-        channelCooldownSec: pathMods.channelCooldownSec,
-        canBlock: pathMods.canBlock,
-        blockReduction: pathMods.blockReduction,
-        blockCooldownSec: pathMods.blockCooldownSec,
-        canWeakPoint: pathMods.canWeakPoint,
-        weakPointDamageMult: pathMods.weakPointDamageMult,
     };
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
     const questWaypoint = activeQuestWaypoint(character);
@@ -366,7 +379,7 @@ export default function WorldPage() {
     // freeze the roaming world whenever any overlay/scene is on top of it
     const worldPaused = !worldIntroDone || !!combatIntroDest || hutOpen || satchelOpen || !!activeDest ||
         !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue ||
-        journalOpen || settingsOpen || epilogueOpen;
+        journalOpen || settingsOpen || epilogueOpen || attunementOpen;
 
     return (
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
@@ -408,6 +421,17 @@ export default function WorldPage() {
                     <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Codex Journal">
                         <BookOpen className="w-4 h-4" />
                     </button>
+                    <button
+                        onClick={() => setAttunementOpen(true)}
+                        className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative"
+                        title="Attunement Tree"
+                        style={path ? { color: path.color } : undefined}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        {character.skillPoints > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
+                        )}
+                    </button>
                     <button onClick={() => setSettingsOpen(true)} className="pointer-events-auto p-2 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold" title="Settings">
                         <SlidersHorizontal className="w-4 h-4" />
                     </button>
@@ -445,8 +469,11 @@ export default function WorldPage() {
             )}
 
             {hint && (
-                <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none">
-                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · find Truth's Hut</p>
+                <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none text-center">
+                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · Eden opens first</p>
+                    {activeDestinationFocus(character) && (
+                        <p className="mt-2 text-[9px] uppercase tracking-[0.25em] text-aether-gold/70">Current road · {DEST_BY_POI[activeDestinationFocus(character)!]?.name}</p>
+                    )}
                 </div>
             )}
 
@@ -821,6 +848,19 @@ export default function WorldPage() {
                     onClaim={handleClaim}
                     onSolve={handleSolve}
                     onExit={() => setActiveDest(null)}
+                    onGuardianCleared={(poiId) => {
+                        markCleared(poiId);
+                        saveToCloud();
+                        showToast('✦ The guardian falls — the inner garden opens.');
+                    }}
+                    onDiscover={(ids) => {
+                        const ch = useGameStore.getState().character;
+                        const fresh = ids.filter((id) => !ch.discovered.includes(id));
+                        if (fresh.length) {
+                            fresh.forEach((id) => markDiscovered(id));
+                            saveToCloud();
+                        }
+                    }}
                 />
             )}
 
@@ -908,7 +948,7 @@ export default function WorldPage() {
                     {...combatStatProps}
                     onVictory={onVictory}
                     onDefeat={onDefeat}
-                    onExit={() => setCombatDest(null)}
+                    onExit={() => { consumeFightBonusHp(); setCombatDest(null); }}
                 />
             )}
 
@@ -922,7 +962,7 @@ export default function WorldPage() {
                     {...combatStatProps}
                     onVictory={onEncounterVictory}
                     onDefeat={onEncounterDefeat}
-                    onExit={() => setEncounter(null)}
+                    onExit={() => { consumeFightBonusHp(); setEncounter(null); }}
                 />
             )}
 
@@ -943,6 +983,18 @@ export default function WorldPage() {
 
             {journalOpen && (
                 <JournalPanel character={character} initiated={!!character.name} onClose={() => setJournalOpen(false)} />
+            )}
+
+            {attunementOpen && (
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setAttunementOpen(false)}>
+                    <div className="w-full max-w-md glass-panel rounded-3xl border border-white/10 overflow-hidden max-h-[88dvh]" onClick={(e) => e.stopPropagation()}>
+                        <AttunementPanel
+                            character={character}
+                            onLearn={(id) => { learnSkill(id); saveToCloud(); hapticTap('light'); }}
+                            onClose={() => setAttunementOpen(false)}
+                        />
+                    </div>
+                </div>
             )}
 
             {settingsOpen && (

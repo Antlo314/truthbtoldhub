@@ -46,7 +46,7 @@ export function updateTruthCompanion(
 /** Contextual Truth lines when near POIs */
 export const TRUTH_PROXIMITY_LINES: Record<string, string> = {
     hut: 'The Hut is where the living word meets the road. Return when the world stirs.',
-    dest_eden: 'Eden remembers before the lie. Walk softly.',
+    dest_eden: 'Eden remembers before the serpent spoke. Read the stones.',
     dest_fair: 'Twelve hundred palaces of white — raised in a season, torn down the next.',
     dest_giza: 'The stone still hums. Listen before you strike.',
     dest_kolbrin: 'Books the kings tried to burn. The ink outlives the fire.',

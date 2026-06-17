@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
@@ -8,6 +8,8 @@ import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
+import { ABILITY_BY_ID, combatAbilities, type AbilityDef } from '@/lib/game/abilities';
+import { PATH_BY_ID } from '@/lib/game/paths';
 
 // ============================================================
 //  COMBAT — real-time, mobile-first. Move with the joystick,
@@ -81,20 +83,19 @@ interface Props {
     enemyDmgMult?: number;
     playerDamageMult?: number;
     playerReachBonus?: number;
-    canChannel?: boolean;
-    channelHealPct?: number;
-    channelCooldownSec?: number;
-    canBlock?: boolean;
-    blockReduction?: number;
-    blockCooldownSec?: number;
-    canWeakPoint?: boolean;
-    weakPointDamageMult?: number;
     onVictory: () => void;
     onDefeat: () => void;
     onExit: () => void;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, canChannel = false, channelHealPct = 0.25, channelCooldownSec = 14, canBlock = false, blockReduction = 0.55, blockCooldownSec = 8, canWeakPoint = false, weakPointDamageMult = 2, onVictory, onDefeat, onExit }: Props) {
+function weakPointMult(character: GameCharacter): number {
+    const ids = character.skills;
+    if (ids.includes('seer_super')) return 2.5;
+    if (ids.includes('seer_sight')) return 2.3;
+    return 2;
+}
+
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, onVictory, onDefeat, onExit }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
     const dmg = Math.round((weaponDamage + bonusDamage) * playerDamageMult);
     const reach = weaponReach + bonusReach + playerReachBonus;
@@ -116,13 +117,16 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const [foesLeft, setFoesLeft] = useState(0);
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
     const [muted, setMutedState] = useState(isMuted());
-    const [channelCd, setChannelCd] = useState(0);
-    const [blockCd, setBlockCd] = useState(0);
     const [dodgeCd, setDodgeCd] = useState(0);
     const [weakPointActive, setWeakPointActive] = useState(false);
-    const channelRef = useRef(false);
-    const blockRef = useRef(false);
+    const [abilityCds, setAbilityCds] = useState<Record<string, number>>({});
     const dodgeRef = useRef(false);
+    const abilityTriggerRef = useRef<string | null>(null);
+    const abilities = useMemo(() => combatAbilities(character), [character.skills, character.path]);
+    const abilitiesRef = useRef<AbilityDef[]>(abilities);
+    abilitiesRef.current = abilities;
+    const pathColor = character.path ? PATH_BY_ID[character.path].color : '#fbbf24';
+    const weakMult = weakPointMult(character);
 
     const endRef = useRef({ onVictory, onDefeat });
     endRef.current = { onVictory, onDefeat };
@@ -132,9 +136,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     // last cooldown second reflected to each ability button — so we set React
     // state only when the displayed value actually changes (and always reset to
     // 0 when ready). The loop runs in a []-effect, so it can't read live state.
-    const blockShownRef = useRef(0);
-    const channelShownRef = useRef(0);
     const dodgeShownRef = useRef(0);
+    const abilityCdShownRef = useRef<Record<string, number>>({});
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -156,15 +159,17 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             foes: [] as Foe[], projectiles: [] as Proj[], rings: [] as Ring[],
             bossSpawned: false, done: false,
             shake: 0, hurtFlash: 0, hurtCd: 0,
-            blockT: 0, blockCd: 0,
+            blockT: 0, blockReduction: 0,
             dodgeT: 0, dodgeCd: 0, dashx: 0, dashy: 0,
-            weakPointT: 0, weakPointActive: false, weakPointCycle: 7,
+            weakPointT: 0, weakPointActive: false,
+            trueSightT: 0, rallyT: 0, rallyReduction: 0,
+            bindT: 0, bindSlow: 0, surgeT: 0, surgeMult: 1,
+            abilityCds: {} as Record<string, number>,
         };
         const foeHp = Math.round(cfg.enemyHp * enemyHpMult);
         const bossHp = Math.round(cfg.bossHp * enemyHpMult);
         const foeDmg = cfg.enemyDmg * enemyDmgMult;
         const bossDmg = cfg.bossDmg * enemyDmgMult;
-        let channelTimer = 0;
         // only this many foes may be MID-ATTACK at once — the rest circle and
         // wait their turn, so the pack coordinates + surrounds instead of mobbing.
         const maxTokens = cfg.enemyCount >= 5 ? 3 : 2;
@@ -195,7 +200,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         // (i-frames), softened by a Sentinel block. Returns whether it landed.
         const hurtPlayer = (amount: number) => {
             if (st.dodgeT > 0) return false;
-            const mult = st.blockT > 0 ? Math.max(0, 1 - blockReduction) : 1;
+            let mult = 1;
+            if (st.blockT > 0) mult *= Math.max(0, 1 - st.blockReduction);
+            if (st.rallyT > 0) mult *= Math.max(0, 1 - st.rallyReduction);
             st.php -= amount * mult;
             st.hurtFlash = Math.min(1, st.hurtFlash + 0.35);
             st.shake = Math.max(st.shake, 3.6);
@@ -206,6 +213,127 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             st.projectiles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, life: 3.4, dmg, color, r: rr });
         };
         const bossMoveCd = (phase: number) => phase === 1 ? rand(2.2, 3.0) : phase === 2 ? rand(1.6, 2.2) : rand(1.0, 1.5);
+
+        const nearestFoe = () => {
+            let best: Foe | null = null, nd = Infinity;
+            for (const f of st.foes) {
+                const dist = Math.hypot(f.x - st.px, f.y - st.py);
+                if (dist < nd) { nd = dist; best = f; }
+            }
+            return best;
+        };
+
+        const fireAtFoe = (ab: AbilityDef, speed = 115, color = d.accent) => {
+            const target = nearestFoe();
+            if (!target) return;
+            const a = Math.atan2(target.y - st.py, target.x - st.px);
+            fireProj(st.px, st.py - 4, a, speed, Math.round(dmg * (ab.potency || 1)), color, ab.effect === 'livingWord' ? 5 : 4);
+            sfx.cast();
+        };
+
+        const damageFoesInRadius = (radius: number, mult: number) => {
+            let hits = 0;
+            for (const f of st.foes) {
+                if (Math.hypot(f.x - st.px, f.y - st.py) > radius) continue;
+                f.hp -= Math.round(dmg * mult);
+                f.hurt = 0.18;
+                const a = Math.atan2(f.y - st.py, f.x - st.px);
+                f.x += Math.cos(a) * 8;
+                f.y += Math.sin(a) * 8;
+                hits++;
+            }
+            if (hits > 0) { sfx.hit(); st.shake = Math.max(st.shake, 3.5); }
+        };
+
+        const triggerAbility = (abId: string) => {
+            const ab = ABILITY_BY_ID[abId];
+            if (!ab || (st.abilityCds[abId] || 0) > 0) return;
+            st.abilityCds[abId] = ab.cooldownSec;
+            switch (ab.effect) {
+                case 'weakPointReveal':
+                    st.weakPointT = ab.durationSec || 5;
+                    st.weakPointActive = true;
+                    sfx.cast();
+                    break;
+                case 'unveiling':
+                    st.weakPointT = ab.durationSec || 8;
+                    st.weakPointActive = true;
+                    sfx.bossSpawn();
+                    st.shake = Math.max(st.shake, 5);
+                    break;
+                case 'veilPulse':
+                    st.rings.push({ x: st.px, y: st.py, r: 70, t: 0, dur: 0.4, dmg: 0, done: false });
+                    damageFoesInRadius(70, ab.potency || 0.65);
+                    break;
+                case 'trueSight':
+                    st.trueSightT = ab.durationSec || 5;
+                    sfx.cast();
+                    break;
+                case 'lightStrike': {
+                    const lo = TILE + 4, hiX = W - TILE - 4, hiY = H - TILE - 4;
+                    st.px = Math.max(lo, Math.min(hiX, st.px + st.aimx * 52));
+                    st.py = Math.max(lo, Math.min(hiY, st.py + st.aimy * 52));
+                    damageFoesInRadius(reach + 14, ab.potency || 1.35);
+                    sfx.strike();
+                    break;
+                }
+                case 'ward':
+                case 'aegis':
+                    st.blockT = ab.durationSec || 1.2;
+                    st.blockReduction = ab.potency || 0.55;
+                    sfx.dash();
+                    break;
+                case 'banish':
+                    for (const f of st.foes) {
+                        const a = Math.atan2(f.y - st.py, f.x - st.px);
+                        const kb = ab.potency || 22;
+                        f.x += Math.cos(a) * kb;
+                        f.y += Math.sin(a) * kb;
+                        if (!f.boss) f.hp -= Math.round(dmg * 0.35);
+                        else f.hp -= Math.round(dmg * 0.2);
+                        f.hurt = 0.2;
+                    }
+                    sfx.slam();
+                    st.shake = Math.max(st.shake, 4.5);
+                    break;
+                case 'rally':
+                    st.rallyT = ab.durationSec || 3;
+                    st.rallyReduction = ab.potency || 0.4;
+                    sfx.dash();
+                    break;
+                case 'glyphBolt':
+                case 'manifestOrb':
+                    fireAtFoe(ab);
+                    break;
+                case 'bindWord':
+                    st.bindT = ab.durationSec || 3;
+                    st.bindSlow = ab.potency || 0.45;
+                    sfx.cast();
+                    break;
+                case 'livingWord':
+                    for (let i = 0; i < 8; i++) {
+                        const a = (i / 8) * Math.PI * 2;
+                        fireProj(st.px, st.py - 4, a, 95, Math.round(dmg * (ab.potency || 2.2) * 0.45), '#c084fc', 5);
+                    }
+                    sfx.bossSpawn();
+                    st.shake = Math.max(st.shake, 6);
+                    break;
+                case 'channel':
+                case 'layingHands':
+                case 'returnSource':
+                    st.php = Math.min(maxHp, st.php + maxHp * (ab.potency || 0.25));
+                    st.shake = Math.max(st.shake, 3);
+                    sfx.hit();
+                    break;
+                case 'sourceSurge':
+                    st.surgeT = ab.durationSec || 4;
+                    st.surgeMult = ab.potency || 1.5;
+                    sfx.cast();
+                    break;
+                default:
+                    break;
+            }
+        };
 
         // ---- BOSS AI ---- repositions to a medium range, then commits to a
         // telegraphed move chosen from its kit by distance + HP phase. Phase 3 is
@@ -344,9 +472,11 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         const dd = Math.hypot(dx, dy) || 0.001;
                         if (dd > reach + (f.boss ? 8 : 0)) continue;
                         if ((dx * st.aimx + dy * st.aimy) / dd < 0.35) continue; // must be in front
-                        const isCrit = crit > 0 && Math.random() < crit;
-                        const weakMult = f.boss && canWeakPoint && st.weakPointActive ? weakPointDamageMult : 1;
-                        const hitDmg = Math.round((isCrit ? dmg * 2 : dmg) * weakMult);
+                        const sightCrit = st.trueSightT > 0 && Math.random() < 0.55;
+                        const isCrit = sightCrit || (crit > 0 && Math.random() < crit);
+                        const wpMult = f.boss && st.weakPointActive ? weakMult : 1;
+                        const surgeMult = st.surgeT > 0 ? st.surgeMult : 1;
+                        const hitDmg = Math.round((isCrit ? dmg * 2 : dmg) * wpMult * surgeMult);
                         f.hp -= hitDmg; f.hurt = 0.16; hits++; dealt += hitDmg;
                         const a = Math.atan2(dy, dx);
                         const kb = (f.boss ? 4 : 9) + knockbackBonus + (isCrit ? 4 : 0);
@@ -359,41 +489,35 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     }
                 }
 
-                // (enemy AI runs further below — AFTER the player's defensive
-                //  abilities resolve, so this frame's block/i-frames are honoured)
-
-                // Sentinel block — brief damage reduction on cooldown
-                st.blockCd = Math.max(0, st.blockCd - dt);
-                if (canBlock && blockRef.current && st.blockCd <= 0) {
-                    blockRef.current = false;
-                    st.blockT = 0.45;
-                    st.blockCd = blockCooldownSec;
+                // attunement abilities — triggered from the HUD bar
+                const pendingAbility = abilityTriggerRef.current;
+                if (pendingAbility) {
+                    abilityTriggerRef.current = null;
+                    triggerAbility(pendingAbility);
                 }
-                st.blockT = Math.max(0, st.blockT - dt);
-                const bShown = st.blockCd > 0 ? Math.ceil(st.blockCd) : 0;
-                if (bShown !== blockShownRef.current) { blockShownRef.current = bShown; setBlockCd(st.blockCd); }
-
-                // Seer weak point — periodic boss vulnerability window
-                if (canWeakPoint && st.bossSpawned) {
-                    st.weakPointCycle -= dt;
-                    if (st.weakPointCycle <= 0) {
-                        st.weakPointActive = !st.weakPointActive;
-                        st.weakPointCycle = st.weakPointActive ? 2.4 : 7;
-                        if (st.weakPointActive !== weakPointActive) setWeakPointActive(st.weakPointActive);
+                for (const id of Object.keys(st.abilityCds)) st.abilityCds[id] = Math.max(0, st.abilityCds[id] - dt);
+                let cdDirty = false;
+                for (const ab of abilitiesRef.current) {
+                    const shown = st.abilityCds[ab.id] > 0 ? Math.ceil(st.abilityCds[ab.id]) : 0;
+                    if (abilityCdShownRef.current[ab.id] !== shown) {
+                        abilityCdShownRef.current[ab.id] = shown;
+                        cdDirty = true;
                     }
                 }
+                if (cdDirty) setAbilityCds({ ...st.abilityCds });
 
-                // Mystic channel — burst heal on cooldown
-                channelTimer = Math.max(0, channelTimer - dt);
-                if (canChannel && channelRef.current && channelTimer <= 0 && st.php > 0) {
-                    channelRef.current = false;
-                    channelTimer = channelCooldownSec;
-                    st.php = Math.min(maxHp, st.php + maxHp * channelHealPct);
-                    st.shake = Math.max(st.shake, 3);
-                    sfx.hit();
+                st.blockT = Math.max(0, st.blockT - dt);
+                st.trueSightT = Math.max(0, st.trueSightT - dt);
+                st.rallyT = Math.max(0, st.rallyT - dt);
+                st.bindT = Math.max(0, st.bindT - dt);
+                st.surgeT = Math.max(0, st.surgeT - dt);
+                if (st.weakPointT > 0) {
+                    st.weakPointT -= dt;
+                    st.weakPointActive = true;
+                } else {
+                    st.weakPointActive = false;
                 }
-                const cShown = channelTimer > 0 ? Math.ceil(channelTimer) : 0;
-                if (cShown !== channelShownRef.current) { channelShownRef.current = cShown; setChannelCd(channelTimer); }
+                if (st.weakPointActive !== weakPointActive) setWeakPointActive(st.weakPointActive);
                 // ===== ENEMY AI — coordinated, telegraphed, archetype-driven =====
                 // only `maxTokens` foes may attack at once; the rest circle.
                 let committed = 0;
@@ -410,7 +534,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     const ux = pdx / pd, uy = pdy / pd;
                     const isCaster = f.kind === 'caster';
                     const ringR = isCaster ? 80 : f.kind === 'brute' ? 30 : f.kind === 'flanker' ? 36 : 24;
-                    const moveSpd = f.kind === 'flanker' ? 64 : f.kind === 'brute' ? 30 : isCaster ? 46 : 50;
+                    const bindFactor = st.bindT > 0 ? Math.max(0.25, 1 - st.bindSlow) : 1;
+                    const moveSpd = (f.kind === 'flanker' ? 64 : f.kind === 'brute' ? 30 : isCaster ? 46 : 50) * bindFactor;
 
                     if (f.state === 'approach') {
                         // steer to a slot spread around the player (surround); flankers
@@ -472,7 +597,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 }
                 st.rings = st.rings.filter((rg) => rg.t < rg.dur + 0.25);
                 // renewal — the Source mends you over time, never past your max
-                if (regen > 0 && st.php > 0) st.php = Math.min(maxHp, st.php + regen * dt);
+                const regenMult = st.surgeT > 0 ? st.surgeMult : 1;
+                if (regen > 0 && st.php > 0) st.php = Math.min(maxHp, st.php + regen * regenMult * dt);
                 // reflect HP to the bar only when the rounded value changes
                 const shown = Math.max(0, Math.round(st.php));
                 if (shown !== shownRef.current) { shownRef.current = shown; setHp(shown); }
@@ -488,11 +614,19 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
                 // boss phase
                 if (!st.bossSpawned && st.foes.length === 0) {
-                    st.bossSpawned = true;
-                    const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0, kind: 'brute', state: 'approach', t: 0, cd: 0, slot: 0, vx: 0, vy: 0, hasTok: false, hit: false, phase: 1, move: '', moveCd: 1.2, summons: 0 };
-                    st.foes.push(b);
-                    setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
-                    sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
+                    if (cfg.skirmish) {
+                        st.done = true;
+                        setOutcome('won');
+                        sfx.victory();
+                        st.shake = Math.max(st.shake, 5);
+                        setTimeout(() => endRef.current.onVictory(), 1200);
+                    } else {
+                        st.bossSpawned = true;
+                        const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0, kind: 'brute', state: 'approach', t: 0, cd: 0, slot: 0, vx: 0, vy: 0, hasTok: false, hit: false, phase: 1, move: '', moveCd: 1.2, summons: 0 };
+                        st.foes.push(b);
+                        setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
+                        sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
+                    }
                 }
                 if (st.bossSpawned) {
                     const b = st.foes.find((f) => f.boss);
@@ -605,12 +739,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         ctx.strokeStyle = 'rgba(239,68,68,0.75)'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
                         ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + f.vx * 130, f.y + f.vy * 130); ctx.stroke(); ctx.setLineDash([]);
                     }
-                    if (canWeakPoint && st.weakPointActive) {
+                    if (st.weakPointActive) {
                         glow(f.x, f.y, '#22d3ee', 30);
                         ctx.strokeStyle = '#22d3ee88'; ctx.lineWidth = 2;
                         ctx.beginPath(); ctx.arc(f.x, f.y - 6, 18, 0, Math.PI * 2); ctx.stroke();
                     }
-                    drawBoss(f.x, f.y, arming ? '#ffffff' : (canWeakPoint && st.weakPointActive ? '#22d3ee' : d.accent), cfg.bossArt || 'wraith', f.hurt);
+                    drawBoss(f.x, f.y, arming ? '#ffffff' : (st.weakPointActive ? '#22d3ee' : d.accent), cfg.bossArt || 'wraith', f.hurt);
                     ctx.fillStyle = '#000a'; ctx.fillRect(f.x - 16, f.y - 28, 32, 3);
                     ctx.fillStyle = d.accent; ctx.fillRect(f.x - 16, f.y - 28, 32 * Math.max(0, f.hp / f.max), 3);
                 } else {
@@ -711,7 +845,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
                     <div className="h-full rounded-full transition-all" style={{ width: `${(hp / maxHp) * 100}%`, background: hp > maxHp * 0.3 ? '#34d399' : '#ef4444' }} />
                 </div>
-                {canWeakPoint && boss && weakPointActive && (
+                {boss && weakPointActive && (
                     <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-400 animate-pulse">Weak point revealed — strike now</p>
                 )}
                 {boss && (
@@ -750,33 +884,32 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     <div className="absolute rounded-full" style={{ width: '44%', height: '44%', left: '28%', top: '28%', background: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.85)', boxShadow: '0 0 12px rgba(251,191,36,0.5)', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
                 </div>
 
-                {canBlock && (
-                    <button
-                        onClick={() => { unlockAudio(); blockRef.current = true; }}
-                        disabled={blockCd > 0}
-                        className="absolute w-[4.25rem] h-[4.25rem] rounded-full text-[8px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-35"
-                        style={{
-                            right: canChannel ? '11.5rem' : '6.75rem',
-                            bottom: 'calc(2rem + env(safe-area-inset-bottom))',
-                            background: 'linear-gradient(135deg,#e2e8f0 0%,#94a3b8 100%)',
-                            boxShadow: '0 0 18px rgba(148,163,184,0.35)',
-                            touchAction: 'none',
-                        }}
+                {abilities.length > 0 && (
+                    <div
+                        className="absolute flex gap-2 items-end pointer-events-auto max-w-[58%] overflow-x-auto custom-scrollbar"
+                        style={{ right: '5.75rem', bottom: 'calc(2rem + env(safe-area-inset-bottom))', touchAction: 'none' }}
                     >
-                        Block
-                        {blockCd > 0 && <span className="text-[7px] mt-0.5">{Math.ceil(blockCd)}s</span>}
-                    </button>
-                )}
-                {canChannel && (
-                    <button
-                        onClick={() => { unlockAudio(); channelRef.current = true; }}
-                        disabled={channelCd > 0}
-                        className="absolute right-[6.75rem] w-[4.5rem] h-[4.5rem] rounded-full text-[9px] font-black uppercase tracking-widest text-white flex flex-col items-center justify-center active:scale-95 transition-transform pointer-events-auto disabled:opacity-35"
-                        style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom))', background: 'linear-gradient(135deg,#10b981 0%,#047857 100%)', boxShadow: '0 0 20px rgba(16,185,129,0.35)', touchAction: 'none' }}
-                    >
-                        Channel
-                        {channelCd > 0 && <span className="text-[7px] mt-0.5">{Math.ceil(channelCd)}s</span>}
-                    </button>
+                        {abilities.map((ab) => {
+                            const cd = abilityCds[ab.id] || 0;
+                            const isSuper = ab.cooldownSec >= 22;
+                            return (
+                                <button
+                                    key={ab.id}
+                                    onClick={() => { unlockAudio(); abilityTriggerRef.current = ab.id; }}
+                                    disabled={cd > 0}
+                                    className="shrink-0 w-[3.75rem] h-[3.75rem] rounded-full text-[7px] font-black uppercase tracking-wide text-white flex flex-col items-center justify-center active:scale-95 transition-transform disabled:opacity-35 px-1 text-center leading-tight"
+                                    style={{
+                                        background: isSuper ? `linear-gradient(135deg, ${pathColor} 0%, ${pathColor}88 100%)` : `linear-gradient(135deg, ${pathColor}cc 0%, ${pathColor}66 100%)`,
+                                        boxShadow: `0 0 16px ${pathColor}44`,
+                                        color: isSuper ? '#0a0a0a' : '#fff',
+                                    }}
+                                >
+                                    {ab.name}
+                                    {cd > 0 && <span className="text-[6px] mt-0.5 opacity-80">{Math.ceil(cd)}s</span>}
+                                </button>
+                            );
+                        })}
+                    </div>
                 )}
                 {/* Dodge — universal, stacked above Strike for the right thumb */}
                 <button

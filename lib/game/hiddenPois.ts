@@ -101,13 +101,13 @@ export function allVisiblePois(base: POI[], c: GameCharacter): POI[] {
 }
 
 export function hiddenPoiById(id: string): HiddenPOI | undefined {
-    return HIDDEN_POIS.find((p) => p.id === id);
+    return HIDDEN_POIS.find((p) => p.id === id) || PATH_HIDDEN_POIS.find((p) => p.id === id);
 }
 
 /** Carve walkable clearings where hidden places sit (called once on map build). */
 export function applyHiddenClears(ow: { solid: boolean[][]; decor: number[][]; width: number; height: number }) {
     const inB = (c: number, r: number) => c >= 0 && r >= 0 && c < ow.width && r < ow.height;
-    for (const h of HIDDEN_POIS) {
+    for (const h of [...HIDDEN_POIS, ...PATH_HIDDEN_POIS]) {
         for (let r = h.y - 2; r <= h.y + 2; r++) {
             for (let c = h.x - 2; c <= h.x + 2; c++) {
                 if (!inB(c, r)) continue;

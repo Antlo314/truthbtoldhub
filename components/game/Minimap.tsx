@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { buildOverworld, MAP_W, MAP_H } from '@/lib/game/overworld';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { QuestWaypoint } from '@/lib/game/questWaypoint';
+import { isDestinationPOI, isDestinationUnlocked } from '@/lib/game/progression';
 
 interface Props {
     playerX: number;
@@ -42,9 +43,10 @@ export default function Minimap({ playerX, playerY, character, questWaypoint, hu
                     const cx = p.x * scale;
                     const cy = p.y * scale;
                     const color = p.type === 'hut' ? '#fbbf24' : p.type === 'portal' ? '#a855f7' : p.type === 'cave' ? '#22d3ee' : '#94a3b8';
-                    const discovered = character.discovered.includes(p.id) || character.cleared.some((d) => d === p.id) || p.type === 'hut';
+                    const locked = isDestinationPOI(p.id) && !isDestinationUnlocked(p.id, character);
+                    const discovered = !locked && (character.discovered.includes(p.id) || character.cleared.some((d) => d === p.id) || p.type === 'hut');
                     return (
-                        <circle key={p.id} cx={cx} cy={cy} r={p.type === 'hut' ? 2.5 : 1.8} fill={color} opacity={discovered ? 0.9 : 0.35} />
+                        <circle key={p.id} cx={cx} cy={cy} r={p.type === 'hut' ? 2.5 : 1.8} fill={locked ? '#52525b' : color} opacity={locked ? 0.25 : discovered ? 0.9 : 0.35} />
                     );
                 })}
                 {questWaypoint && (

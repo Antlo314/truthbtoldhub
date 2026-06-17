@@ -15,6 +15,7 @@ const TILE = 16;
 interface Props {
     character: GameCharacter;
     isSolved: boolean;
+    minigameDone?: boolean;
     onSolve: () => void;
     onClaim: () => void;
     onExit: () => void;
@@ -23,7 +24,7 @@ interface Props {
     accent?: string;
 }
 
-export default function GizaWorld({ character, isSolved, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#22d3ee' }: Props) {
+export default function GizaWorld({ character, isSolved, minigameDone = true, onSolve, onClaim, onExit, puzzleId, puzzleHint, accent = '#22d3ee' }: Props) {
     const addMaterial = useGameStore(s => s.addMaterial);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -529,6 +530,10 @@ export default function GizaWorld({ character, isSolved, onSolve, onClaim, onExi
                 if (!correct) {
                     setTimeout(() => resetSequence(), 150);
                 } else if (nextSeq.length === 3) {
+                    if (!minigameDone) {
+                        setDialogue('The crystals will not resonate until you pass the Serpent Path trial — open Records.');
+                        return;
+                    }
                     state.wallOpen = true;
                     onSolve();
                     setDialogue("The crystals resonate in perfect harmony! Giza's center granite slab slides back, revealing the casing stone Shard!");
