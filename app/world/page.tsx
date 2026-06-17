@@ -48,8 +48,8 @@ import WeaponForge from '@/components/game/WeaponForge';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
-import { activeQuestWaypoint } from '@/lib/game/questWaypoint';
-import { isDestinationUnlocked, unlockBlockMessage, activeDestinationFocus } from '@/lib/game/progression';
+import { activeQuestWaypoint, focusWaypoint } from '@/lib/game/questWaypoint';
+import { isDestinationUnlocked, unlockBlockMessage } from '@/lib/game/progression';
 import { loadSettings, applyMusicSetting, type GameSettings } from '@/lib/game/settings';
 import { gameMusic } from '@/lib/game/music';
 import { hapticTap } from '@/lib/game/haptics';
@@ -122,6 +122,9 @@ export default function WorldPage() {
     const [mounted, setMounted] = useState(false);
     const isDesktop = useIsDesktopLayout();
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
+    // ambient Truth lines (proximity/wander/bulletin) — non-blocking bubble that
+    // never freezes the world or hides the joystick, unlike the modal `dialogue`
+    const [ambient, setAmbient] = useState<{ text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
     const [hutTab, setHutTab] = useState<'dispatch' | 'ledger' | 'patron' | 'truth'>('dispatch');
 
@@ -150,8 +153,15 @@ export default function WorldPage() {
     const [tutorial, setTutorial] = useState<TutorialId | null>(null);
     const [worldPresence, setWorldPresence] = useState<WorldPresence>({ walkedToday: 0, fellows: [] });
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const ambientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastWalkPing = useRef(0);
     const userIdRef = useRef<string | null>(null);
+
+    const showAmbient = useCallback((text: string, color = '#f97316') => {
+        setAmbient({ text, color });
+        if (ambientTimer.current) clearTimeout(ambientTimer.current);
+        ambientTimer.current = setTimeout(() => setAmbient(null), 5200);
+    }, []);
 
     const finishWorldIntro = useCallback(() => {
         sessionStorage.setItem('tbth-cutscene-world', '1');
@@ -178,11 +188,9 @@ export default function WorldPage() {
                 if (!lastSeen || lastSeen !== bs[0].id) {
                     setHutAlert(true);
                     setTimeout(() => {
-                        setDialogue({
-                            speaker: 'Truth',
-                            text: truthBulletinPing(bs[0].title),
-                            color: '#f97316',
-                        });
+                        setAmbient({ text: truthBulletinPing(bs[0].title), color: '#f97316' });
+                        if (ambientTimer.current) clearTimeout(ambientTimer.current);
+                        ambientTimer.current = setTimeout(() => setAmbient(null), 5200);
                     }, 4500);
                 }
             }
@@ -210,6 +218,7 @@ export default function WorldPage() {
         const t = setTimeout(() => setHint(false), 5000);
         return () => {
             clearTimeout(t);
+            if (ambientTimer.current) clearTimeout(ambientTimer.current);
             gameMusic.stopBgm(2200);
         };
     }, [loadFromCloud]);
@@ -277,8 +286,8 @@ export default function WorldPage() {
     }, [worldIntroDone]);
 
     const onTruthLine = useCallback((line: string) => {
-        setDialogue({ speaker: 'Truth', text: line, color: '#f97316' });
-    }, []);
+        showAmbient(line, '#f97316');
+    }, [showAmbient]);
 
     const showToast = useCallback((msg: string) => {
         setToast(msg);
@@ -402,9 +411,10 @@ export default function WorldPage() {
         saveToCloud();
     }, [markDiscovered, saveToCloud, showToast, worldEvent]);
 
-    // walked over an essence mote in the world — bank the material for the forge
+    // walked over an essence mote in the world — bank the material for the forge.
+    // (collection is tracked in the daily-harvest set in WorldCanvas, not in the
+    // permanent `discovered` set, so the world refills each day.)
     const onPickup = useCallback((pk: Pickup) => {
-        markDiscovered(pk.id);
         saveToCloud();
         sfx.pickup();
         hapticTap('light');
@@ -607,6 +617,10 @@ export default function WorldPage() {
     const roamingShades = effectiveShadeCount(baseShades, worldEvent);
     const nextMilestone = nextRoamMilestoneHint(character);
     const questWaypoint = activeQuestWaypoint(character);
+    // persistent "go here next" — quests are off, so fall back to a focus
+    // waypoint (forge at the Hut, then the next destination) so roaming always
+    // has a direction instead of the 5s intro hint being the only cue.
+    const objectiveWaypoint = QUESTS_ENABLED ? questWaypoint : focusWaypoint(character);
     const hutQuests = questsAvailable('hut', character);
 
     // freeze the roaming world whenever any overlay/scene is on top of it
@@ -630,8 +644,8 @@ export default function WorldPage() {
                 shadeAggroMult={worldEvent.aggroMult}
                 paused={worldPaused}
                 resonanceTier={resTier}
-                showQuestTrail={QUESTS_ENABLED && settings.showQuestTrail}
-                questWaypoint={QUESTS_ENABLED ? questWaypoint : null}
+                showQuestTrail={settings.showQuestTrail}
+                questWaypoint={objectiveWaypoint}
                 onInteract={onInteract}
                 onEncounter={onEncounter}
                 onPickup={onPickup}
@@ -700,7 +714,7 @@ export default function WorldPage() {
                         playerX={playerPos.x}
                         playerY={playerPos.y}
                         character={character}
-                        questWaypoint={QUESTS_ENABLED && settings.showQuestTrail ? questWaypoint : null}
+                        questWaypoint={settings.showQuestTrail ? objectiveWaypoint : null}
                         hutAlert={hutAlert}
                     />
                 </div>
@@ -720,15 +734,17 @@ export default function WorldPage() {
                         walkedToday={worldPresence.walkedToday}
                         fellowCount={worldPresence.fellows.length}
                     />
+                    {objectiveWaypoint && !hasAllRelics(character.inventory) && (
+                        <div className="px-3 py-1 rounded-full bg-black/50 border border-aether-gold/25 backdrop-blur-sm">
+                            <span className="text-[9px] font-black uppercase tracking-[0.22em] text-aether-gold/90">◆ {objectiveWaypoint.title}</span>
+                        </div>
+                    )}
                 </div>
             )}
 
             {hint && (
                 <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none text-center">
                     <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · start at Truth&apos;s Hut</p>
-                    {activeDestinationFocus(character) && (
-                        <p className="mt-2 text-[9px] uppercase tracking-[0.25em] text-aether-gold/70">Current road · {DEST_BY_POI[activeDestinationFocus(character)!]?.name}</p>
-                    )}
                     {nextMilestone && (
                         <p className="mt-2 text-[9px] uppercase tracking-[0.2em] text-zinc-500/90 max-w-[16rem] mx-auto leading-snug">
                             Next road · {nextMilestone.title}
@@ -743,6 +759,20 @@ export default function WorldPage() {
                     style={{ top: 'calc(4.25rem + env(safe-area-inset-top))' }}
                 >
                     {toast}
+                </div>
+            )}
+
+            {/* ambient Truth — non-blocking bubble above the controls; the world
+                keeps running and the joystick stays under your thumb */}
+            {ambient && worldIntroDone && !worldPaused && (
+                <div
+                    className="absolute left-1/2 -translate-x-1/2 z-[15] pointer-events-none w-full max-w-[min(88vw,30rem)] px-4"
+                    style={{ bottom: 'calc(8.5rem + env(safe-area-inset-bottom))' }}
+                >
+                    <div className="rounded-2xl bg-black/72 border backdrop-blur-sm px-4 py-2.5" style={{ borderColor: `${ambient.color || '#f97316'}40` }}>
+                        <p className="text-[8px] font-black uppercase tracking-[0.32em] mb-0.5" style={{ color: ambient.color || '#f97316' }}>Truth</p>
+                        <p className="text-[12px] text-white/90 leading-snug">{ambient.text}</p>
+                    </div>
                 </div>
             )}
 

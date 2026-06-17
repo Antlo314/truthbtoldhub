@@ -17,6 +17,7 @@ import {
 } from '@/lib/game/overworld';
 import { allVisiblePois, applyHiddenClears } from '@/lib/game/hiddenPois';
 import { unlockAudio } from '@/lib/game/sfx';
+import { isHarvested, markHarvested } from '@/lib/game/harvest';
 import { initTruthCompanion, updateTruthCompanion, getTruthProximityLine, getTruthWanderLine } from '@/lib/game/truthCompanion';
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
@@ -163,6 +164,8 @@ export default function WorldCanvas({
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
             py: (ow.spawn.y + 0.5) * TILE,
+            vx: 0,
+            vy: 0,
             shades: Array.from({ length: shadeCountRef.current }, (_, i) => {
                 const skin = overworldSkinForShade(i);
                 return {
@@ -201,6 +204,9 @@ export default function WorldCanvas({
 
         let ox = 0;
         let oy = 0;
+        // camera center, persisted across frames for soft follow + deadzone
+        let camX = (ow.spawn.x + 0.5) * TILE;
+        let camY = (ow.spawn.y + 0.5) * TILE;
         const SX = (wx: number) => Math.round(wx * Z + ox);
         const SY = (wy: number) => Math.round(wy * Z + oy);
 
@@ -490,19 +496,29 @@ export default function WorldCanvas({
             if (k.has('arrowright') || k.has('d')) ix = 1;
             if (k.has('arrowup') || k.has('w')) iy = -1;
             if (k.has('arrowdown') || k.has('s')) iy = 1;
-            const mag = Math.hypot(ix, iy);
-            if (mag > 1) { ix /= mag; iy /= mag; }
-            const moving = Math.hypot(ix, iy) > 0.12;
-            walkT += moving ? dt : 0;
-            if (moving) facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
+            const inputMag = Math.hypot(ix, iy);
+            if (inputMag > 1) { ix /= inputMag; iy /= inputMag; }
+            const hasInput = Math.hypot(ix, iy) > 0.12;
+            if (hasInput) facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
 
-            // move with per-axis collision (feet point)
+            // smoothed velocity — ramp toward the target so starts/stops glide
+            // instead of snapping (frame-rate-independent, ~80ms to full speed).
             const spd = 92;
+            const accelK = Math.min(1, dt * 12);
+            st.vx += (ix * spd - st.vx) * accelK;
+            st.vy += (iy * spd - st.vy) * accelK;
+            const speedMag = Math.hypot(st.vx, st.vy);
+            const moving = speedMag > 6;
+            // couple leg cadence to actual speed so a half-push doesn't moonwalk
+            walkT += moving ? (speedMag / spd) * dt : 0;
+
+            // move with per-axis collision (feet point); zero the blocked axis'
+            // velocity so it doesn't keep building up against a wall.
             const fy = 5; // feet offset
-            const nx = st.px + ix * spd * dt;
-            if (!solidAt(nx, st.py + fy) && !solidAt(nx, st.py)) st.px = nx;
-            const ny = st.py + iy * spd * dt;
-            if (!solidAt(st.px, ny + fy) && !solidAt(st.px, ny)) st.py = ny;
+            const nx = st.px + st.vx * dt;
+            if (!solidAt(nx, st.py + fy) && !solidAt(nx, st.py)) st.px = nx; else st.vx = 0;
+            const ny = st.py + st.vy * dt;
+            if (!solidAt(st.px, ny + fy) && !solidAt(st.px, ny)) st.py = ny; else st.vy = 0;
 
             // shades — drift idly, but HOME IN when you stray near (slower than
             // you, so you can still flee). Brushing one drags you into a fight;
@@ -544,12 +560,14 @@ export default function WorldCanvas({
                 }
             }
 
-            // gather essence motes you walk over
+            // gather essence motes you walk over (daily-scoped: harvested motes
+            // refill on the next UTC day so roaming keeps paying out)
             for (const pk of pickups) {
-                if (justCollected.has(pk.id) || charRef.current.discovered.includes(pk.id)) continue;
+                if (justCollected.has(pk.id) || isHarvested(pk.id)) continue;
                 const pwx = (pk.x + 0.5) * TILE, pwy = (pk.y + 0.5) * TILE;
                 if (Math.hypot(pwx - st.px, pwy - st.py) < TILE * 0.7) {
                     justCollected.add(pk.id);
+                    markHarvested(pk.id);
                     cbRef.current.onPickup(pk);
                 }
             }
@@ -613,13 +631,23 @@ export default function WorldCanvas({
                 }
             }
 
-            // ---- camera ----
+            // ---- camera ---- soft follow with a small deadzone so micro-steps
+            // and direction changes don't drag the whole world (cuts the jolt on
+            // the tight mobile view)
             const vw = canvas.clientWidth;
             const vh = canvas.clientHeight;
             const halfW = vw / (2 * Z);
             const halfH = vh / (2 * Z);
-            const camX = clamp(st.px, halfW, MAP_W * TILE - halfW);
-            const camY = clamp(st.py, halfH, MAP_H * TILE - halfH);
+            const dz = TILE * 1.4;
+            let tcx = camX;
+            let tcy = camY;
+            if (st.px > camX + dz) tcx = st.px - dz; else if (st.px < camX - dz) tcx = st.px + dz;
+            if (st.py > camY + dz) tcy = st.py - dz; else if (st.py < camY - dz) tcy = st.py + dz;
+            const camK = Math.min(1, dt * 6);
+            camX += (tcx - camX) * camK;
+            camY += (tcy - camY) * camK;
+            camX = clamp(camX, halfW, MAP_W * TILE - halfW);
+            camY = clamp(camY, halfH, MAP_H * TILE - halfH);
             ox = Math.round(vw / 2 - camX * Z);
             oy = Math.round(vh / 2 - camY * Z);
 
@@ -633,7 +661,7 @@ export default function WorldCanvas({
 
             // essence motes (loot) — drawn over the ground, under the actors
             for (const pk of pickups) {
-                if (justCollected.has(pk.id) || charRef.current.discovered.includes(pk.id)) continue;
+                if (justCollected.has(pk.id) || isHarvested(pk.id)) continue;
                 drawPickup((pk.x + 0.5) * TILE, (pk.y + 0.5) * TILE, ORE_COLOR[pk.kind]);
             }
 
@@ -742,8 +770,14 @@ export default function WorldCanvas({
             }
         };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+        // drop all held keys when focus is lost / tab hidden, else a missed
+        // keyup leaves the avatar walking on its own after alt-tab
+        const clearKeys = () => keysRef.current.clear();
+        const onVisibility = () => { if (document.hidden) keysRef.current.clear(); };
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
+        window.addEventListener('blur', clearKeys);
+        document.addEventListener('visibilitychange', onVisibility);
 
         return () => {
             running = false;
@@ -751,6 +785,8 @@ export default function WorldCanvas({
             window.removeEventListener('resize', resize);
             window.removeEventListener('keydown', kd);
             window.removeEventListener('keyup', ku);
+            window.removeEventListener('blur', clearKeys);
+            document.removeEventListener('visibilitychange', onVisibility);
         };
     }, []);
 

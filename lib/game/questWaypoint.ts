@@ -72,3 +72,35 @@ export function activeQuestWaypoint(character: GameCharacter): QuestWaypoint | n
     }
     return null;
 }
+
+/**
+ * Quest-independent "go here next" objective — always available, even with
+ * QUESTS_ENABLED off. Steers an unarmed soul to the Hut to forge, then to the
+ * next unlocked-incomplete destination, else back to the Hut. This is the only
+ * persistent wayfinding the roaming player gets, so it never returns null while
+ * a Hut exists.
+ */
+export function focusWaypoint(character: GameCharacter): QuestWaypoint | null {
+    const ow = buildOverworld();
+    const hut = ow.pois.find((p) => p.type === 'hut');
+
+    const atHut = (title: string): QuestWaypoint | null => {
+        if (!hut) return null;
+        const c = poiCenter(hut);
+        return { questId: 'objective', title, worldX: c.x, worldY: c.y, poiName: hut.name };
+    };
+
+    // Unarmed → the first real objective is forging at the Hut.
+    if (!character.equipped.weapon) return atHut('Forge your first weapon');
+
+    const focus = activeDestinationFocus(character);
+    if (focus) {
+        const poi = ow.pois.find((p) => p.id === focus);
+        if (poi) {
+            const c = poiCenter(poi);
+            return { questId: 'objective', title: `Seek ${poi.name}`, worldX: c.x, worldY: c.y, poiName: poi.name };
+        }
+    }
+
+    return atHut("Return to Truth's Hut");
+}

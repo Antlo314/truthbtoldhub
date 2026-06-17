@@ -7,8 +7,11 @@
 // ============================================================
 
 export const TILE = 16;
-export const MAP_W = 88;
-export const MAP_H = 88;
+// Tightened from 88 → 64: the old map was ~14% visible per axis on a phone, so
+// roaming meant ~9–12s of empty grass between POIs. 64 keeps room to roam while
+// putting the ~12 POIs within a couple of mobile screens of each other.
+export const MAP_W = 64;
+export const MAP_H = 64;
 
 export const ENV_SHEET = '/assets/kenney/roguelikeSheet.png';
 
@@ -116,12 +119,13 @@ export function buildOverworld(): Overworld {
         }
     }
 
-    // lakes — a few water bodies scattered across the larger map
+    // lakes — water bodies placed in the open quadrants, clear of every POI,
+    // NPC, the spawn and the central hut/Eli cluster (re-authored for the 64² map).
     const lakes = [
-        { x: 19, y: 21, r: 6.5 },
-        { x: W - 23, y: H - 27, r: 5.5 },
-        { x: cx + 19, y: 28, r: 4.2 },
-        { x: 24, y: H - 22, r: 4 },
+        { x: 16, y: 20, r: 4.5 },
+        { x: 48, y: 46, r: 4 },
+        { x: 46, y: 18, r: 3.5 },
+        { x: 18, y: 46, r: 4 },
     ];
     for (let r = 0; r < H; r++) {
         for (let c = 0; c < W; c++) {
@@ -243,9 +247,10 @@ export function buildPickups(): Pickup[] {
             // only on open, walkable grass (not water/dirt/path/tree/solid)
             if (ow.ground[r][c] !== 0 || ow.solid[r][c] || ow.decor[r][c] === 1) continue;
             if (tooCloseToPoi(c, r)) continue;
-            if (rand() > 0.014) continue;
-            // keep them spread out — skip if one is already within 4 tiles
-            if (out.some((p) => Math.hypot(p.x - c, p.y - r) < 4)) continue;
+            // density tuned for the 64² map (the wider 88² used 0.014/4-tile)
+            if (rand() > 0.03) continue;
+            // keep them spread out — skip if one is already within 3 tiles
+            if (out.some((p) => Math.hypot(p.x - c, p.y - r) < 3)) continue;
             const roll = rand();
             if (roll < 0.08) {
                 out.push({ id: `health_${c}_${r}`, x: c, y: r, kind: 'health', qty: 20 });

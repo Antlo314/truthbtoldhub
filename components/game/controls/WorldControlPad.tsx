@@ -66,8 +66,7 @@ export default function WorldControlPad({ profile, joy, joyRadius, near, onInter
             />
             {near && (
                 <button
-                    onClick={onInteract}
-                    onTouchStart={(e) => { e.preventDefault(); onInteract(); }}
+                    onPointerDown={(e) => { e.preventDefault(); onInteract(); }}
                     className="absolute right-4 rounded-full text-[11px] font-black uppercase tracking-widest text-black flex flex-col items-center justify-center text-center animate-pulse pointer-events-auto active:scale-95 transition-transform"
                     style={{
                         width: action,
