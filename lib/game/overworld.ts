@@ -91,8 +91,8 @@ export function buildOverworld(): Overworld {
 
     const pois: POI[] = [
         { id: 'hut', type: 'hut', x: cx, y: cy, name: "Truth's Hut", detail: 'The centerpiece — daily dispatches and scrolls.' },
-        { id: 'dest_eden', type: 'portal', x: 8, y: 8, name: 'Eden — Before the Fall' },
-        { id: 'npc_gardener', type: 'npc', x: 12, y: 11, name: 'The Gardener', detail: 'Keeper of the First Garden — the portal is veiled while Truth weaves Eden\'s missions.' },
+        { id: 'dest_eden', type: 'portal', x: 8, y: 8, name: 'Eden — Before the Fall', detail: 'Step through to the open garden — the hour before shame, before exile.' },
+        { id: 'npc_gardener', type: 'npc', x: 12, y: 11, name: 'The Gardener', detail: 'Keeper of the First Garden — missions and counsel for those who walk Eden.' },
         { id: 'dest_emerald', type: 'portal', x: cx, y: 7, name: 'The Emerald Halls' },
         { id: 'dest_fair', type: 'portal', x: W - 8, y: 8, name: 'St. Louis, 1904' },
         { id: 'npc_mabel', type: 'npc', x: W - 12, y: 11, name: 'Mabel Hart', npcTile: { col: 0, row: 5 }, detail: 'Chronicler of the vanished Fair.' },

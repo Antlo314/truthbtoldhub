@@ -201,7 +201,7 @@ export function truthNpcEcho(npcId: string, c: GameCharacter): string | null {
 
     if (tier >= 2) {
         const tier2: Record<string, string> = {
-            npc_gardener: 'Eden sleeps sealed — but the Gardener\'s word still points home. Return to the Source by walking.',
+            npc_gardener: 'Eden is open again. Walk the garden the way man once walked beside the Source — not from exile.',
             npc_mabel: 'The Fair remembers 1904. Recovery takes souls who refuse to forget.',
         };
         return tier2[npcId] ?? null;

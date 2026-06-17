@@ -4,10 +4,9 @@ import { DEST_BY_POI } from '@/lib/game/destinations';
 // ============================================================
 //  DESTINATION PROGRESSION — linear unlock chain.
 //  Eden first, fully complete, then Giza → Fair → Kolbrin → Emerald.
-//  Eden is temporarily sealed while quests are built out.
 // ============================================================
 
-export const EDEN_SEALED = true;
+export const EDEN_SEALED = false;
 
 export const DESTINATION_ORDER = [
     'dest_eden',
