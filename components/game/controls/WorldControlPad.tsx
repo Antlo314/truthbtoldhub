@@ -39,8 +39,8 @@ export default function WorldControlPad({ profile, joy, joyRadius, near, onInter
                     ]}
                 />
                 {near && (
-                    <div className="absolute right-8 top-1 pointer-events-none hidden lg:block">
-                        <span className="text-[10px] uppercase tracking-widest text-amber-300/90 font-mono">
+                    <div className="absolute right-8 top-1 pointer-events-none hidden lg:block max-w-[min(14rem,28vw)] text-right">
+                        <span className="text-[9px] uppercase tracking-[0.18em] text-amber-300/90 font-mono leading-snug break-words text-pretty inline-block">
                             ◆ {near.name}
                         </span>
                     </div>
@@ -78,8 +78,13 @@ export default function WorldControlPad({ profile, joy, joyRadius, near, onInter
                         touchAction: 'none',
                     }}
                 >
-                    <span className="text-[8px] opacity-70 leading-none mb-0.5">{interactLabel}</span>
-                    <span className="leading-tight px-1 text-center">{near.name}</span>
+                    <span className="text-[8px] opacity-70 leading-none mb-0.5 shrink-0">{interactLabel}</span>
+                    <span
+                        className="leading-[1.15] px-1.5 text-center break-words hyphens-auto text-pretty max-w-[88%]"
+                        style={{ fontSize: near.name.length > 22 ? '7px' : near.name.length > 14 ? '8px' : '10px' }}
+                    >
+                        {near.name}
+                    </span>
                 </button>
             )}
         </div>

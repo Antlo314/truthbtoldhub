@@ -263,3 +263,39 @@ h1, h2, h3, .font-ritual {
     0%   { transform: scale(1) translate(0, 0); }
     100% { transform: scale(1.12) translate(-1.5%, -1%); }
 }
+
+/* Eden garden — HUD & dialogue motion */
+@keyframes eden-rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes eden-zone-in {
+    from { opacity: 0; transform: translateY(-3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes eden-glow-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+}
+@keyframes eden-border-shimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+.eden-animate-in {
+    animation: eden-rise-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.eden-zone-in {
+    animation: eden-zone-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.eden-hp-bar {
+    transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.35s ease;
+}
+.eden-dialogue-in {
+    animation: eden-rise-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.eden-shimmer-border {
+    background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.35), transparent);
+    background-size: 200% 100%;
+    animation: eden-border-shimmer 3s linear infinite;
+}

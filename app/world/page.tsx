@@ -38,6 +38,8 @@ import TutorialOverlay from '@/components/game/TutorialOverlay';
 import SourceEpilogue from '@/components/game/SourceEpilogue';
 import DonationSection from '@/components/DonationSection';
 import TruthQA from '@/components/game/TruthQA';
+import WorldDialogueBox from '@/components/game/WorldDialogueBox';
+import { useIsDesktopLayout } from '@/components/game/controls/useInputProfile';
 import {
     truthCombatLine,
     truthDestClearLine,
@@ -95,6 +97,7 @@ export default function WorldPage() {
     const returnToSource = useGameStore((s) => s.returnToSource);
 
     const [mounted, setMounted] = useState(false);
+    const isDesktop = useIsDesktopLayout();
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
     const [hutTab, setHutTab] = useState<'dispatch' | 'patron' | 'truth'>('dispatch');
@@ -518,6 +521,7 @@ export default function WorldPage() {
                 onPickup={onPickup}
                 onPositionUpdate={onPositionUpdate}
                 onTruthLine={onTruthLine}
+                hideControls={!!dialogue && !isDesktop}
             />
 
             {/* readability scrims so the HUD + controls read against bright grass */}
@@ -597,7 +601,10 @@ export default function WorldPage() {
             )}
 
             {toast && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/70 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide pointer-events-none whitespace-nowrap">
+                <div
+                    className="absolute left-1/2 -translate-x-1/2 z-[25] px-4 py-2 rounded-2xl sm:rounded-full bg-black/75 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide pointer-events-none text-center max-w-[min(92vw,28rem)] leading-snug"
+                    style={{ top: 'calc(4.25rem + env(safe-area-inset-top))' }}
+                >
                     {toast}
                 </div>
             )}
@@ -621,18 +628,14 @@ export default function WorldPage() {
                 </div>
             )}
 
-            {/* NPC / cave / portal dialogue */}
             {dialogue && (
-                <div className="absolute inset-x-0 bottom-0 p-4 flex justify-center z-20" onClick={() => setDialogue(null)}>
-                    <div className="w-full max-w-xl glass-panel rounded-2xl p-5 border cursor-pointer" style={{ borderColor: (dialogue.color || '#fbbf24') + '40' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-[0.35em]" style={{ color: dialogue.color || '#fbbf24' }}>{dialogue.speaker}</span>
-                            <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
-                        </div>
-                        <p className="font-ritual text-base md:text-lg text-white/90 leading-relaxed">{dialogue.text}</p>
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-white/30 mt-3">tap to close</p>
-                    </div>
-                </div>
+                <WorldDialogueBox
+                    speaker={dialogue.speaker}
+                    text={dialogue.text}
+                    color={dialogue.color}
+                    onClose={() => setDialogue(null)}
+                    controlsHidden={!isDesktop}
+                />
             )}
 
             {/* Truth's Hut — live daily dispatch */}

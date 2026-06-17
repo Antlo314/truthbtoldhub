@@ -1,19 +1,20 @@
 import type { CombatConfig } from '@/lib/game/destinations';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { canSeeHiddenPlaces } from '@/lib/game/pathPowers';
+import {
+    EDEN_MAP_W,
+    EDEN_MAP_H,
+    EDEN_TILE,
+    isEdenWalkable,
+} from '@/lib/game/edenOverworld';
 
 // ============================================================
-//  EDEN DUNGEON — deep garden level: the road back to before
-//  man listened to the serpent. Keys, lore stones, fights, boss.
+//  EDEN GARDEN — open overworld-style map (smaller than the
+//  main chamber). Lore, keys, shade trials, rivers, cherub boss.
 // ============================================================
 
-export const EDEN_MAP_W = 36;
-export const EDEN_MAP_H = 28;
-export const EDEN_TILE = 16;
+export { EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE };
 export const EDEN_VIEW_TILES = 13;
-
-/** 0 floor · 1 wall · 2 pool/water · 3 rubble (walkable, lore tone) */
-export type EdenTile = 0 | 1 | 2 | 3;
 
 export interface EdenDoor {
     id: string;
@@ -76,90 +77,15 @@ export interface EdenLevelState {
     temptationResolved: 'none' | 'accepted' | 'resisted';
 }
 
-function buildEdenTiles(): EdenTile[][] {
-    const W = EDEN_MAP_W;
-    const H = EDEN_MAP_H;
-    const g: EdenTile[][] = Array.from({ length: H }, () => Array(W).fill(0));
-    const wall = (x1: number, y1: number, x2: number, y2: number) => {
-        for (let y = y1; y <= y2; y++)
-            for (let x = x1; x <= x2; x++)
-                if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = 1;
-    };
-    const pool = (x1: number, y1: number, x2: number, y2: number) => {
-        for (let y = y1; y <= y2; y++)
-            for (let x = x1; x <= x2; x++)
-                if (g[y][x] === 0) g[y][x] = 2;
-    };
-
-    wall(0, 0, W - 1, 0);
-    wall(0, H - 1, W - 1, H - 1);
-    wall(0, 0, 0, H - 1);
-    wall(W - 1, 0, W - 1, H - 1);
-
-    // —— Wing 1: Threshold (south-west) ——
-    wall(1, 20, 16, 20);
-    wall(1, 20, 1, 26);
-    wall(16, 20, 16, 24);
-    wall(8, 24, 16, 24);
-
-    // —— Wing 2: Eastern garden ——
-    wall(17, 18, 28, 18);
-    wall(28, 18, 28, 26);
-    wall(17, 26, 28, 26);
-    wall(17, 18, 17, 22);
-
-    // —— Wing 3: River warren (mid-east) ——
-    wall(22, 12, 34, 12);
-    wall(34, 12, 34, 20);
-    wall(22, 20, 34, 20);
-    wall(22, 12, 22, 16);
-
-    // —— Wing 4: Forbidden verge (north-west mid) ——
-    wall(1, 8, 20, 8);
-    wall(20, 8, 20, 16);
-    wall(1, 16, 20, 16);
-    wall(1, 8, 1, 12);
-    wall(10, 8, 10, 12);
-
-    // —— Wing 5: Cherub antechamber + sanctum (north-east) ——
-    wall(24, 4, 34, 4);
-    wall(34, 4, 34, 11);
-    wall(24, 11, 34, 11);
-    wall(24, 4, 24, 8);
-
-    pool(28, 3, 33, 6);
-    g[4][31] = 1;
-
-    // river fountain pedestals
-    for (const [x, y] of [[5, 25], [30, 25], [5, 2], [30, 2]] as const) g[y][x] = 1;
-
-    // rubble patches (walkable, visual tone)
-    for (const [x, y] of [[12, 14], [14, 15], [6, 14], [25, 14]] as const) if (g[y][x] === 0) g[y][x] = 3;
-
-    // door passages — floor under gates (open/closed handled by door state, not tile type)
-    for (const [x, y] of [[16, 22], [17, 20], [22, 16], [24, 8]] as const) g[y][x] = 0;
-
-    // threshold ↔ outer grove (spawn was sealed behind row-20 wall)
-    for (const x of [10, 11, 12, 13]) g[20][x] = 0;
-
-    // east corridor along threshold row 24
-    for (const x of [10, 11, 12]) g[24][x] = 0;
-
-    // outer grove ↔ eastern garden (west edge gap when grove gate is closed)
-    g[21][17] = 0;
-
-    return g;
-}
-
-export const EDEN_TILES = buildEdenTiles();
-export const EDEN_SPAWN = { gx: 4, gy: 24 };
-export const EDEN_TREE = { gx: 31, gy: 4 };
+export const EDEN_SPAWN = { gx: 28, gy: 38 };
+export const EDEN_TREE = { gx: 28, gy: 6 };
+export const EDEN_GARDENER = { gx: 26, gy: 37 };
 
 export const EDEN_RIVERS = [
-    { id: 0, name: 'Pishon', gx: 5, gy: 25, active: false, color: '#22d3ee' },
-    { id: 1, name: 'Gihon', gx: 30, gy: 25, active: false, color: '#fbbf24' },
-    { id: 2, name: 'Hiddekel', gx: 5, gy: 2, active: false, color: '#a855f7' },
-    { id: 3, name: 'Euphrates', gx: 30, gy: 2, active: false, color: '#10b981' },
+    { id: 0, name: 'Pishon', gx: 10, gy: 32, active: false, color: '#22d3ee' },
+    { id: 1, name: 'Gihon', gx: 46, gy: 32, active: false, color: '#fbbf24' },
+    { id: 2, name: 'Hiddekel', gx: 10, gy: 10, active: false, color: '#a855f7' },
+    { id: 3, name: 'Euphrates', gx: 46, gy: 10, active: false, color: '#10b981' },
 ] as const;
 
 /** Canonical Eden lore — synced with destinations.ts & quests. */
@@ -203,8 +129,8 @@ export const EDEN_GARDENER_LINES: Record<string, string> = {
 export const EDEN_RESPAWN_LINE =
     'Rest here. The garden does not abandon those who stumble — only those who choose the lie again.';
 
-export const EDEN_TEMPTATION = { gx: 14, gy: 11 };
-export const EDEN_TEMPTATION_SHORTCUT = { gx: 22, gy: 15 };
+export const EDEN_TEMPTATION = { gx: 12, gy: 22 };
+export const EDEN_TEMPTATION_SHORTCUT = { gx: 20, gy: 24 };
 
 export const EDEN_SERPENT_LINES = {
     offer: '【A whisper】 You need not walk the long way. Take this path — you will know as the Source knows.',
@@ -214,41 +140,36 @@ export const EDEN_SERPENT_LINES = {
 
 export function freshEdenState(): EdenLevelState {
     return {
-        doors: [
-            { id: 'door_threshold', gx: 16, gy: 22, keyId: 'key_threshold', open: false, label: 'Threshold gate' },
-            { id: 'door_grove', gx: 17, gy: 20, keyId: 'key_grove', open: false, label: 'Grove gate' },
-            { id: 'door_river', gx: 22, gy: 16, keyId: 'key_river', open: false, label: 'River gate' },
-            { id: 'door_sanctum', gx: 24, gy: 8, keyId: 'key_sanctum', open: false, label: 'Sanctum gate' },
-        ],
+        doors: [],
         chests: [
-            { id: 'chest_threshold', gx: 10, gy: 22, keyId: 'key_threshold', label: 'Threshold compartment', opened: false },
-            { id: 'chest_grove', gx: 24, gy: 22, keyId: 'key_grove', label: 'Grove compartment', opened: false },
-            { id: 'chest_river', gx: 30, gy: 16, keyId: 'key_river', label: 'River vault', opened: false },
-            { id: 'chest_sanctum', gx: 14, gy: 10, keyId: 'key_sanctum', label: 'Forbidden vault', opened: false },
-            { id: 'chest_spring', gx: 6, gy: 14, health: 30, label: 'Hidden spring', opened: false },
-            { id: 'chest_memory', gx: 32, gy: 14, health: 25, label: 'Memory well', opened: false },
-            { id: 'chest_secret', gx: 18, gy: 14, health: 20, label: 'Compartment beneath memory', opened: false, hidden: true },
+            { id: 'chest_threshold', gx: 18, gy: 36, keyId: 'key_threshold', label: 'Threshold compartment', opened: false },
+            { id: 'chest_grove', gx: 42, gy: 30, keyId: 'key_grove', label: 'Grove compartment', opened: false },
+            { id: 'chest_river', gx: 40, gy: 18, keyId: 'key_river', label: 'River vault', opened: false },
+            { id: 'chest_sanctum', gx: 16, gy: 12, keyId: 'key_sanctum', label: 'Forbidden vault', opened: false },
+            { id: 'chest_spring', gx: 14, gy: 28, health: 30, label: 'Hidden spring', opened: false },
+            { id: 'chest_memory', gx: 44, gy: 14, health: 25, label: 'Memory well', opened: false },
+            { id: 'chest_secret', gx: 20, gy: 16, health: 20, label: 'Compartment beneath memory', opened: false, hidden: true },
         ],
         pickups: [
-            { id: 'hp_entry', gx: 3, gy: 25, kind: 'health', amount: 25, collected: false },
-            { id: 'hp_grove', gx: 20, gy: 24, kind: 'health', amount: 25, collected: false },
-            { id: 'hp_river', gx: 26, gy: 18, kind: 'health', amount: 30, collected: false },
-            { id: 'hp_forbidden', gx: 12, gy: 10, kind: 'health', amount: 30, collected: false },
-            { id: 'hp_antechamber', gx: 28, gy: 6, kind: 'health', amount: 35, collected: false },
+            { id: 'hp_entry', gx: 32, gy: 38, kind: 'health', amount: 25, collected: false },
+            { id: 'hp_grove', gx: 34, gy: 32, kind: 'health', amount: 25, collected: false },
+            { id: 'hp_river', gx: 42, gy: 22, kind: 'health', amount: 30, collected: false },
+            { id: 'hp_forbidden', gx: 10, gy: 18, kind: 'health', amount: 30, collected: false },
+            { id: 'hp_antechamber', gx: 30, gy: 12, kind: 'health', amount: 35, collected: false },
         ],
         fights: [
-            { id: 'fight_1', gx: 8, gy: 22, radius: 18, combatId: 'eden_lesson_1', cleared: false, hint: 'A lone shade blocks the eastern path. Learn Strike and Dodge before you go deeper.' },
-            { id: 'fight_2', gx: 22, gy: 23, radius: 18, combatId: 'eden_lesson_2', cleared: false, hint: 'Two shades hunt the grove. Let one wind up — dodge — then strike.' },
-            { id: 'fight_3', gx: 28, gy: 17, radius: 20, combatId: 'eden_lesson_3', cleared: false, hint: 'A caster shade guards the river vault. Close the distance or dodge its bolts.' },
-            { id: 'fight_temptation', gx: 14, gy: 11, radius: 0, combatId: 'eden_temptation', cleared: false, hint: 'The serpent\'s shortcut was a trap — a shade rises from the dust of the lie.' },
-            { id: 'fight_boss', gx: 31, gy: 5, radius: 24, combatId: 'eden_boss', cleared: false, hint: 'The Cherub of the Flaming Sword bars the Tree of Life — the hour before the lie.' },
+            { id: 'fight_1', gx: 20, gy: 34, radius: 22, combatId: 'eden_lesson_1', cleared: false, hint: 'A lone shade roams the threshold road. Learn Strike and Dodge.' },
+            { id: 'fight_2', gx: 42, gy: 28, radius: 22, combatId: 'eden_lesson_2', cleared: false, hint: 'Two shades hunt the eastern grove. Dodge, then strike.' },
+            { id: 'fight_3', gx: 40, gy: 16, radius: 24, combatId: 'eden_lesson_3', cleared: false, hint: 'A caster shade guards the river terrace. Close distance after dodging.' },
+            { id: 'fight_temptation', gx: 12, gy: 22, radius: 0, combatId: 'eden_temptation', cleared: false, hint: 'The serpent\'s shortcut was a trap — a shade rises from the dust of the lie.' },
+            { id: 'fight_boss', gx: 28, gy: 11, radius: 26, combatId: 'eden_boss', cleared: false, hint: 'The Cherub of the Flaming Sword bars the Tree of Life.' },
         ],
         loreStones: [
-            { id: 'lore_threshold', gx: 4, gy: 25, ...EDEN_LORE.lore_threshold, read: false },
-            { id: 'lore_ordering', gx: 12, gy: 14, ...EDEN_LORE.lore_ordering, read: false },
-            { id: 'lore_serpent', gx: 16, gy: 10, ...EDEN_LORE.lore_serpent, read: false },
-            { id: 'lore_exile', gx: 28, gy: 6, ...EDEN_LORE.lore_exile, read: false },
-            { id: 'lore_sanctum', gx: 30, gy: 4, ...EDEN_LORE.lore_sanctum, read: false },
+            { id: 'lore_threshold', gx: 24, gy: 38, ...EDEN_LORE.lore_threshold, read: false },
+            { id: 'lore_ordering', gx: 28, gy: 22, ...EDEN_LORE.lore_ordering, read: false },
+            { id: 'lore_serpent', gx: 14, gy: 20, ...EDEN_LORE.lore_serpent, read: false },
+            { id: 'lore_exile', gx: 30, gy: 12, ...EDEN_LORE.lore_exile, read: false },
+            { id: 'lore_sanctum', gx: 32, gy: 6, ...EDEN_LORE.lore_sanctum, read: false },
         ],
         keysFound: [],
         bossGateOpen: false,
@@ -418,23 +339,7 @@ export function edenDestinationStub(combatId: string) {
 }
 
 export function isEdenSolid(gx: number, gy: number, level: EdenLevelState, barrierActive: boolean): boolean {
-    if (gx < 0 || gx >= EDEN_MAP_W || gy < 0 || gy >= EDEN_MAP_H) return true;
-
-    // doors must be checked before wall tiles — gates sit on former wall cells
-    const door = level.doors.find((d) => d.gx === gx && d.gy === gy);
-    if (door) return !door.open;
-
-    const t = EDEN_TILES[gy][gx];
-    if (t === 1) return true;
-    if (t === 2 && barrierActive) return true;
-    if (gx === EDEN_TREE.gx && gy === EDEN_TREE.gy) return true;
-    // boss antechamber gate (between warren and cherub hall)
-    if (!level.bossGateOpen && gx >= 23 && gx <= 24 && gy >= 9 && gy <= 11) return true;
-    // sanctum pool edge until boss beaten
-    if (!level.sanctumOpen && gx >= 28 && gx <= 33 && gy >= 3 && gy <= 6 && EDEN_TILES[gy][gx] === 2) {
-        if (!(gx === EDEN_TREE.gx && gy === EDEN_TREE.gy + 1)) return true;
-    }
-    return false;
+    return !isEdenWalkable(gx, gy, level, barrierActive);
 }
 
 export function updateEdenProgress(level: EdenLevelState): EdenLevelState {
@@ -451,12 +356,13 @@ export function updateEdenProgress(level: EdenLevelState): EdenLevelState {
 }
 
 export function edenZoneLabel(gx: number, gy: number): string | null {
-    if (gy >= 23) return 'The Threshold';
-    if (gy >= 17 && gx < 15) return 'Outer Grove';
-    if (gy >= 17) return 'Eastern Garden';
-    if (gy >= 11 && gx < 20) return 'River Warren';
-    if (gy >= 6 && gx < 28) return 'The Forbidden Verge';
-    if (gy >= 3) return 'Cherub Antechamber';
+    if (gy >= 34) return 'The Threshold';
+    if (gy >= 26 && gx < 28) return 'Outer Grove';
+    if (gy >= 26) return 'Eastern Garden';
+    if (gy >= 16 && gy < 26 && gx >= 30) return 'River Warren';
+    if (gy >= 12 && gy < 26 && gx < 22) return 'The Forbidden Verge';
+    if (gy < 12) return 'Cherub Antechamber';
+    if (gy >= 16) return 'River Terrace';
     return null;
 }
 
@@ -514,7 +420,7 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
             return step(
                 `river_${nextRiver}`,
                 `Attune the ${r.name} river (${nextRiver + 1}/4)`,
-                'Walk to each corner fountain in order: NW → NE → SW → SE.',
+                'Walk to each corner fountain in order: SW → SE → NW → NE.',
                 { gx: r.gx, gy: r.gy },
                 `【The Gardener】 Stand on the ${r.name} fountain in the ${nextRiver === 0 ? 'south-west' : nextRiver === 1 ? 'south-east' : nextRiver === 2 ? 'north-west' : 'north-east'} corner.`,
                 `【The Gardener】 Rivers must be lit in order: ${order.slice(0, nextRiver + 1).join(' → ')}${nextRiver < 3 ? ' → …' : ''}. Find ${r.name} next.`,
@@ -532,27 +438,27 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
     }
 
     if (ctx.isGuardianCleared || fightDone(level, 'fight_boss')) {
-        return step('reach_sanctum', 'Enter the sanctum', 'The cherub gate is open — walk north to the Tree.',
-            { gx: 31, gy: 6 },
-            '【The Gardener】 The flaming sword has lowered. Walk north through the cherub hall.',
-            '【The Gardener】 Past the antechamber lies the pool and the Tree. Head north-east.',
-            '【The Gardener】 Follow the open path north. The blue pool surrounds the Tree of Life.');
+        return step('reach_sanctum', 'Enter the sanctum', 'Walk north to the Tree of Life.',
+            { gx: 28, gy: 7 },
+            '【The Gardener】 The flaming sword has lowered. Walk north along the spine path.',
+            '【The Gardener】 The sanctum pool surrounds the Tree. Head north.',
+            '【The Gardener】 Follow the open road north. The Tree of Life glows beyond the water.');
     }
 
     if (level.bossGateOpen && !fightDone(level, 'fight_boss')) {
-        return step('fight_boss', 'Face the Cherub', 'The boss trial is in the antechamber — north-east.',
-            { gx: 31, gy: 5 },
+        return step('fight_boss', 'Face the Cherub', 'The cherub waits on the north terrace.',
+            { gx: 28, gy: 11 },
             '【The Gardener】 The Cherub guards the Tree. Enter the red dashed circle when your vitality is high.',
             '【The Gardener】 Red zone ahead — the Cherub of the Flaming Sword. Rest at red orbs if needed.',
             '【The Gardener】 The pulsing marker leads to the cherub. This is the last guardian.');
     }
 
     if (!loreRead(level, 'lore_threshold')) {
-        return step('lore_threshold', 'Read the threshold stone', 'Stand by the golden ◆ and tap Read.',
-            { gx: 4, gy: 25 },
-            '【The Gardener】 The golden ◆ right beside you is the first stone. Tap Read when close.',
-            '【The Gardener】 You are not blocked — the garden opens east and north. Begin with the stone at your feet.',
-            '【The Gardener】 Walk to the glowing ◆ in the south-west corner. The Read button lights up when you are near.');
+        return step('lore_threshold', 'Read the threshold stone', 'Stand by the golden ◆ near spawn and tap Read.',
+            { gx: 24, gy: 38 },
+            '【The Gardener】 The golden ◆ beside the threshold road is your first stone. Tap Read when close.',
+            '【The Gardener】 The garden is open — roam east and north. Begin with the stone at the threshold.',
+            '【The Gardener】 Walk to the glowing ◆ south of center. The Read button lights when you are near.');
     }
 
     if (!fightDone(level, 'fight_1')) {
@@ -565,19 +471,11 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
     }
 
     if (!chestDone(level, 'chest_threshold')) {
-        return step('chest_threshold', 'Open the threshold chest', 'Claim the key from the golden chest.',
-            { gx: 10, gy: 22 },
+        return step('chest_threshold', 'Open the threshold chest', 'Claim the key from the golden chest west of spawn.',
+            { gx: 18, gy: 36 },
             '【The Gardener】 The threshold compartment holds your first key. Walk onto the golden chest.',
-            '【The Gardener】 East of the trial lies a chest. Keys from chests open brown gates.',
-            '【The Gardener】 Follow the pulsing marker to the chest — stand on it to open.');
-    }
-
-    if (!doorOpen(level, 'door_threshold')) {
-        return step('door_threshold', 'Open the threshold gate', 'Walk to the brown gate with the golden lock.',
-            { gx: 16, gy: 22 },
-            '【The Gardener】 Your key opens the threshold gate. Walk up to the brown tile with the gold lock.',
-            '【The Gardener】 The gate is east and slightly north. Stand beside it — it opens automatically.',
-            '【The Gardener】 Brown tiles with gold locks are gates. You hold the threshold key — go open it.');
+                '【The Gardener】 The threshold key clears the first tree-gate north. Find the chest on the west road.',
+            '【The Gardener】 Follow the pulsing marker — stand on the chest to open.');
     }
 
     if (!level.bossGateOpen) {
@@ -597,29 +495,29 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
             );
         }
         if (!hasKey(level, 'key_grove')) {
-            return step('key_grove', 'Find the grove key', 'Golden chests hold keys. Check the Eastern Garden.',
-                { gx: 24, gy: 22 },
-                '【The Gardener】 The eastern garden holds a golden chest with the grove key.',
-                '【The Gardener】 Walk east past the threshold gate. Open the chest at the grove compartment.',
-                '【The Gardener】 The pulsing chest marker is your goal — walk onto it to open.');
+            return step('key_grove', 'Find the grove key', 'Golden chest in the Eastern Garden.',
+                { gx: 42, gy: 30 },
+                '【The Gardener】 The eastern garden holds a chest with the grove key.',
+                '【The Gardener】 Walk east along the southern ring. The grove key opens the river terrace gate.',
+                '【The Gardener】 Follow the pulsing marker to the grove chest.');
         }
         if (!hasKey(level, 'key_river')) {
-            return step('key_river', 'Find the river key', 'The River Warren lies north-east.',
-                { gx: 30, gy: 16 },
-                '【The Gardener】 The river vault holds the next key. Use the grove gate to go deeper.',
-                '【The Gardener】 North through the grove gate, then east into the River Warren.',
-                '【The Gardener】 The chest marker shows the river vault. Keys open brown gates.');
+            return step('key_river', 'Find the river key', 'The River Warren lies on the east terrace.',
+                { gx: 40, gy: 18 },
+                '【The Gardener】 The river vault holds the next key. Pass through the grove gate when you hold that key.',
+                '【The Gardener】 North through the mid road, then east to the river terrace.',
+                '【The Gardener】 The chest marker shows the river vault.');
         }
-        return step('boss_gate', 'Open the cherub gate', 'All trials and keys complete — walk to the golden barrier.',
-            { gx: 23, gy: 10 },
-            '【The Gardener】 The cherub gate senses your keys. Walk north to the golden seal.',
-            '【The Gardener】 The barrier between warren and antechamber will yield. Head north-east.',
-            '【The Gardener】 Stand at the golden gate north of the river warren. It opens for you now.');
+        return step('boss_gate', 'Approach the cherub road', 'All trials and keys complete — walk north.',
+            { gx: 28, gy: 14 },
+            '【The Gardener】 The north road opens. Walk toward the cherub terrace.',
+            '【The Gardener】 Tree-gates yield when you hold the keys. Head north on the spine path.',
+            '【The Gardener】 The cherub waits beyond the final tree-gate.');
     }
 
-    return step('explore', 'Explore the garden', 'Read ◆ stones, open chests, clear gold trial circles.',
-        { gx: 20, gy: 22 },
-        '【The Gardener】 Dark tiles are walls. Walkable grass leads on — follow the pulsing markers.',
-        '【The Gardener】 Red orbs restore vitality. Gold ◆ stones hold lore. Chests and gates go together.',
-        '【The Gardener】 If a path looks sealed, you may need a key from another wing first. Keep exploring east.');
+    return step('explore', 'Roam the garden', 'Read ◆ stones, open chests, clear shade trials.',
+        { gx: 28, gy: 30 },
+        '【The Gardener】 Roam freely — dirt roads connect every wing. Follow the pulsing markers.',
+        '【The Gardener】 Red orbs restore vitality. Gold ◆ stones hold lore. Dashed circles are shade trials.',
+        '【The Gardener】 Tree lines block paths until you hold the right key. Keep exploring.');
 }

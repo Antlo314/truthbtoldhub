@@ -70,6 +70,8 @@ interface WorldCanvasProps {
     onPickup: (p: Pickup) => void;
     onPositionUpdate?: (x: number, y: number) => void;
     onTruthLine?: (line: string) => void;
+    /** Hide thumb controls while speech is on screen (mobile) */
+    hideControls?: boolean;
 }
 
 export default function WorldCanvas({
@@ -84,6 +86,7 @@ export default function WorldCanvas({
     onPickup,
     onPositionUpdate,
     onTruthLine,
+    hideControls = false,
 }: WorldCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -710,7 +713,9 @@ export default function WorldCanvas({
     return (
         <>
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full world-canvas" />
-            <WorldControlPad profile={profile} joy={joy} joyRadius={joyR} near={near} onInteract={doInteract} />
+            {!hideControls && (
+                <WorldControlPad profile={profile} joy={joy} joyRadius={joyR} near={near} onInteract={doInteract} />
+            )}
         </>
     );
 }

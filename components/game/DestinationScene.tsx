@@ -55,6 +55,7 @@ export default function DestinationScene({ destination: d, inventory, solved, on
             onExit: onExit,
             onGuardianCleared: () => onGuardianCleared?.(d.poiId),
             onDiscover: (ids: string[]) => onDiscover?.(ids),
+            onOpenRecords: d.poiId === 'dest_eden' ? () => setViewMode('lore') : undefined,
             puzzleId: d.puzzle?.id,
             puzzleHint: d.puzzle?.hint,
             accent: d.accent,
@@ -76,13 +77,15 @@ export default function DestinationScene({ destination: d, inventory, solved, on
         }
     };
 
+    const isEdenOpenWorld = d.poiId === 'dest_eden' && viewMode === 'world';
+
     return (
         <div
-            className="absolute inset-0 z-40 overflow-y-auto custom-scrollbar flex flex-col"
-            style={{ background: `radial-gradient(circle at 50% -5%, ${d.accent}22, transparent 55%), linear-gradient(180deg, ${d.bg[0]} 0%, ${d.bg[1]} 100%)` }}
+            className={`absolute inset-0 z-40 flex flex-col ${isEdenOpenWorld ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}
+            style={{ background: isEdenOpenWorld ? d.bg[1] : `radial-gradient(circle at 50% -5%, ${d.accent}22, transparent 55%), linear-gradient(180deg, ${d.bg[0]} 0%, ${d.bg[1]} 100%)` }}
         >
-            {/* sticky header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3" style={{ background: `${d.bg[1]}cc`, backdropFilter: 'blur(6px)' }}>
+            {/* sticky header — Eden explore mode uses in-world chrome */}
+            {!isEdenOpenWorld && <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3" style={{ background: `${d.bg[1]}cc`, backdropFilter: 'blur(6px)' }}>
                 <button onClick={onExit} className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/70 hover:text-white">
                     <ArrowLeft className="w-4 h-4" /> Return
                 </button>
@@ -104,13 +107,19 @@ export default function DestinationScene({ destination: d, inventory, solved, on
                 </div>
 
                 <span className="text-[9px] font-mono uppercase tracking-widest hidden sm:inline" style={{ color: d.accent }}>{d.era}</span>
-            </div>
+            </div>}
 
             {/* Interactive World View */}
             {viewMode === 'world' ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 w-full max-w-xl mx-auto">
-                    {renderMiniWorld()}
-                </div>
+                isEdenOpenWorld ? (
+                    <div className="flex-1 flex flex-col min-h-0 w-full">
+                        {renderMiniWorld()}
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-6 w-full max-w-xl mx-auto">
+                        {renderMiniWorld()}
+                    </div>
+                )
             ) : (
                 /* Lore & Records View */
                 <div className="max-w-xl mx-auto px-5 pt-6 pb-28 w-full">
