@@ -61,6 +61,8 @@ interface NearPOI {
 interface WorldCanvasProps {
     character: GameCharacter;
     shadeCount?: number;
+    /** Shade aggro radius multiplier (world events). */
+    shadeAggroMult?: number;
     paused?: boolean;
     resonanceTier?: number;
     showQuestTrail?: boolean;
@@ -77,6 +79,7 @@ interface WorldCanvasProps {
 export default function WorldCanvas({
     character,
     shadeCount = 2,
+    shadeAggroMult = 1,
     paused = false,
     resonanceTier = 0,
     showQuestTrail = false,
@@ -108,6 +111,10 @@ export default function WorldCanvas({
     waypointRef.current = questWaypoint;
     const resTierRef = useRef(resonanceTier);
     resTierRef.current = resonanceTier;
+    const shadeCountRef = useRef(shadeCount);
+    shadeCountRef.current = shadeCount;
+    const shadeAggroRef = useRef(shadeAggroMult);
+    shadeAggroRef.current = shadeAggroMult;
 
     const cbRef = useRef({ onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine });
     cbRef.current = { onInteract, onEncounter, onPickup, onPositionUpdate, onTruthLine };
@@ -149,7 +156,7 @@ export default function WorldCanvas({
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
             py: (ow.spawn.y + 0.5) * TILE,
-            shades: Array.from({ length: shadeCount }, (_, i) => ({
+            shades: Array.from({ length: shadeCountRef.current }, (_, i) => ({
                 x: (20 + i * 17) * TILE,
                 y: (24 + i * 11) * TILE,
                 vx: i % 2 === 0 ? 11 : -9,
@@ -488,10 +495,24 @@ export default function WorldCanvas({
             // you, so you can still flee). Brushing one drags you into a fight;
             // it then scatters far so you aren't re-caught the instant you return.
             st.encCd = Math.max(0, st.encCd - dt);
+
+            const targetShades = shadeCountRef.current;
+            while (st.shades.length < targetShades) {
+                const i = st.shades.length;
+                st.shades.push({
+                    x: (12 + i * 19) * TILE,
+                    y: (18 + i * 13) * TILE,
+                    vx: i % 2 === 0 ? 11 : -9,
+                    vy: i % 2 === 0 ? 8 : 12,
+                });
+            }
+            while (st.shades.length > targetShades) st.shades.pop();
+
+            const aggroTiles = TILE * 6 * shadeAggroRef.current;
             for (const sh of st.shades) {
                 const dxp = st.px - sh.x, dyp = st.py - sh.y;
                 const dp = Math.hypot(dxp, dyp) || 1;
-                const aggro = dp < TILE * 6;
+                const aggro = dp < aggroTiles;
                 const mvx = aggro ? (dxp / dp) * 30 : sh.vx;
                 const mvy = aggro ? (dyp / dp) * 30 : sh.vy;
                 const sxn = sh.x + mvx * dt;

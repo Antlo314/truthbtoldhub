@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
@@ -9,6 +9,14 @@ import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Setti
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import HutLedger from '@/components/game/HutLedger';
+import WorldEventBanner from '@/components/game/WorldEventBanner';
+import {
+    activeWorldEvent,
+    effectiveShadeCount,
+    scalePickupQty,
+    wildEncounterMods,
+    worldEventDayKey,
+} from '@/lib/game/worldEvents';
 import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } from '@/lib/game/resonance';
 import { pathCombatMods } from '@/lib/game/pathPowers';
 import { hiddenPoiById } from '@/lib/game/hiddenPois';
@@ -237,6 +245,16 @@ export default function WorldPage() {
         toastTimer.current = setTimeout(() => setToast(null), 2600);
     }, []);
 
+    const eventDay = worldEventDayKey();
+    const worldEvent = useMemo(() => activeWorldEvent(), [eventDay]);
+    useEffect(() => {
+        if (!worldIntroDone) return;
+        const key = `tbth-event-seen-${eventDay}`;
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+        showToast(`✦ Today's rhythm · ${worldEvent.shortLabel}`);
+    }, [worldIntroDone, eventDay, worldEvent.shortLabel, showToast]);
+
     const onInteract = useCallback((poi: InteractPOI) => {
         setHint(false);
         hapticTap('light');
@@ -313,8 +331,8 @@ export default function WorldPage() {
             });
             return;
         }
-        setEncounter(wildEncounter(ch.cleared.length));
-    }, [showToast]);
+        setEncounter(wildEncounter(ch.cleared.length, wildEncounterMods(worldEvent)));
+    }, [showToast, worldEvent]);
 
     // walked over an essence mote in the world — bank the material for the forge
     const onPickup = useCallback((pk: Pickup) => {
@@ -322,15 +340,18 @@ export default function WorldPage() {
         saveToCloud();
         sfx.pickup();
         hapticTap('light');
+        const qty = scalePickupQty(pk.qty, worldEvent);
         if (pk.kind === 'health') {
-            addFightBonusHp(pk.qty);
-            showToast(`✦ +${pk.qty} vitality · bonus HP for your next fight`);
+            addFightBonusHp(qty);
+            const bonus = qty > pk.qty ? ' · bountiful day' : '';
+            showToast(`✦ +${qty} vitality · bonus HP for your next fight${bonus}`);
             return;
         }
-        addMaterial(pk.kind, pk.qty);
+        addMaterial(pk.kind, qty);
         const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
-        showToast(`✦ +${pk.qty} ${label}`);
-    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast]);
+        const bonus = qty > pk.qty ? ' · bountiful day' : '';
+        showToast(`✦ +${qty} ${label}${bonus}`);
+    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent]);
 
     const onEncounterVictory = useCallback(() => {
         consumeFightBonusHp();
@@ -340,9 +361,21 @@ export default function WorldPage() {
         if (firstStand) markDiscovered('shade_stood');
         const roll = Math.random();
         let loot: string;
-        if (roll < 0.12) { addMaterial('cosmic', 1); loot = '+1 Cosmic Essence'; }
-        else if (roll < 0.5) { addMaterial('copper', 1); loot = '+1 Copper'; }
-        else { addMaterial('iron', 2); loot = '+2 Iron Ore'; }
+        const mult = worldEvent.materialMult;
+        if (roll < 0.12) {
+            const q = scalePickupQty(1, worldEvent);
+            addMaterial('cosmic', q);
+            loot = `+${q} Cosmic Essence`;
+        } else if (roll < 0.5) {
+            const q = scalePickupQty(1, worldEvent);
+            addMaterial('copper', q);
+            loot = `+${q} Copper`;
+        } else {
+            const q = scalePickupQty(2, worldEvent);
+            addMaterial('iron', q);
+            loot = `+${q} Iron Ore`;
+        }
+        if (mult > 1) loot += ' · bountiful day';
         showToast(
             firstStand
                 ? `✦ You stood against the shade · ${loot}`
@@ -360,7 +393,7 @@ export default function WorldPage() {
             });
         }, 2200);
         saveToCloud();
-    }, [addMaterial, consumeFightBonusHp, markDiscovered, saveToCloud, showToast]);
+    }, [addMaterial, consumeFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent.materialMult]);
 
     const onEncounterDefeat = useCallback(() => {
         consumeFightBonusHp();
@@ -493,6 +526,8 @@ export default function WorldPage() {
         playerReachBonus: pathMods.playerReachBonus,
     };
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
+    const baseShades = shadeCountForTier(resTier);
+    const roamingShades = effectiveShadeCount(baseShades, worldEvent);
     const questWaypoint = activeQuestWaypoint(character);
     const hutQuests = questsAvailable('hut', character);
 
@@ -513,7 +548,8 @@ export default function WorldPage() {
 
             <WorldCanvas
                 character={character}
-                shadeCount={shadeCountForTier(resTier)}
+                shadeCount={roamingShades}
+                shadeAggroMult={worldEvent.aggroMult}
                 paused={worldPaused}
                 resonanceTier={resTier}
                 showQuestTrail={QUESTS_ENABLED && settings.showQuestTrail}
@@ -593,6 +629,15 @@ export default function WorldPage() {
 
             {tutorial && worldIntroDone && !worldPaused && (
                 <TutorialOverlay id={tutorial} onDismiss={() => dismissTutorial(tutorial)} />
+            )}
+
+            {worldIntroDone && !worldPaused && (
+                <div
+                    className="absolute left-1/2 -translate-x-1/2 z-[9] pointer-events-none"
+                    style={{ top: 'calc(5.75rem + env(safe-area-inset-top))' }}
+                >
+                    <WorldEventBanner event={worldEvent} />
+                </div>
             )}
 
             {hint && (
@@ -706,6 +751,22 @@ export default function WorldPage() {
                             <HutLedger characterName={character.name} />
                         ) : (
                         <>
+                        {/* today's world rhythm */}
+                        <div
+                            className="rounded-2xl border p-4 mb-4"
+                            style={{
+                                borderColor: `${worldEvent.accent}33`,
+                                background: `linear-gradient(135deg, ${worldEvent.accent}14, rgba(0,0,0,0.35))`,
+                            }}
+                        >
+                            <p className="text-[9px] font-mono uppercase tracking-widest mb-1.5" style={{ color: worldEvent.accent }}>
+                                World rhythm · today
+                            </p>
+                            <p className="font-ritual text-base text-white mb-1">{worldEvent.hutHeadline}</p>
+                            <p className="text-sm text-zinc-300 leading-relaxed">{worldEvent.hutBody}</p>
+                            <p className="text-xs text-orange-300/90 italic mt-3 leading-relaxed">"{worldEvent.truthLine}"</p>
+                        </div>
+
                         {/* latest bulletin */}
                         <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-4">
                             {bulletins.length > 0 ? (

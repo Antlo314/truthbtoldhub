@@ -324,8 +324,22 @@ export const DESTINATIONS: Destination[] = [
 // the overworld. It scales with how many guardians you've already felled so it
 // stays a real (but quick) fight, not a dungeon. No relic/puzzle — just a brawl
 // that scatters into loot. The CombatScene only reads bg/accent/combat.
-export function wildEncounter(clearedCount: number): Destination {
+export interface WildEncounterMods {
+    hpMult?: number;
+    dmgMult?: number;
+    enemyBonus?: number;
+}
+
+export function wildEncounter(clearedCount: number, mods: WildEncounterMods = {}): Destination {
     const t = Math.min(clearedCount, 4); // 0..4 difficulty tier
+    const hpM = mods.hpMult ?? 1;
+    const dmgM = mods.dmgMult ?? 1;
+    const extra = mods.enemyBonus ?? 0;
+    const enemyCount = 2 + (t >= 2 ? 1 : 0) + extra;
+    const enemyHp = Math.round((16 + t * 4) * hpM);
+    const enemyDmg = Math.round((8 + t) * dmgM);
+    const bossHp = Math.round((55 + t * 16) * hpM);
+    const bossDmg = Math.round((11 + t * 2) * dmgM);
     return {
         poiId: 'enc_wild',
         kind: 'cave',
@@ -337,14 +351,14 @@ export function wildEncounter(clearedCount: number): Destination {
         lore: [],
         relics: [],
         combat: {
-            challenge: 'The shades close in. Cut your way free.',
-            enemyCount: 2 + (t >= 2 ? 1 : 0),
-            enemyHp: 16 + t * 4,
-            enemyDmg: 8 + t,
+            challenge: extra > 0 ? 'The surge thickens the pack. Cut your way free.' : 'The shades close in. Cut your way free.',
+            enemyCount,
+            enemyHp,
+            enemyDmg,
             bossName: 'A Greater Shade',
             bossArt: 'wraith',
-            bossHp: 55 + t * 16,
-            bossDmg: 11 + t * 2,
+            bossHp,
+            bossDmg,
             victory: 'The shades scatter into mist — and leave something behind.',
         },
     };
