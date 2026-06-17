@@ -201,7 +201,16 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             slot, vx: 0, vy: 0, hasTok: false, hit: false,
             phase: 1, move: '', moveCd: 0, summons: 0,
         });
-        buildKinds(cfg.enemyCount).forEach((k, i) => st.foes.push(mkFoe(k, i, foeHp)));
+        const kinds = (() => {
+            const custom = cfg.enemyKinds;
+            if (custom?.length) {
+                const out = custom.slice(0, cfg.enemyCount);
+                while (out.length < cfg.enemyCount) out.push(buildKinds(cfg.enemyCount)[out.length] ?? 'grunt');
+                return out;
+            }
+            return buildKinds(cfg.enemyCount);
+        })();
+        kinds.forEach((k, i) => st.foes.push(mkFoe(k, i, foeHp)));
         setFoesLeft(st.foes.length);
 
         let raf = 0, last = performance.now(), running = true;

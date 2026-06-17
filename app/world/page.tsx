@@ -35,7 +35,8 @@ import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulle
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
-import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, wildEncounter, type Destination } from '@/lib/game/destinations';
+import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
+import { rollWildArchetype, wildEncounter, wildShadeDiscoverId } from '@/lib/game/wildShades';
 import { type Pickup } from '@/lib/game/overworld';
 import { sfx } from '@/lib/game/sfx';
 import DestinationScene from '@/components/game/DestinationScene';
@@ -390,8 +391,13 @@ export default function WorldPage() {
             });
             return;
         }
-        setEncounter(wildEncounter(ch.cleared.length, wildEncounterMods(worldEvent)));
-    }, [showToast, worldEvent]);
+        const mods = wildEncounterMods(worldEvent);
+        const arch = rollWildArchetype(ch.cleared.length, mods.worldEventId);
+        if (!ch.discovered.includes(wildShadeDiscoverId(arch.id))) markDiscovered(wildShadeDiscoverId(arch.id));
+        setEncounter(wildEncounter(ch.cleared.length, mods, arch));
+        showToast(arch.encounterToast);
+        saveToCloud();
+    }, [markDiscovered, saveToCloud, showToast, worldEvent]);
 
     // walked over an essence mote in the world — bank the material for the forge
     const onPickup = useCallback((pk: Pickup) => {

@@ -116,6 +116,7 @@ export function wildEncounterMods(event: WorldEvent): WildEncounterMods {
         hpMult: event.wildHpMult,
         dmgMult: event.wildDmgMult,
         enemyBonus: event.wildEnemyBonus,
+        worldEventId: event.id,
     };
 }
 

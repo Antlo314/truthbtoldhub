@@ -28,6 +28,7 @@ import WorldControlPad from '@/components/game/controls/WorldControlPad';
 import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
 import { loadSettings } from '@/lib/game/settings';
 import type { FellowSoul } from '@/lib/game/worldPresence';
+import { overworldSkinForShade } from '@/lib/game/wildShades';
 
 const RESONANCE_TINTS = [
     '',
@@ -45,7 +46,7 @@ const RESONANCE_TINTS = [
 // ============================================================
 
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
-const SHADE_TILE = { col: 0, row: 3 };
+const DEFAULT_SHADE_TILE = { col: 0, row: 3 };
 const ORE_COLOR = { iron: '#cbd5e1', copper: '#f59e0b', cosmic: '#34d399', health: '#f87171' } as const;
 
 function clamp(v: number, lo: number, hi: number) {
@@ -162,12 +163,18 @@ export default function WorldCanvas({
         const st = {
             px: (ow.spawn.x + 0.5) * TILE,
             py: (ow.spawn.y + 0.5) * TILE,
-            shades: Array.from({ length: shadeCountRef.current }, (_, i) => ({
-                x: (20 + i * 17) * TILE,
-                y: (24 + i * 11) * TILE,
-                vx: i % 2 === 0 ? 11 : -9,
-                vy: i % 2 === 0 ? 8 : 12,
-            })),
+            shades: Array.from({ length: shadeCountRef.current }, (_, i) => {
+                const skin = overworldSkinForShade(i);
+                return {
+                    x: (20 + i * 17) * TILE,
+                    y: (24 + i * 11) * TILE,
+                    vx: i % 2 === 0 ? 11 : -9,
+                    vy: i % 2 === 0 ? 8 : 12,
+                    col: skin.col,
+                    row: skin.row,
+                    aura: skin.aura,
+                };
+            }),
             encCd: 0,
             t: 0,
         };
@@ -505,11 +512,15 @@ export default function WorldCanvas({
             const targetShades = shadeCountRef.current;
             while (st.shades.length < targetShades) {
                 const i = st.shades.length;
+                const skin = overworldSkinForShade(i);
                 st.shades.push({
                     x: (12 + i * 19) * TILE,
                     y: (18 + i * 13) * TILE,
                     vx: i % 2 === 0 ? 11 : -9,
                     vy: i % 2 === 0 ? 8 : 12,
+                    col: skin.col,
+                    row: skin.row,
+                    aura: skin.aura,
                 });
             }
             while (st.shades.length > targetShades) st.shades.pop();
@@ -661,11 +672,11 @@ export default function WorldCanvas({
             shadow(truth.x, truth.y);
             truthSprite(truth.x, truth.y, truthBob);
 
-            // shades
+            // shades — varied skins drift the cavern
             for (const sh of st.shades) {
                 const fl = 0.4 + Math.sin(st.t / 240 + sh.x) * 0.12;
-                aura(sh.x, sh.y, '#22d3ee', 11);
-                sprite(charImg, SHADE_TILE.col, SHADE_TILE.row, sh.x, sh.y, fl);
+                aura(sh.x, sh.y, sh.aura ?? '#22d3ee', 11);
+                sprite(charImg, sh.col ?? DEFAULT_SHADE_TILE.col, sh.row ?? DEFAULT_SHADE_TILE.row, sh.x, sh.y, fl);
             }
 
             // fellow souls — faint walkers who roamed today

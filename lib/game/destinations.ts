@@ -56,6 +56,8 @@ export interface CombatConfig {
     skirmish?: boolean;
     /** 1 = tutorial boss (slower, softer AoE). Higher ages use 2–5. */
     bossDifficulty?: number;
+    /** Optional foe roster override (wild shade variety). */
+    enemyKinds?: ('grunt' | 'caster' | 'brute' | 'flanker')[];
 }
 
 export type BossArt = 'wraith' | 'golem' | 'serpent' | 'sentinel' | 'titan';
@@ -328,40 +330,7 @@ export interface WildEncounterMods {
     hpMult?: number;
     dmgMult?: number;
     enemyBonus?: number;
-}
-
-export function wildEncounter(clearedCount: number, mods: WildEncounterMods = {}): Destination {
-    const t = Math.min(clearedCount, 4); // 0..4 difficulty tier
-    const hpM = mods.hpMult ?? 1;
-    const dmgM = mods.dmgMult ?? 1;
-    const extra = mods.enemyBonus ?? 0;
-    const enemyCount = 2 + (t >= 2 ? 1 : 0) + extra;
-    const enemyHp = Math.round((16 + t * 4) * hpM);
-    const enemyDmg = Math.round((8 + t) * dmgM);
-    const bossHp = Math.round((55 + t * 16) * hpM);
-    const bossDmg = Math.round((11 + t * 2) * dmgM);
-    return {
-        poiId: 'enc_wild',
-        kind: 'cave',
-        name: 'Wandering Shades',
-        era: '',
-        accent: '#22d3ee',
-        bg: ['#0a1410', '#04080a'],
-        guide: { name: 'Truth', role: '', tile: { col: 1, row: 10 }, intro: '' },
-        lore: [],
-        relics: [],
-        combat: {
-            challenge: extra > 0 ? 'The surge thickens the pack. Cut your way free.' : 'The shades close in. Cut your way free.',
-            enemyCount,
-            enemyHp,
-            enemyDmg,
-            bossName: 'A Greater Shade',
-            bossArt: 'wraith',
-            bossHp,
-            bossDmg,
-            victory: 'The shades scatter into mist — and leave something behind.',
-        },
-    };
+    worldEventId?: import('@/lib/game/worldEvents').WorldEventId;
 }
 
 export const DEST_BY_POI: Record<string, Destination> = DESTINATIONS.reduce((acc, d) => {
