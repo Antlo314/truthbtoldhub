@@ -25,7 +25,12 @@ export function unlockAudio() {
     if (c && c.state === 'suspended') c.resume().catch(() => {});
 }
 
-export function setMuted(m: boolean) { muted = m; }
+export function setMuted(m: boolean) {
+    muted = m;
+    if (typeof window !== 'undefined') {
+        import('@/lib/game/music').then(({ gameMusic }) => gameMusic.setMuted(m));
+    }
+}
 export function isMuted() { return muted; }
 
 // A single enveloped oscillator note (optionally gliding freq -> to).

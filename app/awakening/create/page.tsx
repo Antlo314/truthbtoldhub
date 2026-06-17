@@ -14,6 +14,8 @@ import {
 } from '@/lib/game/avatar';
 import { Loader2, Shuffle } from 'lucide-react';
 import { CINEMA } from '@/lib/game/cutscenes';
+import RestartJourneyButton from '@/components/game/RestartJourneyButton';
+import { usePageMusic } from '@/lib/game/usePageMusic';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -39,6 +41,8 @@ export default function CreatePage() {
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<Tab>('Body');
 
+    usePageMusic('forging_self');
+
     useEffect(() => {
         setMounted(true);
         loadFromCloud();
@@ -60,7 +64,7 @@ export default function CreatePage() {
 
     return (
         <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-            <CinematicVideo src={CINEMA.forging} overlay="dark" showMuteControl />
+            <CinematicVideo src={CINEMA.forging} overlay="heavy" showMuteControl />
             <div className="grain-overlay pointer-events-none" />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
@@ -176,6 +180,9 @@ export default function CreatePage() {
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {saving ? 'Forging…' : 'Begin your journey →'}
                 </button>
+                <div className="shrink-0 mt-2 flex justify-center">
+                    <RestartJourneyButton label="Erase progress & start over" variant="link" />
+                </div>
             </div>
         </main>
     );

@@ -9,6 +9,9 @@ import AuthModal from '@/components/AuthModal';
 import CinematicVideo from '@/components/game/CinematicVideo';
 import { countFounders, FOUNDER_CAP } from '@/lib/game/founders';
 import { CINEMA } from '@/lib/game/cutscenes';
+import RestartJourneyButton from '@/components/game/RestartJourneyButton';
+import { usePageMusic } from '@/lib/game/usePageMusic';
+import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 
 function TitleCardInner() {
     const searchParams = useSearchParams();
@@ -22,7 +25,10 @@ function TitleCardInner() {
         if (cipher) localStorage.setItem('cipher_referral', cipher);
     }, [searchParams]);
 
+    usePageMusic('title_landing');
+
     useEffect(() => {
+        applyMusicSetting(loadSettings().music);
         supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
         countFounders().then(setFounders);
         try {
@@ -39,7 +45,7 @@ function TitleCardInner() {
 
     return (
         <main className="relative min-h-screen bg-black text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
-            <CinematicVideo src={CINEMA.landing} overlay="medium" showMuteControl />
+            <CinematicVideo src={CINEMA.landing} overlay="heavy" showMuteControl />
 
             <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -70,12 +76,11 @@ function TitleCardInner() {
                         </Link>
                     )}
                     {continueHref && (
-                        <Link
-                            href="/awakening"
-                            className="px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.25em] text-white/70 border border-white/20 hover:border-aether-gold/40 hover:text-white transition-colors"
-                        >
-                            New Soul
-                        </Link>
+                        <RestartJourneyButton
+                            label="New Soul"
+                            variant="button"
+                            className="rounded-full px-6 py-3"
+                        />
                     )}
                 </div>
 

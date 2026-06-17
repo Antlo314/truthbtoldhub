@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { X, Settings } from 'lucide-react';
-import { loadSettings, saveSettings, type GameSettings } from '@/lib/game/settings';
+import { loadSettings, saveSettings, applyMusicSetting, type GameSettings } from '@/lib/game/settings';
+import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 
 interface Props {
     onClose: () => void;
@@ -47,11 +48,16 @@ export default function GameSettingsPanel({ onClose, onChange }: Props) {
                     </div>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10"><X className="w-4 h-4" /></button>
                 </div>
+                <Toggle label="Game music" desc="Ambient loops, combat themes, and story stings" on={s.music} onChange={(v) => { update({ music: v }); applyMusicSetting(v); }} />
                 <Toggle label="Reduced motion" desc="Disable floating animations and Ken Burns effects" on={s.reducedMotion} onChange={(v) => update({ reducedMotion: v })} />
                 <Toggle label="Haptic feedback" desc="Vibration on relic claims and combat hits" on={s.haptics} onChange={(v) => update({ haptics: v })} />
                 <Toggle label="Minimap" desc="Show corner world map" on={s.showMinimap} onChange={(v) => update({ showMinimap: v })} />
                 <Toggle label="Quest trail" desc="Golden waypoint toward active mission" on={s.showQuestTrail} onChange={(v) => update({ showQuestTrail: v })} />
                 <Toggle label="Subtitles" desc="Show captions on cinematic videos" on={s.subtitles} onChange={(v) => update({ subtitles: v })} />
+                <div className="mt-5 pt-4 border-t border-white/10">
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600 mb-2">Journey</p>
+                    <RestartJourneyButton variant="danger" label="Start a New Soul" onRestart={onClose} />
+                </div>
             </div>
         </div>
     );

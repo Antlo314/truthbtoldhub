@@ -4,8 +4,9 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
-import { Volume2, VolumeX, ArrowLeft, Key, Heart } from 'lucide-react';
+import { Volume2, VolumeX, ArrowLeft, Key, Heart, Compass } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
+import { gameMusic } from '@/lib/game/music';
 import MiniWorldInsight from '@/components/game/MiniWorldInsight';
 import CombatScene from '@/components/game/CombatScene';
 import { skillBonuses } from '@/lib/game/paths';
@@ -17,8 +18,9 @@ import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, EDEN_TILES, EDEN_SPAWN, EDEN_RIVERS, EDEN_TREE,
     EDEN_VIEW_TILES, hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
-    edenZoneLabel, edenDiscoveriesFromState, edenWingId, canRevealEdenSecret,
+    edenZoneLabel, edenDiscoveriesFromState, edenWingId, canRevealEdenSecret, edenGuideStep,
     EDEN_GARDENER_LINES, EDEN_RESPAWN_LINE, EDEN_TEMPTATION, EDEN_TEMPTATION_SHORTCUT, EDEN_SERPENT_LINES,
+    EDEN_HINT_DELAYS_SEC,
     type EdenLevelState,
 } from '@/lib/game/edenLevel';
 
@@ -68,8 +70,10 @@ export default function EdenWorld({
     const [dialogue, setDialogue] = useState(
         isGuardianCleared
             ? 'The cherub has fallen. Attune the four rivers and claim the Leaf — the hour before the lie.'
-            : 'Walk the deep garden back to where man still walked beside the Source — before he listened to the serpent. Read the stones. Find the keys. Learn to fight.',
+            : '【The Gardener】 Welcome back. Dark brown tiles are walls — grass is the path. Start with the golden ◆ beside you, then follow the compass hint above.',
     );
+    const [hintTier, setHintTier] = useState(0);
+    const [showTrail, setShowTrail] = useState(false);
     const [barrierActive, setBarrierActive] = useState(!isSolved);
 
     const joyRef = useRef({ x: 0, y: 0 });
@@ -85,6 +89,61 @@ export default function EdenWorld({
     const lastWingRef = useRef<string | null>(null);
     const riverParticlesRef = useRef<{ x: number; y: number; color: string; t: number; speed: number }[]>([]);
     const temptOfferShownRef = useRef(false);
+    const guideStepIdRef = useRef('');
+    const stuckSinceRef = useRef(Date.now());
+    const hintTierRef = useRef(0);
+    const fightWarnRef = useRef<Record<string, number>>({});
+    const dialoguePriorityRef = useRef(0);
+
+    const guideStep = useMemo(() => edenGuideStep(level, {
+        isGuardianCleared,
+        isSolved,
+        minigameDone,
+        barrierActive,
+        relicClaimed,
+        hasWeapon: !!character.equipped.weapon,
+        riversLit: sequence.length,
+    }), [level, isGuardianCleared, isSolved, minigameDone, barrierActive, relicClaimed, character.equipped.weapon, sequence.length]);
+
+    const setGuideDialogue = useCallback((text: string, priority = 1) => {
+        if (priority >= dialoguePriorityRef.current) {
+            dialoguePriorityRef.current = priority;
+            setDialogue(text);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (guideStep.id !== guideStepIdRef.current) {
+            guideStepIdRef.current = guideStep.id;
+            stuckSinceRef.current = Date.now();
+            hintTierRef.current = 0;
+            setHintTier(0);
+            setShowTrail(false);
+            dialoguePriorityRef.current = 0;
+        }
+        const trailTimer = window.setTimeout(() => setShowTrail(true), 8000);
+        return () => window.clearTimeout(trailTimer);
+    }, [guideStep.id]);
+
+    useEffect(() => {
+        if (activeFight) return;
+        const tick = window.setInterval(() => {
+            const elapsed = (Date.now() - stuckSinceRef.current) / 1000;
+            let tier = 0;
+            for (let i = EDEN_HINT_DELAYS_SEC.length - 1; i >= 0; i--) {
+                if (elapsed >= EDEN_HINT_DELAYS_SEC[i]) { tier = i + 1; break; }
+            }
+            if (tier !== hintTierRef.current) {
+                hintTierRef.current = tier;
+                setHintTier(tier);
+                if (tier > 0) {
+                    setShowTrail(true);
+                    setGuideDialogue(guideStep.timedHints[tier - 1], 2);
+                }
+            }
+        }, 1500);
+        return () => window.clearInterval(tick);
+    }, [activeFight, guideStep, setGuideDialogue]);
 
     const gameState = useRef({
         px: EDEN_SPAWN.gx * EDEN_TILE + 8,
@@ -128,9 +187,9 @@ export default function EdenWorld({
         st.px = st.pax;
         st.py = st.pay;
         setDungeonHp(50);
-        setDialogue(`【The Gardener】 ${EDEN_RESPAWN_LINE}`);
+        setGuideDialogue(`【The Gardener】 ${EDEN_RESPAWN_LINE}`, 3);
         sfx.defeat();
-    }, []);
+    }, [setGuideDialogue]);
 
     const acceptTemptation = useCallback(() => {
         if (level.temptationResolved !== 'none') return;
@@ -213,6 +272,16 @@ export default function EdenWorld({
     const isSolid = useCallback((gx: number, gy: number) => {
         return isEdenSolid(gx, gy, level, barrierActive);
     }, [level, barrierActive]);
+
+    useEffect(() => {
+        if (activeFight) {
+            const boss = activeFight === 'eden_boss';
+            const track = boss ? 'combat_eden_cherub' : 'combat_skirmish';
+            gameMusic.crossfadeBgm(track, 700, boss ? 'main' : gameMusic.pickVariant(track));
+        } else {
+            gameMusic.crossfadeBgm('eden_garden', 1200, gameMusic.pickVariant('eden_garden'));
+        }
+    }, [activeFight]);
 
     useEffect(() => {
         const kd = (e: KeyboardEvent) => keysRef.current.add(e.key.toLowerCase());
@@ -332,11 +401,12 @@ export default function EdenWorld({
 
             const secretVisible = canRevealEdenSecret(level, charRef.current);
 
-            // chests / compartments
+            // chests / compartments (proximity — no need to stand dead center)
             for (const ch of level.chests) {
                 if (ch.opened || touchedRef.current.has(ch.id)) continue;
                 if (ch.hidden && !secretVisible) continue;
-                if (pgx === ch.gx && pgy === ch.gy) {
+                const chDist = Math.hypot(ch.gx * EDEN_TILE + 8 - state.pax, ch.gy * EDEN_TILE + 8 - state.pay);
+                if (chDist < 18) {
                     touchedRef.current.add(ch.id);
                     setLevel((prev) => {
                         const next = updateEdenProgress({
@@ -359,10 +429,11 @@ export default function EdenWorld({
                 }
             }
 
-            // doors (auto-open when key held and adjacent)
+            // doors (auto-open when key held — walk near the gate)
             for (const d of level.doors) {
                 if (d.open || !level.keysFound.includes(d.keyId) || touchedRef.current.has(`door_${d.id}`)) continue;
-                if (Math.abs(pgx - d.gx) + Math.abs(pgy - d.gy) <= 1) {
+                const doorDist = Math.hypot(d.gx * EDEN_TILE + 8 - state.pax, d.gy * EDEN_TILE + 8 - state.pay);
+                if (doorDist < 28) {
                     touchedRef.current.add(`door_${d.id}`);
                     setLevel((prev) => {
                         const next = updateEdenProgress({
@@ -377,23 +448,43 @@ export default function EdenWorld({
                 }
             }
 
-            // fight zones (temptation fight is triggered only by accepting the serpent offer)
+            // boss gate nudge when nearby but sealed
+            if (!level.bossGateOpen) {
+                const gateDist = Math.hypot(23.5 * EDEN_TILE - state.pax, 10 * EDEN_TILE - state.pay);
+                if (gateDist < 36) {
+                    setGuideDialogue('【The Gardener】 This golden barrier opens after all three shade trials and the grove & river keys.', 1);
+                }
+            }
+
+            // fight zones — brief warning before combat starts
             for (const fz of level.fights) {
                 if (fz.cleared || fightTriggeredRef.current === fz.id || fz.radius <= 0) continue;
                 const dist = Math.hypot(fz.gx * EDEN_TILE + 8 - state.pax, fz.gy * EDEN_TILE + 8 - state.pay);
+                if (dist >= fz.radius + 8) {
+                    delete fightWarnRef.current[fz.id];
+                    continue;
+                }
                 if (dist < fz.radius) {
                     if (!character.equipped.weapon) {
-                        setDialogue('Arm yourself at Truth\'s Hut before facing the shades.');
+                        setGuideDialogue('Arm yourself at Truth\'s Hut before facing the shades.', 2);
                         break;
                     }
                     if (fz.combatId === 'eden_boss' && !level.bossGateOpen) {
-                        setDialogue('The cherub gate is sealed. Clear all three shade trials and find the grove and river keys.');
+                        setGuideDialogue('The cherub gate is sealed. Clear all three shade trials and find the grove and river keys.', 2);
                         break;
                     }
+                    const warnedAt = fightWarnRef.current[fz.id];
+                    if (!warnedAt) {
+                        fightWarnRef.current[fz.id] = now;
+                        setGuideDialogue(`${fz.hint} — the trial begins in a moment…`, 2);
+                        break;
+                    }
+                    if (now - warnedAt < 2200) break;
                     fightTriggeredRef.current = fz.id;
                     fightBonusRef.current = consumeFightBonusHp();
-                    setDialogue(fz.hint);
+                    setGuideDialogue(fz.hint, 3);
                     setActiveFight(fz.combatId);
+                    delete fightWarnRef.current[fz.id];
                     break;
                 }
             }
@@ -409,6 +500,7 @@ export default function EdenWorld({
                         }
                         r.active = true;
                         sfx.strike();
+                        gameMusic.playCue('river_attune', r.id % 2 === 1 ? 'alt' : 'main');
                         const ox = r.gx * EDEN_TILE + 8;
                         const oy = r.gy * EDEN_TILE + 8;
                         for (let i = 0; i < 6; i++) {
@@ -429,6 +521,7 @@ export default function EdenWorld({
                                 onSolve();
                                 setDialogue('The four rivers converge. The Tree of Life opens.');
                                 sfx.victory();
+                                gameMusic.playCue('rivers_converge');
                             }
                             return next;
                         });
@@ -614,9 +707,37 @@ export default function EdenWorld({
                 }
             }
 
+            // waypoint trail + marker toward current objective
+            const wp = guideStep.waypoint;
+            if (wp) {
+                const wx = wp.gx * EDEN_TILE + 8;
+                const wy = wp.gy * EDEN_TILE + 8;
+                const pulse = 0.5 + Math.sin(state.t / 260) * 0.4;
+                const trailA = showTrail || hintTier > 0 ? 0.55 : 0.2;
+                ctx.strokeStyle = `rgba(52,211,153,${trailA * (0.45 + pulse * 0.35)})`;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 6]);
+                if (showTrail || hintTier > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(state.pax, state.pay);
+                    ctx.lineTo(wx, wy);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+                const dotA = showTrail || hintTier > 0 ? 0.55 : 0.28;
+                ctx.fillStyle = `rgba(52,211,153,${dotA * (0.5 + pulse * 0.35)})`;
+                ctx.beginPath();
+                ctx.arc(wx, wy, 5 + pulse * 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = `rgba(236,253,245,${dotA})`;
+                ctx.font = 'bold 8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('▸', wx, wy + 3);
+            }
+
             // fight zone hints
             for (const fz of level.fights) {
-                if (fz.cleared) continue;
+                if (fz.cleared || fz.radius <= 0) continue;
                 ctx.strokeStyle = fz.combatId === 'eden_boss' ? '#ef444466' : '#fbbf2466';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([3, 3]);
@@ -624,6 +745,19 @@ export default function EdenWorld({
                 ctx.arc(fz.gx * EDEN_TILE + 8, fz.gy * EDEN_TILE + 8, fz.radius, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.setLineDash([]);
+            }
+
+            // locked doors — subtle key label when player is near
+            for (const d of level.doors) {
+                if (d.open) continue;
+                const dd = Math.hypot(d.gx * EDEN_TILE + 8 - state.pax, d.gy * EDEN_TILE + 8 - state.pay);
+                if (dd < 40) {
+                    const hasK = level.keysFound.includes(d.keyId);
+                    ctx.fillStyle = hasK ? 'rgba(52,211,153,0.85)' : 'rgba(251,191,36,0.75)';
+                    ctx.font = '6px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(hasK ? 'gate · open' : `needs ${d.keyId.replace('key_', '')}`, d.gx * EDEN_TILE + 8, d.gy * EDEN_TILE - 2);
+                }
             }
 
             // player
@@ -640,7 +774,7 @@ export default function EdenWorld({
 
         raf = requestAnimationFrame(loop);
         return () => { running = false; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
-    }, [activeFight, level, barrierActive, isSolved, minigameDone, relicClaimed, isSolid, onSolve, onClaim, resetSequence, consumeFightBonusHp, onDiscover, nearLore, nearTemptation, grantSkillPoint, character.equipped.weapon]);
+    }, [activeFight, level, barrierActive, isSolved, minigameDone, relicClaimed, isSolid, onSolve, onClaim, resetSequence, consumeFightBonusHp, onDiscover, nearLore, nearTemptation, grantSkillPoint, character.equipped.weapon, guideStep, showTrail, hintTier, setGuideDialogue]);
 
     const joyMove = (cx: number, cy: number) => {
         const rect = baseRef.current!.getBoundingClientRect();
@@ -720,6 +854,16 @@ export default function EdenWorld({
                         {level.keysFound.map((k) => k.replace('key_', '')).join(' · ')}
                     </div>
                 )}
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/15 bg-emerald-950/40 px-2.5 py-2">
+                    <Compass className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-300/90">{guideStep.objective}</p>
+                        <p className="text-[8px] text-zinc-500 leading-snug mt-0.5">{guideStep.tip}</p>
+                        {hintTier > 0 && (
+                            <p className="text-[7px] uppercase tracking-widest text-amber-400/70 mt-1 animate-pulse">Gardener hint · follow the green trail</p>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="relative border-4 border-emerald-600/40 rounded-2xl overflow-hidden bg-emerald-950 shadow-inner w-full max-w-[520px]">
@@ -774,7 +918,7 @@ export default function EdenWorld({
                     {nearLore ? 'Read' : '—'}
                 </button>
             </div>
-            <p className="text-[8px] uppercase tracking-widest text-zinc-500 text-center px-2 -mt-1">◆ stones hold memory · red zones are fights</p>
+            <p className="text-[8px] uppercase tracking-widest text-zinc-500 text-center px-2 -mt-1">◆ read stones · gold chests hold keys · brown gates open with keys · dashed circles are trials</p>
         </div>
     );
 }

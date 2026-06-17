@@ -7,6 +7,8 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import CinematicVideo from '@/components/game/CinematicVideo';
 import TruthSprite from '@/components/game/TruthSprite';
 import { CINEMA } from '@/lib/game/cutscenes';
+import { usePageMusic } from '@/lib/game/usePageMusic';
+import { gameMusic } from '@/lib/game/music';
 
 interface Line {
     t: string;
@@ -82,6 +84,8 @@ export default function AwakeningPage() {
     const [nameInput, setNameInput] = useState('');
     const [finalName, setFinalName] = useState('');
 
+    usePageMusic('awakening_truth');
+
     useEffect(() => { setMounted(true); }, []);
 
     const current = LINES[lineIndex];
@@ -125,6 +129,7 @@ export default function AwakeningPage() {
     };
 
     const stepIntoLight = () => {
+        gameMusic.playSting('soul_recognized');
         completeAwakening();
         saveToCloud();
         router.push('/awakening/create');
@@ -139,7 +144,7 @@ export default function AwakeningPage() {
 
     return (
         <main className="relative bg-black text-white overflow-hidden flex flex-col select-none" style={{ height: '100dvh' }}>
-            <CinematicVideo src={CINEMA.awakening} overlay="medium" showMuteControl />
+            <CinematicVideo src={CINEMA.awakening} overlay="heavy" showMuteControl />
 
             {!named && (
                 <button

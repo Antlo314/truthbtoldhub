@@ -225,11 +225,11 @@ export function freshEdenState(): EdenLevelState {
             { id: 'hp_antechamber', gx: 28, gy: 6, kind: 'health', amount: 35, collected: false },
         ],
         fights: [
-            { id: 'fight_1', gx: 8, gy: 22, radius: 22, combatId: 'eden_lesson_1', cleared: false, hint: 'A lone shade blocks the eastern path. Learn Strike and Dodge before you go deeper.' },
-            { id: 'fight_2', gx: 22, gy: 23, radius: 22, combatId: 'eden_lesson_2', cleared: false, hint: 'Two shades hunt the grove. Let one wind up — dodge — then strike.' },
-            { id: 'fight_3', gx: 28, gy: 17, radius: 24, combatId: 'eden_lesson_3', cleared: false, hint: 'A caster shade guards the river vault. Close the distance or dodge its bolts.' },
+            { id: 'fight_1', gx: 8, gy: 22, radius: 18, combatId: 'eden_lesson_1', cleared: false, hint: 'A lone shade blocks the eastern path. Learn Strike and Dodge before you go deeper.' },
+            { id: 'fight_2', gx: 22, gy: 23, radius: 18, combatId: 'eden_lesson_2', cleared: false, hint: 'Two shades hunt the grove. Let one wind up — dodge — then strike.' },
+            { id: 'fight_3', gx: 28, gy: 17, radius: 20, combatId: 'eden_lesson_3', cleared: false, hint: 'A caster shade guards the river vault. Close the distance or dodge its bolts.' },
             { id: 'fight_temptation', gx: 14, gy: 11, radius: 0, combatId: 'eden_temptation', cleared: false, hint: 'The serpent\'s shortcut was a trap — a shade rises from the dust of the lie.' },
-            { id: 'fight_boss', gx: 31, gy: 5, radius: 30, combatId: 'eden_boss', cleared: false, hint: 'The Cherub of the Flaming Sword bars the Tree of Life — the hour before the lie.' },
+            { id: 'fight_boss', gx: 31, gy: 5, radius: 24, combatId: 'eden_boss', cleared: false, hint: 'The Cherub of the Flaming Sword bars the Tree of Life — the hour before the lie.' },
         ],
         loreStones: [
             { id: 'lore_threshold', gx: 4, gy: 25, ...EDEN_LORE.lore_threshold, read: false },
@@ -445,4 +445,168 @@ export function edenZoneLabel(gx: number, gy: number): string | null {
     if (gy >= 6 && gx < 28) return 'The Forbidden Verge';
     if (gy >= 3) return 'Cherub Antechamber';
     return null;
+}
+
+/** Seconds without progress before Gardener hints escalate. */
+export const EDEN_HINT_DELAYS_SEC = [10, 22, 38] as const;
+
+export interface EdenGuideContext {
+    isGuardianCleared: boolean;
+    isSolved: boolean;
+    minigameDone: boolean;
+    barrierActive: boolean;
+    relicClaimed: boolean;
+    hasWeapon: boolean;
+    riversLit: number;
+}
+
+export interface EdenGuideStep {
+    id: string;
+    objective: string;
+    tip: string;
+    waypoint: { gx: number; gy: number } | null;
+    timedHints: [string, string, string];
+}
+
+function step(
+    id: string,
+    objective: string,
+    tip: string,
+    waypoint: { gx: number; gy: number } | null,
+    h1: string,
+    h2: string,
+    h3: string,
+): EdenGuideStep {
+    return { id, objective, tip, waypoint, timedHints: [h1, h2, h3] };
+}
+
+const loreRead = (level: EdenLevelState, id: string) => level.loreStones.find((s) => s.id === id)?.read ?? false;
+const fightDone = (level: EdenLevelState, id: string) => level.fights.find((f) => f.id === id)?.cleared ?? false;
+const chestDone = (level: EdenLevelState, id: string) => level.chests.find((c) => c.id === id)?.opened ?? false;
+const hasKey = (level: EdenLevelState, keyId: string) => level.keysFound.includes(keyId);
+const doorOpen = (level: EdenLevelState, id: string) => level.doors.find((d) => d.id === id)?.open ?? false;
+
+/** Current objective + escalating hints when the player is stuck. */
+export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): EdenGuideStep {
+    if (ctx.relicClaimed) {
+        return step('done', 'The Leaf is yours', 'Return to the overworld when ready.', null,
+            'Your work in Eden is complete.', 'Carry the Leaf forward.', 'The garden remembers you.');
+    }
+
+    if (level.sanctumOpen && !ctx.isSolved) {
+        const order = ['Pishon', 'Gihon', 'Hiddekel', 'Euphrates'];
+        const nextRiver = level.sanctumOpen ? ctx.riversLit : 0;
+        if (nextRiver < 4) {
+            const r = EDEN_RIVERS[nextRiver];
+            return step(
+                `river_${nextRiver}`,
+                `Attune the ${r.name} river (${nextRiver + 1}/4)`,
+                'Walk to each corner fountain in order: NW → NE → SW → SE.',
+                { gx: r.gx, gy: r.gy },
+                `【The Gardener】 Stand on the ${r.name} fountain in the ${nextRiver === 0 ? 'south-west' : nextRiver === 1 ? 'south-east' : nextRiver === 2 ? 'north-west' : 'north-east'} corner.`,
+                `【The Gardener】 Rivers must be lit in order: ${order.slice(0, nextRiver + 1).join(' → ')}${nextRiver < 3 ? ' → …' : ''}. Find ${r.name} next.`,
+                `【The Gardener】 The glowing fountain marks ${r.name}. Step onto it — the dashed lines will converge on the Tree.`,
+            );
+        }
+    }
+
+    if (level.sanctumOpen && ctx.isSolved && !ctx.barrierActive && !ctx.relicClaimed) {
+        return step('claim_relic', 'Claim the Leaf of Life', 'Walk to the Tree in the sanctum pool.',
+            { gx: EDEN_TREE.gx, gy: EDEN_TREE.gy + 1 },
+            '【The Gardener】 The Tree of Life glows. Stand beneath it to claim the relic.',
+            '【The Gardener】 North-east sanctum — the green pulsing tree holds the Leaf.',
+            '【The Gardener】 Step directly under the Tree of Life. The leaf awaits.');
+    }
+
+    if (ctx.isGuardianCleared || fightDone(level, 'fight_boss')) {
+        return step('reach_sanctum', 'Enter the sanctum', 'The cherub gate is open — walk north to the Tree.',
+            { gx: 31, gy: 6 },
+            '【The Gardener】 The flaming sword has lowered. Walk north through the cherub hall.',
+            '【The Gardener】 Past the antechamber lies the pool and the Tree. Head north-east.',
+            '【The Gardener】 Follow the open path north. The blue pool surrounds the Tree of Life.');
+    }
+
+    if (level.bossGateOpen && !fightDone(level, 'fight_boss')) {
+        return step('fight_boss', 'Face the Cherub', 'The boss trial is in the antechamber — north-east.',
+            { gx: 31, gy: 5 },
+            '【The Gardener】 The Cherub guards the Tree. Enter the red dashed circle when your vitality is high.',
+            '【The Gardener】 Red zone ahead — the Cherub of the Flaming Sword. Rest at red orbs if needed.',
+            '【The Gardener】 The pulsing marker leads to the cherub. This is the last guardian.');
+    }
+
+    if (!loreRead(level, 'lore_threshold')) {
+        return step('lore_threshold', 'Read the threshold stone', 'Stand by the golden ◆ and tap Read.',
+            { gx: 4, gy: 25 },
+            '【The Gardener】 The golden ◆ right beside you is the first stone. Tap Read when close.',
+            '【The Gardener】 You are not blocked — the garden opens east and north. Begin with the stone at your feet.',
+            '【The Gardener】 Walk to the glowing ◆ in the south-west corner. The Read button lights up when you are near.');
+    }
+
+    if (!fightDone(level, 'fight_1')) {
+        const f = level.fights.find((x) => x.id === 'fight_1')!;
+        return step('fight_1', 'Clear the first shade trial', ctx.hasWeapon ? 'Enter the gold dashed circle east of you.' : 'Arm yourself at Truth\'s Hut first.',
+            { gx: f.gx, gy: f.gy },
+            `【The Gardener】 ${ctx.hasWeapon ? 'The first trial is east — a gold dashed circle. Step in when ready.' : 'You need a weapon from Truth\'s Hut before the shades will engage.'}`,
+            `【The Gardener】 ${f.hint}`,
+            '【The Gardener】 Dark brown tiles are walls. Grass is walkable — circle east to the trial.');
+    }
+
+    if (!chestDone(level, 'chest_threshold')) {
+        return step('chest_threshold', 'Open the threshold chest', 'Claim the key from the golden chest.',
+            { gx: 10, gy: 22 },
+            '【The Gardener】 The threshold compartment holds your first key. Walk onto the golden chest.',
+            '【The Gardener】 East of the trial lies a chest. Keys from chests open brown gates.',
+            '【The Gardener】 Follow the pulsing marker to the chest — stand on it to open.');
+    }
+
+    if (!doorOpen(level, 'door_threshold')) {
+        return step('door_threshold', 'Open the threshold gate', 'Walk to the brown gate with the golden lock.',
+            { gx: 16, gy: 22 },
+            '【The Gardener】 Your key opens the threshold gate. Walk up to the brown tile with the gold lock.',
+            '【The Gardener】 The gate is east and slightly north. Stand beside it — it opens automatically.',
+            '【The Gardener】 Brown tiles with gold locks are gates. You hold the threshold key — go open it.');
+    }
+
+    if (!level.bossGateOpen) {
+        const skirmishes = level.fights.filter((f) => f.combatId !== 'eden_boss' && f.combatId !== 'eden_temptation');
+        const needFights = skirmishes.filter((f) => !f.cleared).length;
+        if (needFights > 0) {
+            const next = skirmishes.find((f) => !f.cleared)!;
+            const done = skirmishes.length - needFights;
+            return step(
+                next.id,
+                `Clear shade trial (${done + 1}/3)`,
+                ctx.hasWeapon ? 'Gold dashed circles are fights — walk in when ready.' : 'Forge a weapon at Truth\'s Hut first.',
+                { gx: next.gx, gy: next.gy },
+                `【The Gardener】 A shade trial lies ahead. The gold dashed circle marks it — ${ctx.hasWeapon ? 'step inside when you are ready.' : 'arm yourself at Truth\'s Hut before entering.'}`,
+                `【The Gardener】 ${next.hint}`,
+                '【The Gardener】 Follow the pulsing marker. Brown walls block you — grass paths go around them.',
+            );
+        }
+        if (!hasKey(level, 'key_grove')) {
+            return step('key_grove', 'Find the grove key', 'Golden chests hold keys. Check the Eastern Garden.',
+                { gx: 24, gy: 22 },
+                '【The Gardener】 The eastern garden holds a golden chest with the grove key.',
+                '【The Gardener】 Walk east past the threshold gate. Open the chest at the grove compartment.',
+                '【The Gardener】 The pulsing chest marker is your goal — walk onto it to open.');
+        }
+        if (!hasKey(level, 'key_river')) {
+            return step('key_river', 'Find the river key', 'The River Warren lies north-east.',
+                { gx: 30, gy: 16 },
+                '【The Gardener】 The river vault holds the next key. Use the grove gate to go deeper.',
+                '【The Gardener】 North through the grove gate, then east into the River Warren.',
+                '【The Gardener】 The chest marker shows the river vault. Keys open brown gates.');
+        }
+        return step('boss_gate', 'Open the cherub gate', 'All trials and keys complete — walk to the golden barrier.',
+            { gx: 23, gy: 10 },
+            '【The Gardener】 The cherub gate senses your keys. Walk north to the golden seal.',
+            '【The Gardener】 The barrier between warren and antechamber will yield. Head north-east.',
+            '【The Gardener】 Stand at the golden gate north of the river warren. It opens for you now.');
+    }
+
+    return step('explore', 'Explore the garden', 'Read ◆ stones, open chests, clear gold trial circles.',
+        { gx: 20, gy: 22 },
+        '【The Gardener】 Dark tiles are walls. Walkable grass leads on — follow the pulsing markers.',
+        '【The Gardener】 Red orbs restore vitality. Gold ◆ stones hold lore. Chests and gates go together.',
+        '【The Gardener】 If a path looks sealed, you may need a key from another wing first. Keep exploring east.');
 }

@@ -3,6 +3,7 @@
 export interface GameSettings {
     reducedMotion: boolean;
     haptics: boolean;
+    music: boolean;
     showMinimap: boolean;
     showQuestTrail: boolean;
     subtitles: boolean;
@@ -14,6 +15,7 @@ const KEY = 'tbth-game-settings';
 export const DEFAULT_SETTINGS: GameSettings = {
     reducedMotion: false,
     haptics: true,
+    music: true,
     showMinimap: true,
     showQuestTrail: true,
     subtitles: true,
@@ -35,6 +37,11 @@ export function saveSettings(s: Partial<GameSettings>): GameSettings {
     const next = { ...loadSettings(), ...s };
     localStorage.setItem(KEY, JSON.stringify(next));
     return next;
+}
+
+export function applyMusicSetting(enabled: boolean) {
+    if (typeof window === 'undefined') return;
+    import('@/lib/game/music').then(({ gameMusic }) => gameMusic.setMuted(!enabled));
 }
 
 export function prefersReducedMotion(): boolean {

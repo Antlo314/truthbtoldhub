@@ -136,7 +136,9 @@ interface GameState {
     claimQuest: (questId: string, skillPointsReward: number) => void;
     returnToSource: () => void;
     completeAwakening: () => void;
+    /** @deprecated use restartJourney */
     reset: () => void;
+    restartJourney: () => Promise<void>;
     addMaterial: (type: 'iron' | 'copper' | 'cosmic', qty: number) => void;
     spendMaterials: (costs: { iron?: number; copper?: number; cosmic?: number }) => void;
     addFightBonusHp: (amount: number) => void;
@@ -274,6 +276,25 @@ export const useGameStore = create<GameState>()(
             completeAwakening: () => set({ initiated: true }),
 
             reset: () => set({ initiated: false, character: freshCharacter(), cloudLoaded: false }),
+
+            restartJourney: async () => {
+                const founderClaimed = get().character.founderClaimed;
+                const founderNumber = get().founderNumber;
+                if (typeof window !== 'undefined') {
+                    try {
+                        sessionStorage.removeItem('tbth-cutscene-world');
+                        localStorage.removeItem('tbth-tutorials-seen');
+                        localStorage.removeItem('tbth-hut-seen');
+                    } catch { /* ignore */ }
+                }
+                set({
+                    initiated: false,
+                    character: { ...freshCharacter(), founderClaimed },
+                    cloudLoaded: true,
+                    founderNumber,
+                });
+                await get().saveToCloud();
+            },
 
             addMaterial: (type, qty) =>
                 set((s) => {

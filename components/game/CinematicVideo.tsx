@@ -7,7 +7,7 @@ interface Props {
     src: string;
     loop?: boolean;
     className?: string;
-    overlay?: 'dark' | 'medium' | 'light' | 'none';
+    overlay?: 'heavy' | 'dark' | 'medium' | 'light' | 'none';
     startMuted?: boolean;
     showMuteControl?: boolean;
     subtitle?: string;
@@ -16,10 +16,20 @@ interface Props {
 }
 
 const OVERLAY: Record<NonNullable<Props['overlay']>, string> = {
+    heavy: 'rgba(0,0,0,0.74)',
     dark: 'rgba(0,0,0,0.55)',
     medium: 'rgba(0,0,0,0.38)',
     light: 'rgba(0,0,0,0.22)',
     none: 'transparent',
+};
+
+/** Extra dimming on the video layer so UI text stays readable over bright stills. */
+const VIDEO_BRIGHTNESS: Record<NonNullable<Props['overlay']>, number> = {
+    heavy: 0.32,
+    dark: 0.42,
+    medium: 0.52,
+    light: 0.72,
+    none: 1,
 };
 
 export default function CinematicVideo({
@@ -75,6 +85,7 @@ export default function CinematicVideo({
                     ref={ref}
                     src={src}
                     className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`}
+                    style={{ filter: `brightness(${VIDEO_BRIGHTNESS[overlay]})` }}
                     autoPlay
                     loop={loop}
                     muted={muted}

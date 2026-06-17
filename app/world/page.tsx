@@ -28,7 +28,8 @@ import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import { activeQuestWaypoint } from '@/lib/game/questWaypoint';
 import { isDestinationUnlocked, unlockBlockMessage, activeDestinationFocus } from '@/lib/game/progression';
-import { loadSettings, type GameSettings } from '@/lib/game/settings';
+import { loadSettings, applyMusicSetting, type GameSettings } from '@/lib/game/settings';
+import { gameMusic } from '@/lib/game/music';
 import { hapticTap } from '@/lib/game/haptics';
 import Minimap from '@/components/game/Minimap';
 import JournalPanel from '@/components/game/JournalPanel';
@@ -114,6 +115,7 @@ export default function WorldPage() {
     const finishWorldIntro = useCallback(() => {
         sessionStorage.setItem('tbth-cutscene-world', '1');
         setWorldIntroDone(true);
+        gameMusic.crossfadeBgm('world_cavern', 3000, gameMusic.pickVariant('world_cavern'));
     }, []);
 
     const finishCombatIntro = useCallback(() => {
@@ -144,9 +146,35 @@ export default function WorldPage() {
                 toastTimer.current = setTimeout(() => setToast(null), 5000);
             }
         });
+        applyMusicSetting(loadSettings().music);
+        if (sessionStorage.getItem('tbth-cutscene-world') === '1') {
+            gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
+        }
         const t = setTimeout(() => setHint(false), 5000);
-        return () => clearTimeout(t);
+        return () => {
+            clearTimeout(t);
+            gameMusic.stopBgm(2200);
+        };
     }, [loadFromCloud]);
+
+    useEffect(() => {
+        if (!mounted || !worldIntroDone) return;
+        if (combatDest || encounter) {
+            const dest = combatDest || encounter;
+            const skirmish = dest?.combat?.skirmish || !!encounter;
+            const edenBoss = combatDest?.poiId === 'dest_eden' && !skirmish && (combatDest.combat?.bossHp ?? 0) > 0;
+            const track = edenBoss ? 'combat_eden_cherub' : 'combat_skirmish';
+            gameMusic.crossfadeBgm(track, 900, gameMusic.pickVariant(track));
+            return;
+        }
+        if (activeDest?.poiId === 'dest_eden') {
+            gameMusic.crossfadeBgm('eden_garden', 2200, gameMusic.pickVariant('eden_garden'));
+            return;
+        }
+        if (!activeDest) {
+            gameMusic.crossfadeBgm('world_cavern', 2000, gameMusic.pickVariant('world_cavern'));
+        }
+    }, [mounted, worldIntroDone, activeDest, combatDest, encounter]);
 
     useEffect(() => {
         if (!worldIntroDone) return;
@@ -280,6 +308,7 @@ export default function WorldPage() {
 
     const handleClaim = useCallback(async (relicId: string) => {
         const beforeTier = resonanceTier(useGameStore.getState().character.inventory);
+        gameMusic.playSting('relic_claim', Math.random() < 0.4 ? 'alt' : 'main');
         claimRelic(relicId);
         const r = RELIC_BY_ID[relicId];
         let msg = `✦ ${r?.name || 'Relic'} claimed · equipped`;

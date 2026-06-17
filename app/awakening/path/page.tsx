@@ -7,6 +7,8 @@ import { Eye, Shield, ScrollText, Sparkles } from 'lucide-react';
 import CinematicVideo from '@/components/game/CinematicVideo';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { CINEMA } from '@/lib/game/cutscenes';
+import RestartJourneyButton from '@/components/game/RestartJourneyButton';
+import { usePageMusic } from '@/lib/game/usePageMusic';
 
 // ============================================================
 //  CHAPTER III — THE FOUR PATHS
@@ -25,6 +27,8 @@ export default function PathPage() {
     const [mounted, setMounted] = useState(false);
     const [selected, setSelected] = useState<GamePath | null>(null);
     const [view, setView] = useState<'select' | 'tree'>('select');
+
+    usePageMusic('paths_crossroads');
 
     useEffect(() => {
         setMounted(true);
@@ -53,11 +57,14 @@ export default function PathPage() {
     if (view === 'tree' && active) {
         return (
             <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-                <CinematicVideo src={CINEMA.paths} overlay="dark" showMuteControl />
+                <CinematicVideo src={CINEMA.paths} overlay="heavy" showMuteControl />
                 <div className="grain-overlay pointer-events-none" />
                 <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 0%, ${active.color}1f, transparent 55%)` }} />
                 <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto">
                     <AttunementPanel character={character} onLearn={learn} showEnterWorld />
+                    <div className="shrink-0 pb-3 flex justify-center" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+                        <RestartJourneyButton label="Start a new soul" variant="link" />
+                    </div>
                 </div>
             </main>
         );
@@ -65,7 +72,7 @@ export default function PathPage() {
 
     return (
         <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
-            <CinematicVideo src={CINEMA.paths} overlay="dark" showMuteControl />
+            <CinematicVideo src={CINEMA.paths} overlay="heavy" showMuteControl />
             <div className="grain-overlay pointer-events-none" />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }} />
 
@@ -116,6 +123,9 @@ export default function PathPage() {
                         Embrace {PATH_BY_ID[selected].name}
                     </button>
                 )}
+                <div className="shrink-0 mt-3 flex justify-center">
+                    <RestartJourneyButton label="Start a new soul" variant="link" />
+                </div>
             </div>
         </main>
     );
