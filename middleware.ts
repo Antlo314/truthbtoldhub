@@ -10,10 +10,25 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get('sb-access-token')?.value;
 
-  // The title card and the intro/onboarding (Awakening -> character creation
-  // -> path) are reachable so the flow is never broken by a cookie race.
-  // Login is still enforced at the title-card "Begin" and at the game (/world).
-  if (pathname === '/' || pathname === '/awakening' || pathname.startsWith('/awakening/')) {
+  // Public routes — reachable without login so shared links, payment returns,
+  // the public leaderboard/profiles, and lore/film content all work for a
+  // logged-out visitor. The GAME and personal/admin pages (/world, /self,
+  // /treasury, /vault, /hut-admin) stay gated below. Login is still enforced
+  // at the title-card "Begin" and at the game itself.
+  const PUBLIC_PREFIXES = [
+    '/awakening',          // intro / character creator / path (onboarding)
+    '/profiles',           // shared soul profiles
+    '/hierarchy',          // public leaderboard
+    '/codex',              // lore codex
+    '/cinema',             // films
+    '/cineworks',          // film studio showcase
+    '/archive',            // archive content
+    '/support',            // donation entry
+    '/thanks',             // post-donation thank-you (Stripe return)
+    '/mission-confirmed',  // post-action confirmation (Stripe return)
+    '/trial',              // trial / entry flow
+  ];
+  if (pathname === '/' || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 

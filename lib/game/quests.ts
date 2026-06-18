@@ -5,7 +5,7 @@ import { buildWorldQuests } from '@/lib/game/worldMissions';
 import type { MissionPhase } from '@/lib/game/worldMissions';
 
 /** Set false to hide all mission UI while focusing on open-world exploration. */
-export const QUESTS_ENABLED = false;
+export const QUESTS_ENABLED = true;
 
 // ============================================================
 //  QUESTS / MISSIONS — given by NPCs in the world (NOT the Hut;
