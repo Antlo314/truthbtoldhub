@@ -137,6 +137,8 @@ interface GameState {
     character: GameCharacter;
     cloudLoaded: boolean;        // have we pulled this soul's row from Supabase?
     founderNumber: number | null;
+    /** ISO of the last local save — used to decide cloud-vs-local recency. */
+    savedAt: string | null;
 
     setName: (name: string) => void;
     setAppearance: (updates: Partial<CharacterAppearance>) => void;
@@ -172,6 +174,91 @@ interface GameState {
     loadFounder: () => Promise<FounderTier | null>;
 }
 
+// ---------------------------------------------------------------------------
+//  CLOUD-SAVE COORDINATOR
+//  A single action (claim a relic, win a fight) fires saveToCloud() many
+//  times. Left alone, those independent upserts race — a slow earlier write
+//  can land last and clobber newer progress. This serializes them: only one
+//  write is ever in flight, and a request made mid-write coalesces into a
+//  single trailing write that reflects the latest state. Awaiting saveToCloud
+//  resolves once a write covering the caller's state has completed.
+// ---------------------------------------------------------------------------
+let _saveActive: Promise<void> | null = null;
+let _savePending = false;
+let _saveWaiters: Array<() => void> = [];
+
+async function _writeOnce() {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const { character, initiated } = useGameStore.getState();
+        await supabase.from('game_state').upsert(
+            {
+                user_id: session.user.id,
+                character,
+                initiated,
+                updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' },
+        );
+    } catch {
+        /* offline / table missing — localStorage retains it */
+    }
+}
+
+function scheduleCloudSave(): Promise<void> {
+    _savePending = true;
+    if (!_saveActive) {
+        _saveActive = (async () => {
+            while (_savePending) {
+                _savePending = false;
+                await _writeOnce();
+            }
+            _saveActive = null;
+            const waiters = _saveWaiters;
+            _saveWaiters = [];
+            for (const w of waiters) w();
+        })();
+    }
+    return new Promise((resolve) => { _saveWaiters.push(resolve); });
+}
+
+const u = (a?: string[], b?: string[]) => Array.from(new Set([...(a || []), ...(b || [])]));
+
+// Combine a cloud row with the local soul WITHOUT losing progress. `primary`
+// is whichever side is fresher (by timestamp) — its scalar fields (name, path,
+// skills, points, equipped, materials…) win. Monotonic collections (relics,
+// clears, puzzles, discoveries, garments) are UNIONED from both sides, so a
+// stale-but-ahead device can never roll back a relic or a cleared guardian.
+function mergeCloudCharacter(
+    local: GameCharacter,
+    cloud: Partial<GameCharacter>,
+    primary: Partial<GameCharacter>,
+): GameCharacter {
+    return {
+        ...freshCharacter(),
+        ...local,
+        ...primary,
+        appearance: { ...DEFAULT_CHARACTER.appearance, ...(primary.appearance || local.appearance || {}) },
+        avatar: { ...DEFAULT_CHARACTER.avatar, ...(primary.avatar || local.avatar || {}) },
+        equipped: { ...DEFAULT_CHARACTER.equipped, ...(primary.equipped || local.equipped || {}) },
+        materials: { ...DEFAULT_CHARACTER.materials, ...(primary.materials || local.materials || {}) },
+        skills: migrateSkillIds(primary.skills || local.skills || []),
+        // never-lose monotonic progress (union both sides regardless of recency)
+        inventory: u(local.inventory, cloud.inventory),
+        scrolls: u(local.scrolls, cloud.scrolls),
+        cleared: u(local.cleared, cloud.cleared),
+        solved: u(local.solved, cloud.solved),
+        minigamesCleared: u(local.minigamesCleared, cloud.minigamesCleared),
+        questsClaimed: u(local.questsClaimed, cloud.questsClaimed),
+        discovered: u(local.discovered, cloud.discovered),
+        wardrobe: u(['plain', ...(local.wardrobe || [])], cloud.wardrobe),
+        // one-time / one-way flags stay set once earned on either side
+        founderClaimed: !!local.founderClaimed || !!cloud.founderClaimed,
+        sourceReturned: !!local.sourceReturned || !!cloud.sourceReturned,
+    };
+}
+
 export const useGameStore = create<GameState>()(
     persist(
         (set, get) => ({
@@ -179,6 +266,7 @@ export const useGameStore = create<GameState>()(
             character: freshCharacter(),
             cloudLoaded: false,
             founderNumber: null,
+            savedAt: null,
 
             setName: (name) => set((s) => ({ character: { ...s.character, name } })),
 
@@ -414,7 +502,7 @@ export const useGameStore = create<GameState>()(
 
                     const { data, error } = await supabase
                         .from('game_state')
-                        .select('character, initiated')
+                        .select('character, initiated, updated_at')
                         .eq('user_id', session.user.id)
                         .maybeSingle();
 
@@ -425,45 +513,38 @@ export const useGameStore = create<GameState>()(
                     }
 
                     if (data && data.character && Object.keys(data.character).length > 0) {
-                        const c = data.character as Partial<GameCharacter>;
+                        const cloud = data.character as Partial<GameCharacter>;
+                        const local = get().character;
+                        const localSavedAt = get().savedAt;
+                        const cloudUpdatedAt = (data.updated_at as string | null) || null;
+                        // cloud wins the scalar fields only if it's genuinely newer
+                        // (e.g. progressed on another device); otherwise local leads.
+                        // Either way, monotonic progress is unioned below.
+                        const cloudFresher = !localSavedAt || (!!cloudUpdatedAt && cloudUpdatedAt >= localSavedAt);
+                        const merged = mergeCloudCharacter(local, cloud, cloudFresher ? cloud : local);
                         set({
-                            character: {
-                                ...freshCharacter(),
-                                ...c,
-                                appearance: { ...DEFAULT_CHARACTER.appearance, ...(c.appearance || {}) },
-                                avatar: { ...DEFAULT_CHARACTER.avatar, ...(c.avatar || {}) },
-                                equipped: { ...DEFAULT_CHARACTER.equipped, ...(c.equipped || {}) },
-                                skills: migrateSkillIds(c.skills || []),
-                            },
-                            initiated: !!data.initiated,
+                            character: merged,
+                            initiated: get().initiated || !!data.initiated,
                             cloudLoaded: true,
                         });
+                        // push the unioned superset back so the cloud catches up
+                        void get().saveToCloud();
                     } else {
+                        // first cloud record for this soul — seed it from local
                         set({ cloudLoaded: true });
+                        void get().saveToCloud();
                     }
                 } catch {
                     /* offline — local copy stands */
                 }
             },
 
+            // Coalesced + serialized — see scheduleCloudSave. Stamps savedAt so a
+            // later loadFromCloud can tell whether the cloud is actually newer.
             saveToCloud: async () => {
-                try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session) return;
-
-                    const { character, initiated } = get();
-                    await supabase.from('game_state').upsert(
-                        {
-                            user_id: session.user.id,
-                            character,
-                            initiated,
-                            updated_at: new Date().toISOString(),
-                        },
-                        { onConflict: 'user_id' }
-                    );
-                } catch {
-                    /* ignore — localStorage retains it until the table exists */
-                }
+                if (typeof window === 'undefined') return;
+                set({ savedAt: new Date().toISOString() });
+                await scheduleCloudSave();
             },
 
             loadFounder: async () => {
@@ -488,7 +569,7 @@ export const useGameStore = create<GameState>()(
             name: 'tbth-journey',
             version: 1,
             storage: createJSONStorage(() => localStorage),
-            partialize: (s) => ({ initiated: s.initiated, character: s.character }),
+            partialize: (s) => ({ initiated: s.initiated, character: s.character, savedAt: s.savedAt }),
             // Heal any older persisted shape (e.g. pre-Kenney appearance) into the
             // current one so required fields like bodyTile/aura always exist.
             merge: (persisted, current) => {
@@ -498,6 +579,7 @@ export const useGameStore = create<GameState>()(
                 return {
                     ...c,
                     initiated: typeof p.initiated === 'boolean' ? p.initiated : c.initiated,
+                    savedAt: typeof p.savedAt === 'string' ? p.savedAt : c.savedAt,
                     character: {
                         ...c.character,
                         ...pc,

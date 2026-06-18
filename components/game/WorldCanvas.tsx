@@ -158,7 +158,10 @@ export default function WorldCanvas({
         let posTick = 0;
         let proxTick = 0;
         let wanderTick = 0;
-        let lastProxId = '';
+        // Truth speaks sparingly: a global cooldown stops her chattering, and
+        // each landmark is greeted at most once per session.
+        let truthSpeakCd = 8;
+        const spokenProx = new Set<string>();
         const TRUTH_FOLLOW_MIN = TILE * 2.2 * 0.6;
 
         const st = {
@@ -178,7 +181,7 @@ export default function WorldCanvas({
                     aura: skin.aura,
                 };
             }),
-            encCd: 0,
+            encCd: 8,
             t: 0,
         };
 
@@ -541,7 +544,7 @@ export default function WorldCanvas({
             }
             while (st.shades.length > targetShades) st.shades.pop();
 
-            const aggroTiles = TILE * 6 * shadeAggroRef.current;
+            const aggroTiles = TILE * 3.5 * shadeAggroRef.current;
             for (const sh of st.shades) {
                 const dxp = st.px - sh.x, dyp = st.py - sh.y;
                 const dp = Math.hypot(dxp, dyp) || 1;
@@ -553,7 +556,7 @@ export default function WorldCanvas({
                 if (!solidAt(sxn, sh.y)) sh.x = sxn; else if (!aggro) sh.vx *= -1;
                 if (!solidAt(sh.x, syn)) sh.y = syn; else if (!aggro) sh.vy *= -1;
                 if (st.encCd <= 0 && dp < TILE * 0.75) {
-                    st.encCd = 3;
+                    st.encCd = 35;
                     cbRef.current.onEncounter();
                     sh.x = (8 + Math.floor(Math.random() * (MAP_W - 16))) * TILE;
                     sh.y = (8 + Math.floor(Math.random() * (MAP_H - 16))) * TILE;
@@ -599,35 +602,37 @@ export default function WorldCanvas({
                 cbRef.current.onPositionUpdate?.(st.px, st.py);
             }
 
+            truthSpeakCd = Math.max(0, truthSpeakCd - dt);
+
             proxTick += dt;
-            if (proxTick >= 3 && cbRef.current.onTruthLine) {
+            if (proxTick >= 4 && truthSpeakCd <= 0 && cbRef.current.onTruthLine) {
                 proxTick = 0;
                 let proxPoi: POI | null = null;
                 let proxD = Infinity;
                 for (const p of allVisiblePois(ow.pois, charRef.current)) {
+                    if (spokenProx.has(p.id)) continue;
                     const pwx = (p.x + 0.5) * TILE;
                     const pwy = (p.y + 0.5) * TILE;
                     const d = Math.hypot(pwx - st.px, pwy - st.py);
-                    if (d < TILE * 3.5 && d < proxD && getTruthProximityLine(p.id, charRef.current)) {
+                    if (d < TILE * 3 && d < proxD && getTruthProximityLine(p.id, charRef.current)) {
                         proxD = d;
                         proxPoi = p;
                     }
                 }
-                if (!proxPoi) {
-                    lastProxId = '';
-                } else if (proxPoi.id !== lastProxId) {
-                    lastProxId = proxPoi.id;
+                if (proxPoi) {
+                    spokenProx.add(proxPoi.id);
                     const line = getTruthProximityLine(proxPoi.id, charRef.current);
-                    if (line) cbRef.current.onTruthLine(line);
+                    if (line) { cbRef.current.onTruthLine(line); truthSpeakCd = 40; }
                 }
             }
 
             wanderTick += dt;
-            if (wanderTick >= 45 && cbRef.current.onTruthLine) {
+            if (wanderTick >= 75 && truthSpeakCd <= 0 && cbRef.current.onTruthLine) {
                 const trailDist = Math.hypot(st.px - truth.x, st.py - truth.y);
                 if (trailDist >= TRUTH_FOLLOW_MIN) {
                     wanderTick = 0;
                     cbRef.current.onTruthLine(getTruthWanderLine(charRef.current));
+                    truthSpeakCd = 40;
                 }
             }
 

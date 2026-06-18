@@ -180,7 +180,15 @@ export default function WorldPage() {
         setMounted(true);
         setSettings(loadSettings());
         setWorldIntroDone(sessionStorage.getItem('tbth-cutscene-world') === '1');
-        loadFromCloud();
+        // load the cloud soul first, THEN grant the founder seal — so the
+        // founder skill-point bump can't be overwritten by a late cloud adopt.
+        loadFromCloud().then(() => loadFounder()).then((tier) => {
+            if (tier) {
+                setToast(`✦ ${tier.name} — founding seal claimed · +${tier.bonusSkillPoints} skill ${tier.bonusSkillPoints === 1 ? 'point' : 'points'}`);
+                if (toastTimer.current) clearTimeout(toastTimer.current);
+                toastTimer.current = setTimeout(() => setToast(null), 5000);
+            }
+        });
         fetchBulletins(8).then((bs) => {
             setBulletins(bs);
             if (bs.length > 0) {
@@ -197,13 +205,6 @@ export default function WorldPage() {
         });
         fetchMedia(16).then(setMedia);
         getArchitectStatus().then((a) => setIsArchitect(a.isArchitect));
-        loadFounder().then((tier) => {
-            if (tier) {
-                setToast(`✦ ${tier.name} — founding seal claimed · +${tier.bonusSkillPoints} skill ${tier.bonusSkillPoints === 1 ? 'point' : 'points'}`);
-                if (toastTimer.current) clearTimeout(toastTimer.current);
-                toastTimer.current = setTimeout(() => setToast(null), 5000);
-            }
-        });
         applyMusicSetting(loadSettings().music);
         if (sessionStorage.getItem('tbth-cutscene-world') === '1') {
             gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
@@ -394,11 +395,8 @@ export default function WorldPage() {
         hapticTap('medium');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
-            setDialogue({
-                speaker: 'Truth',
-                text: truthCombatLine(ch, 'unarmedShade'),
-                color: '#f97316',
-            });
+            // non-blocking nudge — never freeze roaming just to say "go forge"
+            showAmbient(truthCombatLine(ch, 'unarmedShade'), '#f97316');
             return;
         }
         const mods = wildEncounterMods(worldEvent);
@@ -407,7 +405,7 @@ export default function WorldPage() {
         setEncounter(wildEncounter(ch.cleared.length, mods, arch));
         showToast(arch.encounterToast);
         saveToCloud();
-    }, [markDiscovered, saveToCloud, showToast, worldEvent]);
+    }, [markDiscovered, saveToCloud, showToast, showAmbient, worldEvent]);
 
     // walked over an essence mote in the world — bank the material for the forge.
     // (collection is tracked in the daily-harvest set in WorldCanvas, not in the
