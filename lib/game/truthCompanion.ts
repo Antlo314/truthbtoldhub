@@ -1,6 +1,7 @@
 import { TILE } from '@/lib/game/overworld';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthDepthTier } from '@/lib/game/truthLore';
+import { isDestinationSealed, isEdenSealed } from '@/lib/game/progression';
 
 const FOLLOW_DIST = TILE * 2.2;
 const CATCHUP_SPD = 78;
@@ -118,6 +119,10 @@ export function getTruthProximityLine(poiId: string, c: GameCharacter): string |
         const tier = truthDepthTier(c);
         const pool = HUT_LINES_BY_TIER[tier];
         return pool[Math.floor(Math.random() * pool.length)];
+    }
+    // A veiled gate must not promise entry — point the soul back to the Hut.
+    if ((poiId === 'dest_eden' && isEdenSealed()) || isDestinationSealed(poiId)) {
+        return 'This gate is still being forged — its hour has not come. Make my Hut your home for now; there is work enough there for you.';
     }
     return BASE_POI_LINES[poiId] ?? null;
 }

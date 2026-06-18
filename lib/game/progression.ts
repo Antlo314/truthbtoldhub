@@ -6,7 +6,8 @@ import { DEST_BY_POI } from '@/lib/game/destinations';
 //  Eden first, fully complete, then Giza → Fair → Kolbrin → Emerald.
 // ============================================================
 
-export const EDEN_SEALED = false;
+// Eden is sealed while it's being built out — focus stays on Truth's Hut.
+export const EDEN_SEALED = true;
 
 export const DESTINATION_ORDER = [
     'dest_eden',
@@ -27,10 +28,12 @@ export const NPC_DESTINATION: Record<string, DestinationId> = {
     npc_hermes: 'dest_emerald',
 };
 
-/** Destinations still being built — only Eden & Giza are open for now. The
- *  rest still appear on the map but stay veiled (locked) until their content
- *  lands. Their NPC quest chains stay dormant via isNpcQuestActive below. */
+/** Destinations still being built — every age is veiled for now while focus
+ *  stays on Truth's Hut. They still appear on the map but stay locked until
+ *  their content lands; their NPC quest chains stay dormant via
+ *  isNpcQuestActive below. (Eden is sealed separately via EDEN_SEALED above.) */
 export const SEALED_DESTINATIONS = new Set<DestinationId>([
+    'dest_giza',
     'dest_fair',
     'dest_kolbrin',
     'dest_emerald',
@@ -91,7 +94,7 @@ export function unlockBlockMessage(poiId: string): string {
     if (poiId === 'dest_eden' && EDEN_SEALED) return edenSealedMessage();
     if (isDestinationSealed(poiId)) {
         const here = DEST_BY_POI[poiId];
-        return `${here?.name || 'This age'} is still being woven. For now the road runs through Eden and Giza — walk them to their end. When the hour comes, this veil will part.`;
+        return `${here?.name || 'This age'} is still being forged. For now, make Truth's Hut your home — temper your arms, study the Library, walk with the work, and ask me what you will. When the hour comes, this veil will part.`;
     }
 
     const order = playableDestinationOrder();
