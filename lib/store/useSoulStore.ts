@@ -1,6 +1,21 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 
+// The ONLY profile columns a soul may edit from the browser. Privileged
+// columns (tier, soul_power, is_supporter, is_banned, …) are server-only —
+// they are written exclusively through service-role endpoints (/api/admin,
+// /api/stripe/webhook, /api/treasury/pledge) and are additionally locked at
+// the database level (see secure_profiles_privileges.sql). updateProfile
+// strips everything outside this list so it can never forward an escalation.
+const SAFE_PROFILE_COLUMNS = [
+    'display_name',
+    'username',
+    'avatar_url',
+    'bio',
+    'custom_title',
+    'theme_color',
+] as const;
+
 interface SoulProfile {
     id: string;
     username: string;
@@ -23,7 +38,6 @@ interface SoulState {
     
     // Actions
     fetchIdentity: () => Promise<void>;
-    updateSP: (newSP: number) => Promise<void>;
     updateProfile: (updates: Partial<SoulProfile>) => Promise<void>;
     signOut: () => Promise<void>;
 }
@@ -61,37 +75,29 @@ export const useSoulStore = create<SoulState>((set, get) => ({
         }
     },
 
-    updateSP: async (newSP: number) => {
-        const { user, profile } = get();
-        if (!user || !profile) return;
-
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ soul_power: newSP })
-                .eq('id', user.id);
-
-            if (error) throw error;
-            set({ profile: { ...profile, soul_power: newSP } });
-        } catch (err: any) {
-            console.error('Update SP Error:', err);
-            set({ error: err.message });
-            throw err;
-        }
-    },
-
     updateProfile: async (updates: Partial<SoulProfile>) => {
         const { user, profile } = get();
         if (!user || !profile) return;
 
+        // Whitelist: forward ONLY cosmetic columns. Even if a caller passes
+        // tier/soul_power/is_supporter/etc., they are dropped here so this
+        // path can never be used to self-elevate. (The DB enforces the same.)
+        const safe: Partial<SoulProfile> = {};
+        for (const key of SAFE_PROFILE_COLUMNS) {
+            if (key in updates && (updates as Record<string, unknown>)[key] !== undefined) {
+                (safe as Record<string, unknown>)[key] = (updates as Record<string, unknown>)[key];
+            }
+        }
+        if (Object.keys(safe).length === 0) return;
+
         try {
             const { error } = await supabase
                 .from('profiles')
-                .update(updates)
+                .update(safe)
                 .eq('id', user.id);
 
             if (error) throw error;
-            set({ profile: { ...profile, ...updates } });
+            set({ profile: { ...profile, ...safe } });
         } catch (err: any) {
             console.error('Update Profile Error:', err);
             set({ error: err.message });

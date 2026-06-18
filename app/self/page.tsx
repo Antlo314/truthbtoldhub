@@ -199,10 +199,33 @@ export default function PowerSelf() {
             if (email && (email === 'iamwhoiambook@gmail.com' || email === 'admin@truthbtoldhub.com')) {
                 // Fetch admin-specific list
                 fetchAdminData();
-                
-                // Auto-elevate in database if not already Architect
+
+                // Auto-elevate in database if not already Architect. tier is a
+                // privileged column and is no longer client-writable, so this
+                // goes through the service-role admin endpoint, which re-verifies
+                // the caller's email server-side before granting Architect.
                 if (currentProfile && currentProfile.tier !== 'Architect') {
-                    await updateProfile({ tier: 'Architect' });
+                    try {
+                        const res = await fetch('/api/admin', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${currentSession.data.session?.access_token}`
+                            },
+                            body: JSON.stringify({
+                                action: 'updateUser',
+                                userId: currentProfile.id,
+                                updates: { tier: 'Architect' }
+                            })
+                        });
+                        if (res.ok) {
+                            await fetchIdentity();
+                        } else {
+                            console.error('Self-elevation failed:', (await res.json())?.error);
+                        }
+                    } catch (err) {
+                        console.error('Self-elevation request failed:', err);
+                    }
                 }
             }
 
@@ -922,11 +945,29 @@ export default function PowerSelf() {
                                         }
 
                                         const targetId = users[0].id;
-                                        const { error } = await supabase.from('profiles').update({ tier: 'Architect' }).eq('id', targetId);
 
-                                        if (error) alert("Error upgrading soul: " + error.message);
-                                        else { 
-                                            alert(`Success: ${users[0].display_name} has ascended to Architect.`); 
+                                        // tier is privileged and not client-writable; promote through
+                                        // the service-role admin endpoint (it re-checks the caller's email).
+                                        const { data: { session } } = await supabase.auth.getSession();
+                                        if (!session) { alert("Session expired. Please sign in again."); return; }
+
+                                        const res = await fetch('/api/admin', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${session.access_token}`
+                                            },
+                                            body: JSON.stringify({
+                                                action: 'updateUser',
+                                                userId: targetId,
+                                                updates: { tier: 'Architect' }
+                                            })
+                                        });
+                                        const result = await res.json();
+
+                                        if (!res.ok || !result.success) alert("Error upgrading soul: " + (result.error || 'Unknown error'));
+                                        else {
+                                            alert(`Success: ${users[0].display_name} has ascended to Architect.`);
                                             (e.target as HTMLFormElement).reset();
                                             fetchAdminData();
                                         }

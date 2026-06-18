@@ -37,7 +37,7 @@ if (typeof window !== 'undefined') {
 
 export default function Treasury() {
     const router = useRouter();
-    const { user, profile, fetchIdentity, updateSP, signOut: storeSignOut } = useSoulStore();
+    const { user, profile, fetchIdentity, signOut: storeSignOut } = useSoulStore();
 
     const [isConfidential, setIsConfidential] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -290,43 +290,40 @@ export default function Treasury() {
 
         setIsPledging(true);
         try {
-            // 1. Deduct SP from User via store
-            const newSP = currentSoulPower - pledgeAmount;
-            await updateSP(newSP);
+            // Soul Power is locked at the DB level, so the spend is settled
+            // server-side: /api/treasury/pledge re-derives the balance, deducts
+            // it with the service role, and returns the petition's new state.
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Session expired. Please sign in again.');
 
-            // 2. Add SP to Petition
-            const newPledged = (selectedPetition.sp_pledged || 0) + pledgeAmount;
-            const newConsensus = Math.min(100, Math.floor((newPledged / (selectedPetition.sp_goal || 10000)) * 100));
-            const newBackerCount = (selectedPetition.backer_count || 0) + 1; // Simplistic count
+            const res = await fetch('/api/treasury/pledge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ petitionId: selectedPetition.id, amount: pledgeAmount })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Pledge failed');
+            }
 
-            // Determine if status should change
-            let newStatus = selectedPetition.status;
-            if (newConsensus >= 100) newStatus = 'Consensus Reached';
+            // Pull the authoritative new balance back into the store.
+            await fetchIdentity();
 
-            await supabase.from('petitions')
-                .update({
-                    sp_pledged: newPledged,
-                    consensus_percentage: newConsensus,
-                    backer_count: newBackerCount,
-                    status: newStatus
-                })
-                .eq('id', selectedPetition.id);
-
-            // 3. Log Transaction
-            await supabase.from('transactions').insert([{
-                profile_id: user.id,
-                amount: -pledgeAmount, // Negative because it's a spend
-                transaction_type: 'PLEDGE',
-                description: `Pledged to Petition: ${selectedPetition.title}`
-            }]);
-
-            // Refresh local state
-            setPetitions(petitions.map(p => {
-                if (p.id === selectedPetition.id) {
-                    return { ...p, sp_pledged: newPledged, consensus_percentage: newConsensus, backer_count: newBackerCount, status: newStatus };
-                }
-                return p;
-            }));
+            // Reflect the petition's new consensus from the server response.
+            setPetitions(petitions.map(p => (
+                p.id === selectedPetition.id
+                    ? {
+                        ...p,
+                        sp_pledged: data.petition.sp_pledged,
+                        consensus_percentage: data.petition.consensus_percentage,
+                        backer_count: data.petition.backer_count,
+                        status: data.petition.status
+                    }
+                    : p
+            )));
 
             setSelectedPetition(null);
             setPledgeAmount(0);
@@ -337,10 +334,10 @@ export default function Treasury() {
             setToastMessage(`Pledged ${pledgeAmount} SP successfully.`);
             setTimeout(() => setToastMessage(null), 3000);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Pledge failed:", err);
             playError();
-            setToastMessage("An error occurred while pledging.");
+            setToastMessage(err?.message || "An error occurred while pledging.");
             setTimeout(() => setToastMessage(null), 3000);
         } finally {
             setIsPledging(false);
