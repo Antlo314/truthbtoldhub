@@ -257,11 +257,21 @@ h1, h2, h3, .font-ritual {
     image-rendering: pixelated;
 }
 
-/* Truth, breathing in place */
-.truth-float { animation: truthFloat 4.5s ease-in-out infinite; }
+/* Truth (and the avatar preview): a grounded breathing idle. Origin at the feet
+   so he breathes from the ground instead of levitating. The old translateY hover
+   layered an extra vertical bob on top of the element (reading as floating);
+   animating the independent `scale` property grounds the idle and leaves any
+   positioning `translate`/`transform` untouched. */
+.truth-float {
+    transform-origin: bottom center;
+    animation: truthFloat 5s ease-in-out infinite;
+}
 @keyframes truthFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+    0%, 100% { scale: 1 1; }
+    50%      { scale: 1 1.02; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .truth-float { animation: none; }
 }
 
 .awaken-caret {

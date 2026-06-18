@@ -73,6 +73,7 @@ function getHowl(src: string, loop: boolean, volume: number): Howl {
 class GameMusicController {
     private current: Howl | null = null;
     private currentId: BgmId | null = null;
+    private lastTrackId: BgmId | null = null;
     private muted = false;
     private duckTimer: ReturnType<typeof setTimeout> | null = null;
     private unlocked = false;
@@ -86,10 +87,15 @@ class GameMusicController {
     setMuted(m: boolean) {
         this.muted = m;
         if (m && this.current) {
-            this.current.fade(this.current.volume(), 0, 400);
-            setTimeout(() => { this.current?.stop(); }, 420);
-        } else if (!m && this.currentId) {
-            this.playBgm(this.currentId, { restart: true });
+            const ref = this.current;
+            ref.fade(ref.volume(), 0, 400);
+            setTimeout(() => { if (this.muted) ref.stop(); }, 420);
+        } else if (!m) {
+            // Revive whatever the current page wants — currentId if still set, else
+            // the last track we were asked to play (a navigation while muted clears
+            // currentId, so without this fallback unmuting would stay silent).
+            const revive = this.currentId ?? this.lastTrackId;
+            if (revive) this.playBgm(revive, { restart: true });
         }
     }
 
@@ -102,13 +108,21 @@ class GameMusicController {
         const vol = h.volume();
         h.fade(vol, 0, ms);
         const ref = h;
-        setTimeout(() => { ref.stop(); }, ms + 80);
         this.current = null;
         this.currentId = null;
+        // Only stop once the fade completes AND this track hasn't been re-adopted.
+        // Tracks are cached by URL, so navigating away then back replays the SAME
+        // Howl — without this guard a stale stop-timer would kill the restart
+        // (music "shuts off when you come back" with no way to revive it).
+        setTimeout(() => { if (this.current !== ref) ref.stop(); }, ms + 80);
     }
 
     playBgm(id: BgmId, opts?: { variant?: Variant; restart?: boolean; crossfadeMs?: number }) {
-        if (typeof window === 'undefined' || this.muted) return;
+        if (typeof window === 'undefined') return;
+        // Remember the desired track even while muted, so unmuting can revive the
+        // page's BGM after a navigation cleared currentId.
+        this.lastTrackId = id;
+        if (this.muted) return;
         this.ensureUnlock();
         if (this.currentId === id && this.current?.playing() && !opts?.restart) return;
 
@@ -122,14 +136,17 @@ class GameMusicController {
             const prev = this.current;
             const outMs = opts?.crossfadeMs ?? (this.currentId ? BGM_META[this.currentId].fadeOutMs : 1400);
             prev.fade(prev.volume(), 0, outMs);
-            setTimeout(() => prev.stop(), outMs + 80);
+            setTimeout(() => { if (this.current !== prev) prev.stop(); }, outMs + 80);
         }
 
+        // Ramp from the live level (not 0) when re-adopting a still-playing cached
+        // Howl, so navigating back doesn't snap the track to silence and back.
+        const from = next.playing() ? next.volume() : 0;
         if (!next.playing()) {
             next.volume(0);
             next.play();
         }
-        next.fade(0, meta.volume, fadeIn);
+        next.fade(from, meta.volume, fadeIn);
         this.current = next;
         this.currentId = id;
     }
