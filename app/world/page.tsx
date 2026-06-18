@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Menu, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
@@ -137,6 +137,8 @@ export default function WorldPage() {
     const [encounter, setEncounter] = useState<Destination | null>(null);
     const [questNpc, setQuestNpc] = useState<{ id: string; name: string } | null>(null);
     const [questLogOpen, setQuestLogOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [topBannersUp, setTopBannersUp] = useState(true);
     const [sourceOpen, setSourceOpen] = useState(false);
     const [journalOpen, setJournalOpen] = useState(false);
     const [attunementOpen, setAttunementOpen] = useState(false);
@@ -300,6 +302,15 @@ export default function WorldPage() {
         sessionStorage.setItem(key, '1');
         showToast(`✦ Today's rhythm · ${worldEvent.shortLabel}`);
     }, [worldIntroDone, eventDay, worldEvent.shortLabel, showToast]);
+
+    // the top banner column (world rhythm + objective) is an on-entry cue, not a
+    // permanent fixture — fade it out after a few seconds so it doesn't sit there.
+    useEffect(() => {
+        if (!worldIntroDone) return;
+        setTopBannersUp(true);
+        const t = setTimeout(() => setTopBannersUp(false), 6500);
+        return () => clearTimeout(t);
+    }, [worldIntroDone]);
 
     const unlockRoamMilestones = useCallback((opts?: { silent?: boolean }) => {
         const ch = useGameStore.getState().character;
@@ -619,6 +630,15 @@ export default function WorldPage() {
         !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue ||
         journalOpen || settingsOpen || epilogueOpen || attunementOpen;
 
+    // secondary HUD actions — inline on desktop, tucked into a menu on mobile so
+    // the player's name + path always have room to breathe.
+    const hudActions: { id: string; Icon: typeof BookOpen; label: string; onClick: () => void; badge?: number; color?: string }[] = [
+        ...(QUESTS_ENABLED ? [{ id: 'missions', Icon: ScrollText, label: 'Missions', onClick: () => setQuestLogOpen(true) }] : []),
+        { id: 'journal', Icon: BookOpen, label: 'Journal', onClick: () => setJournalOpen(true) },
+        { id: 'attune', Icon: Sparkles, label: 'Attune', onClick: () => setAttunementOpen(true), badge: character.skillPoints > 0 ? character.skillPoints : undefined, color: path?.color },
+        { id: 'settings', Icon: SlidersHorizontal, label: 'Settings', onClick: () => setSettingsOpen(true) },
+    ];
+
     return (
         <div className="relative w-full overflow-hidden bg-void select-none" style={{ height: '100dvh', touchAction: 'none' }}>
             {!worldIntroDone && (
@@ -656,31 +676,41 @@ export default function WorldPage() {
                     <Link href="/awakening/path" className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" title="Return">
                         <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
                     </Link>
-                    {QUESTS_ENABLED && (
-                        <button onClick={() => setQuestLogOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Missions">
-                            <ScrollText className="w-4 h-4" />
-                            <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Missions</span>
+
+                    {/* mobile: one menu button keeps room for the name + path */}
+                    <div className="relative lg:hidden">
+                        <button onClick={() => setMenuOpen((v) => !v)} className="pointer-events-auto p-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-w-[44px] min-h-[44px] flex items-center justify-center relative" title="Menu" aria-label="Menu">
+                            <Menu className="w-4 h-4" />
+                            {character.skillPoints > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
+                            )}
                         </button>
-                    )}
-                    <button onClick={() => setJournalOpen(true)} className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-h-[44px] flex items-center gap-2" title="Codex Journal">
-                        <BookOpen className="w-4 h-4" />
-                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Journal</span>
-                    </button>
-                    <button
-                        onClick={() => setAttunementOpen(true)}
-                        className="pointer-events-auto p-2.5 lg:px-4 lg:py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative min-h-[44px] flex items-center gap-2"
-                        title="Attunement Tree"
-                        style={path ? { color: path.color } : undefined}
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        <span className="hidden lg:inline text-[10px] uppercase tracking-widest">Attune</span>
-                        {character.skillPoints > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
+                        {menuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-[18] pointer-events-auto" onClick={() => setMenuOpen(false)} />
+                                <div className="absolute left-0 top-full mt-2 z-[19] w-44 rounded-2xl bg-black/85 border border-white/10 backdrop-blur-md p-1.5 pointer-events-auto flex flex-col gap-0.5">
+                                    {hudActions.map((a) => (
+                                        <button key={a.id} onClick={() => { a.onClick(); setMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-zinc-200 hover:bg-white/10 text-left" style={a.color ? { color: a.color } : undefined}>
+                                            <a.Icon className="w-4 h-4 shrink-0" />
+                                            <span className="text-[11px] uppercase tracking-widest font-bold flex-1">{a.label}</span>
+                                            {a.badge !== undefined && <span className="w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{a.badge}</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
                         )}
-                    </button>
-                    <button onClick={() => setSettingsOpen(true)} className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-w-[44px] min-h-[44px] flex items-center justify-center" title="Settings">
-                        <SlidersHorizontal className="w-4 h-4" />
-                    </button>
+                    </div>
+
+                    {/* desktop: inline buttons (room exists) */}
+                    <div className="hidden lg:flex items-center gap-2">
+                        {hudActions.map((a) => (
+                            <button key={a.id} onClick={a.onClick} className="pointer-events-auto px-4 py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative min-h-[44px] flex items-center gap-2" title={a.label} style={a.color ? { color: a.color } : undefined}>
+                                <a.Icon className="w-4 h-4" />
+                                <span className="text-[10px] uppercase tracking-widest">{a.label}</span>
+                                {a.badge !== undefined && <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{a.badge}</span>}
+                            </button>
+                        ))}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0 lg:px-5">
                     <FounderBadge founderNumber={founderNumber} size={18} />
@@ -717,7 +747,7 @@ export default function WorldPage() {
 
             {worldIntroDone && !worldPaused && (
                 <div
-                    className={`absolute inset-x-2 lg:left-1/2 lg:inset-x-auto lg:-translate-x-1/2 z-[9] pointer-events-none flex flex-col items-center gap-1.5 ${settings.showMinimap ? 'pr-28 lg:pr-0' : ''}`}
+                    className={`absolute inset-x-2 lg:left-1/2 lg:inset-x-auto lg:-translate-x-1/2 z-[9] pointer-events-none flex flex-col items-center gap-1.5 transition-opacity duration-1000 ${topBannersUp ? 'opacity-100' : 'opacity-0'} ${settings.showMinimap ? 'pr-28 lg:pr-0' : ''}`}
                     style={{ top: 'calc(5.75rem + env(safe-area-inset-top))' }}
                 >
                     <WorldEventBanner event={worldEvent} />
