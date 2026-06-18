@@ -2,10 +2,10 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { DEST_BY_POI, type Destination } from '@/lib/game/destinations';
 import {
     activeDestinationFocus,
+    DESTINATION_ORDER,
     EDEN_SEALED,
     isDestinationComplete,
     isDestinationUnlocked,
-    playableDestinationOrder,
     unlockBlockMessage,
     type DestinationId,
 } from '@/lib/game/progression';
@@ -94,7 +94,9 @@ function rowState(poiId: DestinationId, c: GameCharacter): PortalRowState {
 }
 
 export function buildPortalBoard(c: GameCharacter): PortalBoard {
-    const order = playableDestinationOrder();
+    // Always list all five ages on the board (Eden included), even while sealed,
+    // so players can see every road that is coming.
+    const order = DESTINATION_ORDER;
     const focusId = activeDestinationFocus(c);
     const rows: PortalBoardRow[] = [];
 
@@ -135,7 +137,7 @@ export function buildPortalBoard(c: GameCharacter): PortalBoard {
 }
 
 export function nextPortalStepHint(row: PortalBoardRow): string | null {
-    if (row.state === 'sealed') return 'The garden veil has not yet lifted.';
+    if (row.state === 'sealed') return 'Still being forged — its hour has not yet come.';
     if (row.state === 'locked') return row.sealNote || 'Complete the prior road first.';
     if (row.state === 'complete') return 'This gate stands fully open.';
     const pending = row.steps.find((s) => !s.done);

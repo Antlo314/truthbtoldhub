@@ -125,7 +125,16 @@ export default function HutPortalBoard({ character }: Props) {
                 <p className="text-[10px] text-aether-gold/75 mb-3 leading-relaxed">
                     Truth marks <strong className="text-aether-gold">{DEST_BY_POI[board.focusId]?.name.split('—')[0].trim() || 'the next gate'}</strong> as your current road.
                 </p>
-            ) : null}
+            ) : (
+                <div className="rounded-xl border border-aether-gold/25 bg-aether-gold/[0.06] p-3 mb-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold mb-1">The ages are being forged</p>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">
+                        Every road is veiled while we build it out — realms, guardians, trials, and relics are on the way.
+                        For now, make this Hut your home: temper your arms at the Forge, study the Library, walk with the Offering,
+                        and ask Truth what you will. Watch this space — the veils will part soon.
+                    </p>
+                </div>
+            )}
 
             <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar pr-0.5">
                 {board.rows.map((row) => (
