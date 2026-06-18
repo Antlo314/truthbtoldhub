@@ -135,8 +135,12 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
             <div className="absolute inset-x-0 top-0" style={{ height: '45%', background: 'repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 64px)' }} />
             <div className="absolute inset-x-0 bottom-0" style={{ height: '55%', background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 46px)' }} />
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 80% at 50% 30%, rgba(251,191,36,0.10), transparent 60%)' }} />
-            {/* hearth/floor shadow for depth */}
-            <div className="absolute inset-x-0 pointer-events-none" style={{ top: '42%', height: '6%', background: 'linear-gradient(180deg, rgba(0,0,0,0.4), transparent)' }} />
+            {/* wall/floor seam: shadow + a carved wood baseboard for a finished edge */}
+            <div className="absolute inset-x-0 pointer-events-none" style={{ top: '41%', height: '5%', background: 'linear-gradient(180deg, rgba(0,0,0,0.45), transparent)' }} />
+            <div className="absolute inset-x-0 pointer-events-none" style={{ top: '44.4%', height: '1%', background: 'linear-gradient(180deg,#7a5126 0%,#5a3a1d 60%,#3a2412 100%)', boxShadow: '0 3px 6px rgba(0,0,0,0.45)' }} />
+            {/* cozy vignette */}
+            <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: 'inset 0 0 18vmin 5vmin rgba(0,0,0,0.5)' }} />
+            <style>{`@keyframes hutFlicker{0%,100%{opacity:.5}45%{opacity:.92}70%{opacity:.36}}@keyframes hutFloat{0%{transform:translateY(0);opacity:0}12%{opacity:.85}88%{opacity:.5}100%{transform:translateY(-42vmin);opacity:0}}`}</style>
 
             {/* ---- header ---- */}
             <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4" style={{ paddingTop: 'calc(0.7rem + env(safe-area-inset-top))' }}>
@@ -150,10 +154,19 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                 <div className="w-[44px]" />
             </div>
 
-            {/* ---- decor (non-interactive) ---- */}
-            <div className="absolute pointer-events-none" style={{ left: '4%', top: '20%' }}><KenneyObject col={19} row={0} vmin={7} /></div>
-            <div className="absolute pointer-events-none" style={{ left: '90%', top: '20%' }}><KenneyObject col={19} row={0} vmin={7} /></div>
+            {/* ---- decor (non-interactive) — candelabras cast a flickering glow ---- */}
+            <div className="absolute pointer-events-none" style={{ left: '4%', top: '20%' }}>
+                <div className="absolute" style={{ left: '50%', top: '35%', transform: 'translate(-50%,-50%)', width: '15vmin', height: '15vmin', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,178,80,0.42), transparent 62%)', animation: 'hutFlicker 2.6s ease-in-out infinite' }} />
+                <KenneyObject col={19} row={0} vmin={7} />
+            </div>
+            <div className="absolute pointer-events-none" style={{ left: '90%', top: '20%' }}>
+                <div className="absolute" style={{ left: '50%', top: '35%', transform: 'translate(-50%,-50%)', width: '15vmin', height: '15vmin', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,178,80,0.42), transparent 62%)', animation: 'hutFlicker 3.1s ease-in-out infinite' }} />
+                <KenneyObject col={19} row={0} vmin={7} />
+            </div>
             <div className="absolute pointer-events-none" style={{ left: '49%', top: '74%' }}><KenneyObject col={16} row={0} vmin={7} /></div>
+
+            {/* a woven rug anchors the center under Truth */}
+            <div className="absolute pointer-events-none" style={{ left: '50%', top: '47%', transform: 'translate(-50%,-50%)', width: '48vmin', height: '19vmin', borderRadius: '50%', background: 'radial-gradient(ellipse at center, rgba(178,68,40,0.55), rgba(120,42,28,0.4) 52%, transparent 72%)', border: '0.4vmin solid rgba(251,191,36,0.16)' }} />
 
             {/* ---- Truth, center ---- */}
             <button
@@ -179,6 +192,13 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     <span className="mt-1 px-2 py-0.5 rounded-full bg-black/55 border border-aether-gold/25 text-[8px] font-black uppercase tracking-[0.18em] text-aether-gold/90 opacity-90 group-hover:opacity-100 whitespace-nowrap">{s.label}</span>
                 </button>
             ))}
+
+            {/* drifting embers for warmth */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 6 }}>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <span key={i} className="absolute rounded-full" style={{ left: `${12 + i * 14}%`, bottom: '18%', width: '0.7vmin', height: '0.7vmin', background: 'rgba(255,190,95,0.85)', filter: 'blur(0.25vmin)', animation: `hutFloat ${6 + i * 0.8}s linear ${i * 1.1}s infinite` }} />
+                ))}
+            </div>
 
             {/* ---- station panel ---- */}
             {active && (
