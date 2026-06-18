@@ -12,6 +12,8 @@ import HutConsumableCraft from '@/components/game/HutConsumableCraft';
 import TruthQA from '@/components/game/TruthQA';
 import DonationSection from '@/components/DonationSection';
 import { useSoulStore } from '@/lib/store/useSoulStore';
+import { fetchTestimonies, postTestimony, deleteTestimony, TESTIMONY_MAX, type Testimony } from '@/lib/game/testimony';
+import { supabase } from '@/lib/supabase';
 
 // ============================================================
 //  TRUTH'S HUT — a small place you ENTER. Instead of one
@@ -104,6 +106,17 @@ const STATIONS: Station[] = [
     { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 72, y: 86, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
 ];
 
+const TOUR: [string, string][] = [
+    ['The Ledger', 'my daily Word — and the testimonies of souls'],
+    ['Your Soul', 'shape your name, title & testament in the glass'],
+    ['The Seeing Glass', 'visions & films I leave for you'],
+    ['The Archive', 'scrolls & frequencies to study'],
+    ['The Forge', 'temper your arms & brew tonics'],
+    ['The Offering', 'walk with the work'],
+    ['The Wayfinder', 'the open ages & the ledger of souls'],
+    ['Ask Truth', 'pry the hood — ask me anything'],
+];
+
 interface HutInteriorProps {
     character: GameCharacter;
     bulletins: Bulletin[];
@@ -120,6 +133,17 @@ interface HutInteriorProps {
 export default function HutInterior({ character, bulletins, media, isArchitect, worldEvent, onClose, onOpenForge, onToast, initialStation }: HutInteriorProps) {
     const [active, setActive] = useState<StationId | null>(initialStation ?? null);
     const openStation = useCallback((id: StationId) => setActive(id), []);
+
+    // first-visit walkthrough — a one-time legend of the room
+    const [showTour, setShowTour] = useState(false);
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (!initialStation && !localStorage.getItem('tbth-hut-toured')) setShowTour(true);
+    }, [initialStation]);
+    const dismissTour = useCallback(() => {
+        try { localStorage.setItem('tbth-hut-toured', '1'); } catch { /* ignore */ }
+        setShowTour(false);
+    }, []);
 
     const docs = media.filter((m) => m.kind === 'pdf' || m.kind === 'audio' || m.kind === 'link');
     const visions = media.filter((m) => m.kind === 'video' || m.kind === 'image');
@@ -203,6 +227,26 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                 ))}
             </div>
 
+            {/* ---- first-visit walkthrough ---- */}
+            {showTour && (
+                <div className="absolute inset-0 z-40 bg-black/85 backdrop-blur-sm flex items-center justify-center p-5" onClick={dismissTour}>
+                    <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-aether-gold/25 max-h-[88dvh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Truth's Hut</p>
+                        <h2 className="font-ritual text-2xl gold-shimmer mb-3">Welcome Home{character.name ? `, ${character.name}` : ''}</h2>
+                        <p className="text-sm text-zinc-300 leading-relaxed mb-4">This is the heart of the world. Tap anything in the room to draw near — here is what dwells here:</p>
+                        <ul className="space-y-2.5 mb-5">
+                            {TOUR.map(([label, desc]) => (
+                                <li key={label} className="flex gap-2.5">
+                                    <span className="text-aether-gold mt-0.5 shrink-0">✦</span>
+                                    <span className="text-sm text-zinc-300 leading-snug"><span className="text-white font-bold">{label}</span> — {desc}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <button onClick={dismissTour} className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>Enter the Hut</button>
+                    </div>
+                </div>
+            )}
+
             {/* ---- station panel ---- */}
             {active && (
                 <div className="absolute inset-0 z-30 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setActive(null)}>
@@ -244,6 +288,7 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                                         ))}
                                     </div>
                                 )}
+                                <TestimonyWall authorName={character.name} isArchitect={isArchitect} />
                                 {isArchitect && (
                                     <a href="/hut-admin" className="mt-5 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                         Tend the Hut
@@ -314,6 +359,87 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                             </>
                         )}
                     </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// The Testimony Wall — souls leave short words beneath Truth's daily
+// Word. Async + moderatable (delete own, or any as Architect). Not chat.
+function TestimonyWall({ authorName, isArchitect }: { authorName: string; isArchitect: boolean }) {
+    const [items, setItems] = useState<Testimony[]>([]);
+    const [draft, setDraft] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [posting, setPosting] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+    const [uid, setUid] = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        setItems(await fetchTestimonies(40));
+        setLoading(false);
+    }, []);
+    useEffect(() => { load(); }, [load]);
+    useEffect(() => { supabase.auth.getSession().then(({ data }) => setUid(data.session?.user?.id ?? null)); }, []);
+
+    const submit = async () => {
+        if (!draft.trim()) return;
+        setPosting(true);
+        setErr(null);
+        try {
+            await postTestimony(draft, authorName);
+            setDraft('');
+            await load();
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : 'Could not post.');
+        } finally {
+            setPosting(false);
+        }
+    };
+    const remove = async (id: string) => {
+        try { await deleteTestimony(id); await load(); } catch { /* ignore */ }
+    };
+
+    return (
+        <div className="mt-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Testimonies · souls who answered</p>
+            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-3 mb-4">
+                <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value.slice(0, TESTIMONY_MAX))}
+                    rows={2}
+                    placeholder="Leave a word for the souls who walk after you…"
+                    className="w-full bg-transparent text-sm text-white leading-relaxed focus:outline-none resize-none placeholder:text-zinc-600"
+                />
+                <div className="flex items-center justify-between mt-1">
+                    <span className="text-[8px] text-zinc-600">{draft.length}/{TESTIMONY_MAX}</span>
+                    <button onClick={submit} disabled={posting || !draft.trim()} className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-black disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                        {posting ? 'Speaking…' : 'Speak'}
+                    </button>
+                </div>
+                {err && <p className="text-[10px] text-red-400 mt-1">{err}</p>}
+            </div>
+            {loading ? (
+                <p className="text-[11px] text-zinc-600 text-center py-4 font-mono uppercase tracking-widest">Listening…</p>
+            ) : items.length === 0 ? (
+                <p className="text-[11px] text-zinc-600 text-center py-4 font-mono uppercase tracking-widest">No testimonies yet — be the first to answer.</p>
+            ) : (
+                <div className="space-y-2">
+                    {items.map((t) => (
+                        <div key={t.id} className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-aether-gold/80 truncate">{t.author_name}</p>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[8px] font-mono text-zinc-600">{t.created_at?.slice(0, 10)}</span>
+                                    {(isArchitect || (uid && t.author_id === uid)) && (
+                                        <button onClick={() => remove(t.id)} className="text-zinc-600 hover:text-red-500 text-[9px] uppercase tracking-widest">remove</button>
+                                    )}
+                                </div>
+                            </div>
+                            <p className="text-sm text-white/85 leading-snug mt-1 whitespace-pre-wrap break-words">{t.body}</p>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
