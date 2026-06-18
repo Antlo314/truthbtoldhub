@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle } from 'lucide-react';
+import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthOffscreen } from '@/lib/game/truth';
 import { formatBytes, type Bulletin, type DispatchMedia, type MediaKind } from '@/lib/game/hut';
 import type { WorldEvent } from '@/lib/game/worldEvents';
 import HutLedger from '@/components/game/HutLedger';
 import HutPortalBoard from '@/components/game/HutPortalBoard';
+import HutFrequencies from '@/components/game/HutFrequencies';
 import HutConsumableCraft from '@/components/game/HutConsumableCraft';
 import TruthQA from '@/components/game/TruthQA';
 import DonationSection from '@/components/DonationSection';
@@ -145,7 +146,8 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
         setShowTour(false);
     }, []);
 
-    const docs = media.filter((m) => m.kind === 'pdf' || m.kind === 'audio' || m.kind === 'link');
+    const scrolls = media.filter((m) => m.kind === 'pdf' || m.kind === 'link');
+    const frequencies = media.filter((m) => m.kind === 'audio');
     const visions = media.filter((m) => m.kind === 'video' || m.kind === 'image');
 
     return (
@@ -303,15 +305,34 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                             <>
                                 <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">{active === 'visions' ? 'The Seeing Glass' : 'The Archive'}</p>
                                 <h2 className="font-ritual text-2xl gold-shimmer mb-4">{active === 'visions' ? 'Visions & Films' : 'Scrolls & Frequencies'}</h2>
-                                <MediaList items={active === 'visions' ? visions : docs} />
-                                {active === 'archive' && (
-                                    <a
-                                        href="/library"
-                                        className="mt-5 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black"
-                                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                                    >
-                                        Enter the Library →
-                                    </a>
+                                {active === 'visions' ? (
+                                    <MediaList items={visions} />
+                                ) : (
+                                    <div className="space-y-6">
+                                        <section>
+                                            <div className="flex items-center gap-2 mb-2.5">
+                                                <ScrollText className="w-3.5 h-3.5 text-aether-gold/80 shrink-0" />
+                                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold/80">Scrolls</p>
+                                                <span className="text-[9px] text-zinc-500 truncate">· writings &amp; teachings</span>
+                                            </div>
+                                            <MediaList items={scrolls} emptyLabel="No scrolls posted yet — the Library holds the full collection." />
+                                            <a
+                                                href="/library"
+                                                className="mt-3 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black"
+                                                style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                            >
+                                                Enter the Library →
+                                            </a>
+                                        </section>
+                                        <section>
+                                            <div className="flex items-center gap-2 mb-2.5">
+                                                <Radio className="w-3.5 h-3.5 text-aether-gold/80 shrink-0" />
+                                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold/80">Frequencies</p>
+                                                <span className="text-[9px] text-zinc-500 truncate">· transmissions &amp; the 400 soundtrack</span>
+                                            </div>
+                                            <HutFrequencies tracks={frequencies} />
+                                        </section>
+                                    </div>
                                 )}
                             </>
                         )}
@@ -530,9 +551,9 @@ function ProfileStation() {
     );
 }
 
-function MediaList({ items }: { items: DispatchMedia[] }) {
+function MediaList({ items, emptyLabel }: { items: DispatchMedia[]; emptyLabel?: string }) {
     if (items.length === 0) {
-        return <p className="text-[11px] text-zinc-500 text-center py-8 font-mono uppercase tracking-widest">Nothing here yet — return soon.</p>;
+        return <p className="text-[11px] text-zinc-500 text-center py-8 font-mono uppercase tracking-widest">{emptyLabel || 'Nothing here yet — return soon.'}</p>;
     }
     return (
         <div className="space-y-2">
