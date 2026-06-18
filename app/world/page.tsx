@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, Menu, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Menu, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical, Backpack } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
@@ -673,22 +673,23 @@ export default function WorldPage() {
             {/* HUD — compact on mobile, full-width desktop bar with larger targets */}
             <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] lg:max-w-none flex items-center justify-between gap-2 px-4 lg:px-8 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center gap-1.5 lg:gap-2">
-                    <Link href="/awakening/path" className="pointer-events-auto p-2.5 lg:p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" title="Return">
-                        <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
-                    </Link>
-
-                    {/* mobile: one menu button keeps room for the name + path */}
+                    {/* mobile: a single collapsible menu (Return + all actions) */}
                     <div className="relative lg:hidden">
-                        <button onClick={() => setMenuOpen((v) => !v)} className="pointer-events-auto p-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold min-w-[44px] min-h-[44px] flex items-center justify-center relative" title="Menu" aria-label="Menu">
-                            <Menu className="w-4 h-4" />
-                            {character.skillPoints > 0 && (
+                        <button onClick={() => setMenuOpen((v) => !v)} className={`pointer-events-auto p-2.5 rounded-full border backdrop-blur-sm min-w-[44px] min-h-[44px] flex items-center justify-center relative transition-colors ${menuOpen ? 'bg-aether-gold/20 border-aether-gold/40 text-aether-gold' : 'bg-black/45 border-white/10 text-zinc-300'}`} title="Menu" aria-label="Menu">
+                            {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                            {!menuOpen && character.skillPoints > 0 && (
                                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-aether-gold text-[8px] font-black text-black flex items-center justify-center">{character.skillPoints}</span>
                             )}
                         </button>
                         {menuOpen && (
                             <>
                                 <div className="fixed inset-0 z-[18] pointer-events-auto" onClick={() => setMenuOpen(false)} />
-                                <div className="absolute left-0 top-full mt-2 z-[19] w-44 rounded-2xl bg-black/85 border border-white/10 backdrop-blur-md p-1.5 pointer-events-auto flex flex-col gap-0.5">
+                                <div className="absolute left-0 top-full mt-2 z-[19] w-48 rounded-2xl bg-black/85 border border-white/10 backdrop-blur-md p-1.5 pointer-events-auto flex flex-col gap-0.5 shadow-2xl">
+                                    <Link href="/awakening/path" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-zinc-300 hover:bg-white/10">
+                                        <ArrowLeft className="w-4 h-4 shrink-0" />
+                                        <span className="text-[11px] uppercase tracking-widest font-bold flex-1">Return</span>
+                                    </Link>
+                                    <div className="h-px bg-white/10 my-0.5" />
                                     {hudActions.map((a) => (
                                         <button key={a.id} onClick={() => { a.onClick(); setMenuOpen(false); }} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-zinc-200 hover:bg-white/10 text-left" style={a.color ? { color: a.color } : undefined}>
                                             <a.Icon className="w-4 h-4 shrink-0" />
@@ -701,7 +702,10 @@ export default function WorldPage() {
                         )}
                     </div>
 
-                    {/* desktop: inline buttons (room exists) */}
+                    {/* desktop: back + inline buttons (room exists) */}
+                    <Link href="/awakening/path" className="hidden lg:flex pointer-events-auto p-3 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-white min-w-[44px] min-h-[44px] items-center justify-center" title="Return">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
                     <div className="hidden lg:flex items-center gap-2">
                         {hudActions.map((a) => (
                             <button key={a.id} onClick={a.onClick} className="pointer-events-auto px-4 py-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-300 hover:text-aether-gold relative min-h-[44px] flex items-center gap-2" title={a.label} style={a.color ? { color: a.color } : undefined}>
@@ -723,9 +727,9 @@ export default function WorldPage() {
                     onClick={() => setSatchelOpen(true)}
                     className="pointer-events-auto flex items-center gap-1.5 px-3.5 lg:px-5 py-2.5 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm hover:border-aether-gold/40 min-h-[44px]"
                 >
-                    <Gem className="w-4 h-4 text-aether-gold" />
+                    <Backpack className="w-4 h-4 text-aether-gold" />
                     <span className="text-xs lg:text-sm font-black text-aether-gold">{character.inventory.length}</span>
-                    <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-aether-gold/80">Relics</span>
+                    <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-aether-gold/80">Satchel</span>
                 </button>
             </div>
 
@@ -844,11 +848,19 @@ export default function WorldPage() {
             {/* satchel of relics */}
             {satchelOpen && (
                 <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setSatchelOpen(false)}>
-                    <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[82dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setSatchelOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white">
+                    <div
+                        className="w-full max-w-md rounded-[1.75rem] p-6 pt-11 max-h-[82dvh] overflow-y-auto custom-scrollbar relative"
+                        style={{ background: 'linear-gradient(165deg,#5a3d22 0%,#3f2a16 55%,#2b1d0f 100%)', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.35), inset 0 0 0 4px rgba(214,160,90,0.22), 0 22px 55px rgba(0,0,0,0.65)' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* leather flap, buckle & stitching — this is a satchel */}
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-9 rounded-t-[1.75rem]" style={{ background: 'linear-gradient(180deg,#6b4a28,#4a3119)', boxShadow: 'inset 0 1px 0 rgba(255,220,160,0.22), 0 3px 7px rgba(0,0,0,0.4)' }} />
+                        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-sm" style={{ top: '1.55rem', width: '2.2rem', height: '0.95rem', background: 'linear-gradient(180deg,#f3cf8a,#b9852f)', border: '1px solid rgba(80,50,15,0.7)', boxShadow: '0 1px 2px rgba(0,0,0,0.4)' }} />
+                        <div className="pointer-events-none absolute inset-[6px] rounded-[1.5rem] border border-dashed border-amber-200/20" />
+                        <button onClick={() => setSatchelOpen(false)} className="absolute top-2.5 right-3 z-10 p-2 rounded-full bg-black/30 border border-amber-200/20 text-amber-100/70 hover:text-white">
                             <X className="w-4 h-4" />
                         </button>
-                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Inventory</p>
+                        <p className="text-[10px] tracking-[0.4em] uppercase text-amber-200/70 mb-1">Inventory</p>
                         <h2 className="font-ritual text-2xl gold-shimmer mb-4">Your Satchel</h2>
 
                         {/* raw materials backpack */}
