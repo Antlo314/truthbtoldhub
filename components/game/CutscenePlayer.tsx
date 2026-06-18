@@ -73,7 +73,6 @@ export default function CutscenePlayer({ scene, onComplete, onSkip, className = 
                 {!loadSettings().subtitles && scene.line && (
                     <p className="font-ritual text-lg md:text-2xl text-white/90 leading-relaxed max-w-xl">{scene.line}</p>
                 )}
-                <p className="mt-4 text-[9px] uppercase tracking-[0.35em] text-white/30">tap to skip · unmute top-left</p>
             </div>
 
             <button
