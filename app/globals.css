@@ -299,3 +299,33 @@ h1, h2, h3, .font-ritual {
     background-size: 200% 100%;
     animation: eden-border-shimmer 3s linear infinite;
 }
+
+/* ─── The Codex Journal — tabbed grimoire ────────────────────────────── */
+/* Hide the scrollbar on horizontal tab strips while keeping it scrollable */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Whole panel cross-fades when the active tab changes (keyed remount) */
+@keyframes journalPanelIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.journal-tab-panel { animation: journalPanelIn 0.3s ease both; }
+
+/* Each record card rises in; inline animation-delay staggers the column */
+@keyframes journalCardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.journal-card-in { animation: journalCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Slow gold breathing behind the codex header crest */
+@keyframes codexCrestGlow {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 0.9; }
+}
+.codex-crest-glow { animation: codexCrestGlow 4.5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .journal-tab-panel, .journal-card-in, .codex-crest-glow { animation: none; }
+}
