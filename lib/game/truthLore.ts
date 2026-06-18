@@ -228,6 +228,48 @@ export function truthDepthTier(c: GameCharacter): 0 | 1 | 2 | 3 {
     return 0;
 }
 
+// ------------------------------------------------------------------
+//  TRUST — Truth does not bare his wounds for the asking. Trust is
+//  EARNED by walking with him: recovering relics, felling guardians,
+//  answering riddles, walking a path. The deepest, most personal
+//  threads stay sealed until a soul has truly invested in the journey.
+// ------------------------------------------------------------------
+export function truthTrust(c: GameCharacter): number {
+    let t = 0;
+    t += (c.inventory?.length || 0) * 4;        // relics recovered from the ages
+    t += (c.cleared?.length || 0) * 4;          // guardians felled
+    t += (c.solved?.length || 0) * 3;           // riddles answered
+    t += Math.min(8, c.skills?.length || 0);    // the path walked (attunement)
+    t += truthDepth(c);                          // sincere conversation
+    if (c.sourceReturned) t += 12;               // returned to the Source
+    return t;
+}
+
+export type TruthTrustTier = 0 | 1 | 2 | 3 | 4;
+export function truthTrustTier(c: GameCharacter): TruthTrustTier {
+    const t = truthTrust(c);
+    if (t >= 24) return 4;
+    if (t >= 16) return 3;
+    if (t >= 8) return 2;
+    if (t >= 3) return 1;
+    return 0;
+}
+const TRUST_LABELS = ['A Stranger', 'Known to Him', 'Trusted', 'A Confidant', 'A Witness'] as const;
+export function truthTrustLabel(c: GameCharacter): string {
+    return TRUST_LABELS[truthTrustTier(c)];
+}
+
+// Beyond requires/minDepth, the deeper wounds need real investment (truthTrust)
+// before Truth will open them. Surface threads are absent here (always open).
+// Tune freely — higher = more guarded. (Eden+Giza fully cleared ≈ ~30+ trust.)
+const TRUTH_TRUST_GATE: Record<string, number> = {
+    family: 6, mistakes: 6, walked_away: 6,
+    wilderness: 8, vision: 8, spark: 8, innocence: 10,
+    drinking: 14, fasting: 14, imperfect: 14, burden: 14,
+    transparency: 16, need_from_you: 16, by_any_means: 18, series_400: 18,
+    give_back: 22, fasting_cost: 22, children: 26,
+};
+
 export function truthAccountPages(c: GameCharacter): TruthAccountPage[] {
     const asked = new Set(truthQuestionsAsked(c));
     return TRUTH_QUESTIONS
@@ -249,6 +291,8 @@ export function isTruthQuestionUnlocked(q: TruthQuestion, c: GameCharacter): boo
     const asked = new Set(truthQuestionsAsked(c));
     if (q.requires?.length && !q.requires.every((id) => asked.has(id))) return false;
     if (q.minDepth != null && truthDepth(c) < q.minDepth) return false;
+    const trustGate = TRUTH_TRUST_GATE[q.id];
+    if (trustGate != null && truthTrust(c) < trustGate) return false;
     return true;
 }
 
@@ -286,6 +330,15 @@ const DEFLECT_NOT_NOW = [
     'Brother… not now. Pry gently — start with what is already open.',
 ];
 
+// When the only thing missing is TRUST — the soul hasn't yet walked enough of
+// the road for Truth to bare this wound.
+const DEFLECT_TRUST = [
+    'You ask for the wound, but I do not yet know that you will stay. Walk the road — gather what the portals guard — then ask me again.',
+    'Trust is not given for the asking, brother. Fell a guardian. Carry a relic. Return. Then this thread will open.',
+    'I have been bled by men who only wanted my story. Show me you will walk before I show you my scars.',
+    'Not yet. Words are cheap; the road is not. Invest in the journey, and I will open this to you.',
+];
+
 /** Short deflection when player taps a locked thread */
 export function truthDeflection(c?: GameCharacter, questionId?: string): string {
     if (c && questionId) {
@@ -294,8 +347,12 @@ export function truthDeflection(c?: GameCharacter, questionId?: string): string 
             const asked = new Set(truthQuestionsAsked(c));
             const reqsMet = !q.requires?.length || q.requires.every((id) => asked.has(id));
             const depthGap = q.minDepth != null ? q.minDepth - truthDepth(c) : 0;
-            if (reqsMet && depthGap > 0 && depthGap <= 2) return deflectPick(DEFLECT_SOON);
+            const trustGate = TRUTH_TRUST_GATE[q.id];
+            const trustShort = trustGate != null && truthTrust(c) < trustGate;
             if (!reqsMet) return deflectPick(DEFLECT_NOT_NOW);
+            if (depthGap > 0 && depthGap <= 2) return deflectPick(DEFLECT_SOON);
+            if (trustShort) return deflectPick(DEFLECT_TRUST);
+            if (depthGap > 0) return deflectPick(DEFLECT_NOT_NOW);
         }
     }
     return deflectPick([...DEFLECT_SOON, ...DEFLECT_NOT_NOW]);

@@ -15,6 +15,7 @@ import {
     truthDeflection,
     truthQAIntro,
     truthAccountForQuestion,
+    truthTrustLabel,
 } from '@/lib/game/truthLore';
 
 interface Props {
@@ -69,8 +70,9 @@ export default function TruthQA({ character, onAsked, onJournalUnlock }: Props) 
         <div className="space-y-4">
             <div className="rounded-2xl border border-orange-500/20 bg-orange-950/20 px-4 py-3">
                 <p className="text-[10px] leading-relaxed text-white/75 italic">{truthQAIntro(character)}</p>
-                <p className="mt-2 text-[8px] font-mono uppercase tracking-widest text-orange-400/70">
-                    Threads opened · {depth} / {total}
+                <p className="mt-2 flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-orange-400/70">
+                    <span>His trust · {truthTrustLabel(character)}</span>
+                    <span className="text-zinc-500">{depth} / {total} threads</span>
                 </p>
             </div>
 
@@ -123,11 +125,10 @@ export default function TruthQA({ character, onAsked, onJournalUnlock }: Props) 
                                 </span>
                             </button>
                         ))}
-                        {locked.length > 4 && (
-                            <p className="text-[8px] text-zinc-600 text-center pt-1">
-                                +{locked.length - 4} more when you earn his trust
-                            </p>
-                        )}
+                        <p className="text-[8px] text-zinc-600 text-center pt-1 leading-relaxed">
+                            {locked.length > 4 && <>+{locked.length - 4} more sealed. </>}
+                            His deepest wounds open only as you <span className="text-orange-400/60">walk with him</span> — gather relics, fell guardians, return.
+                        </p>
                     </div>
                 </div>
             )}
