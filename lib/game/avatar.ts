@@ -78,35 +78,50 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
     const fem = cfg.build === 'fem';
 
     // ---- legs / lower body ----
-    if (cfg.outfit === 'dress' || (fem && cfg.outfit === 'robe')) {
-        // a skirt that flares
-        rect(g, 5, 16, 6, 3, top);
-        rect(g, 4, 19, 8, 3, topShade);
-        // legs peeking below
-        rect(g, 5, 22, 2, 1, skin); rect(g, 9, 22, 2, 1, skin);
-        rect(g, 5, 22, 6, 2, boot); // shoes row
+    // Feminine builds read distinctly female: a flared skirt, or — under
+    // trousers — wide hips tapering to slim legs. A dress skirts either build.
+    // Masculine builds keep straight, even trousers.
+    const lLift = step === 1 ? 1 : 0;
+    const rLift = step === 2 ? 1 : 0;
+    const skirted = cfg.outfit === 'dress' || (fem && cfg.outfit === 'robe');
+    if (skirted) {
+        // a skirt that flares from a narrow waist down to a wide hem
+        rect(g, 6, 16, 4, 1, top);
+        rect(g, 5, 17, 6, 2, top);
+        rect(g, 4, 19, 8, 2, top);
+        rect(g, 4, 20, 8, 1, topShade);                            // hem shadow
+        rect(g, 5, 21, 2, 1, skin); rect(g, 9, 21, 2, 1, skin);    // calves peek
+        rect(g, 5, 22, 2, 2, boot); rect(g, 9, 22, 2, 2, boot);    // shoes
+    } else if (fem) {
+        // wide hips taper to slim legs held close together
+        rect(g, 4, 16, 8, 1, bottom);                              // hip line, wide
+        rect(g, 5, 17, 6, 2, bottom);                              // hips / upper thighs
+        rect(g, 5, 19, 2, 3 - lLift, bottom); rect(g, 9, 19, 2, 3 - rLift, bottom);
+        rect(g, 5, 22 - lLift, 2, 2, boot); rect(g, 9, 22 - rLift, 2, 2, boot);
+        px(g, 7, 18, shadeHex(bottom)); px(g, 8, 18, shadeHex(bottom)); // inner-leg shadow
     } else {
-        // trousers + two legs with a centre gap; a lifted foot shortens its
-        // lower leg and raises its boot for the walk cycle.
-        const lLift = step === 1 ? 1 : 0;
-        const rLift = step === 2 ? 1 : 0;
+        // masculine trousers — two even legs with a centre gap; a lifted foot
+        // shortens its lower leg and raises its boot for the walk cycle.
         rect(g, 5, 16, 6, 4, bottom);
         rect(g, 5, 20, 2, 2 - lLift, bottom); rect(g, 9, 20, 2, 2 - rLift, bottom);
         rect(g, 5, 22 - lLift, 2, 2, boot); rect(g, 9, 22 - rLift, 2, 2, boot);
-        // crotch gap shadow
-        px(g, 7, 21, shade); px(g, 8, 21, shade);
+        px(g, 7, 21, shade); px(g, 8, 21, shade);                  // crotch gap shadow
     }
 
     // ---- torso (outfit top) ----
-    const torsoX = fem ? 6 : 5;
-    const torsoW = fem ? 4 : 6;
-    rect(g, torsoX, 10, torsoW, 6, top);
-    if (fem) { // shoulders a touch wider than waist
-        rect(g, 5, 10, 6, 2, top);
-        px(g, 6, 14, topShade); px(g, 9, 14, topShade);
+    if (fem) {
+        // an hourglass: shoulder line → bust → pinched waist → hips
+        rect(g, 5, 10, 6, 1, top);                                 // shoulders
+        rect(g, 6, 11, 4, 2, top);                                 // bust
+        px(g, 6, 12, topShade); px(g, 9, 12, topShade);            // under-bust curve
+        rect(g, 6, 13, 4, 1, top);                                 // waist band…
+        px(g, 6, 13, topShade); px(g, 9, 13, topShade);            // …pinched to ~2px
+        rect(g, 5, 14, 6, 2, top);                                 // hips widen back out
+        px(g, 7, 10, topShade); px(g, 8, 10, topShade);            // neckline
+    } else {
+        rect(g, 5, 10, 6, 6, top);                                 // broad, straight torso
+        rect(g, 7, 10, 2, 1, topShade);                            // collar
     }
-    // collar / neckline
-    rect(g, 7, 10, 2, 1, topShade);
     if (cfg.outfit === 'robe') { rect(g, 5, 14, 6, 2, topShade); } // robe hem
     if (cfg.outfit === 'vest') { px(g, 7, 11, topShade); px(g, 8, 11, topShade); px(g, 7, 13, topShade); px(g, 8, 13, topShade); }
 
