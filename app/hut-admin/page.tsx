@@ -17,8 +17,9 @@ import {
 } from '@/lib/game/hut';
 import {
     ArrowLeft, Megaphone, FileText, Film, Music, Image as ImageIcon, Link2,
-    Pin, PinOff, Trash2, Edit3, Upload, Loader2, Plus, ShieldAlert, ScrollText, X, Eye,
+    Pin, PinOff, Trash2, Edit3, Upload, Loader2, Plus, ShieldAlert, ScrollText, X, Eye, Feather,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 const CATEGORIES = ['General', 'Prophecy', 'History', 'Science', 'Scripture', 'Mission', 'Frequency'];
@@ -41,6 +42,10 @@ export default function HutAdminPage() {
     const [pubDate, setPubDate] = useState(today);
     const [posting, setPosting] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
+
+    // the Quill — Gemini draft assistant
+    const [quillTopic, setQuillTopic] = useState('');
+    const [quilling, setQuilling] = useState(false);
 
     // media state
     const [mTitle, setMTitle] = useState('');
@@ -80,6 +85,31 @@ export default function HutAdminPage() {
         setBody('');
         setPinned(false);
         setPubDate(today);
+    };
+
+    // Ask Gemini (server-side, Architect-gated) to draft the Word in Truth's
+    // voice; it fills the title/body for you to edit and post.
+    const draftWithQuill = async () => {
+        if (!quillTopic.trim()) return flash('Give the Quill a topic.');
+        setQuilling(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { flash('Session expired — sign in again.'); return; }
+            const res = await fetch('/api/quill', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ topic: quillTopic, kind: 'bulletin' }),
+            });
+            const data = await res.json();
+            if (!res.ok) { flash(data.error || 'The Quill faltered.'); return; }
+            if (data.title) setTitle(data.title);
+            if (data.body) setBody(data.body);
+            flash('The Quill has drafted a word — edit it, then post.');
+        } catch {
+            flash('The Quill could not reach the well.');
+        } finally {
+            setQuilling(false);
+        }
     };
 
     const post = async () => {
@@ -242,6 +272,30 @@ export default function HutAdminPage() {
                 {tab === 'compose' && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
+                            {/* The Quill — Gemini drafts the Word in Truth's voice */}
+                            <div className="glass bg-aether-gold/[0.04] border border-aether-gold/20 rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center gap-2 text-aether-gold">
+                                    <Feather className="w-4 h-4" />
+                                    <span className="text-[10px] uppercase tracking-[0.2em] font-black">The Quill · draft in Truth's voice</span>
+                                </div>
+                                <textarea
+                                    value={quillTopic}
+                                    onChange={(e) => setQuillTopic(e.target.value)}
+                                    placeholder="What should today's Word be about? A theme, a verse, a truth to unveil…"
+                                    rows={2}
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white leading-relaxed focus:outline-none focus:border-aether-gold resize-none"
+                                />
+                                <button
+                                    onClick={draftWithQuill}
+                                    disabled={quilling}
+                                    className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold border border-aether-gold/40 hover:bg-aether-gold/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {quilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Feather className="w-4 h-4" />}
+                                    {quilling ? 'The Quill is writing…' : 'Draft with the Quill'}
+                                </button>
+                                <p className="text-[9px] text-zinc-500 leading-relaxed">The Quill suggests; you edit and post. Drafts come from Gemini — review every word before publishing.</p>
+                            </div>
+
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xs uppercase tracking-widest font-black text-zinc-400">{editId ? 'Edit Dispatch' : 'New Daily Dispatch'}</h2>
                                 {editId && (
