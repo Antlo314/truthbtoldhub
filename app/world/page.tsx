@@ -5,12 +5,9 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, FileText, Film, Music, Image as ImageIcon, Link2, Pin, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, Heart, Scroll, MessageCircle, Trophy, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical } from 'lucide-react';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
-import HutLedger from '@/components/game/HutLedger';
-import HutPortalBoard from '@/components/game/HutPortalBoard';
-import HutConsumableCraft from '@/components/game/HutConsumableCraft';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
 import WorldPresenceBanner from '@/components/game/WorldPresenceBanner';
 import { fetchWorldPresence, pingWorldWalk, type WorldPresence } from '@/lib/game/worldPresence';
@@ -32,7 +29,7 @@ import { combatRelicBonuses, resonanceTier, shadeCountForTier, resonanceLabel } 
 import { pathCombatMods } from '@/lib/game/pathPowers';
 import { hiddenPoiById } from '@/lib/game/hiddenPois';
 import { SCROLL_BY_ID } from '@/lib/game/scrolls';
-import { fetchBulletins, fetchMedia, getArchitectStatus, formatBytes, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
+import { fetchBulletins, fetchMedia, getArchitectStatus, type Bulletin, type DispatchMedia } from '@/lib/game/hut';
 import { FounderBadge } from '@/components/game/FounderBadge';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
@@ -45,6 +42,7 @@ import DestinationScene from '@/components/game/DestinationScene';
 import CombatScene from '@/components/game/CombatScene';
 import SourceScene from '@/components/game/SourceScene';
 import WeaponForge from '@/components/game/WeaponForge';
+import HutInterior from '@/components/game/HutInterior';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
@@ -58,8 +56,6 @@ import JournalPanel from '@/components/game/JournalPanel';
 import GameSettingsPanel from '@/components/game/GameSettingsPanel';
 import TutorialOverlay from '@/components/game/TutorialOverlay';
 import SourceEpilogue from '@/components/game/SourceEpilogue';
-import DonationSection from '@/components/DonationSection';
-import TruthQA from '@/components/game/TruthQA';
 import WorldDialogueBox from '@/components/game/WorldDialogueBox';
 import { useIsDesktopLayout } from '@/components/game/controls/useInputProfile';
 import {
@@ -85,8 +81,6 @@ function markTutorialSeen(id: TutorialId) {
     const seen = tutorialsSeen();
     if (!seen.includes(id)) localStorage.setItem(TUTORIAL_KEY, JSON.stringify([...seen, id]));
 }
-
-const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 
 interface InteractPOI {
     id: string;
@@ -126,7 +120,8 @@ export default function WorldPage() {
     // never freezes the world or hides the joystick, unlike the modal `dialogue`
     const [ambient, setAmbient] = useState<{ text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
-    const [hutTab, setHutTab] = useState<'dispatch' | 'ledger' | 'patron' | 'truth'>('dispatch');
+    // deep-link straight to a Hut station (?hut=patron / ?hut=truth)
+    const [hutInitial, setHutInitial] = useState<'offering' | 'truth' | null>(null);
 
     const [toast, setToast] = useState<string | null>(null);
     const [hint, setHint] = useState(true);
@@ -213,7 +208,7 @@ export default function WorldPage() {
         const hutParam = params.get('hut');
         if (hutParam === 'patron' || hutParam === 'truth') {
             setHutOpen(true);
-            setHutTab(hutParam);
+            setHutInitial(hutParam === 'patron' ? 'offering' : 'truth');
             window.history.replaceState({}, '', '/world');
         }
         const t = setTimeout(() => setHint(false), 5000);
@@ -803,229 +798,17 @@ export default function WorldPage() {
 
             {/* Truth's Hut — live daily dispatch */}
             {hutOpen && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => { setHutOpen(false); setHutTab('dispatch'); }}>
-                    <div className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 border border-[rgba(251,191,36,0.2)] relative max-h-[88dvh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => { setHutOpen(false); setHutTab('dispatch'); }} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white z-10">
-                            <X className="w-4 h-4" />
-                        </button>
-                        <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Truth's Hut</p>
-                        <h2 className="font-ritual text-2xl md:text-3xl gold-shimmer mb-4">The Living Word</h2>
-
-                        <div className="flex rounded-xl border border-white/10 bg-black/30 p-1 mb-5 gap-0.5">
-                            <button
-                                type="button"
-                                onClick={() => setHutTab('dispatch')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
-                                    hutTab === 'dispatch' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
-                                }`}
-                            >
-                                <Scroll className="w-3 h-3 shrink-0" />
-                                Word
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setHutTab('ledger')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
-                                    hutTab === 'ledger' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
-                                }`}
-                            >
-                                <Trophy className="w-3 h-3 shrink-0" />
-                                Ledger
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setHutTab('truth')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
-                                    hutTab === 'truth' ? 'bg-orange-500/20 text-orange-400' : 'text-zinc-500 hover:text-white'
-                                }`}
-                            >
-                                <MessageCircle className="w-3 h-3 shrink-0" />
-                                Ask
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setHutTab('patron')}
-                                className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[7px] font-black uppercase tracking-widest transition-all ${
-                                    hutTab === 'patron' ? 'bg-aether-gold/20 text-aether-gold' : 'text-zinc-500 hover:text-white'
-                                }`}
-                            >
-                                <Heart className="w-3 h-3 shrink-0" />
-                                Patron
-                            </button>
-                        </div>
-
-                        {hutTab === 'patron' ? (
-                            <DonationSection variant="hut" showFundingBar />
-                        ) : hutTab === 'truth' ? (
-                            <TruthQA
-                                character={character}
-                                onJournalUnlock={(title) => showToast(`✦ Recorded in Codex Journal · ${title}`)}
-                            />
-                        ) : hutTab === 'ledger' ? (
-                            <HutLedger characterName={character.name} />
-                        ) : (
-                        <>
-                        {/* today's world rhythm */}
-                        <div
-                            className="rounded-2xl border p-4 mb-4"
-                            style={{
-                                borderColor: `${worldEvent.accent}33`,
-                                background: `linear-gradient(135deg, ${worldEvent.accent}14, rgba(0,0,0,0.35))`,
-                            }}
-                        >
-                            <p className="text-[9px] font-mono uppercase tracking-widest mb-1.5" style={{ color: worldEvent.accent }}>
-                                World rhythm · today
-                            </p>
-                            <p className="font-ritual text-base text-white mb-1">{worldEvent.hutHeadline}</p>
-                            <p className="text-sm text-zinc-300 leading-relaxed">{worldEvent.hutBody}</p>
-                            <p className="text-xs text-orange-300/90 italic mt-3 leading-relaxed">"{worldEvent.truthLine}"</p>
-                        </div>
-
-                        <HutPortalBoard character={character} />
-
-                        <HutConsumableCraft
-                            onOpenForge={() => { setHutOpen(false); setForgeOpen(true); }}
-                            onCrafted={(name, effect) => showToast(`✦ ${name} brewed · ${effect}`)}
-                        />
-
-                        {/* latest bulletin */}
-                        <div className="glass bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-4">
-                            {bulletins.length > 0 ? (
-                                <>
-                                    <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60 mb-2 flex items-center gap-2">
-                                        {bulletins[0].pinned && <Pin className="w-3 h-3" />} {bulletins[0].published_at} · From Truth
-                                    </p>
-                                    <p className="font-ritual text-white/90 leading-relaxed whitespace-pre-wrap">
-                                        <span className="block text-aether-gold font-bold mb-1">{bulletins[0].title}</span>
-                                        {bulletins[0].body}
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60 mb-2">Today · From Truth</p>
-                                    <p className="font-ritual text-white/90 leading-relaxed">
-                                        Welcome home, {character.name || 'initiate'}. You stand at the center of all things. Each day I will leave word here —
-                                        a truth unearthed, a scroll to study. Open the <strong className="text-aether-gold/90">Ledger</strong> to see how many souls walk with you. If you would know the brother behind the hood, open <strong className="text-orange-400/90">Ask Truth</strong> and pry gently. Return often. The world is waking with you.
-                                    </p>
-                                </>
-                            )}
-                        </div>
-
-                        {/* earlier dispatches */}
-                        {bulletins.length > 1 && (
-                            <details className="mb-5 group">
-                                <summary className="cursor-pointer text-[10px] uppercase tracking-widest text-zinc-500 hover:text-aether-gold list-none">▸ Earlier words ({bulletins.length - 1})</summary>
-                                <div className="mt-3 space-y-2">
-                                    {bulletins.slice(1).map((b) => (
-                                        <div key={b.id} className="rounded-xl bg-white/[0.02] border border-white/5 p-3">
-                                            <p className="text-[8px] font-mono uppercase tracking-widest text-zinc-500">{b.published_at}</p>
-                                            <p className="text-aether-gold/90 text-sm font-bold">{b.title}</p>
-                                            <p className="text-xs text-zinc-400 mt-0.5 line-clamp-3 whitespace-pre-wrap">{b.body}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </details>
-                        )}
-
-                        {/* dispatch shelf */}
-                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3">Dispatch Shelf</p>
-                        {media.length > 0 ? (
-                            <div className="space-y-2">
-                                {media.map((m) => {
-                                    const Icon = KIND_ICON[m.kind] || Link2;
-                                    return (
-                                        <a key={m.id} href={m.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-aether-gold/30 transition-colors">
-                                            <div className="w-9 h-9 rounded-lg bg-aether-gold/10 border border-aether-gold/20 flex items-center justify-center text-aether-gold shrink-0">
-                                                <Icon className="w-4 h-4" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-white truncate">{m.title}</p>
-                                                <p className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">{m.kind} · {m.category} · {formatBytes(m.size_bytes)}</p>
-                                            </div>
-                                            <span className="text-[10px] uppercase tracking-widest text-aether-gold shrink-0">Open ↗</span>
-                                        </a>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {[{ icon: FileText, label: 'Scrolls' }, { icon: Film, label: 'Visions' }, { icon: Music, label: 'Frequencies' }].map(({ icon: Icon, label }) => (
-                                        <div key={label} className="flex flex-col items-center gap-2 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-zinc-500">
-                                            <Icon className="w-5 h-5 text-aether-gold/70" />
-                                            <span className="text-[9px] uppercase tracking-widest">{label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="text-[10px] text-zinc-600 text-center mt-4 font-mono uppercase tracking-widest">No dispatches yet — return soon.</p>
-                            </>
-                        )}
-
-                        {/* cipher referral mission from Truth */}
-                        {QUESTS_ENABLED && hutQuests.length > 0 && (
-                            <div className="mb-5 space-y-3">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Missions from Truth</p>
-                                {hutQuests.map((q) => {
-                                    const claimed = character.questsClaimed.includes(q.id);
-                                    const met = objectiveMet(q, character);
-                                    return (
-                                        <div key={q.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                                            <h3 className="font-ritual text-base text-white mb-1">{q.title}</h3>
-                                            <p className="text-sm text-white/80 italic leading-relaxed mb-3">"{claimed || met ? q.completeText : q.intro}"</p>
-                                            {claimed ? (
-                                                <span className="text-[10px] text-aether-gold flex items-center gap-1"><Check className="w-3 h-3" /> Completed</span>
-                                            ) : met ? (
-                                                <button onClick={() => handleClaimQuest(q)} className="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                                                    Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
-                                                </button>
-                                            ) : (
-                                                <p className="text-[10px] text-zinc-500">{q.objectiveText} ({objectiveProgress(q, character)})</p>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        <div className="flex gap-2 mb-4">
-                            <Link href="/codex" className="flex-1 text-center py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10 text-zinc-400 hover:border-aether-gold/30 hover:text-aether-gold transition-colors">
-                                Codex ↗
-                            </Link>
-                            <Link href="/cinema" className="flex-1 text-center py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10 text-zinc-400 hover:border-aether-gold/30 hover:text-aether-gold transition-colors">
-                                Cinema ↗
-                            </Link>
-                        </div>
-
-                        {/* first weapon */}
-                        {!character.equipped.weapon ? (
-                            <button onClick={() => { setHutOpen(false); setForgeOpen(true); }} className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                                <Swords className="w-3.5 h-3.5" /> Forge your first weapon
-                            </button>
-                        ) : (
-                            <div className="mt-6 flex flex-col gap-2">
-                                <p className="text-center text-[10px] uppercase tracking-widest text-zinc-500 flex items-center justify-center gap-2">
-                                    <Swords className="w-3 h-3 text-aether-gold" /> Armed · {WEAPON_BY_ID[character.equipped.weapon]?.name}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => { setHutOpen(false); setForgeOpen(true); }}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-aether-gold/30 text-aether-gold hover:bg-aether-gold/10 transition-colors"
-                                >
-                                    <Swords className="w-3.5 h-3.5" /> Upgrade at the Forge
-                                </button>
-                            </div>
-                        )}
-
-                        {/* architect access */}
-                        {isArchitect && (
-                            <Link href="/hut-admin" className="mt-6 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                                <Settings className="w-3.5 h-3.5" /> Tend the Hut
-                            </Link>
-                        )}
-                        </>
-                        )}
-                    </div>
-                </div>
+                <HutInterior
+                    character={character}
+                    bulletins={bulletins}
+                    media={media}
+                    isArchitect={isArchitect}
+                    worldEvent={worldEvent}
+                    onClose={() => { setHutOpen(false); setHutInitial(null); }}
+                    onOpenForge={() => setForgeOpen(true)}
+                    onToast={showToast}
+                    initialStation={hutInitial ?? undefined}
+                />
             )}
 
             {/* satchel of relics */}
