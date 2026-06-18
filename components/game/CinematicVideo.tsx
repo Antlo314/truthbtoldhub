@@ -97,9 +97,15 @@ export default function CinematicVideo({
             ) : null}
             {overlay !== 'none' && <div className="absolute inset-0 pointer-events-none" style={{ background: OVERLAY[overlay] }} />}
             {showSubtitles && subtitle && (
-                <div className="absolute bottom-0 inset-x-0 p-6 pb-10 flex justify-center pointer-events-none z-10">
-                    <p className="font-ritual text-base md:text-xl text-white/90 leading-relaxed max-w-xl text-center drop-shadow-lg">{subtitle}</p>
-                </div>
+                <>
+                    <div
+                        className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none z-[5]"
+                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 45%, transparent 100%)' }}
+                    />
+                    <div className="absolute bottom-0 inset-x-0 p-6 pb-10 flex justify-center pointer-events-none z-10">
+                        <p className="font-ritual text-base md:text-xl text-white/95 leading-relaxed max-w-xl text-center text-pretty" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9)' }}>{subtitle}</p>
+                    </div>
+                </>
             )}
             {showMuteControl && !failed && (
                 <>
