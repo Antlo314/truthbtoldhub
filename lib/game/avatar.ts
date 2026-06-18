@@ -13,7 +13,7 @@ export const AV_H = 24;
 
 export type Build = 'masc' | 'fem';
 export type HairStyle = 'buzz' | 'short' | 'afro' | 'long' | 'bun' | 'braids' | 'locs';
-export type OutfitStyle = 'tunic' | 'robe' | 'vest' | 'dress';
+export type OutfitStyle = 'tunic' | 'robe' | 'vest' | 'dress' | 'gown' | 'cloak';
 export type FaceStyle = 'calm' | 'keen' | 'goatee' | 'beard';
 
 export interface AvatarConfig {
@@ -83,7 +83,7 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
     // Masculine builds keep straight, even trousers.
     const lLift = step === 1 ? 1 : 0;
     const rLift = step === 2 ? 1 : 0;
-    const skirted = cfg.outfit === 'dress' || (fem && cfg.outfit === 'robe');
+    const skirted = cfg.outfit === 'dress' || cfg.outfit === 'gown' || (fem && cfg.outfit === 'robe');
     if (skirted) {
         // a skirt that flares from a narrow waist down to a wide hem
         rect(g, 6, 16, 4, 1, top);
@@ -92,6 +92,12 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
         rect(g, 4, 20, 8, 1, topShade);                            // hem shadow
         rect(g, 5, 21, 2, 1, skin); rect(g, 9, 21, 2, 1, skin);    // calves peek
         rect(g, 5, 22, 2, 2, boot); rect(g, 9, 22, 2, 2, boot);    // shoes
+        if (cfg.outfit === 'gown') {
+            // a fuller, sweeping hem + a waist sash — distinctly a gown
+            rect(g, 3, 19, 10, 2, top);
+            rect(g, 3, 20, 10, 1, topShade);
+            rect(g, 5, 16, 6, 1, topShade);
+        }
     } else if (fem) {
         // wide hips taper to slim legs held close together
         rect(g, 4, 16, 8, 1, bottom);                              // hip line, wide
@@ -124,6 +130,13 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
     }
     if (cfg.outfit === 'robe') { rect(g, 5, 14, 6, 2, topShade); } // robe hem
     if (cfg.outfit === 'vest') { px(g, 7, 11, topShade); px(g, 8, 11, topShade); px(g, 7, 13, topShade); px(g, 8, 13, topShade); }
+    if (cfg.outfit === 'cloak') {
+        // a mantle across the shoulders + capes draping outside the arms
+        rect(g, 3, 10, 10, 1, top);
+        rect(g, 3, 11, 1, 8, top); rect(g, 12, 11, 1, 8, top);
+        px(g, 3, 18, topShade); px(g, 12, 18, topShade);
+        rect(g, 6, 10, 4, 1, topShade);                            // collar clasp
+    }
 
     // ---- arms ----
     rect(g, 4, 10, 1, 5, top); rect(g, 11, 10, 1, 5, top);
@@ -267,13 +280,13 @@ export const FEM_PRESETS: AvatarConfig[] = [
     { build: 'fem', skin: 3, hairStyle: 'bun', hairColor: 2, face: 'keen', top: 3, bottom: 6, boots: 1, outfit: 'tunic' },
     { build: 'fem', skin: 10, hairStyle: 'braids', hairColor: 0, face: 'calm', top: 1, bottom: 0, boots: 0, outfit: 'dress' },
     { build: 'fem', skin: 1, hairStyle: 'long', hairColor: 6, face: 'calm', top: 0, bottom: 6, boots: 2, outfit: 'tunic' },
-    { build: 'fem', skin: 5, hairStyle: 'afro', hairColor: 0, face: 'keen', top: 5, bottom: 0, boots: 0, outfit: 'vest' },
+    { build: 'fem', skin: 5, hairStyle: 'afro', hairColor: 0, face: 'keen', top: 5, bottom: 0, boots: 0, outfit: 'gown' },
     { build: 'fem', skin: 9, hairStyle: 'braids', hairColor: 8, face: 'calm', top: 4, bottom: 6, boots: 1, outfit: 'dress' },
     { build: 'fem', skin: 2, hairStyle: 'bun', hairColor: 3, face: 'calm', top: 10, bottom: 6, boots: 3, outfit: 'tunic' },
     { build: 'fem', skin: 6, hairStyle: 'long', hairColor: 1, face: 'keen', top: 8, bottom: 0, boots: 0, outfit: 'robe' },
     { build: 'fem', skin: 11, hairStyle: 'afro', hairColor: 7, face: 'calm', top: 9, bottom: 6, boots: 2, outfit: 'dress' },
     { build: 'fem', skin: 4, hairStyle: 'long', hairColor: 4, face: 'calm', top: 6, bottom: 6, boots: 0, outfit: 'tunic' },
-    { build: 'fem', skin: 8, hairStyle: 'bun', hairColor: 0, face: 'keen', top: 2, bottom: 0, boots: 1, outfit: 'vest' },
+    { build: 'fem', skin: 8, hairStyle: 'bun', hairColor: 0, face: 'keen', top: 2, bottom: 0, boots: 1, outfit: 'tunic' },
     { build: 'fem', skin: 0, hairStyle: 'braids', hairColor: 5, face: 'calm', top: 11, bottom: 6, boots: 0, outfit: 'dress' },
     { build: 'fem', skin: 7, hairStyle: 'long', hairColor: 9, face: 'calm', top: 3, bottom: 0, boots: 2, outfit: 'tunic' },
 ];
@@ -284,7 +297,15 @@ export function defaultAvatar(): AvatarConfig {
 
 // option lists for the creator UI
 export const HAIR_STYLES: HairStyle[] = ['short', 'afro', 'locs', 'long', 'bun', 'braids', 'buzz'];
-export const OUTFIT_STYLES: OutfitStyle[] = ['tunic', 'vest', 'robe', 'dress'];
+export const OUTFIT_STYLES: OutfitStyle[] = ['tunic', 'vest', 'robe', 'dress', 'gown', 'cloak'];
+// Gender-appropriate garment sets for the creator. Some are shared (tunic/robe);
+// gown is feminine-exclusive, vest + cloak are masculine-exclusive.
+export const MASC_OUTFITS: OutfitStyle[] = ['tunic', 'vest', 'robe', 'cloak'];
+export const FEM_OUTFITS: OutfitStyle[] = ['dress', 'gown', 'robe', 'tunic'];
+/** The default garment a build wears when its Form is chosen. */
+export function defaultOutfitFor(build: Build): OutfitStyle {
+    return build === 'fem' ? 'dress' : 'tunic';
+}
 export const FACE_STYLES: FaceStyle[] = ['calm', 'keen', 'goatee', 'beard'];
 
 const randI = (n: number) => Math.floor(Math.random() * n);

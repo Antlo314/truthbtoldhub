@@ -8,8 +8,8 @@ import CinematicVideo from '@/components/game/CinematicVideo';
 import { AURA_OPTIONS } from '@/components/game/KenneySprite';
 import {
     SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS,
-    HAIR_STYLES, OUTFIT_STYLES, FACE_STYLES,
-    randomAvatar,
+    HAIR_STYLES, MASC_OUTFITS, FEM_OUTFITS, FACE_STYLES,
+    randomAvatar, defaultOutfitFor,
     type Build, type HairStyle, type OutfitStyle, type FaceStyle,
 } from '@/lib/game/avatar';
 import { Loader2, Shuffle, Pencil, Check } from 'lucide-react';
@@ -157,7 +157,7 @@ export default function CreatePage() {
                                     return (
                                         <button
                                             key={b}
-                                            onClick={() => setAvatar({ build: b })}
+                                            onClick={() => { if (b !== av.build) setAvatar({ build: b, outfit: defaultOutfitFor(b) }); }}
                                             aria-pressed={active}
                                             className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.12em] border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/60 ${
                                                 active
@@ -235,7 +235,7 @@ export default function CreatePage() {
                                 <>
                                     <Section label="Garb">
                                         <div className="flex flex-wrap gap-1.5">
-                                            {OUTFIT_STYLES.map((o: OutfitStyle) => (
+                                            {(av.build === 'fem' ? FEM_OUTFITS : MASC_OUTFITS).map((o: OutfitStyle) => (
                                                 <OptBtn key={o} active={av.outfit === o} onClick={() => setAvatar({ outfit: o })}>{cap(o)}</OptBtn>
                                             ))}
                                         </div>
