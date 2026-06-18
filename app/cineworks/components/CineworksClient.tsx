@@ -53,8 +53,11 @@ export default function Cineworks() {
 
             const res = await fetch('/api/stripe/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 14, userId: session.user.id }) // $14 standard energy contribution
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ amount: 14 }) // $14 standard energy contribution; userId derived from token server-side
             });
 
             if (!res.ok) throw new Error("Stripe checkout failed to initialize.");

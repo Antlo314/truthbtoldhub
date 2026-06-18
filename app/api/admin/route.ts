@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Service-role key MUST come from the environment — never hardcode it (it
+// bypasses all RLS). Fail closed below if it is missing.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2ZW9zdWxhZGV3anRxb3FoZGJsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTE5Nzk2OSwiZXhwIjoyMDg2NzczOTY5fQ.N590TQQP2c_N8bO5Fk2G8r-F-kFzB7PzG7H1hGzI7K8';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Admin accounts whitelist
@@ -42,6 +44,12 @@ export async function POST(req: Request) {
         // 3. Parse Request Payload
         const body = await req.json();
         const { action, userId, updates } = body;
+
+        // Fail closed if the server isn't configured with a real service-role key.
+        if (!serviceRoleKey) {
+            console.error('SUPABASE_SERVICE_ROLE_KEY is not set — admin actions disabled');
+            return NextResponse.json({ error: 'Server is not configured for admin actions' }, { status: 500 });
+        }
 
         // Initialize admin client to perform database overrides (bypassing user RLS policies)
         const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {

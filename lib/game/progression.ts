@@ -27,6 +27,19 @@ export const NPC_DESTINATION: Record<string, DestinationId> = {
     npc_hermes: 'dest_emerald',
 };
 
+/** Destinations still being built — only Eden & Giza are open for now. The
+ *  rest still appear on the map but stay veiled (locked) until their content
+ *  lands. Their NPC quest chains stay dormant via isNpcQuestActive below. */
+export const SEALED_DESTINATIONS = new Set<DestinationId>([
+    'dest_fair',
+    'dest_kolbrin',
+    'dest_emerald',
+]);
+
+export function isDestinationSealed(poiId: string): boolean {
+    return SEALED_DESTINATIONS.has(poiId as DestinationId);
+}
+
 export function isEdenSealed(): boolean {
     return EDEN_SEALED;
 }
@@ -65,6 +78,7 @@ export function isDestinationComplete(poiId: string, c: GameCharacter): boolean 
 
 export function isDestinationUnlocked(poiId: string, c: GameCharacter): boolean {
     if (poiId === 'dest_eden' && EDEN_SEALED) return false;
+    if (isDestinationSealed(poiId)) return false;
 
     const order = playableDestinationOrder();
     const idx = order.indexOf(poiId as DestinationId);
@@ -75,6 +89,10 @@ export function isDestinationUnlocked(poiId: string, c: GameCharacter): boolean 
 
 export function unlockBlockMessage(poiId: string): string {
     if (poiId === 'dest_eden' && EDEN_SEALED) return edenSealedMessage();
+    if (isDestinationSealed(poiId)) {
+        const here = DEST_BY_POI[poiId];
+        return `${here?.name || 'This age'} is still being woven. For now the road runs through Eden and Giza — walk them to their end. When the hour comes, this veil will part.`;
+    }
 
     const order = playableDestinationOrder();
     const idx = order.indexOf(poiId as DestinationId);
