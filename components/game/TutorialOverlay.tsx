@@ -17,7 +17,10 @@ export default function TutorialOverlay({ id, onDismiss }: Props) {
     const t = TUTORIALS[id];
     if (!t) return null;
     return (
-        <div className="absolute inset-x-4 bottom-36 z-40 pointer-events-auto animate-fade-in">
+        <div
+            className="absolute inset-x-4 z-40 pointer-events-auto animate-fade-in"
+            style={{ bottom: 'calc(11rem + env(safe-area-inset-bottom))' }}
+        >
             <div className="max-w-md mx-auto glass-panel rounded-2xl p-4 border border-aether-gold/25">
                 <p className="text-[9px] font-black uppercase tracking-[0.35em] text-aether-gold">{t.title}</p>
                 <p className="font-ritual text-sm text-white/85 mt-1.5 leading-relaxed">{t.body}</p>

@@ -722,7 +722,7 @@ export default function WorldPage() {
 
             {worldIntroDone && !worldPaused && (
                 <div
-                    className="absolute left-1/2 -translate-x-1/2 z-[9] pointer-events-none flex flex-col items-center gap-1.5"
+                    className={`absolute inset-x-2 lg:left-1/2 lg:inset-x-auto lg:-translate-x-1/2 z-[9] pointer-events-none flex flex-col items-center gap-1.5 ${settings.showMinimap ? 'pr-28 lg:pr-0' : ''}`}
                     style={{ top: 'calc(5.75rem + env(safe-area-inset-top))' }}
                 >
                     <WorldEventBanner event={worldEvent} />
