@@ -304,6 +304,15 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                                 <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">{active === 'visions' ? 'The Seeing Glass' : 'The Archive'}</p>
                                 <h2 className="font-ritual text-2xl gold-shimmer mb-4">{active === 'visions' ? 'Visions & Films' : 'Scrolls & Frequencies'}</h2>
                                 <MediaList items={active === 'visions' ? visions : docs} />
+                                {active === 'archive' && (
+                                    <a
+                                        href="/library"
+                                        className="mt-5 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black"
+                                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                    >
+                                        Enter the Library →
+                                    </a>
+                                )}
                             </>
                         )}
 
