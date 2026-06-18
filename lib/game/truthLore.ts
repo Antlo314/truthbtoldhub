@@ -182,8 +182,6 @@ export const TRUTH_QUESTIONS: TruthQuestion[] = [
         id: 'series_400',
         prompt: 'What is the 400 Series?',
         answer: 'A cinematic telling of Israelite history — and deeper knowledge drawn from the old scrolls. Much hidden wisdom still needs to be recovered, and recovery is not free. To spread this message and build those masterpieces takes currency, support, labor, prayer. I did not choose an easy charge. The 400 Series is part of why I must go all the way — so what was buried can breathe again in the sight of the world.',
-        requires: ['by_any_means'],
-        minDepth: 7,
         accountTitle: 'The 400 Series · Buried Wisdom',
         accountBody: 'The 400 Series is cinematic Israelite history and recovered scroll-wisdom. Hidden knowledge must be unearthed and shown — and that work requires support, labor, and patronage. It is central to his last run.',
     },
@@ -266,7 +264,7 @@ const TRUTH_TRUST_GATE: Record<string, number> = {
     family: 6, mistakes: 6, walked_away: 6,
     wilderness: 8, vision: 8, spark: 8, innocence: 10,
     drinking: 14, fasting: 14, imperfect: 14, burden: 14,
-    transparency: 16, need_from_you: 16, by_any_means: 18, series_400: 18,
+    transparency: 16, need_from_you: 16, by_any_means: 18,
     give_back: 22, fasting_cost: 22, children: 26,
 };
 
