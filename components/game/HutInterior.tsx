@@ -11,6 +11,7 @@ import HutPortalBoard from '@/components/game/HutPortalBoard';
 import HutConsumableCraft from '@/components/game/HutConsumableCraft';
 import TruthQA from '@/components/game/TruthQA';
 import DonationSection from '@/components/DonationSection';
+import { useSoulStore } from '@/lib/store/useSoulStore';
 
 // ============================================================
 //  TRUTH'S HUT — a small place you ENTER. Instead of one
@@ -22,7 +23,7 @@ import DonationSection from '@/components/DonationSection';
 const SHEET = '/assets/kenney/roguelikeIndoor.png';
 const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 
-type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth';
+type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth' | 'profile';
 
 // Draw w×h tiles of the indoor sheet onto a crisp, pixel-perfect canvas.
 function KenneyObject({ col, row, w = 1, h = 1, vmin }: { col: number; row: number; w?: number; h?: number; vmin: number }) {
@@ -91,14 +92,16 @@ interface Station {
 
 const STATIONS: Station[] = [
     // wall row (top)
-    { id: 'ledger', label: 'The Ledger', sub: "Truth's daily Word", x: 22, y: 17, sprite: { col: 18, row: 0, vmin: 11 } },
-    { id: 'visions', label: 'The Seeing Glass', sub: 'Visions & films', x: 74, y: 14, sprite: { col: 22, row: 14, h: 2, vmin: 11 } },
-    // upper floor row
-    { id: 'archive', label: 'The Archive', sub: 'Scrolls & frequencies', x: 22, y: 62, sprite: { col: 12, row: 0, h: 2, vmin: 13 } },
-    { id: 'forge', label: 'The Forge', sub: 'Temper arms & tonics', x: 78, y: 62, sprite: { col: 10, row: 14, h: 2, vmin: 13 } },
+    { id: 'ledger', label: 'The Ledger', sub: "Truth's daily Word", x: 20, y: 17, sprite: { col: 18, row: 0, vmin: 11 } },
+    { id: 'visions', label: 'The Seeing Glass', sub: 'Visions & films', x: 78, y: 15, sprite: { col: 22, row: 14, h: 2, vmin: 11 } },
+    // your reflection — the centerpiece, beneath Truth
+    { id: 'profile', label: 'Your Soul', sub: 'Name · title · testament', x: 50, y: 60, sprite: { col: 22, row: 14, h: 2, vmin: 12 } },
+    // floor sides
+    { id: 'archive', label: 'The Archive', sub: 'Scrolls & frequencies', x: 16, y: 63, sprite: { col: 12, row: 0, h: 2, vmin: 13 } },
+    { id: 'forge', label: 'The Forge', sub: 'Temper arms & tonics', x: 84, y: 63, sprite: { col: 10, row: 14, h: 2, vmin: 13 } },
     // lower floor row (well clear of each other)
-    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 26, y: 85, sprite: { col: 17, row: 12, vmin: 10 } },
-    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 70, y: 85, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
+    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 28, y: 86, sprite: { col: 17, row: 12, vmin: 10 } },
+    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 72, y: 86, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
 ];
 
 interface HutInteriorProps {
@@ -163,7 +166,7 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                 <div className="absolute" style={{ left: '50%', top: '35%', transform: 'translate(-50%,-50%)', width: '15vmin', height: '15vmin', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,178,80,0.42), transparent 62%)', animation: 'hutFlicker 3.1s ease-in-out infinite' }} />
                 <KenneyObject col={19} row={0} vmin={7} />
             </div>
-            <div className="absolute pointer-events-none" style={{ left: '49%', top: '74%' }}><KenneyObject col={16} row={0} vmin={7} /></div>
+            <div className="absolute pointer-events-none" style={{ left: '8%', top: '83%' }}><KenneyObject col={16} row={0} vmin={7} /></div>
 
             {/* a woven rug anchors the center under Truth */}
             <div className="absolute pointer-events-none" style={{ left: '50%', top: '47%', transform: 'translate(-50%,-50%)', width: '48vmin', height: '19vmin', borderRadius: '50%', background: 'radial-gradient(ellipse at center, rgba(178,68,40,0.55), rgba(120,42,28,0.4) 52%, transparent 72%)', border: '0.4vmin solid rgba(251,191,36,0.16)' }} />
@@ -295,6 +298,14 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                             </>
                         )}
 
+                        {active === 'profile' && (
+                            <>
+                                <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Your Soul</p>
+                                <h2 className="font-ritual text-2xl gold-shimmer mb-4">Behold Yourself</h2>
+                                <ProfileStation />
+                            </>
+                        )}
+
                         {active === 'truth' && (
                             <>
                                 <p className="text-[10px] tracking-[0.4em] uppercase text-orange-400/70 mb-1">Ask Truth</p>
@@ -305,6 +316,79 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// The Profile station — a soul fleshes out their community identity
+// (name / title / testament) against the existing `profiles` table.
+function ProfileStation() {
+    const profile = useSoulStore((s) => s.profile);
+    const fetchIdentity = useSoulStore((s) => s.fetchIdentity);
+    const updateProfile = useSoulStore((s) => s.updateProfile);
+    const [name, setName] = useState('');
+    const [title, setTitle] = useState('');
+    const [bio, setBio] = useState('');
+    const [seeded, setSeeded] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [msg, setMsg] = useState<string | null>(null);
+
+    useEffect(() => { if (!profile) fetchIdentity(); }, [profile, fetchIdentity]);
+    useEffect(() => {
+        if (profile && !seeded) {
+            setName(profile.display_name || '');
+            setTitle(profile.custom_title || '');
+            setBio(profile.bio || '');
+            setSeeded(true);
+        }
+    }, [profile, seeded]);
+
+    if (!profile) {
+        return <p className="text-zinc-500 text-sm py-10 text-center font-mono uppercase tracking-widest">Gazing into the glass…</p>;
+    }
+
+    const save = async () => {
+        setSaving(true);
+        setMsg(null);
+        try {
+            await updateProfile({ display_name: name.trim(), custom_title: title.trim(), bio: bio.trim() });
+            setMsg('✦ Your soul is inscribed.');
+        } catch {
+            setMsg('Could not save — try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-4 rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+                <div className="text-center shrink-0">
+                    <p className="text-[8px] uppercase tracking-widest text-zinc-500">Soul Power</p>
+                    <p className="font-ritual text-2xl text-aether-gold leading-none mt-0.5">{profile.soul_power ?? 0}</p>
+                </div>
+                <div className="flex-1 min-w-0 border-l border-white/10 pl-4">
+                    <p className="text-[8px] uppercase tracking-widest text-zinc-500">Standing</p>
+                    <p className="text-sm text-white font-bold truncate">{profile.tier || 'Initiate'}</p>
+                </div>
+            </div>
+            <div>
+                <label className="text-[9px] uppercase tracking-widest text-zinc-500">Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="The name souls will know you by" className="mt-1 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold" />
+            </div>
+            <div>
+                <label className="text-[9px] uppercase tracking-widest text-zinc-500">Title</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={48} placeholder="A title beneath your name — e.g. Seeker of the First Light" className="mt-1 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold" />
+            </div>
+            <div>
+                <label className="text-[9px] uppercase tracking-widest text-zinc-500">Testament</label>
+                <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4} placeholder="A few words on who you are and why you walk…" className="mt-1 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white leading-relaxed focus:outline-none focus:border-aether-gold resize-none" />
+                <p className="text-[8px] text-zinc-600 text-right mt-1">{bio.length}/500</p>
+            </div>
+            {msg && <p className="text-[11px] text-aether-gold font-mono tracking-wide">{msg}</p>}
+            <button onClick={save} disabled={saving} className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                {saving ? 'Inscribing…' : 'Inscribe Your Soul'}
+            </button>
         </div>
     );
 }
