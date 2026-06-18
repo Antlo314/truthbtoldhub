@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { PATH_BY_ID, skillBonuses } from '@/lib/game/paths';
-import { ArrowLeft, Menu, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical, Backpack } from 'lucide-react';
+import { ArrowLeft, Menu, Settings, Gem, Swords, ScrollText, Check, X, Shirt, BookOpen, SlidersHorizontal, Sparkles, FlaskConical, Backpack, Heart } from 'lucide-react';
+import { maxVitality, currentVitality } from '@/lib/game/vitality';
 import AttunementPanel from '@/components/game/AttunementPanel';
 import { QUESTS, QUESTS_ENABLED, questsAvailable, objectiveMet, objectiveProgress, type Quest } from '@/lib/game/quests';
 import WorldEventBanner from '@/components/game/WorldEventBanner';
@@ -105,6 +106,9 @@ export default function WorldPage() {
     const learnSkill = useGameStore((s) => s.learnSkill);
     const addFightBonusHp = useGameStore((s) => s.addFightBonusHp);
     const consumeFightBonusHp = useGameStore((s) => s.consumeFightBonusHp);
+    const setHpStore = useGameStore((s) => s.setHp);
+    const healHp = useGameStore((s) => s.healHp);
+    const restVitality = useGameStore((s) => s.restVitality);
     const grantScroll = useGameStore((s) => s.grantScroll);
     const equipRelic = useGameStore((s) => s.equipRelic);
     const equipScroll = useGameStore((s) => s.equipScroll);
@@ -312,6 +316,11 @@ export default function WorldPage() {
         return () => clearTimeout(t);
     }, [worldIntroDone]);
 
+    // the Hut is the safe haven — resting there restores vitality to full.
+    useEffect(() => {
+        if (hutOpen) restVitality();
+    }, [hutOpen, restVitality]);
+
     const unlockRoamMilestones = useCallback((opts?: { silent?: boolean }) => {
         const ch = useGameStore.getState().character;
         const fresh = newlyMetRoamMilestones(ch);
@@ -422,9 +431,9 @@ export default function WorldPage() {
         hapticTap('light');
         const qty = scalePickupQty(pk.qty, worldEvent);
         if (pk.kind === 'health') {
-            addFightBonusHp(qty);
+            healHp(qty);
             const bonus = qty > pk.qty ? ' · bountiful day' : '';
-            showToast(`✦ +${qty} vitality · bonus HP for your next fight${bonus}`);
+            showToast(`✦ +${qty} vitality restored${bonus}`);
             return;
         }
         addMaterial(pk.kind, qty);
@@ -432,7 +441,7 @@ export default function WorldPage() {
         const bonus = qty > pk.qty ? ' · bountiful day' : '';
         showToast(`✦ +${qty} ${label}${bonus}`);
         setTimeout(() => unlockRoamMilestones(), 50);
-    }, [addMaterial, addFightBonusHp, markDiscovered, saveToCloud, showToast, worldEvent, unlockRoamMilestones]);
+    }, [addMaterial, healHp, markDiscovered, saveToCloud, showToast, worldEvent, unlockRoamMilestones]);
 
     const onEncounterVictory = useCallback(() => {
         consumeFightBonusHp();
@@ -482,13 +491,10 @@ export default function WorldPage() {
     const onEncounterDefeat = useCallback(() => {
         consumeFightBonusHp();
         setEncounter(null);
-        const ch = useGameStore.getState().character;
-        setDialogue({
-            speaker: 'Truth',
-            text: truthCombatLine(ch, 'wildLose'),
-            color: '#f97316',
-        });
-    }, [consumeFightBonusHp]);
+        restVitality();
+        setHutOpen(true); // wake at the Hut, fully restored
+        showToast('✦ The shades take you — you wake in Truth\'s Hut, vitality restored.');
+    }, [consumeFightBonusHp, restVitality, showToast]);
 
     const handleClaim = useCallback(async (relicId: string) => {
         const beforeTier = resonanceTier(useGameStore.getState().character.inventory);
@@ -564,13 +570,10 @@ export default function WorldPage() {
     const onDefeat = useCallback(() => {
         consumeFightBonusHp();
         setCombatDest(null);
-        const ch = useGameStore.getState().character;
-        setDialogue({
-            speaker: 'Truth',
-            text: truthCombatLine(ch, 'guardianLose'),
-            color: '#f97316',
-        });
-    }, [consumeFightBonusHp]);
+        restVitality();
+        setHutOpen(true); // wake at the Hut, fully restored
+        showToast('✦ You fall — and wake in Truth\'s Hut, your vitality restored.');
+    }, [consumeFightBonusHp, restVitality, showToast]);
 
     const handleSolve = useCallback((puzzleId: string) => {
         markSolved(puzzleId);
@@ -601,8 +604,12 @@ export default function WorldPage() {
     const cSkill = skillBonuses(character.skills);
     const cFounder = founderBonuses(founderNumber);
     const cCloth = clothingBonus(character.equipped.clothing);
+    const maxHp = maxVitality(character, founderNumber);
+    const curHp = currentVitality(character, founderNumber, maxHp);
     const combatStatProps = {
-        bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp + character.fightBonusHp,
+        bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
+        startHp: curHp,
+        onCombatEnd: (hp: number) => setHpStore(hp),
         bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage + (character.fightBonusDamage ?? 0),
         bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
         bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
@@ -716,12 +723,21 @@ export default function WorldPage() {
                         ))}
                     </div>
                 </div>
-                <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0 lg:px-5">
-                    <FounderBadge founderNumber={founderNumber} size={18} />
-                    <span className="font-ritual text-sm lg:text-base text-white truncate">{character.name || 'Soul'}</span>
-                    {path && (
-                        <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
-                    )}
+                <div className="flex flex-col items-stretch gap-1 px-3.5 py-1.5 rounded-2xl bg-black/45 border border-aether-gold/20 backdrop-blur-sm min-w-0 lg:px-5">
+                    <div className="flex items-center gap-2 min-w-0 justify-center">
+                        <FounderBadge founderNumber={founderNumber} size={18} />
+                        <span className="font-ritual text-sm lg:text-base text-white truncate">{character.name || 'Soul'}</span>
+                        {path && (
+                            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <Heart className="w-2.5 h-2.5 shrink-0 text-red-400" />
+                        <div className="flex-1 h-1 min-w-[60px] rounded-full bg-black/50 overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(0, (curHp / maxHp) * 100)}%`, background: curHp > maxHp * 0.35 ? '#34d399' : curHp > maxHp * 0.15 ? '#fbbf24' : '#ef4444' }} />
+                        </div>
+                        <span className="text-[7px] font-mono tabular-nums text-zinc-400 shrink-0">{curHp}/{maxHp}</span>
+                    </div>
                 </div>
                 <button
                     onClick={() => setSatchelOpen(true)}

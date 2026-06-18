@@ -58,6 +58,9 @@ interface Foe {
 interface Proj { x: number; y: number; vx: number; vy: number; life: number; dmg: number; color: string; r: number; }
 interface Ring { x: number; y: number; r: number; t: number; dur: number; dmg: number; done: boolean; }
 
+// Floating combat text — a damage/crit/heal number that pops up and fades.
+interface Floater { x: number; y: number; vy: number; life: number; max: number; text: string; color: string; crit: boolean; }
+
 // Build a varied roster so larger packs aren't just clones — a flanker, then a
 // caster, then a brute get mixed in as the count grows.
 function buildKinds(n: number): FoeKind[] {
@@ -91,6 +94,10 @@ interface Props {
     playerReachBonus?: number;
     onVictory: () => void;
     onDefeat: () => void;
+    /** Persistent vitality: hp the fight starts at, and a callback with the hp
+     *  remaining when it ends, so vitality carries back out into the world. */
+    startHp?: number;
+    onCombatEnd?: (hp: number) => void;
     onExit: () => void;
     /** BGM to restore when combat ends (defeat, victory, or flee). */
     exploreBgm?: BgmId;
@@ -103,8 +110,9 @@ function weakPointMult(character: GameCharacter): number {
     return 2;
 }
 
-export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, onVictory, onDefeat, onExit, exploreBgm = 'world_cavern' }: Props) {
+export default function CombatScene({ destination: d, character, weaponDamage, weaponReach, bonusHp = 0, bonusDamage = 0, bonusReach = 0, bonusRegen = 0, bonusLifesteal = 0, bonusCrit = 0, bonusKnockback = 0, enemyHpMult = 1, enemyDmgMult = 1, playerDamageMult = 1, playerReachBonus = 0, startHp, onCombatEnd, onVictory, onDefeat, onExit, exploreBgm = 'world_cavern' }: Props) {
     const maxHp = PLAYER_HP + bonusHp;
+    const initialHp = Math.min(startHp ?? maxHp, maxHp);
     const dmg = Math.round((weaponDamage + bonusDamage) * playerDamageMult);
     const reach = weaponReach + bonusReach + playerReachBonus;
     const regen = bonusRegen;
@@ -119,7 +127,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const keysRef = useRef<Set<string>>(new Set());
     const attackRef = useRef(false);
 
-    const [hp, setHp] = useState(maxHp);
+    const [hp, setHp] = useState(initialHp);
     const [boss, setBoss] = useState<{ name: string; hp: number; max: number } | null>(null);
     const [foesLeft, setFoesLeft] = useState(0);
     const [outcome, setOutcome] = useState<'fight' | 'won' | 'lost'>('fight');
@@ -135,11 +143,11 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const pathColor = character.path ? PATH_BY_ID[character.path].color : '#fbbf24';
     const weakMult = weakPointMult(character);
 
-    const endRef = useRef({ onVictory, onDefeat });
-    endRef.current = { onVictory, onDefeat };
+    const endRef = useRef({ onVictory, onDefeat, onCombatEnd });
+    endRef.current = { onVictory, onDefeat, onCombatEnd };
     // last HP value pushed to the bar — guards against a render every frame
     // while the Mystic's renewal is ticking.
-    const shownRef = useRef(maxHp);
+    const shownRef = useRef(initialHp);
     // last cooldown second reflected to each ability button — so we set React
     // state only when the displayed value actually changes (and always reset to
     // 0 when ready). The loop runs in a []-effect, so it can't read live state.
@@ -174,9 +182,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
         const rand = (a: number, b: number) => a + Math.random() * (b - a);
         const st = {
-            px: W / 2, py: H - TILE * 3, php: maxHp, atk: 0, swing: 0,
+            px: W / 2, py: H - TILE * 3, php: initialHp, atk: 0, swing: 0,
             aimx: 0, aimy: 1, // attack direction (last movement; default down)
             foes: [] as Foe[], projectiles: [] as Proj[], rings: [] as Ring[],
+            floaters: [] as Floater[],
             bossSpawned: false, done: false,
             shake: 0, hurtFlash: 0, hurtCd: 0,
             blockT: 0, blockReduction: 0,
@@ -185,6 +194,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             trueSightT: 0, rallyT: 0, rallyReduction: 0,
             bindT: 0, bindSlow: 0, surgeT: 0, surgeMult: 1,
             abilityCds: {} as Record<string, number>,
+            hitStop: 0,      // seconds remaining of frozen-frame hit feedback
+            slowmo: 0,       // seconds remaining of slow-motion (KO / boss spawn)
+            slowScale: 1,    // 0.35 during slowmo, else 1
+            flash: 0,        // full-screen white flash for crits / boss spawns
         };
         const foeHp = Math.round(cfg.enemyHp * enemyHpMult);
         const bossHp = Math.round(cfg.bossHp * enemyHpMult);
@@ -277,6 +290,13 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             }
             if (hits > 0) { sfx.hit(); st.shake = Math.max(st.shake, 3.5); }
         };
+
+        // spawn a floating combat number at (x,y). crits are bigger/gold.
+        const popFloater = (x: number, y: number, text: string, color: string, crit = false) => {
+            st.floaters.push({ x: x + (Math.random() - 0.5) * 6, y, vy: -26, life: 0, max: crit ? 0.85 : 0.7, text, color, crit });
+        };
+        // freeze the world for a beat — the "weight" behind heavy hits & KOs.
+        const hitStop = (secs: number) => { st.hitStop = Math.max(st.hitStop, secs); };
 
         const triggerAbility = (abId: string) => {
             const ab = ABILITY_BY_ID[abId];
@@ -436,15 +456,31 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
 
         function loop(now: number) {
             if (!running) return;
-            const dt = Math.min(0.05, (now - last) / 1000);
+            const rawDt = Math.min(0.05, (now - last) / 1000);
             const tsec = now / 1000;
             last = now;
 
+            // JUICE timers — hit-stop freezes the world for a few frames on
+            // heavy hits/KOs; slowmo stretches time for boss spawns & the kill.
+            // These decay in REAL time so the effect always resolves cleanly.
+            st.hitStop = Math.max(0, st.hitStop - rawDt);
+            st.slowmo = Math.max(0, st.slowmo - rawDt);
+            st.flash = Math.max(0, st.flash - rawDt * 2.4);
+            st.slowScale = st.slowmo > 0 ? 0.32 : 1;
+            const frozen = st.hitStop > 0;
+            // gameplay advances on a scaled dt (0 during hit-stop, ~0.32x in slowmo)
+            const dt = frozen ? 0 : rawDt * st.slowScale;
+
             // juice decays run regardless of state so they settle on the banner
-            st.shake = Math.max(0, st.shake - dt * 22);
-            st.hurtFlash = Math.max(0, st.hurtFlash - dt * 1.6);
-            st.hurtCd -= dt;
+            st.shake = Math.max(0, st.shake - rawDt * 22);
+            st.hurtFlash = Math.max(0, st.hurtFlash - rawDt * 1.6);
+            st.hurtCd -= rawDt;
             let frameMoving = false;
+
+            // floaters always animate in real time so a hit-stop freeze still
+            // shows the damage numbers rising & fading.
+            for (const fl of st.floaters) { fl.life += rawDt; fl.y += fl.vy * rawDt; fl.vy += 30 * rawDt; }
+            st.floaters = st.floaters.filter((fl) => fl.life < fl.max);
 
             if (!st.done) {
                 // input
@@ -502,7 +538,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                     // a small lunge in the aim direction for punch
                     st.px = Math.max(lo, Math.min(hiX, st.px + st.aimx * 5));
                     st.py = Math.max(lo, Math.min(hiY, st.py + st.aimy * 5));
-                    let hits = 0, dealt = 0;
+                    let hits = 0, dealt = 0, critLanded = false;
                     for (const f of st.foes) {
                         const dx = f.x - st.px, dy = f.y - st.py;
                         const dd = Math.hypot(dx, dy) || 0.001;
@@ -514,6 +550,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         const surgeMult = st.surgeT > 0 ? st.surgeMult : 1;
                         const hitDmg = Math.round((isCrit ? dmg * 2 : dmg) * wpMult * surgeMult);
                         f.hp -= hitDmg; f.hurt = 0.16; hits++; dealt += hitDmg;
+                        if (isCrit) critLanded = true;
+                        // floating damage number — crits read bigger & gold
+                        popFloater(f.x, f.y - (f.boss ? 24 : 14), String(hitDmg), isCrit ? '#fcd34d' : '#ffffff', isCrit);
                         const a = Math.atan2(dy, dx);
                         const kb = (f.boss ? 4 : 9) + knockbackBonus + (isCrit ? 4 : 0);
                         f.x += Math.cos(a) * kb; f.y += Math.sin(a) * kb;
@@ -522,6 +561,10 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         sfx.hit();
                         st.shake = Math.max(st.shake, dealt > dmg ? 4.5 : 2.6);
                         if (lifesteal > 0) st.php = Math.min(maxHp, st.php + dealt * lifesteal);
+                        // JUICE — crits hit-stop the world for ~70ms + flash;
+                        // multi-hit heavies get a shorter freeze.
+                        if (critLanded) { hitStop(0.07); st.flash = Math.max(st.flash, 0.5); }
+                        else if (hits >= 2) hitStop(0.035);
                     }
                 }
 
@@ -655,6 +698,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         setOutcome('won');
                         sfx.victory();
                         st.shake = Math.max(st.shake, 5);
+                        st.slowmo = Math.max(st.slowmo, 0.7);
+                        hitStop(0.12);
+                        endRef.current.onCombatEnd?.(Math.max(0, Math.round(st.php)));
                         setTimeout(() => endRef.current.onVictory(), 1200);
                     } else {
                         st.bossSpawned = true;
@@ -662,6 +708,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         st.foes.push(b);
                         setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
                         sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
+                        st.flash = Math.max(st.flash, 0.75);
+                        st.slowmo = Math.max(st.slowmo, 0.9);  // dramatic time-stretch on the reveal
+                        hitStop(0.09);
                     }
                 }
                 if (st.bossSpawned) {
@@ -671,8 +720,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 }
 
                 // outcomes
-                if (st.php <= 0) { st.done = true; setOutcome('lost'); sfx.defeat(); st.shake = Math.max(st.shake, 5); setTimeout(() => endRef.current.onDefeat(), 1400); }
-                else if (st.bossSpawned && st.foes.length === 0) { st.done = true; setOutcome('won'); sfx.victory(); st.shake = Math.max(st.shake, 7); setTimeout(() => endRef.current.onVictory(), 1600); }
+                if (st.php <= 0) { st.done = true; setOutcome('lost'); sfx.defeat(); st.shake = Math.max(st.shake, 5); st.slowmo = Math.max(st.slowmo, 1.1); hitStop(0.14); st.flash = Math.max(st.flash, 0.4); setTimeout(() => endRef.current.onDefeat(), 1400); }
+                else if (st.bossSpawned && st.foes.length === 0) { st.done = true; setOutcome('won'); sfx.victory(); st.shake = Math.max(st.shake, 7); st.slowmo = Math.max(st.slowmo, 1.2); hitStop(0.16); st.flash = Math.max(st.flash, 0.6); endRef.current.onCombatEnd?.(Math.max(0, Math.round(st.php))); setTimeout(() => endRef.current.onVictory(), 1600); }
             }
 
             // ---- render ----
@@ -803,6 +852,27 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 ctx.beginPath(); ctx.arc(st.px, st.py - 2, reach, a0 - 0.7, a0 + 0.7); ctx.stroke();
             }
 
+            // floating combat text — damage numbers rise & fade. Crits are
+            // bigger, gold, and carry a faint halo so they read at a glance.
+            for (const fl of st.floaters) {
+                const k = fl.life / fl.max;
+                const alpha = Math.max(0, 1 - k * k);
+                const size = fl.crit ? 11 : 8;
+                ctx.save();
+                ctx.font = `${fl.crit ? '900' : '700'} ${size}px Inter, system-ui, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (fl.crit) {
+                    ctx.fillStyle = `rgba(0,0,0,${alpha * 0.55})`;
+                    ctx.fillText(fl.text, fl.x + 0.5, fl.y + 0.5);
+                }
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = fl.color;
+                ctx.fillText(fl.text, fl.x, fl.y);
+                ctx.restore();
+            }
+            ctx.globalAlpha = 1;
+
             // player — the layered avatar (16x24) with its walk cycle
             glow(st.px, st.py, character.appearance.aura, 11);
             ctx.globalAlpha = 1;
@@ -820,9 +890,25 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
             const pBob = frameMoving && wphase === 0 ? 1 : 0;
             const pOx = st.px - 8;
             const pOy = st.py - 19 - pBob;
-            ctx.drawImage(wframe, pOx, pOy, 16, 24);
-            const wKind = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff']?.kind || 'staff';
-            drawWeaponOverlay(ctx, wKind, facing, pOx, pOy, 1);
+            // squash & stretch — a strike briefly stretches the avatar in its aim
+            // direction; the settle reads as weight behind every swing.
+            if (st.swing > 0.12) {
+                const sk = (st.swing - 0.12) / 0.08; // 0..1 early in the swing
+                ctx.save();
+                ctx.translate(st.px, st.py - 10);
+                ctx.rotate(Math.atan2(st.aimy, st.aimx));
+                ctx.scale(1 + 0.18 * sk, 1 - 0.10 * sk);
+                ctx.rotate(-Math.atan2(st.aimy, st.aimx));
+                ctx.translate(-st.px, -(st.py - 10));
+                ctx.drawImage(wframe, pOx, pOy, 16, 24);
+                const wKind = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff']?.kind || 'staff';
+                drawWeaponOverlay(ctx, wKind, facing, pOx, pOy, 1);
+                ctx.restore();
+            } else {
+                ctx.drawImage(wframe, pOx, pOy, 16, 24);
+                const wKind = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff']?.kind || 'staff';
+                drawWeaponOverlay(ctx, wKind, facing, pOx, pOy, 1);
+            }
             ctx.globalAlpha = 1;
 
             ctx.restore();
@@ -833,6 +919,11 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 rv.addColorStop(0, 'rgba(239,68,68,0)');
                 rv.addColorStop(1, `rgba(239,68,68,${0.55 * Math.min(1, st.hurtFlash)})`);
                 ctx.fillStyle = rv; ctx.fillRect(0, 0, vw, vh);
+            }
+            // crit / boss-spawn / KO flash — a brief warm-white punch
+            if (st.flash > 0.01) {
+                ctx.fillStyle = `rgba(255,248,225,${Math.min(0.85, st.flash)})`;
+                ctx.fillRect(0, 0, vw, vh);
             }
 
             raf = requestAnimationFrame(loop);

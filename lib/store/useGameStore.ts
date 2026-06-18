@@ -14,6 +14,7 @@ import {
     MAX_FIGHT_BONUS_DAMAGE,
     MAX_FIGHT_BONUS_HP,
 } from '@/lib/game/consumables';
+import { maxVitality, BASE_VITALITY } from '@/lib/game/vitality';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -70,7 +71,9 @@ export interface GameCharacter {
         copper: number;
         cosmic: number;
     };
-    /** HP bonus from health orbs / consumables — next fight only. */
+    /** Current vitality — persists between the overworld and every fight. */
+    hp: number;
+    /** @deprecated transient orb bonus — vitality is now the persistent `hp`. */
     fightBonusHp: number;
     /** Damage bonus from consumables — next fight only. */
     fightBonusDamage: number;
@@ -108,6 +111,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     sourceReturned: false,
     equipped: { weapon: null, clothing: 'plain', relic: null, scroll: null },
     materials: { iron: 0, copper: 0, cosmic: 0 },
+    hp: BASE_VITALITY,
     fightBonusHp: 0,
     fightBonusDamage: 0,
     consumables: {},
@@ -166,6 +170,10 @@ interface GameState {
     spendMaterials: (costs: { iron?: number; copper?: number; cosmic?: number }) => void;
     addFightBonusHp: (amount: number) => void;
     consumeFightBonusHp: () => number;
+    /** Persistent vitality: set / heal / fully restore (rest at the Hut). */
+    setHp: (hp: number) => void;
+    healHp: (amount: number) => void;
+    restVitality: () => void;
     craftConsumable: (id: string) => boolean;
     useConsumable: (id: string) => boolean;
 
@@ -439,6 +447,21 @@ export const useGameStore = create<GameState>()(
                 return bonus;
             },
 
+            setHp: (hp) =>
+                set((s) => ({
+                    character: { ...s.character, hp: Math.max(0, Math.min(maxVitality(s.character, s.founderNumber), Math.round(hp))) },
+                })),
+
+            healHp: (amount) =>
+                set((s) => {
+                    const max = maxVitality(s.character, s.founderNumber);
+                    const cur = typeof s.character.hp === 'number' ? s.character.hp : max;
+                    return { character: { ...s.character, hp: Math.min(max, Math.round(cur + amount)) } };
+                }),
+
+            restVitality: () =>
+                set((s) => ({ character: { ...s.character, hp: maxVitality(s.character, s.founderNumber) } })),
+
             craftConsumable: (id) => {
                 const ch = get().character;
                 if (!canCraftConsumable(ch, id)) return false;
@@ -462,9 +485,10 @@ export const useGameStore = create<GameState>()(
                     const stock = { ...s.character.consumables };
                     stock[id] = Math.max(0, (stock[id] ?? 0) - 1);
                     if (stock[id] === 0) delete stock[id];
-                    const hp = def.effect.hp
-                        ? Math.min(MAX_FIGHT_BONUS_HP, s.character.fightBonusHp + def.effect.hp)
-                        : s.character.fightBonusHp;
+                    // health tonics now restore persistent vitality (not a per-fight buffer)
+                    const max = maxVitality(s.character, s.founderNumber);
+                    const cur = typeof s.character.hp === 'number' ? s.character.hp : max;
+                    const newHp = def.effect.hp ? Math.min(max, cur + def.effect.hp) : cur;
                     const damage = def.effect.damage
                         ? Math.min(MAX_FIGHT_BONUS_DAMAGE, s.character.fightBonusDamage + def.effect.damage)
                         : s.character.fightBonusDamage;
@@ -472,7 +496,7 @@ export const useGameStore = create<GameState>()(
                         character: {
                             ...s.character,
                             consumables: stock,
-                            fightBonusHp: hp,
+                            hp: newHp,
                             fightBonusDamage: damage,
                         },
                     };
