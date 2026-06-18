@@ -90,12 +90,15 @@ interface Station {
 }
 
 const STATIONS: Station[] = [
-    { id: 'ledger', label: 'The Ledger', sub: "Truth's daily Word", x: 20, y: 16, sprite: { col: 18, row: 0, vmin: 11 } },
-    { id: 'visions', label: 'The Seeing Glass', sub: 'Visions & films', x: 72, y: 12, sprite: { col: 22, row: 14, h: 2, vmin: 11 } },
-    { id: 'archive', label: 'The Archive', sub: 'Scrolls & frequencies', x: 12, y: 56, sprite: { col: 12, row: 0, h: 2, vmin: 13 } },
-    { id: 'forge', label: 'The Forge', sub: 'Temper arms & tonics', x: 76, y: 55, sprite: { col: 10, row: 14, h: 2, vmin: 13 } },
-    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 36, y: 72, sprite: { col: 17, row: 12, vmin: 9 } },
-    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 56, y: 73, sprite: { col: 0, row: 0, w: 2, vmin: 18 } },
+    // wall row (top)
+    { id: 'ledger', label: 'The Ledger', sub: "Truth's daily Word", x: 22, y: 17, sprite: { col: 18, row: 0, vmin: 11 } },
+    { id: 'visions', label: 'The Seeing Glass', sub: 'Visions & films', x: 74, y: 14, sprite: { col: 22, row: 14, h: 2, vmin: 11 } },
+    // upper floor row
+    { id: 'archive', label: 'The Archive', sub: 'Scrolls & frequencies', x: 22, y: 62, sprite: { col: 12, row: 0, h: 2, vmin: 13 } },
+    { id: 'forge', label: 'The Forge', sub: 'Temper arms & tonics', x: 78, y: 62, sprite: { col: 10, row: 14, h: 2, vmin: 13 } },
+    // lower floor row (well clear of each other)
+    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 26, y: 85, sprite: { col: 17, row: 12, vmin: 10 } },
+    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 70, y: 85, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
 ];
 
 interface HutInteriorProps {
@@ -150,7 +153,7 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
             {/* ---- decor (non-interactive) ---- */}
             <div className="absolute pointer-events-none" style={{ left: '4%', top: '20%' }}><KenneyObject col={19} row={0} vmin={7} /></div>
             <div className="absolute pointer-events-none" style={{ left: '90%', top: '20%' }}><KenneyObject col={19} row={0} vmin={7} /></div>
-            <div className="absolute pointer-events-none" style={{ left: '46%', top: '60%' }}><KenneyObject col={16} row={0} vmin={7} /></div>
+            <div className="absolute pointer-events-none" style={{ left: '49%', top: '74%' }}><KenneyObject col={16} row={0} vmin={7} /></div>
 
             {/* ---- Truth, center ---- */}
             <button
