@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft } from 'lucide-react';
+import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthOffscreen } from '@/lib/game/truth';
 import { formatBytes, type Bulletin, type DispatchMedia, type MediaKind } from '@/lib/game/hut';
@@ -178,7 +178,9 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     <p className="text-[9px] tracking-[0.4em] uppercase text-aether-gold/70">Truth's Hut</p>
                     <p className="text-[10px] text-orange-300/80 italic mt-0.5 max-w-[60vw] truncate">"{worldEvent.truthLine}"</p>
                 </div>
-                <div className="w-[44px]" />
+                <button onClick={() => setShowTour(true)} className="pointer-events-auto p-2.5 rounded-full bg-black/45 border border-white/10 backdrop-blur-sm text-zinc-200 hover:text-aether-gold min-w-[44px] min-h-[44px] flex items-center justify-center" title="Guide to the Hut" aria-label="Guide">
+                    <HelpCircle className="w-4 h-4" />
+                </button>
             </div>
 
             {/* ---- decor (non-interactive) — candelabras cast a flickering glow ---- */}
