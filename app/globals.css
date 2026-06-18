@@ -33,6 +33,25 @@
     --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
+/* Tailwind v4 colour tokens — registers the aether palette so utilities like
+   bg-aether-gold/10, border-aether-gold/25, via-aether-gold/35, from-aether-gold/[0.06]
+   and text-aether-gold/70 actually resolve (with opacity modifiers). Without this
+   @theme block these classes silently emit no CSS in Tailwind v4, so the intended
+   gold borders, washes and dividers app-wide were simply not rendering. Keep the
+   values in sync with the :root custom properties above. */
+@theme {
+    --color-aether-deep: #020617;
+    --color-aether-void: #000000;
+    --color-aether-surface: #0f172a;
+    --color-aether-muted: #1e293b;
+    --color-aether-gold: #fbbf24;
+    --color-aether-gold-soft: #fcd34d;
+    --color-aether-gold-deep: #b45309;
+    --color-aether-indigo: #6366f1;
+    --color-aether-violet: #a855f7;
+    --color-aether-cyan: #22d3ee;
+}
+
 /* Base Styles */
 body {
     background-color: var(--aether-deep);
