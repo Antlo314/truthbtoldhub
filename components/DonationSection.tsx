@@ -31,9 +31,37 @@ export default function DonationSection({
 
     return (
         <section className={className}>
-            <p className={`text-white/60 leading-relaxed ${hut ? 'text-[11px] mb-4' : 'text-sm mb-6 max-w-lg'}`}>
-                Fuel the 400 Series and the Sacred Sanctum. Give any amount — Stripe or Cash App — and DM{' '}
-                <span className="text-aether-gold font-bold">@truufbtold</span> with your hub name so we can match your gift.
+            {/* Vision — patronage builds far more than the film series */}
+            <p className={`font-ritual text-white leading-tight ${hut ? 'text-base mb-1.5' : 'text-xl mb-2'}`}>
+                It&apos;s bigger than the 400 Series.
+            </p>
+            <p className={`text-white/60 leading-relaxed ${hut ? 'text-[11px] mb-3' : 'text-sm mb-4 max-w-lg'}`}>
+                Your offering doesn&apos;t just fund a film — it builds the infrastructure of an awakening. The
+                400 Series is the spark; the Sanctum itself is being reborn as a living{' '}
+                <span className="text-aether-gold font-semibold">3D world</span>, layered with sacred assets,
+                trials, and tools forged for real spiritual growth. Every gift lays another stone.
+            </p>
+
+            <ul className={hut ? 'mb-4 space-y-1.5' : 'mb-6 max-w-lg space-y-2'}>
+                {[
+                    ['The 400 Series', 'Cinematic Israelite history & recovered scroll-wisdom'],
+                    ['A world reborn in 3D', 'The Sanctum rebuilt as a living, walkable realm'],
+                    ['Assets for awakening', 'Scriptures, relics, guides & trials built for real growth'],
+                    ['The engine behind it', 'Render pipeline, studio & hosting that keep it alive'],
+                ].map(([title, desc]) => (
+                    <li key={title} className="flex gap-2">
+                        <span className="text-aether-gold leading-none mt-0.5">✦</span>
+                        <span className={`${hut ? 'text-[10px]' : 'text-[13px]'} text-white/55 leading-snug`}>
+                            <span className="font-bold text-white/85">{title}</span> — {desc}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+
+            <p className={`text-white/55 leading-relaxed ${hut ? 'text-[11px] mb-4' : 'text-sm mb-6 max-w-lg'}`}>
+                Give any amount — Stripe or Cash App — then DM{' '}
+                <span className="text-aether-gold font-bold">@truufbtold</span> with your hub name so we can
+                match your gift to your soul.
             </p>
 
             {showFundingBar && (
