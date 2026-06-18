@@ -1,8 +1,8 @@
 'use client';
 
 const TUTORIALS: Record<string, { title: string; body: string }> = {
-    roam: { title: 'Roam the Cavern', body: 'Drag the joystick or use WASD to move. Find Truth\'s Hut at the center of the world.' },
-    interact: { title: 'Interact', body: 'Walk near a portal, cave, or NPC and tap the prompt that appears.' },
+    roam: { title: 'Roam the Cavern', body: 'Drag the joystick (or WASD) to move. Begin at Truth\'s Hut in the center — forge a weapon, then walk the glowing portals to gather their relics on the way back to the Source.' },
+    interact: { title: 'Interact', body: 'Near a portal, cave, or an NPC marked with "!", a prompt appears — tap it to enter or speak. The souls at the edges hand out the missions that sharpen you.' },
     satchel: { title: 'Your Satchel', body: 'Tap the gem icon to view relics, scrolls, and equipped gear.' },
     forge: { title: 'Truth\'s Forge', body: 'Inside the Hut, open the forge to smelt weapons from gathered ore.' },
     combat: { title: 'Combat', body: 'Shades will hunt you. Strike with ATTACK. Path abilities appear when you\'ve learned them.' },

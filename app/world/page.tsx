@@ -49,7 +49,7 @@ import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import { activeQuestWaypoint, focusWaypoint } from '@/lib/game/questWaypoint';
-import { isDestinationUnlocked, unlockBlockMessage } from '@/lib/game/progression';
+import { isDestinationUnlocked, unlockBlockMessage, isDestinationSealed } from '@/lib/game/progression';
 import { loadSettings, applyMusicSetting, type GameSettings } from '@/lib/game/settings';
 import { gameMusic } from '@/lib/game/music';
 import { hapticTap } from '@/lib/game/haptics';
@@ -1115,21 +1115,34 @@ export default function WorldPage() {
 
                         {/* the goal — gather all five relics to open the way to the Source */}
                         {(() => {
-                            const got = ALL_RELIC_IDS.filter((id) => character.inventory.includes(id)).length;
-                            const total = ALL_RELIC_IDS.length;
-                            const done = got >= total;
+                            // Near-term goal tracks relics from the ages that are OPEN; the
+                            // full 5-relic Source gate still needs every age (some sealed).
+                            const openRelicIds = Object.values(DEST_BY_POI)
+                                .filter((d) => !isDestinationSealed(d.poiId))
+                                .flatMap((d) => d.relics.map((r) => r.id));
+                            const openTotal = openRelicIds.length;
+                            const got = openRelicIds.filter((id) => character.inventory.includes(id)).length;
+                            const grandTotal = ALL_RELIC_IDS.length;
+                            const moreComing = openTotal < grandTotal;
+                            const done = got >= grandTotal;
+                            const pct = openTotal > 0 ? (got / openTotal) * 100 : 0;
+                            const msg = done
+                                ? 'The five relics burn as one. The way to the Source is open.'
+                                : moreComing && got >= openTotal
+                                    ? 'You hold every relic of the open ages. More will unveil on the road ahead.'
+                                    : moreComing
+                                        ? 'Gather the relics of the ages now open. More will unveil as you walk.'
+                                        : 'Gather all five relics — one from each destination — to open the way back to the Source.';
                             return (
                                 <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: done ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.1)', background: done ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.02)' }}>
                                     <div className="flex items-center justify-between mb-2">
                                         <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/80">Path to the Source</p>
-                                        <p className="text-[10px] font-black tracking-widest text-aether-gold">{got} / {total}</p>
+                                        <p className="text-[10px] font-black tracking-widest text-aether-gold">{got} / {openTotal}{moreComing ? ` · ${grandTotal} in all` : ''}</p>
                                     </div>
                                     <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
-                                        <div className="h-full rounded-full transition-all" style={{ width: `${(got / total) * 100}%`, background: 'linear-gradient(90deg,#fcd34d,#b45309)' }} />
+                                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#fcd34d,#b45309)' }} />
                                     </div>
-                                    <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
-                                        {done ? 'The five relics burn as one. The way to the Source is open.' : 'Gather all five relics — one from each destination — to open the way back to the Source.'}
-                                    </p>
+                                    <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">{msg}</p>
                                 </div>
                             );
                         })()}
