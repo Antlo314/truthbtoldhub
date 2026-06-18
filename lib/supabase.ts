@@ -3,11 +3,23 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// IMPORTANT: do NOT throw here. This module is imported while Next collects
+// page data during `next build`, so throwing on a missing/blank env var fails
+// the ENTIRE build (not just one route). Warn loudly and fall back to a
+// non-functional placeholder so the build completes. Supabase calls will fail
+// gracefully at runtime (callers already try/catch) until the env vars are set
+// in the host project — which they MUST be for auth, saves, and the leaderboard.
 if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables! Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+    console.warn(
+        '[supabase] Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY — ' +
+        'the app will build but cannot reach Supabase until these are set in the environment.',
+    );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(
+    supabaseUrl || 'https://placeholder.supabase.co',
+    supabaseKey || 'public-anon-placeholder',
+);
 
 if (typeof window !== 'undefined') {
     // Only mark the cookie Secure over https — on http (localhost) a Secure
