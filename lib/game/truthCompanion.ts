@@ -80,11 +80,13 @@ const WANDER_LINES: Record<0 | 1 | 2 | 3, string[]> = {
         'Stay on the road. The shades test what is unarmed.',
         'The Hut is center. Return when you need the word.',
         'I follow — not to watch you fail, but to witness you rise.',
+        'Come back to my Hut when you can — I have set something aside there for you. Go and see.',
     ],
     1: [
         'Each question you asked lives in me. Ask more when you are ready.',
         'I was weak once. I am still imperfect. Keep walking anyway.',
         'The Source did not leave you alone. Neither will I.',
+        'Do not roam past my Hut. What I have gathered for you waits inside — more than word.',
     ],
     2: [
         'Seven years in a cell carved the mission into me. I ran anyway. Do not repeat my detour.',
@@ -93,6 +95,7 @@ const WANDER_LINES: Record<0 | 1 | 2 | 3, string[]> = {
         'Sorrow once had me reaching for the cup. The Source\'s water is the only drink that quenches.',
         'Fasting broke the cup for me — uneven at first, faithful over time. Forgiveness and prayer still arm me.',
         'Every day is a fight. Empty the flesh, or the monster wins by default.',
+        'My Hut holds more than dispatch — the offering, the library, gifts laid by. Return and see what I keep for you.',
     ],
     3: [
         'We are givers of light on this run — or we are nothing.',
@@ -103,6 +106,7 @@ const WANDER_LINES: Record<0 | 1 | 2 | 3, string[]> = {
         'Share the vision. Fuel it if you can. Learn from my mishaps — that is how you honor me.',
         'The 400 Series must breathe. Buried wisdom does not recover itself.',
         'Some nights I fight alone in a foreign land. Your steps beside me are not small.',
+        'Come back to my Hut, friend — new word, the offering, the work. I have laid it all out for you.',
     ],
 };
 

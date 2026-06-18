@@ -11,9 +11,11 @@ const TUTORIALS: Record<string, { title: string; body: string }> = {
 interface Props {
     id: keyof typeof TUTORIALS;
     onDismiss: () => void;
+    /** Suppress every intro walkthrough so they never flood on load again. */
+    onNeverShow?: () => void;
 }
 
-export default function TutorialOverlay({ id, onDismiss }: Props) {
+export default function TutorialOverlay({ id, onDismiss, onNeverShow }: Props) {
     const t = TUTORIALS[id];
     if (!t) return null;
     return (
@@ -24,9 +26,19 @@ export default function TutorialOverlay({ id, onDismiss }: Props) {
             <div className="max-w-md mx-auto glass-panel rounded-2xl p-4 border border-aether-gold/25">
                 <p className="text-[9px] font-black uppercase tracking-[0.35em] text-aether-gold">{t.title}</p>
                 <p className="font-ritual text-sm text-white/85 mt-1.5 leading-relaxed">{t.body}</p>
-                <button onClick={onDismiss} className="mt-3 text-[10px] font-black uppercase tracking-widest text-aether-gold hover:text-white">
-                    Got it →
-                </button>
+                <div className="mt-3 flex items-center justify-between gap-4">
+                    <button onClick={onDismiss} className="text-[10px] font-black uppercase tracking-widest text-aether-gold hover:text-white">
+                        Got it →
+                    </button>
+                    {onNeverShow && (
+                        <button
+                            onClick={onNeverShow}
+                            className="text-[9px] font-bold uppercase tracking-widest text-white/40 hover:text-white/75 transition-colors"
+                        >
+                            Never show again
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

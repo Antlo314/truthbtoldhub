@@ -55,7 +55,7 @@ import { hapticTap } from '@/lib/game/haptics';
 import Minimap from '@/components/game/Minimap';
 import JournalPanel from '@/components/game/JournalPanel';
 import GameSettingsPanel from '@/components/game/GameSettingsPanel';
-import TutorialOverlay from '@/components/game/TutorialOverlay';
+import TutorialOverlay, { TUTORIAL_IDS } from '@/components/game/TutorialOverlay';
 import SourceEpilogue from '@/components/game/SourceEpilogue';
 import WorldDialogueBox from '@/components/game/WorldDialogueBox';
 import { useIsDesktopLayout } from '@/components/game/controls/useInputProfile';
@@ -81,6 +81,12 @@ function tutorialsSeen(): string[] {
 function markTutorialSeen(id: TutorialId) {
     const seen = tutorialsSeen();
     if (!seen.includes(id)) localStorage.setItem(TUTORIAL_KEY, JSON.stringify([...seen, id]));
+}
+
+/** Suppress every intro walkthrough at once ("Never show again"). */
+function markAllTutorialsSeen() {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(TUTORIAL_KEY, JSON.stringify([...TUTORIAL_IDS]));
 }
 
 interface InteractPOI {
@@ -275,6 +281,11 @@ export default function WorldPage() {
 
     const dismissTutorial = useCallback((id: TutorialId) => {
         markTutorialSeen(id);
+        setTutorial(null);
+    }, []);
+
+    const dismissAllTutorials = useCallback(() => {
+        markAllTutorialsSeen();
         setTutorial(null);
     }, []);
 
@@ -762,7 +773,7 @@ export default function WorldPage() {
             )}
 
             {tutorial && worldIntroDone && !worldPaused && (
-                <TutorialOverlay id={tutorial} onDismiss={() => dismissTutorial(tutorial)} />
+                <TutorialOverlay id={tutorial} onDismiss={() => dismissTutorial(tutorial)} onNeverShow={dismissAllTutorials} />
             )}
 
             {worldIntroDone && !worldPaused && (
