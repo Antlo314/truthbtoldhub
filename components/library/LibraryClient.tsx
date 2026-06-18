@@ -22,6 +22,7 @@ import {
 import { isAdminEmail } from '@/lib/adminEmails';
 
 const BUCKET = 'library';
+const MAX_FILE_BYTES = 52428800; // 50 MB — keep in sync with library_schema.sql bucket cap
 
 interface LibraryDoc {
     id: string;
@@ -68,6 +69,17 @@ function withDownload(url: string, name: string | null): string {
     return `${url}${sep}download=${encodeURIComponent(name || '')}`;
 }
 
+/** Turn a messy source filename into a clean default title (drops the
+ *  extension and any " -- author -- year -- … " metadata tail). */
+function deriveTitle(filename: string): string {
+    return filename
+        .replace(/\.[^.]+$/, '')
+        .split(' -- ')[0]
+        .replace(/_+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 export default function LibraryClient() {
     const router = useRouter();
 
@@ -79,14 +91,30 @@ export default function LibraryClient() {
 
     const [activeCat, setActiveCat] = useState('All');
 
-    // Upload form (admin only)
+    // Upload form (admin only) — supports batch (multi-file) uploads
     const [showUpload, setShowUpload] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [title, setTitle] = useState('');
+    const [progress, setProgress] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('General');
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
+    const [titles, setTitles] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    function onFilesPicked(picked: File[]) {
+        // Additive + de-duped (by name+size) so a second pick doesn't wipe files
+        // and titles the user already edited.
+        const existing = new Set(files.map((f) => `${f.name}:${f.size}`));
+        const fresh = picked.filter((f) => {
+            const k = `${f.name}:${f.size}`;
+            if (existing.has(k)) return false;
+            existing.add(k);
+            return true;
+        });
+        setFiles([...files, ...fresh]);
+        setTitles([...titles, ...fresh.map((f) => deriveTitle(f.name))]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
 
     async function load() {
         setLoading(true);
@@ -130,47 +158,72 @@ export default function LibraryClient() {
 
     async function handleUpload(e: React.FormEvent) {
         e.preventDefault();
-        if (!file || !title.trim() || uploading) return;
+        if (!files.length || uploading) return;
         setUploading(true);
         setError(null);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const uid = session?.user?.id ?? null;
-            const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-            const path = `${Date.now()}_${safeName}`;
 
-            const { error: upErr } = await supabase.storage
-                .from(BUCKET)
-                .upload(path, file, { contentType: file.type || undefined, upsert: false });
-            if (upErr) throw upErr;
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id ?? null;
+        const failures: string[] = [];
+        const failedIdx: number[] = [];
+        let done = 0;
 
-            const { error: insErr } = await supabase.from('library_documents').insert({
-                title: title.trim(),
-                description: description.trim() || null,
-                category: category.trim() || 'General',
-                file_path: path,
-                file_name: file.name,
-                file_type: file.type || null,
-                file_size: file.size,
-                uploaded_by: uid,
-            });
-            if (insErr) {
-                // Don't leave an orphaned object if the metadata insert was rejected.
-                await supabase.storage.from(BUCKET).remove([path]);
-                throw insErr;
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const title = (titles[i] || deriveTitle(f.name)).trim() || f.name;
+            setProgress(`Uploading ${i + 1} of ${files.length} — ${title}`);
+
+            if (f.size > MAX_FILE_BYTES) {
+                failures.push(`${f.name} — exceeds the ${fmtSize(MAX_FILE_BYTES)} limit`);
+                failedIdx.push(i);
+                continue;
             }
 
-            setTitle('');
+            const safeName = f.name.replace(/[^\w.\-]+/g, '_');
+            const path = `${Date.now()}_${i}_${safeName}`;
+            try {
+                const { error: upErr } = await supabase.storage
+                    .from(BUCKET)
+                    .upload(path, f, { contentType: f.type || undefined, upsert: false });
+                if (upErr) throw upErr;
+
+                const { error: insErr } = await supabase.from('library_documents').insert({
+                    title,
+                    description: description.trim() || null,
+                    category: category.trim() || 'General',
+                    file_path: path,
+                    file_name: f.name,
+                    file_type: f.type || null,
+                    file_size: f.size,
+                    uploaded_by: uid,
+                });
+                if (insErr) {
+                    // Don't leave an orphaned object if the metadata insert was rejected.
+                    await supabase.storage.from(BUCKET).remove([path]);
+                    throw insErr;
+                }
+                done++;
+            } catch (err) {
+                failures.push(`${f.name} — ${err instanceof Error ? err.message : 'failed'}`);
+                failedIdx.push(i);
+            }
+        }
+
+        setProgress(null);
+        setUploading(false);
+        if (failures.length) {
+            // Keep only the files that failed, so a retry can't re-upload successes.
+            setFiles(failedIdx.map((j) => files[j]));
+            setTitles(failedIdx.map((j) => titles[j] ?? ''));
+            setError(`${done} uploaded, ${failures.length} failed:\n${failures.join('\n')}`);
+        } else {
             setDescription('');
-            setFile(null);
+            setFiles([]);
+            setTitles([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
             setShowUpload(false);
-            await load();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Upload failed.');
-        } finally {
-            setUploading(false);
         }
+        await load();
     }
 
     async function handleDelete(doc: LibraryDoc) {
@@ -228,9 +281,9 @@ export default function LibraryClient() {
                 </header>
 
                 {error && (
-                    <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
+                    <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2">
                         <X className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span className="min-w-0 break-words">{error}</span>
+                        <span className="min-w-0 break-words whitespace-pre-line">{error}</span>
                     </div>
                 )}
 
@@ -251,37 +304,24 @@ export default function LibraryClient() {
                                 onSubmit={handleUpload}
                                 className="rounded-2xl border border-[#fbbf24]/20 bg-white/[0.03] p-4 sm:p-5 space-y-3"
                             >
+                                {/* Persistent live region so screen readers hear batch progress */}
+                                <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">{progress ?? ''}</div>
                                 <div className="flex items-center justify-between">
-                                    <h2 className="font-ritual text-lg text-white">New document</h2>
+                                    <h2 className="font-ritual text-lg text-white">Add documents</h2>
                                     <button type="button" onClick={() => setShowUpload(false)} className="p-1.5 rounded-full hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/70" aria-label="Cancel">
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
 
-                                <input
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Title"
-                                    aria-label="Document title"
-                                    required
-                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white font-ritual tracking-wide focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-1 focus-visible:ring-[#fbbf24]/40 transition-colors"
-                                />
-                                <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Description (optional)"
-                                    aria-label="Document description"
-                                    rows={2}
-                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-1 focus-visible:ring-[#fbbf24]/40 transition-colors resize-none"
-                                />
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <input
                                         value={category}
                                         onChange={(e) => setCategory(e.target.value)}
-                                        placeholder="Category"
+                                        placeholder="Category (applies to all)"
                                         aria-label="Category"
                                         list="library-categories"
-                                        className="sm:w-44 bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-1 focus-visible:ring-[#fbbf24]/40 transition-colors"
+                                        disabled={uploading}
+                                        className="sm:w-52 bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-1 focus-visible:ring-[#fbbf24]/40 transition-colors disabled:opacity-50"
                                     />
                                     <datalist id="library-categories">
                                         {categories.filter((c) => c !== 'All').map((c) => <option key={c} value={c} />)}
@@ -289,23 +329,65 @@ export default function LibraryClient() {
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                                        required
-                                        aria-label="Choose a file to upload"
+                                        multiple
+                                        disabled={uploading}
+                                        onChange={(e) => onFilesPicked(Array.from(e.target.files ?? []))}
+                                        aria-label="Choose one or more files to upload"
                                         className="flex-1 text-sm text-zinc-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-[#fbbf24]/15 file:text-[#fbbf24] hover:file:bg-[#fbbf24]/25 file:cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/40 rounded-lg"
                                     />
                                 </div>
+
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Shared description (optional)"
+                                    aria-label="Shared description"
+                                    rows={2}
+                                    disabled={uploading}
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-1 focus-visible:ring-[#fbbf24]/40 transition-colors resize-none disabled:opacity-50"
+                                />
+
+                                {files.length > 0 && (
+                                    <ul className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                        {files.map((f, i) => (
+                                            <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2">
+                                                <FileText className="w-4 h-4 text-[#fbbf24]/70 shrink-0" aria-hidden />
+                                                <div className="flex-1 min-w-0">
+                                                    <input
+                                                        value={titles[i] ?? ''}
+                                                        onChange={(e) => setTitles((t) => t.map((x, j) => (j === i ? e.target.value : x)))}
+                                                        placeholder="Title"
+                                                        aria-label={`Title for ${f.name}`}
+                                                        disabled={uploading}
+                                                        className="w-full bg-transparent border-0 border-b border-white/10 px-0 py-1 text-sm text-white font-ritual rounded focus:outline-none focus:border-[#fbbf24]/60 focus-visible:ring-2 focus-visible:ring-[#fbbf24]/60 disabled:opacity-50"
+                                                    />
+                                                    <p className="text-[10px] text-zinc-500 truncate mt-0.5">{f.name} · {fmtSize(f.size)}</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={uploading}
+                                                    onClick={() => { setFiles((fs) => fs.filter((_, j) => j !== i)); setTitles((t) => t.filter((_, j) => j !== i)); }}
+                                                    className="p-1 rounded hover:bg-white/10 text-zinc-500 hover:text-red-400 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 disabled:opacity-40"
+                                                    aria-label={`Remove ${f.name}`}
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+
                                 <div className="flex items-center gap-3 pt-1">
                                     <button
                                         type="submit"
-                                        disabled={uploading || !file || !title.trim()}
+                                        disabled={uploading || files.length === 0}
                                         className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-[0.2em] text-black transition-transform active:scale-[0.98] disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                         style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
                                     >
                                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                        {uploading ? 'Uploading…' : 'Add to Library'}
+                                        {uploading ? 'Uploading…' : files.length > 1 ? `Add ${files.length} to Library` : 'Add to Library'}
                                     </button>
-                                    {file && <span className="text-[11px] text-zinc-500 truncate">{file.name} · {fmtSize(file.size)}</span>}
+                                    {progress && <span className="text-[11px] text-zinc-400 truncate">{progress}</span>}
                                 </div>
                             </form>
                         )}
