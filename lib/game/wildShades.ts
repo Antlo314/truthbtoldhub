@@ -221,7 +221,9 @@ export function buildWildEncounter(
             bossHp,
             bossDmg,
             victory: arch.victory,
-            skirmish: arch.skirmish,
+            // bosses are locked behind destinations — roaming packs are always a
+            // boss-free skirmish (clear the pack, no "greater shade" phase).
+            skirmish: true,
             enemyKinds: roster.slice(0, enemyCount),
         },
     };
