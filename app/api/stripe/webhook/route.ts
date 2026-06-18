@@ -25,8 +25,11 @@ const SP_PER_DOLLAR = 25;
 export async function POST(req: Request) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!stripeKey || stripeKey === 'sk_test_placeholder' || !webhookSecret) {
-        return new NextResponse('Stripe webhook not configured', { status: 503 });
+    if (!stripeKey || stripeKey === 'sk_test_placeholder') {
+        return new NextResponse('STRIPE_SECRET_KEY not set', { status: 503 });
+    }
+    if (!webhookSecret) {
+        return new NextResponse('STRIPE_WEBHOOK_SECRET not set', { status: 503 });
     }
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any });
 
