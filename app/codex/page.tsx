@@ -398,7 +398,7 @@ export default function Archive() {
 
     const handleAttemptDecrypt = async () => {
         if (!decryptingId) return;
-        await supabase.from('codex_whispers').update({ is_encrypted: false }).eq('id', decryptingId);
+        await supabase.rpc('decrypt_whisper', { whisper_id: decryptingId });
         setDecryptingId(null);
     };
 

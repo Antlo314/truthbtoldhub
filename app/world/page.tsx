@@ -39,11 +39,6 @@ import { rollWildArchetype, wildEncounter, wildShadeDiscoverId } from '@/lib/gam
 import { CONSUMABLE_BY_ID, consumableStock, formatConsumableEffect } from '@/lib/game/consumables';
 import { type Pickup } from '@/lib/game/overworld';
 import { sfx } from '@/lib/game/sfx';
-import DestinationScene from '@/components/game/DestinationScene';
-import CombatScene from '@/components/game/CombatScene';
-import SourceScene from '@/components/game/SourceScene';
-import WeaponForge from '@/components/game/WeaponForge';
-import HutInterior from '@/components/game/HutInterior';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
@@ -53,10 +48,7 @@ import { loadSettings, applyMusicSetting, type GameSettings } from '@/lib/game/s
 import { gameMusic } from '@/lib/game/music';
 import { hapticTap } from '@/lib/game/haptics';
 import Minimap from '@/components/game/Minimap';
-import JournalPanel from '@/components/game/JournalPanel';
-import GameSettingsPanel from '@/components/game/GameSettingsPanel';
 import TutorialOverlay, { TUTORIAL_IDS } from '@/components/game/TutorialOverlay';
-import SourceEpilogue from '@/components/game/SourceEpilogue';
 import WorldDialogueBox from '@/components/game/WorldDialogueBox';
 import { useIsDesktopLayout } from '@/components/game/controls/useInputProfile';
 import {
@@ -69,6 +61,17 @@ import {
 } from '@/lib/game/truthVoice';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
+// Gated overlays — only mount behind state, so split them out of the first-load
+// bundle (keeps the overworld's first paint light on mobile). CutscenePlayer
+// stays static above: it renders on first paint for the world intro.
+const DestinationScene = dynamic(() => import('@/components/game/DestinationScene'), { ssr: false });
+const CombatScene = dynamic(() => import('@/components/game/CombatScene'), { ssr: false });
+const SourceScene = dynamic(() => import('@/components/game/SourceScene'), { ssr: false });
+const WeaponForge = dynamic(() => import('@/components/game/WeaponForge'), { ssr: false });
+const HutInterior = dynamic(() => import('@/components/game/HutInterior'), { ssr: false });
+const JournalPanel = dynamic(() => import('@/components/game/JournalPanel'), { ssr: false });
+const GameSettingsPanel = dynamic(() => import('@/components/game/GameSettingsPanel'), { ssr: false });
+const SourceEpilogue = dynamic(() => import('@/components/game/SourceEpilogue'), { ssr: false });
 
 const TUTORIAL_KEY = 'tbth-tutorials-seen';
 type TutorialId = 'roam' | 'interact' | 'satchel' | 'forge' | 'combat';
