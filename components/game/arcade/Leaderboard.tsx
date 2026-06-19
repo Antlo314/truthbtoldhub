@@ -8,6 +8,8 @@ interface Props {
     accent: string;
     loading?: boolean;
     emptyLabel?: string;
+    /** secondary count noun, e.g. 'lines' or 'orbs' */
+    metric?: string;
 }
 
 function RankBadge({ rank, accent }: { rank: number; accent: string }) {
@@ -17,7 +19,7 @@ function RankBadge({ rank, accent }: { rank: number; accent: string }) {
     return <span className="text-[11px] font-mono text-white/40 w-4 text-center">{rank}</span>;
 }
 
-export default function Leaderboard({ rows, accent, loading, emptyLabel }: Props) {
+export default function Leaderboard({ rows, accent, loading, emptyLabel, metric = 'lines' }: Props) {
     if (loading) {
         return <p className="text-[11px] text-zinc-500 text-center py-8 font-mono uppercase tracking-widest">Reading the ledger…</p>;
     }
@@ -46,7 +48,7 @@ export default function Leaderboard({ rows, accent, loading, emptyLabel }: Props
                             {r.player_name}
                             {r.isYou && <span className="ml-2 text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: accent }}>You</span>}
                         </p>
-                        <p className="text-[9px] font-mono uppercase tracking-widest text-white/35">Lv {r.level} · {r.lines} lines</p>
+                        <p className="text-[9px] font-mono uppercase tracking-widest text-white/35">Lv {r.level} · {r.lines} {metric}</p>
                     </div>
                     <p className="font-ritual text-lg shrink-0" style={{ color: r.rank === 1 ? '#fcd34d' : accent }}>{r.score.toLocaleString()}</p>
                 </div>

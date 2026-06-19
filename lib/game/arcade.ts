@@ -15,20 +15,32 @@ export interface ArcadeGameDef {
     tagline: string;
     /** what the score counts */
     scoreUnit: string;
+    /** secondary count noun shown on the leaderboard (e.g. 'lines', 'orbs') */
+    metric: string;
     accent: string;
     /** false = "coming soon" placeholder card */
     live: boolean;
 }
 
-// The arcade's game roster. Tetra is the first; more slots are
-// reserved so the lobby reads as a growing arcade, not a one-off.
+// The arcade's game roster. More slots are reserved so the lobby
+// reads as a growing arcade, not a one-off.
 export const ARCADE_GAMES: ArcadeGameDef[] = [
     {
         id: 'tetra',
         title: 'Tetra',
         tagline: 'Stack the falling stones. Clear the lines. Rise the levels.',
         scoreUnit: 'points',
+        metric: 'lines',
         accent: '#22d3ee',
+        live: true,
+    },
+    {
+        id: 'serpent',
+        title: 'Serpent',
+        tagline: 'Gather the luminous orbs. Grow, quicken, and survive your own coils.',
+        scoreUnit: 'points',
+        metric: 'orbs',
+        accent: '#22c55e',
         live: true,
     },
     {
@@ -36,10 +48,14 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
         title: 'More Trials Coming',
         tagline: 'New arcade challenges will open here. Keep watch.',
         scoreUnit: '',
+        metric: '',
         accent: '#a855f7',
         live: false,
     },
 ];
+
+/** Just the playable games. */
+export const LIVE_GAMES = ARCADE_GAMES.filter((g) => g.live);
 
 export function gameById(id: string): ArcadeGameDef | undefined {
     return ARCADE_GAMES.find((g) => g.id === id);

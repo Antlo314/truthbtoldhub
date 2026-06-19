@@ -5,34 +5,37 @@ import { ArrowLeft, Trophy, Crown, Gamepad2, Clock, ChevronRight, Lock } from 'l
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import {
-    ARCADE_GAMES, ARCADE_PRIZE, currentSeason, seasonLabel, daysLeftInSeason,
-    fetchLeaderboard, fetchPersonalBest, submitScore, gameById,
+    ARCADE_GAMES, LIVE_GAMES, ARCADE_PRIZE, currentSeason, seasonLabel, daysLeftInSeason,
+    fetchLeaderboard, fetchPersonalBest, submitScore,
     type LeaderRow, type ArcadeGameDef,
 } from '@/lib/game/arcade';
-import TetrisGame, { type TetrisResult } from '@/components/game/arcade/TetrisGame';
+import { unlockArcadeAudio } from '@/lib/game/arcadeSfx';
+import TetrisGame from '@/components/game/arcade/TetrisGame';
+import SnakeGame from '@/components/game/arcade/SnakeGame';
 import Leaderboard from '@/components/game/arcade/Leaderboard';
 
 // ============================================================
 //  THE SANCTUM ARCADE — the lobby. Prize banner, game roster,
-//  and the seasonal leaderboard. Tapping a live game drops you
-//  into a full-screen play scene; on game over the run is
-//  recorded and the board refreshes. Rendered full-screen from
+//  and a per-game seasonal leaderboard. Tapping a live game
+//  drops you into a full-screen play scene; on game over the
+//  run is recorded and the board refreshes. Full-screen from
 //  Truth's Hut.
 // ============================================================
-
-const FEATURED = 'tetra';
 
 interface Props {
     character: GameCharacter;
     onClose: () => void;
 }
 
+type GameResult = { score: number; lines: number; level: number };
+
 export default function ArcadeLobby({ character, onClose }: Props) {
     const profile = useSoulStore((s) => s.profile);
     const playerName = character.name?.trim() || profile?.display_name?.trim() || 'A soul';
 
     const [view, setView] = useState<'lobby' | 'playing'>('lobby');
-    const [activeGame, setActiveGame] = useState<ArcadeGameDef>(gameById(FEATURED)!);
+    const [activeGame, setActiveGame] = useState<ArcadeGameDef>(LIVE_GAMES[0]);
+    const [boardGame, setBoardGame] = useState<ArcadeGameDef>(LIVE_GAMES[0]);
     const [scope, setScope] = useState<'current' | 'all'>('current');
     const seasonKey = scope === 'current' ? currentSeason() : 'all';
 
@@ -47,26 +50,28 @@ export default function ArcadeLobby({ character, onClose }: Props) {
     const loadBoard = useCallback(async () => {
         setLoadingBoard(true);
         const [b, pb] = await Promise.all([
-            fetchLeaderboard(FEATURED, seasonKey),
-            fetchPersonalBest(FEATURED, seasonKey),
+            fetchLeaderboard(boardGame.id, seasonKey),
+            fetchPersonalBest(boardGame.id, seasonKey),
         ]);
         setRows(b);
         setBest(pb);
         setLoadingBoard(false);
-    }, [seasonKey]);
+    }, [boardGame.id, seasonKey]);
 
     useEffect(() => { loadBoard(); }, [loadBoard]);
 
     const handlePlay = (g: ArcadeGameDef) => {
         if (!g.live) return;
+        unlockArcadeAudio();
         setActiveGame(g);
+        setBoardGame(g);
         setSubmitState('idle');
         setSubmitMessage(undefined);
         setIsNewBest(false);
         setView('playing');
     };
 
-    const handleGameOver = useCallback(async (r: TetrisResult) => {
+    const handleGameOver = useCallback(async (r: GameResult) => {
         setSubmitState('saving');
         setIsNewBest(r.score > (best ?? -1));
         try {
@@ -87,21 +92,21 @@ export default function ArcadeLobby({ character, onClose }: Props) {
     }, []);
 
     if (view === 'playing') {
-        return (
-            <TetrisGame
-                accent={activeGame.accent}
-                onExit={() => setView('lobby')}
-                onGameOver={handleGameOver}
-                onReset={handleReset}
-                submitState={submitState}
-                submitMessage={submitMessage}
-                isNewBest={isNewBest}
-            />
-        );
+        const common = {
+            accent: activeGame.accent,
+            onExit: () => setView('lobby'),
+            onGameOver: handleGameOver,
+            onReset: handleReset,
+            submitState,
+            submitMessage,
+            isNewBest,
+        };
+        return activeGame.id === 'serpent' ? <SnakeGame {...common} /> : <TetrisGame {...common} />;
     }
 
     const champion = rows[0] ?? null;
     const daysLeft = daysLeftInSeason();
+    const acc = boardGame.accent;
 
     return (
         <div
@@ -133,11 +138,11 @@ export default function ArcadeLobby({ character, onClose }: Props) {
                         </span>
                         {champion ? (
                             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-white/80 px-2.5 py-1 rounded-full bg-black/30 border border-white/10">
-                                <Crown className="w-3 h-3 text-aether-gold" /> {champion.player_name} · {champion.score.toLocaleString()}
+                                <Crown className="w-3 h-3 text-aether-gold" /> {boardGame.title}: {champion.player_name} · {champion.score.toLocaleString()}
                             </span>
                         ) : (
                             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-white/50 px-2.5 py-1 rounded-full bg-black/30 border border-white/10">
-                                <Crown className="w-3 h-3" /> Crown unclaimed
+                                <Crown className="w-3 h-3" /> {boardGame.title} crown unclaimed
                             </span>
                         )}
                     </div>
@@ -177,22 +182,46 @@ export default function ArcadeLobby({ character, onClose }: Props) {
                 </div>
 
                 {/* leaderboard */}
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-3">Leaderboard</p>
+
+                {/* game tabs */}
+                {LIVE_GAMES.length > 1 && (
+                    <div className="flex gap-2 mb-3">
+                        {LIVE_GAMES.map((g) => {
+                            const on = g.id === boardGame.id;
+                            return (
+                                <button
+                                    key={g.id}
+                                    onClick={() => setBoardGame(g)}
+                                    className="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border transition-colors"
+                                    style={on
+                                        ? { background: g.accent, borderColor: g.accent, color: '#000' }
+                                        : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(0,0,0,0.25)' }}
+                                >
+                                    {g.title}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* season scope */}
                 <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Leaderboard · Tetra</p>
+                    <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: acc }}>{boardGame.title}</p>
                     <div className="flex rounded-full border border-white/10 bg-black/30 p-0.5 text-[9px] font-black uppercase tracking-widest">
-                        <button onClick={() => setScope('current')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'current' ? 'text-black' : 'text-white/50'}`} style={scope === 'current' ? { background: '#22d3ee' } : undefined}>Season</button>
-                        <button onClick={() => setScope('all')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'all' ? 'text-black' : 'text-white/50'}`} style={scope === 'all' ? { background: '#22d3ee' } : undefined}>All-Time</button>
+                        <button onClick={() => setScope('current')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'current' ? 'text-black' : 'text-white/50'}`} style={scope === 'current' ? { background: acc } : undefined}>Season</button>
+                        <button onClick={() => setScope('all')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'all' ? 'text-black' : 'text-white/50'}`} style={scope === 'all' ? { background: acc } : undefined}>All-Time</button>
                     </div>
                 </div>
 
                 {best != null && (
-                    <div className="flex items-center justify-between rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2.5 mb-3">
-                        <p className="text-[10px] font-mono uppercase tracking-widest text-cyan-300/80">Your best · {scope === 'current' ? seasonLabel(currentSeason()) : 'All-Time'}</p>
-                        <p className="font-ritual text-lg text-cyan-300">{best.toLocaleString()}</p>
+                    <div className="flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3" style={{ borderColor: `${acc}40`, background: `${acc}10` }}>
+                        <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: acc }}>Your best · {scope === 'current' ? seasonLabel(currentSeason()) : 'All-Time'}</p>
+                        <p className="font-ritual text-lg" style={{ color: acc }}>{best.toLocaleString()}</p>
                     </div>
                 )}
 
-                <Leaderboard rows={rows} accent="#22d3ee" loading={loadingBoard} />
+                <Leaderboard rows={rows} accent={acc} loading={loadingBoard} metric={boardGame.metric} />
 
                 <p className="text-[10px] text-zinc-600 text-center mt-5 leading-relaxed">
                     Scores are tied to your soul. Climb the board before the season turns.

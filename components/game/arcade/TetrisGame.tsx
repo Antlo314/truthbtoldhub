@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Pause, Play, RotateCcw, RotateCw, ChevronDown, ChevronsDown, Box } from 'lucide-react';
+import { ArrowLeft, Pause, Play, RotateCcw, RotateCw, ChevronDown, ChevronsDown, Box, Volume2, VolumeX } from 'lucide-react';
+import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
 
 // ============================================================
 //  TETRA — a full, mobile-first Tetris for the Sanctum Arcade.
@@ -75,6 +76,8 @@ interface GameState {
     lockAcc: number;
     lockResets: number;
     softDrop: boolean;
+    combo: number;   // -1 = no active combo
+    b2b: boolean;    // last clear was a tetris (back-to-back chain)
     last: number;
 }
 
@@ -138,9 +141,14 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     const [level, setLevel] = useState(1);
     const [holdId, setHoldId] = useState<PieceId | null>(null);
     const [nextId, setNextId] = useState<PieceId | null>(null);
+    const [muted, setMuted] = useState(false);
+    const [flash, setFlash] = useState<{ text: string; key: number } | null>(null);
+    const flashKey = useRef(0);
 
     useEffect(() => { propsRef.current = { accent, onGameOver, onReset }; }, [accent, onGameOver, onReset]);
     useEffect(() => { statusRef.current = status; }, [status]);
+    useEffect(() => { setMuted(isArcadeMuted()); }, []);
+    useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 850); return () => clearTimeout(t); }, [flash]);
 
     // ---- responsive canvas sizing ----
     useEffect(() => {
@@ -169,6 +177,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     // ---- the game: logic + loop + input, set up once ----
     useEffect(() => {
         const spawnX = (m: number[][]) => Math.floor((COLS - m[0].length) / 2);
+        const showFlash = (text: string) => { if (!text) return; flashKey.current++; setFlash({ text, key: flashKey.current }); };
 
         const refillBag = (st: GameState) => {
             while (st.queue.length < 7) {
@@ -195,6 +204,8 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             if (overRef.current) return;
             overRef.current = true;
             statusRef.current = 'over';
+            asfx.gameOver();
+            vibrate(60);
             setStatus('over');
             propsRef.current.onGameOver({ score: st.score, lines: st.lines, level: st.level });
         };
@@ -217,6 +228,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
         };
 
         const lockAndNext = (st: GameState) => {
+            asfx.lock();
             const { matrix, x, y, color } = st.piece;
             for (let r = 0; r < matrix.length; r++) for (let c = 0; c < matrix[r].length; c++) {
                 if (!matrix[r][c]) continue;
@@ -229,10 +241,27 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             while (st.board.length < ROWS) st.board.unshift(Array(COLS).fill(''));
             if (cleared > 0) {
                 st.lines += cleared;
-                st.score += LINE_SCORE[cleared] * st.level;
+                const difficult = cleared >= 4;          // a tetris
+                const wasB2b = st.b2b;
+                let gain = LINE_SCORE[cleared] * st.level;
+                if (difficult && wasB2b) gain = Math.floor(gain * 1.5); // back-to-back bonus
+                st.b2b = difficult;
+                st.combo += 1;
+                if (st.combo > 0) gain += 50 * st.combo * st.level;     // combo bonus
+                st.score += gain;
+                const oldLevel = st.level;
                 const newLevel = Math.floor(st.lines / 10) + 1;
-                if (newLevel !== st.level) { st.level = newLevel; st.gravityMs = gravityFor(newLevel); }
-                vibrate(cleared >= 4 ? 40 : 18);
+                if (newLevel !== oldLevel) { st.level = newLevel; st.gravityMs = gravityFor(newLevel); }
+                // feedback
+                asfx.lineClear(cleared);
+                let text = difficult ? (wasB2b ? 'B2B TETRIS!' : 'TETRIS!')
+                    : st.combo >= 1 ? `COMBO ×${st.combo + 1}`
+                    : (['', 'SINGLE', 'DOUBLE', 'TRIPLE'][cleared] || '');
+                if (newLevel !== oldLevel) { text = `LEVEL ${newLevel}`; asfx.levelUp(); }
+                showFlash(text);
+                vibrate(difficult ? 40 : 18);
+            } else {
+                st.combo = -1;   // a non-clearing lock breaks the combo (b2b persists)
             }
             spawn(st);
         };
@@ -246,7 +275,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
         const move = (dx: number) => {
             const st = stRef.current; if (!st || statusRef.current !== 'playing') return;
-            if (!collides(st, st.piece.matrix, st.piece.x + dx, st.piece.y)) { st.piece.x += dx; touchLock(st); }
+            if (!collides(st, st.piece.matrix, st.piece.x + dx, st.piece.y)) { st.piece.x += dx; touchLock(st); asfx.move(); }
         };
 
         const rotate = (dir: 1 | -1) => {
@@ -254,7 +283,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             const rotated = dir === 1 ? rotateCW(st.piece.matrix) : rotateCCW(st.piece.matrix);
             for (const k of KICKS) {
                 if (!collides(st, rotated, st.piece.x + k, st.piece.y)) {
-                    st.piece.matrix = rotated; st.piece.x += k; touchLock(st); return;
+                    st.piece.matrix = rotated; st.piece.x += k; touchLock(st); asfx.rotate(); return;
                 }
             }
         };
@@ -275,6 +304,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             else { const h = st.hold; st.hold = cur; st.piece = newPiece(st, h); if (collides(st, st.piece.matrix, st.piece.x, st.piece.y)) gameOver(st); }
             st.holdUsed = true;
             st.lockAcc = 0; st.lockResets = 0;
+            asfx.hold();
             setHoldId(st.hold);
         };
 
@@ -286,7 +316,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 piece: newPiece({} as GameState, 'I'),
                 queue: [], hold: null, holdUsed: false,
                 score: 0, lines: 0, level: 1, gravityMs: gravityFor(1),
-                dropAcc: 0, lockAcc: 0, lockResets: 0, softDrop: false, last: 0,
+                dropAcc: 0, lockAcc: 0, lockResets: 0, softDrop: false, combo: -1, b2b: false, last: 0,
             };
             stRef.current = st;
             overRef.current = false;
@@ -397,6 +427,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
         // ---- keyboard ----
         const onKeyDown = (e: KeyboardEvent) => {
             if (overRef.current) return;
+            unlockArcadeAudio();
             const a = actionsRef.current;
             switch (e.key) {
                 case 'ArrowLeft': e.preventDefault(); a.move(-1); break;
@@ -444,6 +475,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     useEffect(() => () => { Object.values(timers.current).forEach(clearTimeout); }, []);
 
     const a = actionsRef.current;
+    const toggleMute = () => { const m = !muted; setArcadeMuted(m); setMuted(m); };
     const padBtn = 'flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] active:bg-white/[0.12] text-white/90 select-none touch-none h-14';
     const stat = (label: string, val: number | string) => (
         <div className="text-center px-1">
@@ -453,16 +485,22 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     );
 
     return (
-        <div className="absolute inset-0 z-[60] flex flex-col select-none" style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <style>{`@keyframes arcadePop{0%{transform:scale(0.6);opacity:0}20%{transform:scale(1.12);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}`}</style>
             {/* header */}
             <div className="flex items-center justify-between px-3 pt-2 shrink-0">
                 <button onClick={onExit} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave Tetra">
                     <ArrowLeft className="w-4 h-4" />
                 </button>
                 <p className="font-ritual text-xl tracking-[0.3em]" style={{ color: accent }}>TETRA</p>
-                <button onClick={() => a.togglePause?.()} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Pause">
-                    {status === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </button>
+                <div className="flex items-center gap-1">
+                    <button onClick={toggleMute} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Mute">
+                        {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    </button>
+                    <button onClick={() => a.togglePause?.()} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Pause">
+                        {status === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    </button>
+                </div>
             </div>
 
             {/* hold · stats · next */}
@@ -485,6 +523,12 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             {/* board */}
             <div ref={wrapRef} className="relative flex-1 min-h-0 flex items-center justify-center px-3 py-2">
                 <canvas ref={canvasRef} className="rounded-xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none' }} />
+
+                {flash && status === 'playing' && (
+                    <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
+                        <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: accent, textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
+                    </div>
+                )}
 
                 {status === 'paused' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">
