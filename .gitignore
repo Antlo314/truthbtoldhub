@@ -24,6 +24,13 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env*.vercel
+api/.env.local.js
+
+# one-off admin/seed scripts that have held live secrets — never track these
+force_admin_login.js
+seed_data.js
+zero_pool.js
 
 # vercel
 .vercel
