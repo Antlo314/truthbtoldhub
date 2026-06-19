@@ -1228,6 +1228,9 @@ export default function WorldPage() {
                                             <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color }}>{status}</span>
                                         </div>
                                         <p className="text-[10px] text-zinc-500 mt-0.5">{q.giverName} · {q.objectiveText} ({objectiveProgress(q, character)})</p>
+                                        {!claimed && q.intro && (
+                                            <p className="text-[11px] text-white/70 italic leading-snug mt-1.5">“{q.intro}”</p>
+                                        )}
                                         {met && !claimed && (
                                             <button onClick={() => handleClaimQuest(q)} className="mt-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                                 Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
