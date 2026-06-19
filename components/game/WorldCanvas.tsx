@@ -158,9 +158,10 @@ export default function WorldCanvas({
         let posTick = 0;
         let proxTick = 0;
         let wanderTick = 0;
-        // Truth speaks sparingly: a global cooldown stops her chattering, and
-        // each landmark is greeted at most once per session.
-        let truthSpeakCd = 8;
+        // Truth speaks sparingly: a JITTERED global cooldown stops him chattering
+        // (and keeps the cadence organic, not metronomic), and each landmark is
+        // greeted at most once per session.
+        let truthSpeakCd = 14;
         const spokenProx = new Set<string>();
         const TRUTH_FOLLOW_MIN = TILE * 2.2 * 0.6;
 
@@ -622,17 +623,21 @@ export default function WorldCanvas({
                 if (proxPoi) {
                     spokenProx.add(proxPoi.id);
                     const line = getTruthProximityLine(proxPoi.id, charRef.current);
-                    if (line) { cbRef.current.onTruthLine(line); truthSpeakCd = 40; }
+                    if (line) { cbRef.current.onTruthLine(line); truthSpeakCd = 55 + Math.random() * 50; }
                 }
             }
 
             wanderTick += dt;
-            if (wanderTick >= 75 && truthSpeakCd <= 0 && cbRef.current.onTruthLine) {
+            if (wanderTick >= 90 && truthSpeakCd <= 0 && cbRef.current.onTruthLine) {
+                wanderTick = 0;
                 const trailDist = Math.hypot(st.px - truth.x, st.py - truth.y);
-                if (trailDist >= TRUTH_FOLLOW_MIN) {
-                    wanderTick = 0;
+                // Stay silent some of the time so the wandering voice feels organic
+                // rather than firing like clockwork the instant the timer is up.
+                if (trailDist >= TRUTH_FOLLOW_MIN && Math.random() < 0.6) {
                     cbRef.current.onTruthLine(getTruthWanderLine(charRef.current));
-                    truthSpeakCd = 40;
+                    truthSpeakCd = 55 + Math.random() * 50;
+                } else {
+                    truthSpeakCd = 12 + Math.random() * 12; // brief quiet, then reconsider
                 }
             }
 

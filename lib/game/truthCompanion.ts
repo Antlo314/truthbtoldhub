@@ -2,6 +2,7 @@ import { TILE } from '@/lib/game/overworld';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthDepthTier } from '@/lib/game/truthLore';
 import { isDestinationSealed, isEdenSealed } from '@/lib/game/progression';
+import { pickFresh } from '@/lib/game/truthBanter';
 
 const FOLLOW_DIST = TILE * 2.2;
 const CATCHUP_SPD = 78;
@@ -117,8 +118,7 @@ export const TRUTH_PROXIMITY_LINES: Record<string, string> = BASE_POI_LINES;
 export function getTruthProximityLine(poiId: string, c: GameCharacter): string | null {
     if (poiId === 'hut') {
         const tier = truthDepthTier(c);
-        const pool = HUT_LINES_BY_TIER[tier];
-        return pool[Math.floor(Math.random() * pool.length)];
+        return pickFresh(HUT_LINES_BY_TIER[tier]);
     }
     // A veiled gate must not promise entry — point the soul back to the Hut.
     if ((poiId === 'dest_eden' && isEdenSealed()) || isDestinationSealed(poiId)) {
@@ -130,6 +130,5 @@ export function getTruthProximityLine(poiId: string, c: GameCharacter): string |
 /** Occasional line while Truth trails the player */
 export function getTruthWanderLine(c: GameCharacter): string {
     const tier = truthDepthTier(c);
-    const pool = WANDER_LINES[tier];
-    return pool[Math.floor(Math.random() * pool.length)];
+    return pickFresh(WANDER_LINES[tier]);
 }

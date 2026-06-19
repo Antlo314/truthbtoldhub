@@ -1,13 +1,16 @@
 import type { GameCharacter, GamePath } from '@/lib/store/useGameStore';
 import { truthDepthTier, truthQuestionsAsked } from '@/lib/game/truthLore';
+import { pickFresh } from '@/lib/game/truthBanter';
 
 // ============================================================
 //  TRUTH SPINE — one voice system feeding every surface.
 //  Ask Truth holds the full confession; the journey echoes it.
 // ============================================================
 
-function pick<T>(pool: T[]): T {
-    return pool[Math.floor(Math.random() * pool.length)];
+// All voice pools are strings — route through the shared no-repeat picker so
+// Truth never says the same thing twice in a row across any surface.
+function pick(pool: string[]): string {
+    return pickFresh(pool);
 }
 
 function asked(c: GameCharacter, id: string): boolean {
@@ -31,8 +34,18 @@ export function truthCombatLine(c: GameCharacter, outcome: CombatOutcome): strin
     const tier = truthDepthTier(c);
 
     if (outcome === 'unarmedShade') {
-        if (tier >= 2) return 'A shade passes through you — cold. Empty the flesh later; arm yourself at the Hut first.';
-        return 'A shade drifts through you — cold, and searching. Arm yourself at Truth\'s Hut.';
+        if (tier >= 2) return pick([
+            'A shade passes through you — cold. Empty the flesh later; arm yourself at the Hut first.',
+            'That chill was a shade testing empty hands. Steel first — the Hut waits.',
+            'Unarmed, you are only a draft to them. Forge at my Hut before the next one finds you.',
+            'It searched you and found no edge. Take up a weapon before you walk on.',
+        ]);
+        return pick([
+            'A shade drifts through you — cold, and searching. Arm yourself at Truth\'s Hut.',
+            'Cold, was it? That was a shade. Take up a weapon at the Hut.',
+            'You cannot strike what frightens you with empty hands. Arm yourself first.',
+            'The road tests the unarmed. Forge a weapon at my Hut, then return.',
+        ]);
     }
 
     if (outcome === 'wildLose' || outcome === 'guardianLose') {

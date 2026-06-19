@@ -424,8 +424,9 @@ export default function WorldPage() {
         hapticTap('medium');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
-            // non-blocking nudge — never freeze roaming just to say "go forge"
-            showAmbient(truthCombatLine(ch, 'unarmedShade'), '#f97316');
+            // non-blocking nudge — never freeze roaming just to say "go forge".
+            // Don't comment on every brush; let some pass in silence (organic).
+            if (Math.random() < 0.7) showAmbient(truthCombatLine(ch, 'unarmedShade'), '#f97316');
             return;
         }
         const mods = wildEncounterMods(worldEvent);
