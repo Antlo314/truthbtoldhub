@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio } from 'lucide-react';
+import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio, Lock } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthOffscreen } from '@/lib/game/truth';
 import { formatBytes, type Bulletin, type DispatchMedia, type MediaKind } from '@/lib/game/hut';
@@ -490,6 +490,11 @@ function ProfileStation() {
     const [seeded, setSeeded] = useState(false);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
+    // change-password (Supabase auth — updates the logged-in account)
+    const [pw, setPw] = useState('');
+    const [pw2, setPw2] = useState('');
+    const [pwMsg, setPwMsg] = useState<string | null>(null);
+    const [pwSaving, setPwSaving] = useState(false);
 
     useEffect(() => { if (!profile) fetchIdentity(); }, [profile, fetchIdentity]);
     useEffect(() => {
@@ -515,6 +520,24 @@ function ProfileStation() {
             setMsg('Could not save — try again.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const changePassword = async () => {
+        setPwMsg(null);
+        if (pw.length < 8) { setPwMsg('Password must be at least 8 characters.'); return; }
+        if (pw !== pw2) { setPwMsg('Passwords do not match.'); return; }
+        setPwSaving(true);
+        try {
+            const { error } = await supabase.auth.updateUser({ password: pw });
+            if (error) throw error;
+            setPw('');
+            setPw2('');
+            setPwMsg('✦ Password changed.');
+        } catch (err) {
+            setPwMsg(err instanceof Error ? err.message : 'Could not change password — try again.');
+        } finally {
+            setPwSaving(false);
         }
     };
 
@@ -547,6 +570,44 @@ function ProfileStation() {
             <button onClick={save} disabled={saving} className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                 {saving ? 'Inscribing…' : 'Inscribe Your Soul'}
             </button>
+
+            {/* Security — change the password for your logged-in account */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 mt-1">
+                <div className="flex items-center gap-2 mb-3">
+                    <Lock className="w-3.5 h-3.5 text-aether-gold/80 shrink-0" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-aether-gold/80">Security</p>
+                    <span className="text-[9px] text-zinc-500 truncate">· change your password</span>
+                </div>
+                <label className="text-[9px] uppercase tracking-widest text-zinc-500">New password</label>
+                <input
+                    type="password"
+                    value={pw}
+                    onChange={(e) => setPw(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder="at least 8 characters"
+                    className="mt-1 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold"
+                />
+                <label className="text-[9px] uppercase tracking-widest text-zinc-500 mt-3 block">Confirm</label>
+                <input
+                    type="password"
+                    value={pw2}
+                    onChange={(e) => setPw2(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder="re-enter the new password"
+                    onKeyDown={(e) => { if (e.key === 'Enter') changePassword(); }}
+                    className="mt-1 w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold"
+                />
+                {pwMsg && (
+                    <p className={`text-[11px] font-mono tracking-wide mt-2 break-words ${pwMsg.startsWith('✦') ? 'text-aether-gold' : 'text-red-400'}`}>{pwMsg}</p>
+                )}
+                <button
+                    onClick={changePassword}
+                    disabled={pwSaving || !pw || !pw2}
+                    className="mt-3 w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] border border-aether-gold/30 bg-aether-gold/10 text-aether-gold disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                    {pwSaving ? 'Changing…' : 'Change Password'}
+                </button>
+            </div>
         </div>
     );
 }
