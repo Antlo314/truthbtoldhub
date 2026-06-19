@@ -12,6 +12,7 @@ import {
 import { unlockArcadeAudio } from '@/lib/game/arcadeSfx';
 import TetrisGame from '@/components/game/arcade/TetrisGame';
 import SnakeGame from '@/components/game/arcade/SnakeGame';
+import VeilGame from '@/components/game/arcade/VeilGame';
 import Leaderboard from '@/components/game/arcade/Leaderboard';
 
 // ============================================================
@@ -101,7 +102,9 @@ export default function ArcadeLobby({ character, onClose }: Props) {
             submitMessage,
             isNewBest,
         };
-        return activeGame.id === 'serpent' ? <SnakeGame {...common} /> : <TetrisGame {...common} />;
+        return activeGame.id === 'serpent' ? <SnakeGame {...common} />
+            : activeGame.id === 'veil' ? <VeilGame {...common} />
+            : <TetrisGame {...common} />;
     }
 
     const champion = rows[0] ?? null;
@@ -221,7 +224,7 @@ export default function ArcadeLobby({ character, onClose }: Props) {
                     </div>
                 )}
 
-                <Leaderboard rows={rows} accent={acc} loading={loadingBoard} metric={boardGame.metric} />
+                <Leaderboard rows={rows} accent={acc} loading={loadingBoard} metric={boardGame.metric} levelLabel={boardGame.levelLabel} />
 
                 <p className="text-[10px] text-zinc-600 text-center mt-5 leading-relaxed">
                     Scores are tied to your soul. Climb the board before the season turns.

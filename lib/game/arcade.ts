@@ -17,6 +17,8 @@ export interface ArcadeGameDef {
     scoreUnit: string;
     /** secondary count noun shown on the leaderboard (e.g. 'lines', 'orbs') */
     metric: string;
+    /** leaderboard row prefix for the `level` field (default 'Lv'; e.g. 'Try' for attempts) */
+    levelLabel?: string;
     accent: string;
     /** false = "coming soon" placeholder card */
     live: boolean;
@@ -41,6 +43,16 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
         scoreUnit: 'points',
         metric: 'orbs',
         accent: '#22c55e',
+        live: true,
+    },
+    {
+        id: 'veil',
+        title: 'Veil',
+        tagline: 'Pierce the veil. Ride the pulse. Return to the Source.',
+        scoreUnit: 'units',
+        metric: 'coins',
+        levelLabel: 'Try',
+        accent: '#7c5cff',
         live: true,
     },
     {
