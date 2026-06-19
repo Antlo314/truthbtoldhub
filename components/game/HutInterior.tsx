@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio, Lock } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthOffscreen } from '@/lib/game/truth';
@@ -16,6 +17,17 @@ import { useSoulStore } from '@/lib/store/useSoulStore';
 import { fetchTestimonies, postTestimony, deleteTestimony, TESTIMONY_MAX, type Testimony } from '@/lib/game/testimony';
 import { supabase } from '@/lib/supabase';
 
+// The arcade (with the Tetris engine) is heavy — load it only when a
+// soul opens it, so the Hut itself stays light.
+const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 z-[55] flex items-center justify-center bg-[#06080e]">
+            <p className="text-[11px] font-mono uppercase tracking-[0.3em] text-aether-gold/70">Opening the Arcade…</p>
+        </div>
+    ),
+});
+
 // ============================================================
 //  TRUTH'S HUT — a small place you ENTER. Instead of one
 //  overloaded panel, the daily Word, the shelf, patronage,
@@ -26,7 +38,7 @@ import { supabase } from '@/lib/supabase';
 const SHEET = '/assets/kenney/roguelikeIndoor.png';
 const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 
-type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth' | 'profile';
+type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth' | 'profile' | 'arcade';
 
 // Draw w×h tiles of the indoor sheet onto a crisp, pixel-perfect canvas.
 function KenneyObject({ col, row, w = 1, h = 1, vmin }: { col: number; row: number; w?: number; h?: number; vmin: number }) {
@@ -84,6 +96,42 @@ function TruthFigure({ vmin }: { vmin: number }) {
     );
 }
 
+// A bespoke pixel arcade cabinet (drawn, not from the Kenney sheet) so the
+// Arcade station reads unmistakably as "play here" — a colorful Tetris screen.
+function ArcadeIcon({ vmin }: { vmin: number }) {
+    const ref = useRef<HTMLCanvasElement>(null);
+    const W = 16, H = 20, SCALE = 7;
+    useEffect(() => {
+        const cv = ref.current;
+        if (!cv) return;
+        const ctx = cv.getContext('2d');
+        if (!ctx) return;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        const px = (x: number, y: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE); };
+        px(2, 1, 12, 18, '#241a30');   // cabinet body
+        px(2, 1, 12, 1, '#3a2a4d');    // top bevel
+        px(3, 2, 10, 2, '#fcd34d');    // gold marquee
+        px(3, 5, 10, 8, '#0a1018');    // screen
+        // tetromino blocks on the screen
+        px(4, 9, 2, 2, '#22d3ee'); px(6, 9, 2, 2, '#22d3ee');
+        px(8, 7, 2, 2, '#a855f7'); px(8, 9, 2, 2, '#a855f7'); px(10, 9, 2, 2, '#a855f7');
+        px(4, 11, 2, 2, '#ef4444');
+        px(10, 7, 2, 2, '#22c55e');
+        px(3, 14, 10, 3, '#3a2a4d');   // control panel
+        px(5, 15, 1, 1, '#ef4444'); px(7, 15, 1, 1, '#22d3ee'); // buttons
+        px(3, 19, 2, 1, '#1a1322'); px(11, 19, 2, 1, '#1a1322'); // legs
+    }, []);
+    return (
+        <canvas
+            ref={ref}
+            width={W * SCALE}
+            height={H * SCALE}
+            style={{ width: `${vmin}vmin`, height: `${(vmin * H) / W}vmin`, imageRendering: 'pixelated', filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.5))' }}
+        />
+    );
+}
+
 interface Station {
     id: StationId;
     label: string;
@@ -103,8 +151,9 @@ const STATIONS: Station[] = [
     { id: 'archive', label: 'The Archive', sub: 'Scrolls & frequencies', x: 16, y: 63, sprite: { col: 12, row: 0, h: 2, vmin: 13 } },
     { id: 'forge', label: 'The Forge', sub: 'Temper arms & tonics', x: 84, y: 63, sprite: { col: 10, row: 14, h: 2, vmin: 13 } },
     // lower floor row (well clear of each other)
-    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 28, y: 86, sprite: { col: 17, row: 12, vmin: 10 } },
-    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 72, y: 86, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
+    { id: 'offering', label: 'The Offering', sub: 'Walk with the work', x: 24, y: 86, sprite: { col: 17, row: 12, vmin: 10 } },
+    { id: 'arcade', label: 'The Arcade', sub: 'Play for the high score', x: 50, y: 85, sprite: { col: 0, row: 0, vmin: 12 } },
+    { id: 'map', label: 'The Wayfinder', sub: 'Ages & the ledger', x: 76, y: 86, sprite: { col: 0, row: 0, w: 2, vmin: 16 } },
 ];
 
 const TOUR: [string, string][] = [
@@ -114,6 +163,7 @@ const TOUR: [string, string][] = [
     ['The Archive', 'scrolls & frequencies to study'],
     ['The Forge', 'temper your arms & brew tonics'],
     ['The Offering', 'walk with the work'],
+    ['The Arcade', 'play for the high score — a prize each season'],
     ['The Wayfinder', 'the open ages & the ledger of souls'],
     ['Ask Truth', 'pry the hood — ask me anything'],
 ];
@@ -218,7 +268,9 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     style={{ left: `${s.x}%`, top: `${s.y}%`, transform: 'translate(-50%,-50%)' }}
                 >
                     <div className="transition-transform group-hover:-translate-y-0.5 group-active:translate-y-0">
-                        <KenneyObject col={s.sprite.col} row={s.sprite.row} w={s.sprite.w} h={s.sprite.h} vmin={s.sprite.vmin} />
+                        {s.id === 'arcade'
+                            ? <ArcadeIcon vmin={s.sprite.vmin} />
+                            : <KenneyObject col={s.sprite.col} row={s.sprite.row} w={s.sprite.w} h={s.sprite.h} vmin={s.sprite.vmin} />}
                     </div>
                     <span className="mt-1 px-2 py-0.5 rounded-full bg-black/55 border border-aether-gold/25 text-[8px] font-black uppercase tracking-[0.18em] text-aether-gold/90 opacity-90 group-hover:opacity-100 whitespace-nowrap">{s.label}</span>
                 </button>
@@ -251,8 +303,13 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                 </div>
             )}
 
+            {/* ---- the Arcade — a full-screen scene, not the small panel ---- */}
+            {active === 'arcade' && (
+                <ArcadeLobby character={character} onClose={() => setActive(null)} />
+            )}
+
             {/* ---- station panel ---- */}
-            {active && (
+            {active && active !== 'arcade' && (
                 <div className="absolute inset-0 z-30 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setActive(null)}>
                     <div className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 border border-[rgba(251,191,36,0.2)] relative max-h-[86dvh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setActive(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white z-10">

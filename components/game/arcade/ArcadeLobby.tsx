@@ -1,0 +1,203 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, Trophy, Crown, Gamepad2, Clock, ChevronRight, Lock } from 'lucide-react';
+import type { GameCharacter } from '@/lib/store/useGameStore';
+import { useSoulStore } from '@/lib/store/useSoulStore';
+import {
+    ARCADE_GAMES, ARCADE_PRIZE, currentSeason, seasonLabel, daysLeftInSeason,
+    fetchLeaderboard, fetchPersonalBest, submitScore, gameById,
+    type LeaderRow, type ArcadeGameDef,
+} from '@/lib/game/arcade';
+import TetrisGame, { type TetrisResult } from '@/components/game/arcade/TetrisGame';
+import Leaderboard from '@/components/game/arcade/Leaderboard';
+
+// ============================================================
+//  THE SANCTUM ARCADE — the lobby. Prize banner, game roster,
+//  and the seasonal leaderboard. Tapping a live game drops you
+//  into a full-screen play scene; on game over the run is
+//  recorded and the board refreshes. Rendered full-screen from
+//  Truth's Hut.
+// ============================================================
+
+const FEATURED = 'tetra';
+
+interface Props {
+    character: GameCharacter;
+    onClose: () => void;
+}
+
+export default function ArcadeLobby({ character, onClose }: Props) {
+    const profile = useSoulStore((s) => s.profile);
+    const playerName = character.name?.trim() || profile?.display_name?.trim() || 'A soul';
+
+    const [view, setView] = useState<'lobby' | 'playing'>('lobby');
+    const [activeGame, setActiveGame] = useState<ArcadeGameDef>(gameById(FEATURED)!);
+    const [scope, setScope] = useState<'current' | 'all'>('current');
+    const seasonKey = scope === 'current' ? currentSeason() : 'all';
+
+    const [rows, setRows] = useState<LeaderRow[]>([]);
+    const [loadingBoard, setLoadingBoard] = useState(true);
+    const [best, setBest] = useState<number | null>(null);
+
+    const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [submitMessage, setSubmitMessage] = useState<string | undefined>(undefined);
+    const [isNewBest, setIsNewBest] = useState(false);
+
+    const loadBoard = useCallback(async () => {
+        setLoadingBoard(true);
+        const [b, pb] = await Promise.all([
+            fetchLeaderboard(FEATURED, seasonKey),
+            fetchPersonalBest(FEATURED, seasonKey),
+        ]);
+        setRows(b);
+        setBest(pb);
+        setLoadingBoard(false);
+    }, [seasonKey]);
+
+    useEffect(() => { loadBoard(); }, [loadBoard]);
+
+    const handlePlay = (g: ArcadeGameDef) => {
+        if (!g.live) return;
+        setActiveGame(g);
+        setSubmitState('idle');
+        setSubmitMessage(undefined);
+        setIsNewBest(false);
+        setView('playing');
+    };
+
+    const handleGameOver = useCallback(async (r: TetrisResult) => {
+        setSubmitState('saving');
+        setIsNewBest(r.score > (best ?? -1));
+        try {
+            await submitScore({ game: activeGame.id, score: r.score, lines: r.lines, level: r.level }, playerName);
+            setSubmitState('saved');
+            setSubmitMessage(`✦ Recorded · ${seasonLabel(currentSeason())}`);
+        } catch (e) {
+            setSubmitState('error');
+            setSubmitMessage(e instanceof Error ? e.message : 'Could not record score.');
+        }
+        loadBoard();
+    }, [activeGame.id, best, playerName, loadBoard]);
+
+    const handleReset = useCallback(() => {
+        setSubmitState('idle');
+        setSubmitMessage(undefined);
+        setIsNewBest(false);
+    }, []);
+
+    if (view === 'playing') {
+        return (
+            <TetrisGame
+                accent={activeGame.accent}
+                onExit={() => setView('lobby')}
+                onGameOver={handleGameOver}
+                onReset={handleReset}
+                submitState={submitState}
+                submitMessage={submitMessage}
+                isNewBest={isNewBest}
+            />
+        );
+    }
+
+    const champion = rows[0] ?? null;
+    const daysLeft = daysLeftInSeason();
+
+    return (
+        <div
+            className="absolute inset-0 z-[55] overflow-y-auto custom-scrollbar"
+            style={{ background: 'radial-gradient(120% 60% at 50% -8%, rgba(34,211,238,0.10), transparent 55%), #06080e' }}
+        >
+            {/* header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 backdrop-blur-md bg-black/40 border-b border-white/5" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+                <button onClick={onClose} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave the Arcade">
+                    <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div className="text-center pointer-events-none">
+                    <p className="text-[9px] tracking-[0.4em] uppercase text-aether-gold/70">Truth's Hut</p>
+                    <p className="font-ritual text-lg gold-shimmer leading-tight flex items-center gap-2"><Gamepad2 className="w-4 h-4" /> The Arcade</p>
+                </div>
+                <div className="w-[44px]" />
+            </div>
+
+            <div className="max-w-lg mx-auto px-4 pb-28 pt-5">
+                {/* prize banner */}
+                <div className="relative rounded-3xl border border-aether-gold/25 p-5 overflow-hidden mb-6" style={{ background: 'linear-gradient(150deg, rgba(252,211,77,0.12), rgba(180,83,9,0.06) 60%, transparent)' }}>
+                    <div className="absolute -top-6 -right-4 opacity-15"><Trophy className="w-28 h-28 text-aether-gold" /></div>
+                    <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">The Prize</p>
+                    <h2 className="font-ritual text-2xl gold-shimmer mb-2">{ARCADE_PRIZE.title}</h2>
+                    <p className="text-sm text-zinc-300 leading-relaxed mb-4 max-w-[34ch]">{ARCADE_PRIZE.blurb}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-aether-gold/90 px-2.5 py-1 rounded-full bg-black/30 border border-aether-gold/20">
+                            <Clock className="w-3 h-3" /> {seasonLabel(currentSeason())} · {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left
+                        </span>
+                        {champion ? (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-white/80 px-2.5 py-1 rounded-full bg-black/30 border border-white/10">
+                                <Crown className="w-3 h-3 text-aether-gold" /> {champion.player_name} · {champion.score.toLocaleString()}
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-white/50 px-2.5 py-1 rounded-full bg-black/30 border border-white/10">
+                                <Crown className="w-3 h-3" /> Crown unclaimed
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* games */}
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-3">The Games</p>
+                <div className="space-y-3 mb-7">
+                    {ARCADE_GAMES.map((g) => (
+                        <button
+                            key={g.id}
+                            onClick={() => handlePlay(g)}
+                            disabled={!g.live}
+                            className="w-full text-left rounded-2xl border p-4 flex items-center gap-4 transition-colors disabled:cursor-default"
+                            style={{
+                                borderColor: g.live ? `${g.accent}44` : 'rgba(255,255,255,0.07)',
+                                background: g.live ? `linear-gradient(120deg, ${g.accent}14, rgba(0,0,0,0.25))` : 'rgba(255,255,255,0.015)',
+                                opacity: g.live ? 1 : 0.6,
+                            }}
+                        >
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border" style={{ borderColor: `${g.accent}55`, background: `${g.accent}1a`, color: g.accent }}>
+                                {g.live ? <Gamepad2 className="w-6 h-6" /> : <Lock className="w-5 h-5" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-ritual text-lg text-white leading-tight">{g.title}</p>
+                                <p className="text-xs text-zinc-400 leading-snug mt-0.5">{g.tagline}</p>
+                            </div>
+                            {g.live ? (
+                                <span className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-black" style={{ background: g.accent }}>
+                                    Play <ChevronRight className="w-3.5 h-3.5" />
+                                </span>
+                            ) : (
+                                <span className="shrink-0 text-[9px] font-mono uppercase tracking-widest text-white/40">Soon</span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* leaderboard */}
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Leaderboard · Tetra</p>
+                    <div className="flex rounded-full border border-white/10 bg-black/30 p-0.5 text-[9px] font-black uppercase tracking-widest">
+                        <button onClick={() => setScope('current')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'current' ? 'text-black' : 'text-white/50'}`} style={scope === 'current' ? { background: '#22d3ee' } : undefined}>Season</button>
+                        <button onClick={() => setScope('all')} className={`px-3 py-1 rounded-full transition-colors ${scope === 'all' ? 'text-black' : 'text-white/50'}`} style={scope === 'all' ? { background: '#22d3ee' } : undefined}>All-Time</button>
+                    </div>
+                </div>
+
+                {best != null && (
+                    <div className="flex items-center justify-between rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2.5 mb-3">
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-cyan-300/80">Your best · {scope === 'current' ? seasonLabel(currentSeason()) : 'All-Time'}</p>
+                        <p className="font-ritual text-lg text-cyan-300">{best.toLocaleString()}</p>
+                    </div>
+                )}
+
+                <Leaderboard rows={rows} accent="#22d3ee" loading={loadingBoard} />
+
+                <p className="text-[10px] text-zinc-600 text-center mt-5 leading-relaxed">
+                    Scores are tied to your soul. Climb the board before the season turns.
+                </p>
+            </div>
+        </div>
+    );
+}
