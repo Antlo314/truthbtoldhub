@@ -97,8 +97,10 @@ export default function PowerSelf() {
             }
 
             const file = event.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+            if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+            if (file.size > 5 * 1024 * 1024) throw new Error('Image too large — keep it under 5 MB.');
+            const fileExt = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'png';
+            const filePath = `${user?.id}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('avatars')

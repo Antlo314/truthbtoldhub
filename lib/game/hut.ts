@@ -95,18 +95,38 @@ export async function fetchMedia(limit = 100): Promise<DispatchMedia[]> {
     return (data || []) as DispatchMedia[];
 }
 
+// Hard client-side ceiling. NOTE: the effective limit is also bounded by the
+// Supabase PROJECT "Upload file size limit" (Dashboard → Settings → Storage) and
+// the `dispatches` bucket file_size_limit — raise those for large video.
+export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500 MB
+
 export async function uploadMedia(
     file: File,
     meta: { title: string; description: string; category: string }
 ): Promise<DispatchMedia> {
+    if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`That file is ${formatBytes(file.size)} — over the ${formatBytes(MAX_UPLOAD_BYTES)} limit. Compress it or trim the clip.`);
+    }
     const kind = detectKind(file);
-    const ext = file.name.split('.').pop() || 'bin';
+    // sanitize the extension so the storage key can't carry odd characters
+    const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin';
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
     const { error: upErr } = await supabase.storage
         .from(DISPATCH_BUCKET)
-        .upload(path, file, { cacheControl: '3600', upsert: false });
-    if (upErr) throw new Error(`Upload failed: ${upErr.message} (is the "dispatches" bucket created & public?)`);
+        .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
+    if (upErr) {
+        const m = upErr.message || '';
+        throw new Error(
+            /exceeded|maximum|too large|payload|size/i.test(m)
+                ? 'File too large for the current Storage limit. Raise the project upload-size limit in Supabase (Settings → Storage), or use a smaller file.'
+                : /bucket|not found|404|does not exist/i.test(m)
+                    ? 'Storage isn’t set up yet — create the public "dispatches" bucket and run secure_dispatches_storage.sql.'
+                    : /row-level security|not authoriz|403|permission|denied/i.test(m)
+                        ? 'Upload not permitted — sign in as an Architect and run secure_dispatches_storage.sql.'
+                        : `Upload failed: ${m}`,
+        );
+    }
 
     const { data: pub } = supabase.storage.from(DISPATCH_BUCKET).getPublicUrl(path);
 
@@ -120,7 +140,15 @@ export async function uploadMedia(
         category: meta.category || 'General',
     };
     const { data, error } = await supabase.from('dispatch_media').insert(row).select().single();
-    if (error) throw new Error(error.message);
+    if (error) {
+        // don't leave an orphaned object if the metadata row can't be saved
+        try { await supabase.storage.from(DISPATCH_BUCKET).remove([path]); } catch { /* ignore */ }
+        throw new Error(
+            /row-level security|permission|denied|403/i.test(error.message)
+                ? 'The file saved but the dispatch record was blocked — run secure_dispatches_storage.sql so the insert is permitted.'
+                : error.message,
+        );
+    }
     return data as DispatchMedia;
 }
 

@@ -14,6 +14,7 @@ import {
     deleteMedia,
     getArchitectStatus,
     formatBytes,
+    MAX_UPLOAD_BYTES,
 } from '@/lib/game/hut';
 import {
     ArrowLeft, Megaphone, FileText, Film, Music, Image as ImageIcon, Link2,
@@ -163,6 +164,7 @@ export default function HutAdminPage() {
 
     const doUpload = async () => {
         if (!file) return flash('Choose a file first.');
+        if (file.size > MAX_UPLOAD_BYTES) return flash(`That file is ${formatBytes(file.size)} — over the ${formatBytes(MAX_UPLOAD_BYTES)} limit. Compress or trim it first.`);
         setUploading(true);
         try {
             await uploadMedia(file, { title: mTitle, description: mDesc, category: mCat });
