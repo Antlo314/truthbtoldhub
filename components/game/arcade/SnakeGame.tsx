@@ -19,6 +19,10 @@ const BASE_STEP = 210;       // ms per move at speed 1 (calmer start)
 const MIN_STEP = 100;        // fastest the serpent ever moves
 const BONUS_TTL = 38;        // steps a golden orb lingers
 const BONUS_EVERY = 5;       // orbs between golden-orb chances
+const VEIL_EVERY = 11;       // regular-food eats between Veil-pickup offers
+const VEIL_CHANCE = 0.30;
+const VEIL_MS = 4000;        // duration of the self-phase grace
+const PICKUP_TTL = 46;       // steps the Veil pickup lingers
 
 type Vec = { x: number; y: number };
 
@@ -35,6 +39,9 @@ interface SnakeState {
     food: Vec;
     bonus: (Vec & { ttl: number }) | null;
     sinceBonus: number;
+    pickup: (Vec & { ttl: number }) | null;  // Veil (Ward of the Coils)
+    sinceVeil: number;
+    effect: { ttlMs: number } | null;        // active self-phase grace
     grow: number;
     score: number;
     orbs: number;
@@ -66,16 +73,27 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
     const propsRef = useRef({ onGameOver, onReset });
     const shown = useRef({ score: -1, orbs: -1, speed: -1 });
     const actionsRef = useRef<{ [k: string]: (...a: any[]) => void }>({});
+    const reduceRef = useRef(false);
+    const flashKey = useRef(0);
 
     const [status, setStatus] = useState<'playing' | 'paused' | 'over'>('playing');
     const [score, setScore] = useState(0);
     const [orbs, setOrbs] = useState(0);
     const [speed, setSpeed] = useState(1);
     const [muted, setMuted] = useState(false);
+    const [flash, setFlash] = useState<{ text: string; key: number } | null>(null);
 
     useEffect(() => { propsRef.current = { onGameOver, onReset }; }, [onGameOver, onReset]);
     useEffect(() => { statusRef.current = status; }, [status]);
     useEffect(() => { setMuted(isArcadeMuted()); }, []);
+    useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 850); return () => clearTimeout(t); }, [flash]);
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const set = () => { reduceRef.current = mq.matches; };
+        set(); mq.addEventListener?.('change', set);
+        return () => mq.removeEventListener?.('change', set);
+    }, []);
 
     // ---- responsive canvas sizing ----
     useEffect(() => {
@@ -103,6 +121,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
 
     // ---- game: logic + loop + input, set up once ----
     useEffect(() => {
+        const showFlash = (text: string) => { if (!text) return; flashKey.current++; setFlash({ text, key: flashKey.current }); };
         const cellEq = (a: Vec, b: Vec) => a.x === b.x && a.y === b.y;
         const onSnake = (st: SnakeState, v: Vec, skipTail: boolean) => {
             const n = st.snake.length - (skipTail ? 1 : 0);
@@ -116,6 +135,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 if (onSnake(st, v, false)) continue;
                 if (st.food && cellEq(v, st.food)) continue;
                 if (st.bonus && cellEq(v, st.bonus)) continue;
+                if (st.pickup && cellEq(v, st.pickup)) continue;
                 return v;
             }
             return { x: 0, y: 0 };
@@ -139,9 +159,10 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             const nh = { x: head.x + st.dir.x, y: head.y + st.dir.y };
             if (nh.x < 0 || nh.x >= COLS || nh.y < 0 || nh.y >= ROWS) { gameOver(st); return; }
             const willGrow = (cellEq(nh, st.food)) || (st.bonus != null && cellEq(nh, st.bonus));
-            if (onSnake(st, nh, !willGrow)) { gameOver(st); return; }
+            if (!st.effect && onSnake(st, nh, !willGrow)) { gameOver(st); return; } // Veil grace skips the self-test; walls always kill
 
             st.snake.unshift(nh);
+            if (st.pickup && cellEq(nh, st.pickup)) { st.effect = { ttlMs: VEIL_MS }; st.pickup = null; asfx.veil(); showFlash('VEIL'); vibrate(20); }
             if (st.bonus && cellEq(nh, st.bonus)) {
                 st.score += 50 + st.speed * 5;
                 st.orbs += 1;
@@ -160,11 +181,15 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 // periodically offer a golden orb
                 st.sinceBonus += 1;
                 if (!st.bonus && st.sinceBonus >= BONUS_EVERY && Math.random() < 0.7) { st.bonus = { ...randEmpty(st), ttl: BONUS_TTL }; st.sinceBonus = 0; }
+                // rare Veil pickup (single shared slot — never with a bonus out)
+                st.sinceVeil += 1;
+                if (!st.pickup && !st.bonus && st.sinceVeil >= VEIL_EVERY && Math.random() < VEIL_CHANCE) { st.pickup = { ...randEmpty(st), ttl: PICKUP_TTL }; st.sinceVeil = 0; asfx.pickupSpawn(); }
                 vibrate(10);
             }
             if (st.grow > 0) st.grow -= 1; else st.snake.pop();
 
             if (st.bonus) { st.bonus.ttl -= 1; if (st.bonus.ttl <= 0) st.bonus = null; }
+            if (st.pickup) { st.pickup.ttl -= 1; if (st.pickup.ttl <= 0) st.pickup = null; }
         };
 
         const setDir = (x: number, y: number) => {
@@ -179,7 +204,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             const st: SnakeState = {
                 snake: [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }, { x: cx - 3, y: cy }],
                 dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
-                food: { x: 0, y: 0 }, bonus: null, sinceBonus: 0, grow: 0,
+                food: { x: 0, y: 0 }, bonus: null, sinceBonus: 0, pickup: null, sinceVeil: 0, effect: null, grow: 0,
                 score: 0, orbs: 0, speed: 1, stepMs: BASE_STEP, acc: 0, last: 0,
             };
             st.food = randEmpty(st);
@@ -211,6 +236,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             if (!cell || !cv || !st) return;
             const ctx = cv.getContext('2d');
             if (!ctx) return;
+            const reduce = reduceRef.current;
             ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = '#07120c';
             ctx.fillRect(0, 0, w, h);
@@ -232,14 +258,32 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             orbAt(st.food, accent, cell * 0.5);
             if (st.bonus) orbAt(st.bonus, '#fcd34d', cell * 0.7);
 
-            // snake — head brightest, tail darker
+            // Veil pickup — a hollow gold ring with a sweeping arc (distinct from solid orbs)
+            if (st.pickup) {
+                const cxp = st.pickup.x * cell + cell / 2, cyp = st.pickup.y * cell + cell / 2;
+                const r = cell * 0.30;
+                ctx.save();
+                ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = reduce ? 0 : Math.min(cell * 0.6, 12);
+                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = Math.max(1.5, cell * 0.10);
+                ctx.beginPath(); ctx.arc(cxp, cyp, r, 0, Math.PI * 2); ctx.stroke();
+                const a0 = reduce ? 0 : performance.now() * 0.004;
+                ctx.beginPath(); ctx.arc(cxp, cyp, r * 0.6, a0, a0 + Math.PI * 0.9); ctx.stroke();
+                ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(cxp, cyp, Math.max(1.5, cell * 0.07), 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            // snake — head brightest, tail darker; phased (translucent + gold rim) while the Veil holds
             const n = st.snake.length;
+            const phasing = !!st.effect;
+            ctx.save();
+            if (phasing) { ctx.globalAlpha = 0.5; ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = reduce ? 0 : Math.min(cell * 0.5, 10); }
             for (let i = n - 1; i >= 0; i--) {
                 const seg = st.snake[i];
                 const t = 1 - i / Math.max(1, n);  // 1 at head
                 const shade = i === 0 ? '#eafff4' : accent;
                 roundedCell(ctx, seg.x, seg.y, cell, shade, i === 0 ? 1 : 1.5);
-                if (i !== 0) { ctx.globalAlpha = 0.25 + 0.35 * (1 - t); ctx.fillStyle = '#000'; ctx.fillRect(seg.x * cell + 1.5, seg.y * cell + 1.5, cell - 3, cell - 3); ctx.globalAlpha = 1; }
+                if (!phasing && i !== 0) { ctx.globalAlpha = 0.25 + 0.35 * (1 - t); ctx.fillStyle = '#000'; ctx.fillRect(seg.x * cell + 1.5, seg.y * cell + 1.5, cell - 3, cell - 3); ctx.globalAlpha = 1; }
             }
             // eyes on the head — forward along travel, offset to each side
             const head = st.snake[0];
@@ -249,6 +293,14 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             ctx.fillStyle = '#0b1f15';
             ctx.beginPath(); ctx.arc(cxh + st.dir.x * fwd + perpX * spread, cyh + st.dir.y * fwd + perpY * spread, e, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(cxh + st.dir.x * fwd - perpX * spread, cyh + st.dir.y * fwd - perpY * spread, e, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+
+            // Veil timer bar (top edge)
+            if (st.effect) {
+                const frac = Math.max(0, st.effect.ttlMs / VEIL_MS);
+                ctx.fillStyle = 'rgba(251,191,36,0.22)'; ctx.fillRect(0, 0, w, 3);
+                ctx.fillStyle = '#fbbf24'; ctx.fillRect(0, 0, w * frac, 3);
+            }
         };
 
         // ---- loop ----
@@ -264,6 +316,8 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 if (statusRef.current === 'playing' && !overRef.current) {
                     st.acc += dt;
                     while (st.acc >= st.stepMs && !overRef.current) { st.acc -= st.stepMs; step(st); }
+                    // Veil grace counts down in REAL time (step cadence varies with speed)
+                    if (st.effect) { st.effect.ttlMs -= dt; if (st.effect.ttlMs <= 0) { st.effect = null; asfx.veilEnd(); } }
                     if (st.score !== shown.current.score) { shown.current.score = st.score; setScore(st.score); }
                     if (st.orbs !== shown.current.orbs) { shown.current.orbs = st.orbs; setOrbs(st.orbs); }
                     if (st.speed !== shown.current.speed) { shown.current.speed = st.speed; setSpeed(st.speed); }
@@ -330,6 +384,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
 
     return (
         <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <style>{`@keyframes arcadePop{0%{transform:scale(0.6);opacity:0}20%{transform:scale(1.12);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}`}</style>
             {/* header */}
             <div className="flex items-center justify-between px-3 pt-2 shrink-0">
                 <button onClick={onExit} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave Serpent">
@@ -356,6 +411,12 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             {/* board */}
             <div ref={wrapRef} className="relative flex-1 min-h-0 flex items-center justify-center px-3 py-2">
                 <canvas ref={canvasRef} className="rounded-xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none' }} />
+
+                {flash && status === 'playing' && (
+                    <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
+                        <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: '#fbbf24', textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
+                    </div>
+                )}
 
                 {status === 'paused' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">

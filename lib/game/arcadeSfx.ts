@@ -109,6 +109,24 @@ export const asfx = {
     coin() { tone({ freq: 988, type: 'square', dur: 0.06, gain: 0.06 }); tone({ freq: 1319, type: 'square', dur: 0.12, gain: 0.06, delay: 0.06 }); },
     flip() { tone({ freq: 300, to: 520, type: 'triangle', dur: 0.08, gain: 0.06 }); },
     complete() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.4, gain: 0.13, delay: i * 0.1 })); tone({ freq: 1568, type: 'sine', dur: 0.5, gain: 0.08, delay: 0.5 }); },
+    // power-ups & pickups ----------------------------------
+    // Tetra: one rising blip per Aether segment gained (a Tetris arpeggiates up)
+    charge(seg: number) { tone({ freq: 520 + seg * 40, to: 700 + seg * 40, type: 'square', dur: 0.04, gain: 0.035 }); },
+    // Tetra: the meter just became spendable + off cooldown (rising edge)
+    powerReady() { tone({ freq: 880, type: 'triangle', dur: 0.16, gain: 0.07 }); tone({ freq: 1320, type: 'sine', dur: 0.14, gain: 0.04, delay: 0.06 }); },
+    // Tetra: a power button pressed while blocked (no charge / cooldown)
+    powerFizzle() { tone({ freq: 240, to: 150, type: 'sawtooth', dur: 0.12, gain: 0.06 }); noise({ dur: 0.05, type: 'lowpass', freq: 260, gain: 0.04 }); },
+    // Tetra: Slow Veil — time dilating
+    slowVeil() { tone({ freq: 620, to: 300, type: 'triangle', dur: 0.4, gain: 0.10 }); tone({ freq: 310, to: 150, type: 'sine', dur: 0.45, gain: 0.05, delay: 0.05 }); noise({ dur: 0.3, type: 'lowpass', freq: 500, gain: 0.04 }); },
+    // Tetra: Aether Sink — deep downward dissolve + sparkle tail
+    aetherSink() { tone({ freq: 300, to: 70, type: 'sawtooth', dur: 0.35, gain: 0.13 }); noise({ dur: 0.22, type: 'lowpass', freq: 360, gain: 0.10 }); tone({ freq: 1568, type: 'sine', dur: 0.3, gain: 0.06, delay: 0.12 }); },
+    // Serpent: Veil grace gained / lifted, and the rare pickup appearing
+    veil() { tone({ freq: 520, to: 1040, type: 'sine', dur: 0.22, gain: 0.10 }); tone({ freq: 780, to: 1560, type: 'triangle', dur: 0.20, gain: 0.05, delay: 0.05 }); noise({ dur: 0.16, type: 'bandpass', freq: 2200, gain: 0.04, delay: 0.02 }); },
+    veilEnd() { tone({ freq: 760, to: 380, type: 'sine', dur: 0.26, gain: 0.06 }); tone({ freq: 1140, to: 560, type: 'triangle', dur: 0.22, gain: 0.03, delay: 0.03 }); },
+    pickupSpawn() { tone({ freq: 1320, type: 'sine', dur: 0.05, gain: 0.035 }); tone({ freq: 1760, type: 'sine', dur: 0.06, gain: 0.03, delay: 0.04 }); },
+    // Veil: Source Shard collected (Aegis armed) / the Aegis absorbing a hit
+    shardPickup() { tone({ freq: 660, to: 1245, type: 'triangle', dur: 0.16, gain: 0.09 }); tone({ freq: 1320, to: 1760, type: 'sine', dur: 0.18, gain: 0.05, delay: 0.05 }); noise({ dur: 0.05, type: 'bandpass', freq: 5000, gain: 0.03 }); },
+    shieldBreak() { tone({ freq: 520, to: 130, type: 'sawtooth', dur: 0.22, gain: 0.12 }); tone({ freq: 1320, to: 660, type: 'triangle', dur: 0.14, gain: 0.06 }); noise({ dur: 0.16, type: 'bandpass', freq: 2400, gain: 0.07 }); },
     // shared -----------------------------------------------
     gameOver() { [392, 294, 196].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.5, gain: 0.15, delay: i * 0.14 })); },
 };

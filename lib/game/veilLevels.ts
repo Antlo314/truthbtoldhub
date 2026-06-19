@@ -34,7 +34,7 @@ export const MAX_TIER = 6;
 export const START_PAD = 6;
 
 export type ModeKind = 'cube' | 'ship';
-export type ObstacleKind = 'spike' | 'block' | 'gravityPortal' | 'modePortal' | 'speedPortal' | 'orb' | 'pad' | 'coin';
+export type ObstacleKind = 'spike' | 'block' | 'gravityPortal' | 'modePortal' | 'speedPortal' | 'orb' | 'pad' | 'coin' | 'shard';
 
 export interface Obstacle {
     kind: ObstacleKind;
@@ -61,6 +61,7 @@ export interface SegmentTemplate {
     obstacles: Obstacle[];
     jumps?: JumpSpec[];
     coins?: { x: number; y: number }[];
+    shards?: { x: number; y: number }[];
 }
 
 // ---- seeded PRNG (deterministic level gen; never used in physics) ----
@@ -216,10 +217,11 @@ export interface VeilGen {
     mode: ModeKind;
     speedTier: number;
     recent: string[];
+    lastShardTier: number;  // gates rare Source Shard placement
 }
 
 export function createGen(seed: number): VeilGen {
-    return { rng: mulberry32(seed), cursorX: START_PAD, mode: 'cube', speedTier: 2, recent: [] };
+    return { rng: mulberry32(seed), cursorX: START_PAD, mode: 'cube', speedTier: 2, recent: [], lastShardTier: -99 };
 }
 
 function pick<T>(rng: () => number, arr: T[]): T | null {
@@ -248,12 +250,17 @@ export function generateAhead(gen: VeilGen, out: Obstacle[], targetX: number): v
 
         for (const o of tpl.obstacles) out.push({ ...o, x: o.x + gen.cursorX });
         for (const c of (tpl.coins || [])) out.push({ kind: 'coin', x: c.x + gen.cursorX, y: c.y });
+        for (const s of (tpl.shards || [])) out.push({ kind: 'shard', x: s.x + gen.cursorX, y: s.y });
 
         gen.cursorX += tpl.length;
         gen.recent.push(tpl.id);
         if (gen.recent.length > 3) gen.recent.shift();
 
-        gen.cursorX += safeGapFor(tier);
+        // rare Source Shard on the flat safe-gap (deterministic via gen.rng; never inside an obstacle)
+        const gapStart = gen.cursorX;
+        const gap = safeGapFor(tier);
+        if (tier - gen.lastShardTier >= 2 && gen.rng() < 0.18) { out.push({ kind: 'shard', x: gapStart + gap / 2, y: 0.7 }); gen.lastShardTier = tier; }
+        gen.cursorX += gap;
 
         maybeTransition(gen, out, tier);
     }

@@ -66,6 +66,9 @@ interface VS {
     gen: VeilGen;
     coins: number;
     distance: number;       // = px, the score basis
+    shield: boolean;        // Aegis from a Source Shard (one-hit)
+    invulnUntil: number;    // sim-time i-frames after an Aegis break
+    shardsUsed: number;
     // visual-only
     trail: { x: number; y: number }[];
     particles: Particle[];
@@ -105,7 +108,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
     const inputRef = useRef({ held: false, tapPending: false });
     const attemptsRef = useRef(1);
     const reduceRef = useRef(false);
-    const shown = useRef({ score: -1, coins: -1 });
+    const shown = useRef({ score: -1, coins: -1, shield: -1 });
     const actionsRef = useRef<{ [k: string]: (...a: any[]) => void }>({});
 
     const [status, setStatus] = useState<'playing' | 'paused' | 'over'>('playing');
@@ -114,6 +117,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
     const [attempt, setAttempt] = useState(1);
     const [muted, setMuted] = useState(false);
     const [started, setStarted] = useState(false);
+    const [shield, setShield] = useState(false);
 
     useEffect(() => { propsRef.current = { onGameOver, onReset }; }, [onGameOver, onReset]);
     useEffect(() => { statusRef.current = status; }, [status]);
@@ -167,6 +171,18 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
         };
 
         const die = (st: VS) => {
+            // Aegis absorbs a single hit — consume the shield, brief i-frames, escape nudge
+            if (st.shield) {
+                st.shield = false;
+                st.shardsUsed++;
+                st.invulnUntil = st.simTime + 0.45;
+                st.vy = JUMP_VELOCITY * st.gravitySign * 0.5;
+                asfx.shieldBreak();
+                st.flash = performance.now() + 140;
+                spawnParticles(st, st.px + 0.5, st.py + 0.5, 18, PAL.shard, 7, 7);
+                if (typeof navigator !== 'undefined' && 'vibrate' in navigator) { try { navigator.vibrate(25); } catch { /* ignore */ } }
+                return;
+            }
             if (overRef.current) return;
             overRef.current = true;
             statusRef.current = 'over';
@@ -251,7 +267,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     // otherwise: a side/penetration hit kills
                     const ovX = Math.min(insR, bx1) - Math.max(insL, bx0);
                     const ovY = Math.min(st.py + 1 - IN, bTop) - Math.max(st.py + IN, bBot);
-                    if (ovX > CONTACT_EPS && ovY > CONTACT_EPS) { die(st); return; }
+                    if (ovX > CONTACT_EPS && ovY > CONTACT_EPS && st.simTime >= st.invulnUntil) { die(st); return; }
                 } else if (o.kind === 'spike') {
                     const h = o.h ?? 1;
                     const baseY = o.y;
@@ -266,7 +282,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         [insL, st.py + IN], [insR, st.py + IN], [insL, st.py + 1 - IN], [insR, st.py + 1 - IN], [st.px + 0.5, st.py + IN],
                     ];
                     for (const s of samples) {
-                        if (pointInTri(s[0], s[1], ax, ay, bx, by, ix, iy)) { die(st); return; }
+                        if (pointInTri(s[0], s[1], ax, ay, bx, by, ix, iy)) { if (st.simTime >= st.invulnUntil) { die(st); return; } break; }
                     }
                 }
             }
@@ -317,6 +333,11 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         if (!o.taken && Math.hypot(o.x - cx, o.y - cy) < 0.7) { o.taken = true; st.coins++; asfx.coin(); spawnParticles(st, o.x, o.y, 6, PAL.coin, 3, 4); }
                         break;
                     }
+                    case 'shard': {
+                        // Source Shard → arms the Aegis (one held; no score/coin, deterministic)
+                        if (!o.taken && !st.shield && Math.hypot(o.x - cx, o.y - cy) < 0.75) { o.taken = true; st.shield = true; asfx.shardPickup(); spawnParticles(st, o.x, o.y, 8, PAL.shard, 3, 4); }
+                        break;
+                    }
                 }
             }
         };
@@ -328,12 +349,14 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 px: 0, py: 0, vy: 0, prevPy: 0, gravitySign: 1, mode: 'cube', speedMult: SPEED_MULTS[1],
                 onSurface: true, wasOnSurface: true, lastHoldJumpT: -1, simTime: 0, acc: 0, last: 0,
                 obstacles: [], gen, coins: 0, distance: 0,
+                shield: false, invulnUntil: 0, shardsUsed: 0,
                 trail: [], particles: [], shakeUntil: 0, shakeMag: 0, flash: 0,
             };
             generateAhead(gen, st.obstacles, PLAYER_SCREEN_X + dimRef.current.viewUnits + SPAWN_AHEAD);
             stRef.current = st;
             overRef.current = false;
-            shown.current = { score: -1, coins: -1 };
+            shown.current = { score: -1, coins: -1, shield: -1 };
+            setShield(false);
             inputRef.current.tapPending = false;
             setScore(0); setCoins(0);
             setAttempt(attemptsRef.current);
@@ -458,6 +481,17 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         ctx.restore();
                         break;
                     }
+                    case 'shard': {
+                        if (o.taken) break;
+                        const cyp = sy(o.y);
+                        ctx.save(); ctx.shadowColor = PAL.shard; ctx.shadowBlur = reduce ? 0 : 12;
+                        ctx.strokeStyle = PAL.shard; ctx.lineWidth = 2.5;
+                        ctx.beginPath(); ctx.arc(ox, cyp, P * 0.30, 0, Math.PI * 2); ctx.stroke();
+                        ctx.fillStyle = PAL.shard; ctx.globalAlpha = 0.5 + (reduce ? 0.2 : pulse * 0.4);
+                        ctx.beginPath(); ctx.arc(ox, cyp, P * 0.1, 0, Math.PI * 2); ctx.fill();
+                        ctx.restore();
+                        break;
+                    }
                     case 'orb': {
                         const cyp = sy(o.y);
                         const col = o.variant === 'pink' ? '#ff6bd6' : PAL.orb;
@@ -528,6 +562,17 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             }
             ctx.restore();
 
+            // Aegis ring — orbits the player while a Source Shard is held
+            if (st.shield) {
+                const rr = P * (0.62 + (reduce ? 0 : pulse * 0.08));
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = PAL.shard; ctx.shadowColor = PAL.shard; ctx.shadowBlur = reduce ? 0 : 12;
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(pxc, pyc, rr, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+            }
+
             // particles
             for (const pt of st.particles) {
                 const a = Math.max(0, 1 - pt.life / pt.max);
@@ -584,6 +629,8 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     const sc = Math.floor(st.distance) + st.coins * COIN_BONUS;
                     if (sc !== shown.current.score) { shown.current.score = sc; setScore(sc); }
                     if (st.coins !== shown.current.coins) { shown.current.coins = st.coins; setCoins(st.coins); }
+                    const sh = st.shield ? 1 : 0;
+                    if (sh !== shown.current.shield) { shown.current.shield = sh; setShield(st.shield); }
                     // tap lives at most one frame
                     inputRef.current.tapPending = false;
                 }
@@ -652,10 +699,12 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             </div>
 
             {/* HUD */}
-            <div className="flex items-center justify-center gap-4 px-3 pt-2 shrink-0">
-                <div className="text-center px-2"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Score</p><p className="font-ritual text-lg leading-tight" style={{ color: accent }}>{score.toLocaleString()}</p></div>
-                <div className="text-center px-2"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Coins</p><p className="font-ritual text-lg leading-tight text-amber-300">{coins}</p></div>
-                <div className="text-center px-2"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Try</p><p className="font-ritual text-lg leading-tight text-white">{attempt}</p></div>
+            <div className="flex items-center justify-center gap-3.5 px-3 pt-2 shrink-0">
+                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Score</p><p className="font-ritual text-lg leading-tight" style={{ color: accent }}>{score.toLocaleString()}</p></div>
+                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Coins</p><p className="font-ritual text-lg leading-tight text-amber-300">{coins}</p></div>
+                <div className="text-center px-1.5 flex flex-col items-center"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Aegis</p>
+                    <span className="mt-1 inline-block rounded-full" style={{ width: 16, height: 16, border: `2px solid ${shield ? PAL.shard : 'rgba(255,255,255,0.25)'}`, background: shield ? PAL.shard : 'transparent', boxShadow: shield ? `0 0 8px ${PAL.shard}` : 'none' }} /></div>
+                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Try</p><p className="font-ritual text-lg leading-tight text-white">{attempt}</p></div>
             </div>
 
             {/* play surface — taps/holds here drive the game */}
@@ -664,7 +713,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
 
                 {!started && status === 'playing' && (
                     <div className="absolute inset-0 flex items-end justify-center pb-[18%] pointer-events-none">
-                        <p className="font-ritual text-base tracking-[0.25em] uppercase animate-pulse" style={{ color: accent }}>Tap to jump · hold to fly</p>
+                        <p className="font-ritual text-sm tracking-[0.2em] uppercase animate-pulse text-center px-4" style={{ color: accent }}>Tap to jump · hold to fly · gather the Source</p>
                     </div>
                 )}
 
