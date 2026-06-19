@@ -15,8 +15,8 @@ import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/ga
 const COLS = 17;
 const ROWS = 17;
 const MAX_CELL = 26;
-const BASE_STEP = 150;       // ms per move at speed 1
-const MIN_STEP = 62;
+const BASE_STEP = 210;       // ms per move at speed 1 (calmer start)
+const MIN_STEP = 100;        // fastest the serpent ever moves
 const BONUS_TTL = 38;        // steps a golden orb lingers
 const BONUS_EVERY = 5;       // orbs between golden-orb chances
 
@@ -155,7 +155,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 st.grow += 1;
                 st.food = randEmpty(st);
                 const newSpeed = Math.floor(st.orbs / 5) + 1;
-                if (newSpeed !== st.speed) { st.speed = newSpeed; st.stepMs = Math.max(MIN_STEP, BASE_STEP - (newSpeed - 1) * 11); asfx.levelUp(); }
+                if (newSpeed !== st.speed) { st.speed = newSpeed; st.stepMs = Math.max(MIN_STEP, BASE_STEP - (newSpeed - 1) * 10); asfx.levelUp(); }
                 else asfx.eat();
                 // periodically offer a golden orb
                 st.sinceBonus += 1;
@@ -391,15 +391,18 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 )}
             </div>
 
-            {/* d-pad */}
-            <div className="shrink-0 px-3 pb-3 pt-1 mx-auto w-full max-w-[260px]" style={{ touchAction: 'none' }}>
-                <div className="grid grid-cols-3 gap-2">
+            {/* directional pad — a single centralized cross */}
+            <div className="shrink-0 px-3 pb-3 pt-1" style={{ touchAction: 'none' }}>
+                <div className="grid grid-cols-3 gap-2 w-[198px] mx-auto">
                     <div />
                     <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, -1); }} aria-label="Up"><ChevronUp className="w-6 h-6" /></button>
                     <div />
                     <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(-1, 0); }} aria-label="Left"><ChevronLeft className="w-6 h-6" /></button>
-                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
+                    <div className="flex items-center justify-center"><span className="w-2.5 h-2.5 rounded-full" style={{ background: `${accent}66` }} /></div>
                     <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(1, 0); }} aria-label="Right"><ChevronRight className="w-6 h-6" /></button>
+                    <div />
+                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
+                    <div />
                 </div>
                 <p className="text-center text-[9px] font-mono uppercase tracking-[0.25em] text-white/30 mt-2">swipe the board or use the pad</p>
             </div>
