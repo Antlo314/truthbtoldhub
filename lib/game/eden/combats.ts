@@ -23,6 +23,7 @@ const TUTORIALS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'A single shade wanders the threshold road, then a second. Learn to dodge the lunge and strike on the recovery.',
         enemyCount: 2,
+        enemyKinds: ['grunt', 'grunt'],
         enemyHp: 24,
         enemyDmg: 10,
         bossName: '',
@@ -35,6 +36,7 @@ const TUTORIALS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'Three shades drift up from the outer grove, sharing their turns. Keep moving — never let two close on you at once.',
         enemyCount: 3,
+        enemyKinds: ['grunt', 'flanker', 'grunt'],
         enemyHp: 27,
         enemyDmg: 11,
         bossName: '',
@@ -47,6 +49,7 @@ const TUTORIALS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'Caster shades and a flanker hold the eastern beds. Close the gap after each volley — distance is their only weapon.',
         enemyCount: 3,
+        enemyKinds: ['caster', 'caster', 'flanker'],
         enemyHp: 30,
         enemyDmg: 13,
         bossName: '',
@@ -60,6 +63,8 @@ const TUTORIALS: Record<string, EdenCombatDef> = {
 //  River guardians — one boss per river, built from the atlas so
 //  ids ('eden_g_<river>') and names track EDEN_RIVERS_V2.
 // ------------------------------------------------------------
+type FoeKind = 'grunt' | 'caster' | 'brute' | 'flanker';
+
 interface GuardianSpec {
     art: BossArt;
     hp: number;
@@ -67,6 +72,8 @@ interface GuardianSpec {
     adds: number;
     addHp: number;
     addDmg: number;
+    /** Add roster — matches the guardian's flavour (echoes/lungers/etc). */
+    kinds: FoeKind[];
     difficulty: number;
     challenge: string;
 }
@@ -79,6 +86,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         adds: 2,
         addHp: 26,
         addDmg: 10,
+        kinds: ['grunt', 'grunt'],
         difficulty: 1,
         challenge: 'A figure of gold-veined stone rises from the riverbed of Havilah. It strikes slow but sure — read the wind-up, sidestep, and answer between blows.',
     },
@@ -89,6 +97,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         adds: 2,
         addHp: 28,
         addDmg: 11,
+        kinds: ['caster', 'flanker'],
         difficulty: 2,
         challenge: 'A coiled thing wreathed in the cold springs of Cush bars the source. It lunges in long arcs — never stand where it last struck, and the water will not drown you.',
     },
@@ -99,6 +108,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         adds: 3,
         addHp: 28,
         addDmg: 12,
+        kinds: ['flanker', 'flanker', 'caster'],
         difficulty: 2,
         challenge: 'A pale wraith moves faster than thought above the swift water toward Assyria. It blinks across the arena — clear its echoes first, then chase it into its own recovery.',
     },
@@ -109,6 +119,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         adds: 3,
         addHp: 30,
         addDmg: 13,
+        kinds: ['brute', 'flanker', 'grunt'],
         difficulty: 3,
         challenge: 'The Keeper of the great river stands like a wall over the deepest water. Its sweep covers half the bank — bait the swing, roll wide, and close before it sets again.',
     },
@@ -121,6 +132,7 @@ function guardianDef(id: EdenRiverId): EdenCombatDef {
         id: river.guardian.combatId,
         challenge: spec.challenge,
         enemyCount: spec.adds,
+        enemyKinds: spec.kinds,
         enemyHp: spec.addHp,
         enemyDmg: spec.addDmg,
         bossName: river.guardian.name,
@@ -151,6 +163,7 @@ const SERPENT_TRAPS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'The gold path buckles. Two shades of want claw up from the riverbed — quick and greedy. End it fast.',
         enemyCount: 2,
+        enemyKinds: ['flanker', 'flanker'],
         enemyHp: 30,
         enemyDmg: 14,
         bossName: '',
@@ -163,6 +176,7 @@ const SERPENT_TRAPS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'The springs turn black. Two cold shades surface from the still water and strike from the sides at once.',
         enemyCount: 2,
+        enemyKinds: ['flanker', 'flanker'],
         enemyHp: 31,
         enemyDmg: 15,
         bossName: '',
@@ -175,6 +189,7 @@ const SERPENT_TRAPS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'The swift water carries two shades to you before you can brace. Move first — they do not wait their turn here.',
         enemyCount: 2,
+        enemyKinds: ['flanker', 'grunt'],
         enemyHp: 32,
         enemyDmg: 16,
         bossName: '',
@@ -187,6 +202,7 @@ const SERPENT_TRAPS: Record<string, EdenCombatDef> = {
         skirmish: true,
         challenge: 'The great river offers a crossing that was never there. Two heavy shades rise to drag you under. Hold the bank.',
         enemyCount: 2,
+        enemyKinds: ['brute', 'grunt'],
         enemyHp: 33,
         enemyDmg: 16,
         bossName: '',
@@ -203,6 +219,7 @@ const CHERUB: EdenCombatDef = {
     id: 'eden_boss',
     challenge: 'The Cherub keeps the way back, its flaming sword turning every direction at once. It sweeps the sword in burning red rings — dodge through their gaps, fell the two shade-echoes first, then strike in the breath between turns.',
     enemyCount: 2,
+    enemyKinds: ['caster', 'flanker'],
     enemyHp: 30,
     enemyDmg: 12,
     bossName: 'The Cherub of the Flaming Sword',

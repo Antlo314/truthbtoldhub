@@ -14,6 +14,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import {
     EDEN_RIVER_ORDER,
     EDEN_RIVERS_V2,
+    EDEN_REGIONS,
 } from '@/lib/game/eden/atlas';
 import { EDEN_CREATURES, EDEN_CREATURE_COUNT } from '@/lib/game/eden/bestiary';
 import { EDEN_FRUITS, EDEN_FRUIT_COUNT } from '@/lib/game/eden/cultivation';
@@ -67,6 +68,28 @@ export function edenCodex(character: GameCharacter, level: EdenLevelState): Eden
     }));
     const serpentDone = serpent.filter((s) => s.choice !== null).length;
 
+    // ---- trials (lessons + guardians + Cherub) ----
+    const trialsDone = level.fights.filter((f) => f.cleared).length;
+    const trialsTotal = level.fights.length;
+
+    // ---- caches (open chests + springs), with hidden ones split out ----
+    const visibleChests = level.chests.filter((c) => !c.hidden);
+    const hiddenChests = level.chests.filter((c) => c.hidden);
+    const cachesDone =
+        visibleChests.filter((c) => c.opened).length + level.springs.filter((s) => s.collected).length;
+    const cachesTotal = visibleChests.length + level.springs.length;
+
+    // ---- secrets (the hidden caches no map recorded) ----
+    const secretsDone = hiddenChests.filter((c) => c.opened).length;
+    const secretsTotal = hiddenChests.length;
+
+    // ---- regions walked (Gardener greeting per wing) ----
+    const regionsTotal = EDEN_REGIONS.length;
+    const regionsDone = Math.min(
+        regionsTotal,
+        character.discovered.filter((d) => d.startsWith('eden_wing_')).length,
+    );
+
     // ---- the relic (1) ----
     const relicClaimed = character.inventory.includes(RELIC_ID);
     const relicDone = relicClaimed ? 1 : 0;
@@ -76,7 +99,11 @@ export function edenCodex(character: GameCharacter, level: EdenLevelState): Eden
         { label: 'Rivers attuned', done: riversDone, total: EDEN_RIVER_ORDER.length, color: '#34d399' },
         { label: 'Creatures named', done: creaturesDone, total: EDEN_CREATURE_COUNT, color: '#fbbf24' },
         { label: 'Fruits gathered', done: fruitsDone, total: EDEN_FRUIT_COUNT, color: '#a3e635' },
+        { label: 'Trials won', done: trialsDone, total: trialsTotal, color: '#fb923c' },
+        { label: 'Caches found', done: cachesDone, total: cachesTotal, color: '#fcd34d' },
         { label: 'Inscriptions read', done: loreDone, total: loreTotal, color: '#fbbf24' },
+        { label: 'Secrets uncovered', done: secretsDone, total: secretsTotal, color: '#c084fc' },
+        { label: 'Regions walked', done: regionsDone, total: regionsTotal, color: '#5eead4' },
         { label: 'The Serpent', done: serpentDone, total: EDEN_SERPENT_BEAT_COUNT, color: '#ef4444' },
         { label: 'The Leaf of Life', done: relicDone, total: 1, color: '#86efac' },
     ];

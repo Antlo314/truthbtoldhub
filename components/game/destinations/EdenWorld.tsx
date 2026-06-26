@@ -27,7 +27,7 @@ import {
 import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt,
     EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
-    EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, edenDayState, EDEN_DAY_SECONDS,
+    EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, EDEN_KEYS, edenDayState, EDEN_DAY_SECONDS,
     type EdenDayPhase,
 } from '@/lib/game/eden/atlas';
 import { buildEdenOverworld } from '@/lib/game/edenOverworld';
@@ -37,7 +37,7 @@ import {
     edenGuideStep, EDEN_RESPAWN_LINE, edenMinimapTerrain, edenMinimapGates, edenMinimapPois,
     EDEN_MINIMAP_TERRAIN_COLORS, type EdenLevelState,
 } from '@/lib/game/edenLevel';
-import { EDEN_CREATURES, nameCreatureKey } from '@/lib/game/eden/bestiary';
+import { EDEN_CREATURES, EDEN_CREATURE_COUNT, nameCreatureKey } from '@/lib/game/eden/bestiary';
 import { EDEN_BEDS, EDEN_SEEDS, seedById, harvestFruitKey, growthStage } from '@/lib/game/eden/cultivation';
 import {
     EDEN_SERPENT_BEATS, serpentBeatById, serpentChoiceKey, climaxResolution, knowledgeOutcomeKey,
@@ -118,6 +118,7 @@ type NearTarget =
     | { kind: 'lore'; id: string; label: string }
     | { kind: 'name'; id: string; label: string }
     | { kind: 'tend'; id: string; label: string }
+    | { kind: 'gardener'; id: string; label: string }
     | null;
 
 type Overlay =
@@ -127,6 +128,11 @@ type Overlay =
     | null;
 
 interface FruitBuff { hp: number; damage: number; regen: number; fights: number; }
+
+// The garden strengthens, but it does not break the trials: fruit buffs stack
+// additively only up to these ceilings, so farming the beds can't trivialise
+// the guardians or the Cherub.
+const FRUIT_BUFF_CAP = { hp: 30, damage: 12, regen: 8 } as const;
 
 export default function EdenWorld({
     character, isSolved, isGuardianCleared,
@@ -171,7 +177,8 @@ export default function EdenWorld({
     const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
     const fightTriggeredRef = useRef<string | null>(null);
-    const fightBonusRef = useRef(0);
+    const [fightBonus, setFightBonus] = useState(0);
+    const serpentResolvingRef = useRef(false);
     const touchedRef = useRef(new Set<string>());
     const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
     const lastWingRef = useRef<string | null>(null);
@@ -287,12 +294,21 @@ export default function EdenWorld({
         setLevel((prev) => updateEdenProgress({ ...prev, named: [...prev.named, creatureId] }));
         const keys = [nameCreatureKey(creatureId)];
         if (cr?.reward?.key) keys.push(cr.reward.key);
-        onDiscover(keys);
         if (cr?.reward?.skillPoint) grantSkillPoints(1);
-        if (cr?.lore) {
+        // the first work complete — every living thing named.
+        const allNamed = level.named.length + 1 >= EDEN_CREATURE_COUNT
+            && !charRef.current.discovered.includes(EDEN_KEYS.allNamed);
+        if (allNamed) {
+            keys.push(EDEN_KEYS.allNamed);
+            grantSkillPoints(1);
+            const sp = (cr?.reward?.skillPoint ? 1 : 0) + 1;
+            const loreLine = cr?.lore ? `${cr.lore}\n\n` : '';
+            setDialogue({ speaker: 'The Gardener', text: `${loreLine}Every living thing has its name again. The first work — the one given to the first man — is finished in you. (+${sp} skill point${sp > 1 ? 's' : ''})`, color: '#34d399' });
+        } else if (cr?.lore) {
             const bonus = cr.reward?.skillPoint ? ' (+1 skill point)' : '';
             setDialogue({ speaker: cr.name, text: cr.lore + bonus, color: '#fbbf24' });
         }
+        onDiscover(keys);
         sfx.victory();
         setOverlay(null);
     }, [level.named, onDiscover, grantSkillPoints]);
@@ -312,16 +328,19 @@ export default function EdenWorld({
         if (f.heal) setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + f.heal!));
         if (f.buff) {
             setFruitBuff((prev) => ({
-                hp: (prev?.hp ?? 0) + (f.buff!.hp ?? 0),
-                damage: (prev?.damage ?? 0) + (f.buff!.damage ?? 0),
-                regen: (prev?.regen ?? 0) + (f.buff!.regen ?? 0),
+                hp: Math.min(FRUIT_BUFF_CAP.hp, (prev?.hp ?? 0) + (f.buff!.hp ?? 0)),
+                damage: Math.min(FRUIT_BUFF_CAP.damage, (prev?.damage ?? 0) + (f.buff!.damage ?? 0)),
+                regen: Math.min(FRUIT_BUFF_CAP.regen, (prev?.regen ?? 0) + (f.buff!.regen ?? 0)),
                 fights: Math.max(prev?.fights ?? 0, f.buff!.fights),
             }));
         }
+        const extra: string[] = [];
         if (!level.fruitsHarvested.includes(f.id)) {
             setLevel((prev) => ({ ...prev, fruitsHarvested: [...prev.fruitsHarvested, f.id] }));
-            onDiscover([harvestFruitKey(f.id)]);
+            extra.push(harvestFruitKey(f.id));
         }
+        if (!charRef.current.discovered.includes(EDEN_KEYS.firstHarvest)) extra.push(EDEN_KEYS.firstHarvest);
+        if (extra.length) onDiscover(extra);
         setDialogue({ speaker: 'The Garden', text: f.line, color: '#a3e635' });
         sfx.victory();
         setOverlay(null);
@@ -329,19 +348,26 @@ export default function EdenWorld({
 
     // ---- serpent arc ----
     const resolveSerpent = useCallback((beatId: string, choice: 'resisted' | 'listened') => {
+        // one resolution per beat — guards against a double-tap on the fork
+        // (the buttons fire before React unmounts the panel) corrupting a
+        // permanent, one-shot moral choice.
+        if (serpentResolvingRef.current || levelRef.current.serpent[beatId]) return;
         const beat = serpentBeatById(beatId);
         if (!beat) return;
+        serpentResolvingRef.current = true;
         setNearSerpent(null);
         serpOfferShownRef.current = null;
 
         if (beat.climax) {
-            // the moral fork at the Tree of Knowledge
+            // the moral fork at the Tree of Knowledge — both endings are
+            // honourable, so each carries a reflective blessing (+1 skill point).
             const taste = choice === 'listened';
             const res = climaxResolution(taste);
             const keys = [serpentChoiceKey(beatId, choice), knowledgeOutcomeKey(res.outcome)];
             setLevel((prev) => ({ ...prev, serpent: { ...prev.serpent, [beatId]: choice }, knowledgeOutcome: res.outcome }));
             onDiscover(keys);
-            setDialogue({ speaker: res.title, text: res.line, color: taste ? '#ef4444' : '#34d399' });
+            grantSkillPoints(1);
+            setDialogue({ speaker: res.title, text: `${res.line}\n\n${res.blessingLabel} · +1 skill point`, color: taste ? '#ef4444' : '#34d399' });
             taste ? sfx.hit() : sfx.victory();
             return;
         }
@@ -367,11 +393,11 @@ export default function EdenWorld({
         });
         if (beat.listenedFight && character.equipped.weapon) {
             fightTriggeredRef.current = `serpent_${beatId}`;
-            fightBonusRef.current = consumeFightBonusHp();
+            setFightBonus(consumeFightBonusHp());
             setActiveFight(beat.listenedFight);
         }
         sfx.hit();
-    }, [onDiscover, character.equipped.weapon, consumeFightBonusHp, softRespawn]);
+    }, [onDiscover, character.equipped.weapon, consumeFightBonusHp, softRespawn, grantSkillPoints]);
 
     // ---- fights ----
     const markFightCleared = useCallback((fightId: string, combatId: string) => {
@@ -415,6 +441,11 @@ export default function EdenWorld({
         if (n.kind === 'lore') readLoreStone(n.id);
         else if (n.kind === 'name') setOverlay({ kind: 'naming', creatureId: n.id });
         else if (n.kind === 'tend') setOverlay({ kind: 'tend', bedId: n.id });
+        else if (n.kind === 'gardener') {
+            // hint-on-demand: the Gardener speaks the current objective + counsel.
+            const g = guideStepRef.current;
+            setDialogue({ speaker: 'The Gardener', text: `${g.objective}. ${g.tip}`, color: '#34d399' });
+        }
     }, [near, readLoreStone]);
 
     // music
@@ -546,7 +577,7 @@ export default function EdenWorld({
                     sh.x = nx; sh.y = ny;
                     if (Math.hypot(sh.x - st.px, sh.y - st.py) < 20 && character.equipped.weapon && fightTriggeredRef.current !== fight.id) {
                         fightTriggeredRef.current = fight.id;
-                        fightBonusRef.current = consumeFightBonusHp();
+                        setFightBonus(consumeFightBonusHp());
                         setActiveFight(fight.combatId);
                         setDialogue({ speaker: 'The Gardener', text: fight.hint, color: '#34d399' });
                     }
@@ -607,7 +638,7 @@ export default function EdenWorld({
                         if (!warnedAt) { fightWarnRef.current[fz.id] = now; setDialogue({ speaker: 'The Gardener', text: fz.hint, color: '#34d399' }); break; }
                         if (now - warnedAt < 1200) break;
                         fightTriggeredRef.current = fz.id;
-                        fightBonusRef.current = consumeFightBonusHp();
+                        setFightBonus(consumeFightBonusHp());
                         setActiveFight(fz.combatId);
                         break;
                     }
@@ -645,14 +676,19 @@ export default function EdenWorld({
                     if (Math.hypot(tx - st.px, ty - st.py) < 20) {
                         setRelicClaimed(true);
                         onClaim();
+                        if (!charRef.current.discovered.includes(EDEN_KEYS.treeOfLifeClaimed)) onDiscover([EDEN_KEYS.treeOfLifeClaimed]);
                         setDialogue({ speaker: 'The Gardener', text: 'You take the Leaf of the Tree of Life. It will not wither — it remembers the first morning, and now, so do you.', color: '#34d399' });
                         sfx.victory();
                     }
                 }
 
-                // proximity targets (lore / creature / bed) + serpent beats
+                // proximity targets (gardener / lore / creature / bed) + serpent beats
                 let target: NearTarget = null;
                 let bestD = Infinity;
+                {
+                    const gd = Math.hypot((EDEN_GARDENER.gx + 0.5) * EDEN_TILE - st.px, (EDEN_GARDENER.gy + 0.5) * EDEN_TILE - st.py);
+                    if (gd < 24 && gd < bestD) { bestD = gd; target = { kind: 'gardener', id: 'gardener', label: 'Speak with the Gardener' }; }
+                }
                 for (const ls of lvl.loreStones) {
                     if (ls.read) continue;
                     const d = Math.hypot((ls.gx + 0.5) * EDEN_TILE - st.px, (ls.gy + 0.5) * EDEN_TILE - st.py);
@@ -678,7 +714,7 @@ export default function EdenWorld({
                 if (!nearSerpentRef.current) {
                     for (const b of EDEN_SERPENT_BEATS) {
                         if (lvl.serpent[b.id]) continue;
-                        if (Math.hypot((b.at.gx + 0.5) * EDEN_TILE - st.px, (b.at.gy + 0.5) * EDEN_TILE - st.py) < 24) { setNearSerpent(b.id); break; }
+                        if (Math.hypot((b.at.gx + 0.5) * EDEN_TILE - st.px, (b.at.gy + 0.5) * EDEN_TILE - st.py) < 24) { serpentResolvingRef.current = false; setNearSerpent(b.id); break; }
                     }
                 }
 
@@ -963,11 +999,11 @@ export default function EdenWorld({
         const fb = fruitBuff;
         return {
             ...baseBonuses,
-            bonusHp: baseBonuses.bonusHp + (fb?.hp ?? 0) + fightBonusRef.current,
+            bonusHp: baseBonuses.bonusHp + (fb?.hp ?? 0) + fightBonus,
             bonusDamage: baseBonuses.bonusDamage + (fb?.damage ?? 0),
             bonusRegen: baseBonuses.bonusRegen + (fb?.regen ?? 0),
         };
-    }, [baseBonuses, fruitBuff, activeFight]);
+    }, [baseBonuses, fruitBuff, fightBonus]);
 
     const nearPoi = near ? { name: near.label, type: 'npc' as const } : null;
     const openCreature = overlay?.kind === 'naming' ? EDEN_CREATURES.find((c) => c.id === overlay.creatureId) : null;

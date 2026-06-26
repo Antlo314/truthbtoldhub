@@ -133,7 +133,6 @@ export interface EdenChest {
     gx: number;
     gy: number;
     region: EdenRegionId;
-    keyId?: string;
     health?: number;
     label: string;
     opened: boolean;
@@ -172,9 +171,8 @@ export interface EdenLevelState {
     springs: EdenSpring[];
     fights: EdenFightZone[];
     loreStones: EdenLoreStone[];
-    keysFound: string[];
 
-    /** River order-indices attuned, in the order they were lit. */
+    /** River order-indices attuned, in canonical Genesis order. */
     riversLit: number[];
     /** All four rivers lit in Genesis order → the Cherub road opens. */
     bossGateOpen: boolean;

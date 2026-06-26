@@ -156,11 +156,18 @@ export function listenedAny(discovered: string[]): boolean {
     return EDEN_SERPENT_BEATS.some((b) => beatChoice(b.id, discovered) === 'listened');
 }
 
-/** All four river beats resolved AND not one of them was a listening. */
+/**
+ * The whole road kept: all four river beats resolved, not one of them a
+ * listening, AND the Tree of Knowledge was not tasted. Tasting at the climax
+ * disqualifies the accolade — you cannot be "Untempted" and have taken the
+ * fruit. (A still-unreached climax is provisionally allowed; refusing it is
+ * the clean finish.)
+ */
 export function wasUntempted(discovered: string[]): boolean {
     return (
         RIVER_BEATS.every((b) => beatChoice(b.id, discovered) !== null) &&
-        RIVER_BEATS.every((b) => beatChoice(b.id, discovered) !== 'listened')
+        RIVER_BEATS.every((b) => beatChoice(b.id, discovered) !== 'listened') &&
+        knowledgeOutcomeFrom(discovered) !== 'tasted'
     );
 }
 

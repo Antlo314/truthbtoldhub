@@ -154,7 +154,7 @@ export function freshEdenState(): EdenLevelState {
     ];
 
     return {
-        chests, springs, fights, loreStones, keysFound: [],
+        chests, springs, fights, loreStones,
         riversLit: [], bossGateOpen: false, sanctumOpen: false,
         named: [], fruitsHarvested: [], serpent: {}, knowledgeOutcome: 'none', secretsFound: [],
     };
@@ -245,6 +245,21 @@ export function isEdenSolid(gx: number, gy: number, level: EdenLevelState, barri
     return !isEdenWalkable(gx, gy, level, barrierActive);
 }
 
+/**
+ * The theme colour a given Eden fight should glow in. River guardians and
+ * their serpent-trap ambushes take their river's biome colour; the Cherub
+ * burns its flaming-sword red; tutorials keep the garden emerald.
+ */
+export function edenCombatAccent(combatId: string): string {
+    if (combatId === EDEN_CHERUB.combatId) return '#ef4444';
+    for (const id of EDEN_RIVER_ORDER) {
+        if (combatId === `eden_g_${id}` || combatId === `eden_serpent_${id}`) {
+            return EDEN_RIVERS_V2[id].color;
+        }
+    }
+    return '#34d399';
+}
+
 /** A minimal Destination shim so CombatScene can run an Eden fight. */
 export function edenDestinationStub(combatId: string) {
     return {
@@ -252,7 +267,7 @@ export function edenDestinationStub(combatId: string) {
         kind: 'portal' as const,
         name: 'Eden — Before the Fall',
         era: '',
-        accent: '#34d399',
+        accent: edenCombatAccent(combatId),
         bg: ['#0a1f17', '#04100b'] as [string, string],
         guide: { name: 'The Gardener', role: '', tile: { col: 0, row: 8 }, intro: '' },
         lore: [],
