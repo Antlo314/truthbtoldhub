@@ -200,7 +200,7 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
         });
     }
 
-    const edenLoreOrder = ['lore_threshold', 'lore_naming', 'lore_havilah', 'lore_cush', 'lore_ordering', 'lore_serpent', 'lore_assyria', 'lore_euphrates', 'lore_exile', 'lore_sanctum'];
+    const edenLoreOrder = ['lore_threshold', 'lore_naming', 'lore_abundance', 'lore_havilah', 'lore_cush', 'lore_ordering', 'lore_serpent', 'lore_assyria', 'lore_euphrates', 'lore_exile', 'lore_sanctum'];
     for (const loreKey of edenLoreOrder) {
         const discId = `eden_${loreKey}`;
         if (!character.discovered.includes(discId)) continue;

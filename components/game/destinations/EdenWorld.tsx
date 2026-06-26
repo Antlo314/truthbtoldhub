@@ -25,7 +25,7 @@ import {
     exploredChunksFromDiscovered, initialRevealChunks, mapRevealKey, newRevealDiscoveries,
 } from '@/lib/game/mapReveal';
 import {
-    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt,
+    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt, edenRegionAt,
     EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
     EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, EDEN_KEYS, edenDayState, EDEN_DAY_SECONDS,
     type EdenDayPhase,
@@ -91,6 +91,30 @@ function edenGroundLayer(ow: ReturnType<typeof buildEdenOverworld>): HTMLCanvasE
             } else if (d === 2) {
                 gctx.fillStyle = biome.canopy;
                 gctx.beginPath(); gctx.ellipse(x + 8, y + 10, 6, 5, 0, 0, Math.PI * 2); gctx.fill();
+            } else if (d === 3) {
+                // rock — walkable biome-tinted stones
+                gctx.fillStyle = 'rgba(0,0,0,0.15)';
+                gctx.beginPath(); gctx.ellipse(x + 8, y + 12, 5, 2, 0, 0, Math.PI * 2); gctx.fill();
+                gctx.fillStyle = '#8a8580'; gctx.beginPath(); gctx.ellipse(x + 8, y + 10, 4, 3, 0, 0, Math.PI * 2); gctx.fill();
+                gctx.fillStyle = '#aca7a0'; gctx.beginPath(); gctx.ellipse(x + 7, y + 9, 2, 1.5, 0, 0, Math.PI * 2); gctx.fill();
+            } else if (d === 4) {
+                // flowers — short stems topped with the biome accent
+                gctx.fillStyle = '#4f8a3a';
+                gctx.fillRect(x + 5, y + 9, 1, 4); gctx.fillRect(x + 8, y + 8, 1, 5); gctx.fillRect(x + 11, y + 10, 1, 3);
+                gctx.fillStyle = biome.accent;
+                gctx.fillRect(x + 4, y + 8, 2, 2); gctx.fillRect(x + 7, y + 7, 2, 2); gctx.fillRect(x + 10, y + 9, 2, 2);
+            } else if (d === 5) {
+                // tall grass — blades in the biome's own grass tones
+                gctx.fillStyle = biome.grass[2];
+                gctx.fillRect(x + 4, y + 8, 1, 6); gctx.fillRect(x + 6, y + 6, 1, 8); gctx.fillRect(x + 8, y + 7, 1, 7); gctx.fillRect(x + 10, y + 6, 1, 8); gctx.fillRect(x + 12, y + 9, 1, 5);
+                gctx.fillStyle = biome.grass[0];
+                gctx.fillRect(x + 7, y + 5, 1, 3); gctx.fillRect(x + 11, y + 5, 1, 3);
+            } else if (d === 6) {
+                // reeds — tall stalks fringing the water's edge
+                gctx.fillStyle = '#3f6b4a';
+                gctx.fillRect(x + 5, y + 5, 1, 9); gctx.fillRect(x + 8, y + 3, 1, 11); gctx.fillRect(x + 11, y + 6, 1, 8);
+                gctx.fillStyle = '#caa15e';
+                gctx.fillRect(x + 8, y + 2, 1, 2); gctx.fillRect(x + 5, y + 4, 1, 2);
             }
         }
     }
@@ -182,7 +206,7 @@ export default function EdenWorld({
     const touchedRef = useRef(new Set<string>());
     const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
     const lastWingRef = useRef<string | null>(null);
-    const ambientRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
+    const ambientRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string; streak?: boolean; size?: number }[]>([]);
     const riverParticlesRef = useRef<{ ox: number; oy: number; tx: number; ty: number; color: string; t: number; speed: number }[]>([]);
     const serpOfferShownRef = useRef<string | null>(null);
     const fightWarnRef = useRef<Record<string, number>>({});
@@ -937,23 +961,42 @@ export default function EdenWorld({
                 ctx.beginPath(); ctx.arc(SX(wx), SY(wy), mk * Z, 0, Math.PI * 2); ctx.fill();
             }
 
-            // ambient motes (more at night = fireflies)
+            // ambient weather — per-biome, more at night (fireflies). Each
+            // land has its own air: Gihon drizzles, Hiddekel breathes violet
+            // mist, Pishon glints with gold dust; elsewhere the biome's motes.
             const night = dayPhaseRef.current === 'night' || dayPhaseRef.current === 'dusk';
-            const moteCap = night ? 40 : 24;
-            if (ambientRef.current.length < moteCap && Math.random() < 0.06) {
+            const regId = edenRegionAt(pgx, pgy)?.id;
+            const curBiome = edenBiomeAt(pgx, pgy);
+            const rain = regId === 'gihon' && !night;
+            const mist = regId === 'hiddekel';
+            const moteCap = night ? 42 : rain ? 46 : mist ? 36 : 26;
+            const spawnRate = rain ? 0.30 : regId === 'pishon' ? 0.11 : mist ? 0.10 : 0.06;
+            if (ambientRef.current.length < moteCap && Math.random() < spawnRate) {
                 ambientRef.current.push({
-                    x: st.px + (Math.random() - 0.5) * vw / Z, y: st.py + (Math.random() - 0.5) * vh / Z,
-                    vx: (Math.random() - 0.5) * 8, vy: -4 - Math.random() * 6,
-                    life: 2.5 + Math.random() * 2, color: night ? '#fde68a' : (Math.random() > 0.5 ? '#34d399' : '#fbbf24'),
+                    x: st.px + (Math.random() - 0.5) * vw / Z,
+                    y: st.py + (Math.random() - 0.5) * vh / Z - (rain ? (vh / Z) * 0.55 : 0),
+                    vx: rain ? 10 : (Math.random() - 0.5) * (mist ? 4 : 8),
+                    vy: rain ? 150 + Math.random() * 50 : mist ? -1.5 : -4 - Math.random() * 6,
+                    life: rain ? 1.1 : mist ? 4.5 : 2.5 + Math.random() * 2,
+                    color: night ? '#fde68a' : rain ? '#67e8f9' : (regId ? curBiome.motes : (Math.random() > 0.5 ? '#34d399' : '#fbbf24')),
+                    streak: rain,
+                    size: mist ? 3.4 : night ? 1.8 : 1.5,
                 });
             }
             for (let i = ambientRef.current.length - 1; i >= 0; i--) {
                 const p = ambientRef.current[i];
                 p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
                 if (p.life <= 0) { ambientRef.current.splice(i, 1); continue; }
-                const a = Math.min(1, p.life) * (night ? 0.55 : 0.4) * (0.6 + Math.sin(st.t / 200 + i) * 0.4);
-                ctx.fillStyle = p.color; ctx.globalAlpha = a;
-                ctx.beginPath(); ctx.arc(SX(p.x), SY(p.y), (night ? 1.8 : 1.5) * Z, 0, Math.PI * 2); ctx.fill();
+                if (p.streak) {
+                    ctx.strokeStyle = p.color; ctx.globalAlpha = Math.min(1, p.life) * 0.4;
+                    ctx.lineWidth = Z; ctx.beginPath();
+                    ctx.moveTo(SX(p.x), SY(p.y)); ctx.lineTo(SX(p.x - p.vx * 0.03), SY(p.y - p.vy * 0.03)); ctx.stroke();
+                } else {
+                    const soft = (p.size ?? 1.5) > 3 ? 0.22 : (night ? 0.55 : 0.4);
+                    const a = Math.min(1, p.life) * soft * (0.6 + Math.sin(st.t / 200 + i) * 0.4);
+                    ctx.fillStyle = p.color; ctx.globalAlpha = a;
+                    ctx.beginPath(); ctx.arc(SX(p.x), SY(p.y), (p.size ?? 1.5) * Z, 0, Math.PI * 2); ctx.fill();
+                }
                 ctx.globalAlpha = 1;
             }
 

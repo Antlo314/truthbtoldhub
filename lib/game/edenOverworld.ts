@@ -19,7 +19,9 @@ import {
 export { EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE };
 
 export type EdenGroundId = 0 | 1 | 2; // grass | dirt(road) | water
-export type EdenDecorId = 0 | 1 | 2;  // none | tree | bush
+// none | tree | bush | rock | flower | tall-grass | reed.
+// Only tree(1) is ever solid; 3..6 are walkable ground-cover for biome flavour.
+export type EdenDecorId = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface EdenOverworld {
     width: number;
@@ -157,6 +159,7 @@ export function buildEdenOverworld(): EdenOverworld {
                     decor[r][c] = 0;
                     solid[r][c] = false;
                     if (asRoad) ground[r][c] = 1;
+                    else if (ground[r][c] === 2) ground[r][c] = 0; // a clearing/plaza drains any river water it covers
                 }
             }
         }
@@ -165,6 +168,23 @@ export function buildEdenOverworld(): EdenOverworld {
         const [x0, y0, x1, y1] = reg.rect;
         clearEllipse((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2.7, (y1 - y0) / 2.7);
     }
+
+    // --- the river of Eden (Gen 2:10) ----------------------------------
+    //  "A river went out of Eden... and parted into four heads." A great
+    //  water flows from the north sanctum down the spine and parts east–
+    //  west across the four-rivers band, dividing the garden into four
+    //  lands. Carved BEFORE the plazas/sanctum/landing/gates below, and it
+    //  never floods a road tile — so the road grid bridges both waters at
+    //  every crossing (a ford) and every landmark plaza drains its water.
+    const RIVER_H = 40; // east–west, just south of the gy36 midline road
+    const RIVER_V = 52; // north–south, just east of the spine
+    const carveWater = (c: number, r: number) => {
+        if (!inBounds(c, r) || c <= 1 || r <= 1 || c >= W - 2 || r >= H - 2) return;
+        if (ground[r][c] === 1) return; // never flood a road — it is the ford
+        ground[r][c] = 2; solid[r][c] = true; decor[r][c] = 0;
+    };
+    for (let c = 6; c <= W - 6; c++) carveWater(c, RIVER_H);            // the dividing river
+    for (let r = 6; r <= RIVER_H + 9; r++) carveWater(RIVER_V, r);     // the source, flowing from the north into the cross
 
     // --- plazas around every fixed landmark (always walkable) ----------
     const plaza = (gx: number, gy: number, rad = 3) => clearEllipse(gx, gy, rad, rad);
@@ -215,6 +235,33 @@ export function buildEdenOverworld(): EdenOverworld {
         const f = EDEN_RIVERS_V2[id].fountain;
         // small pool offset toward the map corner, never covering the road
         pool(f.gx + (f.gx < SPINE ? -3 : 3), f.gy + (f.gy < EDEN_MAP_H / 2 ? -3 : 3), 2);
+    }
+
+    // --- biome ground cover + riverbank reeds (all walkable) -----------
+    //  Pure decor that makes the nine biomes read distinct; never solid, so
+    //  it has zero effect on walkability. Reeds fringe every water edge.
+    const COVER: Record<string, EdenDecorId[]> = {
+        pishon: [3, 3, 4], gihon: [4, 5, 4], hiddekel: [3, 3, 5], euphrates: [5, 4, 5],
+        verge: [3, 5, 3], outer_grove: [5, 4, 5], eastern_garden: [4, 4, 5],
+        threshold: [5, 4, 5], antechamber: [3, 5, 3],
+    };
+    for (let r = 1; r < H - 1; r++) {
+        for (let c = 1; c < W - 1; c++) {
+            if (ground[r][c] !== 0 || decor[r][c] !== 0 || solid[r][c]) continue;
+            let nearWater = false;
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                if (inBounds(c + dx, r + dy) && ground[r + dy][c + dx] === 2) { nearWater = true; break; }
+            }
+            if (nearWater) {
+                if (edenHash(c, r, 30) < 0.55) decor[r][c] = 6; // reeds at the water's edge
+                continue;
+            }
+            if (edenHash(c, r, 21) < 0.07) {
+                const reg = edenRegionAt(c, r);
+                const pal = (reg && COVER[reg.id]) || [4, 5, 3];
+                decor[r][c] = pal[Math.floor(edenHash(c, r, 22) * pal.length) % pal.length];
+            }
+        }
     }
 
     // --- gate trees (rendered solid until the gate opens) --------------

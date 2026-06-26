@@ -69,6 +69,9 @@ const LORE: { id: string; gx: number; gy: number; region: EdenRegionId; title: s
     { id: 'sanctum', gx: 56, gy: 9, region: 'antechamber',
         title: 'The Tree Remembers',
         text: 'The leaf does not wither because it remembers when death was not yet a custom of the world — when man still knew the Source by walking, not by believing from afar.' },
+    { id: 'abundance', gx: 76, gy: 66, region: 'eastern_garden',
+        title: 'To Work It and Keep It',
+        text: 'The eastern beds were the first man\'s charge: to dress the garden and to keep it. Labour here was not the wage of the fall — it was love made visible, the hand returning to the ground the care the ground first gave to it.' },
 ];
 
 // ------------------------------------------------------------
@@ -82,6 +85,7 @@ const CHESTS: Omit<EdenChest, 'opened'>[] = [
     { id: 'gihon', gx: 76, gy: 30, region: 'gihon', health: 22, label: 'Spring vault' },
     { id: 'euphrates', gx: 84, gy: 16, region: 'euphrates', health: 24, label: 'River vault' },
     { id: 'antechamber', gx: 40, gy: 10, region: 'antechamber', health: 25, label: 'Antechamber cache' },
+    { id: 'eastern', gx: 88, gy: 64, region: 'eastern_garden', health: 22, label: 'Eastern Garden store' },
     { id: 'secret', gx: 56, gy: 36, region: 'verge', health: 30, label: 'The Compartment Beneath Memory', hidden: true },
 ];
 
@@ -92,6 +96,8 @@ const SPRINGS: Omit<EdenSpring, 'collected'>[] = [
     { id: 'gihon', gx: 86, gy: 44, region: 'gihon', amount: 20 },
     { id: 'hiddekel', gx: 24, gy: 8, region: 'hiddekel', amount: 22 },
     { id: 'verge', gx: 48, gy: 44, region: 'verge', amount: 20 },
+    { id: 'eastern', gx: 68, gy: 64, region: 'eastern_garden', amount: 20 },
+    { id: 'euphrates', gx: 88, gy: 18, region: 'euphrates', amount: 22 },
 ];
 
 // ------------------------------------------------------------
