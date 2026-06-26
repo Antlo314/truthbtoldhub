@@ -1,6 +1,7 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { DEST_BY_POI } from '@/lib/game/destinations';
 import { EDEN_LORE, EDEN_GARDENER_LINES } from '@/lib/game/edenLevel';
+import { knowledgeOutcomeFrom, wasUntempted } from '@/lib/game/eden/serpent';
 import { truthAccountPages } from '@/lib/game/truthLore';
 import { QUESTS } from '@/lib/game/quests';
 import { ROAM_MILESTONES } from '@/lib/game/roamMilestones';
@@ -82,11 +83,14 @@ export const JOURNAL_SECTION_META: Record<JournalSectionId, { title: string; sub
 
 const WING_TITLES: Record<string, string> = {
     wing_threshold: 'The Threshold',
-    wing_outer_grove: 'Outer Grove',
-    wing_eastern_garden: 'Eastern Garden',
-    wing_river_warren: 'River Warren',
-    wing_forbidden_verge: 'The Forbidden Verge',
-    wing_cherub_antechamber: 'Cherub Antechamber',
+    wing_outer_grove: 'The Outer Grove',
+    wing_eastern_garden: 'The Eastern Garden',
+    wing_pishon: 'The Land of Havilah',
+    wing_verge: 'The Forbidden Verge',
+    wing_gihon: 'The Springs of Cush',
+    wing_hiddekel: 'The Swift Water',
+    wing_antechamber: 'The Cherub Antechamber',
+    wing_euphrates: 'The Great River',
 };
 
 const BASE_ENTRIES: JournalEntry[] = [
@@ -196,7 +200,7 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
         });
     }
 
-    const edenLoreOrder = ['lore_threshold', 'lore_ordering', 'lore_serpent', 'lore_exile', 'lore_sanctum', 'lore_secret'];
+    const edenLoreOrder = ['lore_threshold', 'lore_naming', 'lore_havilah', 'lore_cush', 'lore_ordering', 'lore_serpent', 'lore_assyria', 'lore_euphrates', 'lore_exile', 'lore_sanctum'];
     for (const loreKey of edenLoreOrder) {
         const discId = `eden_${loreKey}`;
         if (!character.discovered.includes(discId)) continue;
@@ -230,27 +234,38 @@ export function buildJournal(character: GameCharacter, initiated: boolean): Jour
         });
     }
 
-    if (character.discovered.includes('eden_temptation_resisted')) {
+    // The Serpent's long arc — climax outcome + the undivided road.
+    const knowledge = knowledgeOutcomeFrom(character.discovered);
+    if (knowledge === 'refused') {
         entries.push({
-            id: 'eden_temptation_resisted',
+            id: 'eden_knowledge_refused',
             title: 'The Road Chosen',
             category: 'lore',
             section: 'eden',
-            subtitle: 'Forbidden Verge',
-            detail: 'Walk on — do not trade the road for a whisper.',
-            body: 'In the Forbidden Verge you heard the serpent\'s whisper — a shortcut promising knowledge without walking. You walked on. That is how man once knew the Source.',
+            subtitle: 'The Tree of Knowledge',
+            detail: 'You turned from the tree and kept the road whole.',
+            body: 'At the Tree of Knowledge the serpent offered the knowing-without-walking. You refused — not from fear of the knowing, but from trust in the walking. You arrive at the Source undivided.',
         });
-    }
-
-    if (character.discovered.includes('eden_temptation_accepted')) {
+    } else if (knowledge === 'tasted') {
         entries.push({
-            id: 'eden_temptation_accepted',
-            title: 'The False Shortcut',
+            id: 'eden_knowledge_tasted',
+            title: 'The Long Way Home',
             category: 'lore',
             section: 'eden',
-            subtitle: 'Forbidden Verge',
-            detail: 'Knowing without walking was always the lie.',
-            body: 'You listened to the whisper and took the serpent\'s path. The ground buckled. A shade rose from the dust of the lie — mercy is still to walk the true road afterward.',
+            subtitle: 'The Tree of Knowledge',
+            detail: 'You know good and evil now — wholly, heavily, all at once.',
+            body: 'You tasted, and the knowing flooded in unwalked. The shortcut was real; so is its weight. The road back to the Source did not close — it only grew honest. Walk it eyes open.',
+        });
+    }
+    if (wasUntempted(character.discovered)) {
+        entries.push({
+            id: 'eden_untempted',
+            title: 'The Untempted',
+            category: 'lore',
+            section: 'eden',
+            subtitle: 'The Four Rivers',
+            detail: 'Every whisper at every river — refused.',
+            body: 'At each of the four rivers the serpent found you again with the same trade in new clothes. Four times you walked on. The Source was never at the end of a shortcut; it was in every mile you refused to skip.',
         });
     }
 

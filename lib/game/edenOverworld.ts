@@ -1,15 +1,24 @@
 // ============================================================
-//  EDEN OPEN GARDEN — smaller overworld-style map.
-//  Grass paths, trees, ponds; puzzles & trials scattered openly.
+//  EDEN OVERWORLD — the 96×72 nine-region garden.
+//
+//  Generated from lib/game/eden/atlas.ts so every fountain,
+//  guardian arena, tree and the spine fall ON the carved road
+//  grid by construction. Biome-tinted tree scatter per region,
+//  generous region clearings, a sanctum pool around the Tree of
+//  Life, corner river pools, and a single Cherub gate north.
 // ============================================================
 
-import type { EdenLevelState } from '@/lib/game/edenLevel';
+import type { EdenLevelState } from '@/lib/game/eden/types';
+import {
+    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenHash,
+    EDEN_REGIONS, edenRegionAt,
+    EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
+    EDEN_RIVERS_V2, EDEN_RIVER_ORDER,
+} from '@/lib/game/eden/atlas';
 
-export const EDEN_MAP_W = 56;
-export const EDEN_MAP_H = 44;
-export const EDEN_TILE = 16;
+export { EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE };
 
-export type EdenGroundId = 0 | 1 | 2; // grass | dirt | water
+export type EdenGroundId = 0 | 1 | 2; // grass | dirt(road) | water
 export type EdenDecorId = 0 | 1 | 2;  // none | tree | bush
 
 export interface EdenOverworld {
@@ -21,47 +30,71 @@ export interface EdenOverworld {
     spawn: { x: number; y: number };
 }
 
-function h2(c: number, r: number, s = 0) {
-    let x = (c * 374761393 + r * 668265263 + s * 2246822519) | 0;
-    x = Math.imul(x ^ (x >>> 13), 1274126177);
-    return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
-}
-
 let cached: EdenOverworld | null = null;
 
-/** Choke-point gates — trees clear when conditions met */
-export const EDEN_GATES: {
+// ------------------------------------------------------------
+//  Gates — choke points cleared by level progress.
+//  Only one true wall-gate now (the Cherub road north); rivers
+//  stay open to roam, but their fountains won't attune until the
+//  river's guardian falls (handled in level logic, not here).
+// ------------------------------------------------------------
+export type EdenGateCondition =
+    | { kind: 'bossGate' }
+    | { kind: 'fight'; combatId: string }
+    | { kind: 'rivers'; count: number };
+
+export interface EdenGate {
     id: string;
     tiles: [number, number][];
-    keyId?: string;
-    needsBossGate?: boolean;
-}[] = [
-    { id: 'gate_grove', tiles: [[22, 30], [23, 30], [24, 30]], keyId: 'key_threshold' },
-    { id: 'gate_river', tiles: [[36, 22], [37, 22], [38, 22]], keyId: 'key_river' },
-    { id: 'gate_cherub', tiles: [[26, 14], [27, 14], [28, 14], [29, 14], [30, 14]], needsBossGate: true },
+    condition: EdenGateCondition;
+}
+
+const SPINE = EDEN_TREE_OF_LIFE.gx; // 48
+export const EDEN_GATES: EdenGate[] = [
+    {
+        id: 'gate_cherub',
+        // spine crossing at the Verge → Antechamber boundary (gy 21)
+        tiles: [[SPINE - 2, 21], [SPINE - 1, 21], [SPINE, 21], [SPINE + 1, 21], [SPINE + 2, 21]],
+        condition: { kind: 'bossGate' },
+    },
 ];
+
+export function edenGateOpen(gateId: string, level: EdenLevelState): boolean {
+    const gate = EDEN_GATES.find((g) => g.id === gateId);
+    if (!gate) return true;
+    const cond = gate.condition;
+    switch (cond.kind) {
+        case 'bossGate': return level.bossGateOpen;
+        case 'fight': return level.fights.some((f) => f.combatId === cond.combatId && f.cleared);
+        case 'rivers': return (level.riversLit?.length ?? 0) >= cond.count;
+        default: return true;
+    }
+}
+
+// ------------------------------------------------------------
+//  Map generation
+// ------------------------------------------------------------
+function blankGrid<T>(fill: T): T[][] {
+    const g: T[][] = [];
+    for (let r = 0; r < EDEN_MAP_H; r++) {
+        g[r] = [];
+        for (let c = 0; c < EDEN_MAP_W; c++) g[r][c] = fill;
+    }
+    return g;
+}
 
 export function buildEdenOverworld(): EdenOverworld {
     if (cached) return cached;
     const W = EDEN_MAP_W;
     const H = EDEN_MAP_H;
 
-    const ground: EdenGroundId[][] = [];
-    const decor: EdenDecorId[][] = [];
-    const solid: boolean[][] = [];
+    const ground: EdenGroundId[][] = blankGrid<EdenGroundId>(0);
+    const decor: EdenDecorId[][] = blankGrid<EdenDecorId>(0);
+    const solid: boolean[][] = blankGrid<boolean>(false);
 
-    for (let r = 0; r < H; r++) {
-        ground[r] = [];
-        decor[r] = [];
-        solid[r] = [];
-        for (let c = 0; c < W; c++) {
-            ground[r][c] = 0;
-            decor[r][c] = 0;
-            solid[r][c] = false;
-        }
-    }
+    const inBounds = (c: number, r: number) => c >= 0 && c < W && r >= 0 && r < H;
 
-    // border forest
+    // --- border forest -------------------------------------------------
     for (let c = 0; c < W; c++) {
         decor[0][c] = 1; solid[0][c] = true;
         decor[H - 1][c] = 1; solid[H - 1][c] = true;
@@ -71,105 +104,138 @@ export function buildEdenOverworld(): EdenOverworld {
         decor[r][W - 1] = 1; solid[r][W - 1] = true;
     }
 
-    // main cross paths
-    const path = (x1: number, y1: number, x2: number, y2: number) => {
-        for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-            for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-                if (ground[y]?.[x] === 0) ground[y][x] = 1;
-    };
-    path(8, 38, 48, 38);   // south road (threshold)
-    path(28, 6, 28, 40);   // north-south spine
-    path(10, 22, 46, 22);  // east-west mid
-    path(10, 10, 46, 10);  // north terrace
-    path(10, 32, 46, 32);  // south grove ring
-
-    // sanctum pool (north)
-    for (let r = 4; r <= 9; r++) {
-        for (let c = 22; c <= 34; c++) {
-            if (Math.hypot(c - 28, r - 6) < 5.5) {
-                ground[r][c] = 2;
-                solid[r][c] = true;
+    // --- per-region biome tree scatter --------------------------------
+    for (let r = 1; r < H - 1; r++) {
+        for (let c = 1; c < W - 1; c++) {
+            const reg = edenRegionAt(c, r);
+            if (!reg) continue;
+            // keep a soft inner buffer from region rect edges so regions read distinct
+            const [x0, y0, x1, y1] = reg.rect;
+            const edge = c <= x0 + 1 || c >= x1 - 1 || r <= y0 + 1 || r >= y1 - 1;
+            const n = edenHash(c, r, reg.id.length * 7 + 3);
+            const dens = reg.biome.density * (edge ? 1.7 : 1);
+            if (n < dens) {
+                decor[r][c] = edenHash(c, r, 8) > 0.6 ? 1 : 2;
+                solid[r][c] = decor[r][c] === 1; // bushes walkable, trees solid
             }
         }
     }
-    // tree of life landing
-    ground[6][28] = 0;
-    solid[6][28] = false;
-    ground[7][28] = 0;
-    solid[7][28] = false;
 
-    // corner river pools
-    const pool = (cx: number, cy: number, rad: number) => {
-        for (let r = cy - rad; r <= cy + rad; r++) {
-            for (let c = cx - rad; c <= cx + rad; c++) {
-                if (r < 1 || r >= H - 1 || c < 1 || c >= W - 1) continue;
-                if (Math.hypot(c - cx, r - cy) <= rad) {
-                    ground[r][c] = 2;
-                    solid[r][c] = true;
+    // --- carve a road (dirt, walkable) ---------------------------------
+    const carveRoad = (x1: number, y1: number, x2: number, y2: number, half: number) => {
+        for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+            for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+                for (let dy = -half; dy <= half; dy++) {
+                    for (let dx = -half; dx <= half; dx++) {
+                        const cx = x + dx, cy = y + dy;
+                        if (!inBounds(cx, cy) || cx === 0 || cy === 0 || cx === W - 1 || cy === H - 1) continue;
+                        ground[cy][cx] = 1;
+                        decor[cy][cx] = 0;
+                        solid[cy][cx] = false;
+                    }
                 }
             }
         }
-        ground[cy][cx] = 0;
-        solid[cy][cx] = false;
     };
-    pool(10, 10, 3);
-    pool(46, 10, 3);
-    pool(10, 32, 3);
-    pool(46, 32, 3);
 
-    // scattered groves (organic trees)
-    for (let r = 2; r < H - 2; r++) {
-        for (let c = 2; c < W - 2; c++) {
-            if (ground[r][c] === 2) continue;
-            const edge = r < 3 || r > H - 4 || c < 3 || c > W - 4;
-            const onPath = ground[r][c] === 1;
-            if (edge && h2(c, r) > 0.35) {
-                decor[r][c] = 1;
+    // vertical spine + the two river columns (gx 16 / 80) — fountains sit on these
+    carveRoad(SPINE, 3, SPINE, H - 3, 1);
+    carveRoad(16, 3, 16, H - 3, 1);
+    carveRoad(80, 3, 80, H - 3, 1);
+    // three horizontal mid-lines (gy 12 / 36 / 60) — fountains sit on these too
+    carveRoad(3, 12, W - 3, 12, 1);
+    carveRoad(3, 36, W - 3, 36, 1);
+    carveRoad(3, 60, W - 3, 60, 1);
+
+    // --- region centre clearings (open grass to roam) ------------------
+    const clearEllipse = (cx: number, cy: number, rx: number, ry: number, asRoad = false) => {
+        for (let r = Math.ceil(cy - ry); r <= Math.floor(cy + ry); r++) {
+            for (let c = Math.ceil(cx - rx); c <= Math.floor(cx + rx); c++) {
+                if (!inBounds(c, r) || c === 0 || r === 0 || c === W - 1 || r === H - 1) continue;
+                const dx = (c - cx) / rx, dy = (r - cy) / ry;
+                if (dx * dx + dy * dy <= 1) {
+                    decor[r][c] = 0;
+                    solid[r][c] = false;
+                    if (asRoad) ground[r][c] = 1;
+                }
+            }
+        }
+    };
+    for (const reg of EDEN_REGIONS) {
+        const [x0, y0, x1, y1] = reg.rect;
+        clearEllipse((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2.7, (y1 - y0) / 2.7);
+    }
+
+    // --- plazas around every fixed landmark (always walkable) ----------
+    const plaza = (gx: number, gy: number, rad = 3) => clearEllipse(gx, gy, rad, rad);
+    plaza(EDEN_SPAWN.gx, EDEN_SPAWN.gy, 4);
+    plaza(EDEN_GARDENER.gx, EDEN_GARDENER.gy, 3);
+    plaza(EDEN_TREE_OF_KNOWLEDGE.gx, EDEN_TREE_OF_KNOWLEDGE.gy, 4);
+    plaza(EDEN_CHERUB.at.gx, EDEN_CHERUB.at.gy, 4);
+    for (const id of EDEN_RIVER_ORDER) {
+        const rv = EDEN_RIVERS_V2[id];
+        plaza(rv.fountain.gx, rv.fountain.gy, 3);
+        plaza(rv.guardian.at.gx, rv.guardian.at.gy, 3);
+    }
+
+    // --- sanctum pool around the Tree of Life (north) ------------------
+    const tl = EDEN_TREE_OF_LIFE;
+    for (let r = 2; r <= 9; r++) {
+        for (let c = tl.gx - 7; c <= tl.gx + 7; c++) {
+            if (!inBounds(c, r)) continue;
+            if (Math.hypot(c - tl.gx, r - tl.gy) < 6) {
+                ground[r][c] = 2;
                 solid[r][c] = true;
-            } else if (!onPath && h2(c, r, 7) > 0.88) {
-                decor[r][c] = h2(c, r, 8) > 0.55 ? 1 : 2;
-                solid[r][c] = true;
+                decor[r][c] = 0;
             }
         }
     }
-
-    // gate trees (cleared dynamically in isEdenWalkable)
-    for (const gate of EDEN_GATES) {
-        for (const [c, r] of gate.tiles) {
-            decor[r][c] = 1;
-            solid[r][c] = true;
-        }
+    // tree-of-life landing (walkable approach from the south on the spine).
+    // MUST reach gy+4 to punch through the sanctum-pool moat ring at gy9 and
+    // connect the gy10 spine road to the gy5..8 landing — else the Leaf is
+    // unclaimable. Carving to ground=0 also bypasses the sanctum-water gate.
+    for (let r = tl.gy; r <= tl.gy + 4; r++) {
+        if (inBounds(tl.gx, r)) { ground[r][tl.gx] = 0; solid[r][tl.gx] = false; decor[r][tl.gx] = 0; }
     }
 
-    // clear spawn plaza
-    for (let r = 36; r <= 40; r++) {
-        for (let c = 24; c <= 32; c++) {
-            decor[r][c] = 0;
-            solid[r][c] = false;
-            ground[r][c] = 0;
+    // --- decorative corner river pools near each fountain --------------
+    const pool = (cx: number, cy: number, rad: number) => {
+        for (let r = cy - rad; r <= cy + rad; r++) {
+            for (let c = cx - rad; c <= cx + rad; c++) {
+                if (!inBounds(c, r) || c <= 1 || r <= 1 || c >= W - 2 || r >= H - 2) continue;
+                if (Math.hypot(c - cx, r - cy) <= rad && ground[r][c] !== 1) {
+                    ground[r][c] = 2; solid[r][c] = true; decor[r][c] = 0;
+                }
+            }
+        }
+        // keep the fountain tile itself walkable
+        if (inBounds(cx, cy)) { ground[cy][cx] = 1; solid[cy][cx] = false; decor[cy][cx] = 0; }
+    };
+    for (const id of EDEN_RIVER_ORDER) {
+        const f = EDEN_RIVERS_V2[id].fountain;
+        // small pool offset toward the map corner, never covering the road
+        pool(f.gx + (f.gx < SPINE ? -3 : 3), f.gy + (f.gy < EDEN_MAP_H / 2 ? -3 : 3), 2);
+    }
+
+    // --- gate trees (rendered solid until the gate opens) --------------
+    for (const gate of EDEN_GATES) {
+        for (const [c, r] of gate.tiles) {
+            if (!inBounds(c, r)) continue;
+            decor[r][c] = 1; solid[r][c] = true; ground[r][c] = 0;
         }
     }
 
     cached = {
-        width: W,
-        height: H,
-        ground,
-        decor,
-        solid,
-        spawn: { x: 28, y: 38 },
+        width: W, height: H, ground, decor, solid,
+        spawn: { x: EDEN_SPAWN.gx, y: EDEN_SPAWN.gy },
     };
     return cached;
 }
 
-export function edenGateOpen(gateId: string, level: EdenLevelState): boolean {
-    const gate = EDEN_GATES.find((g) => g.id === gateId);
-    if (!gate) return true;
-    if (gate.needsBossGate) return level.bossGateOpen;
-    if (gate.keyId) return level.keysFound.includes(gate.keyId);
-    return true;
-}
-
-/** Walkable check — open garden with dynamic gates & sanctum pool */
+// ------------------------------------------------------------
+//  Walkability
+// ------------------------------------------------------------
+/** Is a tile blocked? barrierActive seals the sanctum until the rivers converge. */
 export function isEdenWalkable(
     gx: number,
     gy: number,
@@ -179,21 +245,49 @@ export function isEdenWalkable(
     const ow = buildEdenOverworld();
     if (gx < 0 || gx >= ow.width || gy < 0 || gy >= ow.height) return false;
 
+    // gate trees
     for (const gate of EDEN_GATES) {
         if (!edenGateOpen(gate.id, level)) {
-            for (const [c, r] of gate.tiles) {
-                if (c === gx && r === gy) return false;
-            }
+            for (const [c, r] of gate.tiles) if (c === gx && r === gy) return false;
         }
     }
 
-    if (ow.solid[gy][gx] && ow.ground[gy][gx] !== 2) return false;
-
-    if (ow.ground[gy][gx] === 2) {
-        if (barrierActive && !(gx === 28 && gy >= 6 && gy <= 8)) return false;
-        if (!level.sanctumOpen && gy < 12) return false;
-        return gx === 28 && gy >= 6 && gy <= 8;
+    const tl = EDEN_TREE_OF_LIFE;
+    // sanctum water: only the spine landing is walkable, and only once the
+    // rivers converge (barrier down) + sanctum opened.
+    if (ow.ground[gy][gx] === 2 && gy <= 9 && Math.hypot(gx - tl.gx, gy - tl.gy) < 6.5) {
+        const onLanding = gx === tl.gx && gy >= tl.gy && gy <= tl.gy + 3;
+        if (!onLanding) return false;
+        if (barrierActive) return false;
+        if (!level.sanctumOpen) return false;
+        return true;
     }
 
+    if (ow.solid[gy][gx] && ow.ground[gy][gx] !== 1) return false;
     return true;
+}
+
+/** Nearest walkable tile (BFS) — safety net for dynamically-placed content. */
+export function edenNearestWalkable(
+    gx: number, gy: number,
+    level: EdenLevelState,
+): { gx: number; gy: number } {
+    if (isEdenWalkable(gx, gy, level, false)) return { gx, gy };
+    const seen = new Set<string>([`${gx},${gy}`]);
+    let frontier = [[gx, gy]];
+    for (let ring = 0; ring < 8; ring++) {
+        const next: number[][] = [];
+        for (const [cx, cy] of frontier) {
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = cx + dx, ny = cy + dy;
+                const k = `${nx},${ny}`;
+                if (seen.has(k)) continue;
+                seen.add(k);
+                if (isEdenWalkable(nx, ny, level, false)) return { gx: nx, gy: ny };
+                next.push([nx, ny]);
+            }
+        }
+        frontier = next;
+    }
+    return { gx, gy };
 }

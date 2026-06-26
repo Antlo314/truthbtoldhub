@@ -192,3 +192,20 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Clean-tree ask**: I have staged and committed all modified files (`app/world/page.tsx`, `lib/game/destinations.ts`, `lib/game/weapons.ts`, `COLLABORATION_PROTOCOL.md`, `.agent_sync/*`) and verified the Next.js production build completes with exit code 0.
 - Pushed to `main` to ensure a clean tree for the next agent.
 - gemini → idle.
+
+---
+
+## 2026-06-24 (Claude) — EDEN MEGA-EXPANSION (game-within-the-game)
+
+- **Status**: Built + verified (tsc 0 errors, `npm run build` exit 0, logic-sanity + map-validation pass). UNCOMMITTED — left for the user to review/commit.
+- **Scope**: Exploded the `dest_eden` destination from a 56×44 single garden into a self-contained game. NO store schema changes — everything persists as append-only `eden_*` keys in `character.discovered[]` (plus existing inventory/cleared/solved). One additive store action added: `grantSkillPoints(n)`.
+- **New files**:
+  - `lib/game/eden/atlas.ts` — canonical contract: 9 regions + biome palettes, Four Rivers (fountains/guardians, Genesis order), both Trees, Cherub, cool-of-the-day cycle, `edenKey()` persistence helpers.
+  - `lib/game/eden/types.ts` — shared interface contract for every subsystem.
+  - `lib/game/eden/bestiary.ts` (14 nameable creatures), `cultivation.ts` (5 seeds/8 beds/fruit buffs), `serpent.ts` (5-beat branching arc), `combats.ts` (4 river-guardian bosses + Cherub), `codex.ts` (dashboard model).
+  - `components/game/destinations/eden/{EdenCodex,NamingPanel,TendPanel}.tsx` — the codex dashboard + creature-naming minigame + planting/harvest overlays.
+  - `scratch/{validate_eden,sanity_eden,check_landing}.ts` — verification scripts.
+- **Rewritten**: `lib/game/edenOverworld.ts` (96×72 nine-region map, road grid, sanctum pool, Cherub gate, `edenNearestWalkable`); `lib/game/edenLevel.ts` (hydration/serialize/guide/minimap spine tying the modules together); `components/game/destinations/EdenWorld.tsx` (renderer: biome-tinted map, cool-of-day light cycle, roaming nameable creatures, garden beds, guardian-gated fountains attuning in order, Serpent whispers, fruit buffs into combat, 3 overlay mounts).
+- **Touched (shared, was locked)**: `lib/store/useGameStore.ts` (+`grantSkillPoints`); `lib/game/journal.ts` (Eden lore/wing/serpent entries realigned to new content). The four-rivers attunement now also calls `markMinigameCleared('mg_eden_match')` so the existing world-mission/progression stays satisfied.
+- **QA**: ran a 4-lens adversarial review (progression soft-locks / React runtime / persistence / mobile UX) + verifier; fixed all 10 confirmed findings — incl. a BLOCKER (Tree-of-Life landing was sealed by a 1-tile water moat → Leaf unclaimable; now carved through), a river-attune double-fire, the unran naming reward, serpent/dialogue overlap + climax-fork loss, stuck-key auto-walk, and a per-fight ground re-bake.
+- **Handoff**: Persistence rides `discovered[]` only, so it cloud-syncs with no migration. EdenWorld owns the new lane (`edenOverworld/edenLevel/EdenWorld` + `lib/game/eden/*` + `components/game/destinations/eden/*`). Not visually run in a live logged-in session (auth-gated). claude → idle.

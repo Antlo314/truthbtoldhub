@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
-import { ArrowLeft, Heart, Key, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Heart, Volume2, VolumeX, BookOpen } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import { gameMusic } from '@/lib/game/music';
 import CombatScene from '@/components/game/CombatScene';
@@ -20,29 +20,82 @@ import { useInputProfile, useIsDesktopLayout } from '@/components/game/controls/
 import { useJoystick } from '@/components/game/controls/useJoystick';
 import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
 import { loadSettings } from '@/lib/game/settings';
-import { buildEdenOverworld } from '@/lib/game/edenOverworld';
 import DestinationMinimap from '@/components/game/DestinationMinimap';
 import {
-    exploredChunksFromDiscovered,
-    initialRevealChunks,
-    mapRevealKey,
-    newRevealDiscoveries,
+    exploredChunksFromDiscovered, initialRevealChunks, mapRevealKey, newRevealDiscoveries,
 } from '@/lib/game/mapReveal';
 import {
-    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, EDEN_SPAWN, EDEN_TREE, EDEN_RIVERS, EDEN_GARDENER,
+    EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt,
+    EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
+    EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, edenDayState, EDEN_DAY_SECONDS,
+    type EdenDayPhase,
+} from '@/lib/game/eden/atlas';
+import { buildEdenOverworld } from '@/lib/game/edenOverworld';
+import {
     hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
-    edenZoneLabel, edenDiscoveriesFromState, edenWingId, canRevealEdenSecret, edenGuideStep,
-    EDEN_GARDENER_LINES, EDEN_RESPAWN_LINE, EDEN_TEMPTATION, EDEN_TEMPTATION_SHORTCUT, EDEN_SERPENT_LINES,
-    EDEN_MINIMAP_TERRAIN_COLORS, edenMinimapTerrain, edenMinimapGates, edenMinimapPois,
-    type EdenLevelState,
+    edenZoneLabel, edenDiscoveriesFromState, edenWingId, edenWingGreeting, canRevealEdenSecret,
+    edenGuideStep, EDEN_RESPAWN_LINE, edenMinimapTerrain, edenMinimapGates, edenMinimapPois,
+    EDEN_MINIMAP_TERRAIN_COLORS, type EdenLevelState,
 } from '@/lib/game/edenLevel';
+import { EDEN_CREATURES, nameCreatureKey } from '@/lib/game/eden/bestiary';
+import { EDEN_BEDS, EDEN_SEEDS, seedById, harvestFruitKey, growthStage } from '@/lib/game/eden/cultivation';
+import {
+    EDEN_SERPENT_BEATS, serpentBeatById, serpentChoiceKey, climaxResolution, knowledgeOutcomeKey,
+} from '@/lib/game/eden/serpent';
+import type { EdenBedRuntime, EdenSeed } from '@/lib/game/eden/types';
+import EdenCodex from '@/components/game/destinations/eden/EdenCodex';
+import NamingPanel from '@/components/game/destinations/eden/NamingPanel';
+import TendPanel from '@/components/game/destinations/eden/TendPanel';
 
 const CHAR_SHEET = '/assets/kenney/roguelikeChar.png';
 const SHADE_TILE = { col: 0, row: 3 };
 const MAX_DUNGEON_HP = 100;
 
-function clamp(v: number, lo: number, hi: number) {
-    return v < lo ? lo : v > hi ? hi : v;
+function clamp(v: number, lo: number, hi: number) { return v < lo ? lo : v > hi ? hi : v; }
+const th = (c: number, r: number, s = 0) => {
+    let x = (c * 374761393 + r * 668265263 + s * 2246822519) | 0;
+    x = Math.imul(x ^ (x >>> 13), 1274126177);
+    return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+};
+
+// The biome-tinted ground+decor is static and deterministic — bake it once
+// per page load and reuse the canvas across every mount and fight transition.
+let EDEN_GROUND_LAYER: HTMLCanvasElement | null = null;
+function edenGroundLayer(ow: ReturnType<typeof buildEdenOverworld>): HTMLCanvasElement {
+    if (EDEN_GROUND_LAYER) return EDEN_GROUND_LAYER;
+    const layer = document.createElement('canvas');
+    layer.width = EDEN_MAP_W * 16;
+    layer.height = EDEN_MAP_H * 16;
+    const gctx = layer.getContext('2d')!;
+    for (let r = 0; r < EDEN_MAP_H; r++) {
+        for (let c = 0; c < EDEN_MAP_W; c++) {
+            const biome = edenBiomeAt(c, r);
+            const gv = ow.ground[r][c];
+            const x = c * 16, y = r * 16;
+            if (gv === 2) { gctx.fillStyle = biome.water; gctx.fillRect(x, y, 16, 16); }
+            else if (gv === 1) { gctx.fillStyle = biome.dirt; gctx.fillRect(x, y, 16, 16); }
+            else {
+                gctx.fillStyle = biome.grass[Math.floor(th(c >> 2, r >> 2, 1) * 3) % 3];
+                gctx.fillRect(x, y, 16, 16);
+                if (th(c, r, 5) > 0.94) { gctx.fillStyle = biome.motes; gctx.globalAlpha = 0.5; gctx.fillRect(x + 6, y + 6, 2, 2); gctx.globalAlpha = 1; }
+            }
+            const d = ow.decor[r][c];
+            if (d === 1) {
+                gctx.fillStyle = 'rgba(0,0,0,0.18)';
+                gctx.beginPath(); gctx.ellipse(x + 8, y + 13, 6, 2.5, 0, 0, Math.PI * 2); gctx.fill();
+                gctx.fillStyle = biome.trunk; gctx.fillRect(x + 6, y + 9, 4, 6);
+                gctx.fillStyle = biome.canopy;
+                gctx.beginPath(); gctx.ellipse(x + 8, y + 6, 7, 7, 0, 0, Math.PI * 2); gctx.fill();
+                gctx.fillStyle = 'rgba(255,255,255,0.10)';
+                gctx.beginPath(); gctx.ellipse(x + 6, y + 4, 3, 3, 0, 0, Math.PI * 2); gctx.fill();
+            } else if (d === 2) {
+                gctx.fillStyle = biome.canopy;
+                gctx.beginPath(); gctx.ellipse(x + 8, y + 10, 6, 5, 0, 0, Math.PI * 2); gctx.fill();
+            }
+        }
+    }
+    EDEN_GROUND_LAYER = layer;
+    return layer;
 }
 
 interface Props {
@@ -61,17 +114,28 @@ interface Props {
     accent?: string;
 }
 
-interface NearTarget {
-    kind: 'lore' | 'read' | 'none';
-    label: string;
-}
+type NearTarget =
+    | { kind: 'lore'; id: string; label: string }
+    | { kind: 'name'; id: string; label: string }
+    | { kind: 'tend'; id: string; label: string }
+    | null;
+
+type Overlay =
+    | { kind: 'codex' }
+    | { kind: 'naming'; creatureId: string }
+    | { kind: 'tend'; bedId: string }
+    | null;
+
+interface FruitBuff { hp: number; damage: number; regen: number; fights: number; }
 
 export default function EdenWorld({
-    character, isSolved, minigameDone = true, isGuardianCleared,
-    onSolve, onClaim, onExit, onGuardianCleared, onDiscover, onOpenRecords,
+    character, isSolved, isGuardianCleared,
+    onSolve, onClaim, onExit, onGuardianCleared, onDiscover,
 }: Props) {
     const founderNumber = useGameStore((s) => s.founderNumber);
     const consumeFightBonusHp = useGameStore((s) => s.consumeFightBonusHp);
+    const markMinigameCleared = useGameStore((s) => s.markMinigameCleared);
+    const grantSkillPoints = useGameStore((s) => s.grantSkillPoints);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const charRef = useRef(character);
@@ -81,22 +145,21 @@ export default function EdenWorld({
     const [dungeonHp, setDungeonHp] = useState(MAX_DUNGEON_HP);
     const [level, setLevel] = useState<EdenLevelState>(() => hydrateEdenState(character));
     const [zoneLabel, setZoneLabel] = useState('The Threshold');
-    const [near, setNear] = useState<NearTarget | null>(null);
-    const [nearLore, setNearLore] = useState<string | null>(null);
-    const [nearTemptation, setNearTemptation] = useState(false);
-    const [sequence, setSequence] = useState<number[]>([]);
+    const [dayLabel, setDayLabel] = useState('Morning');
+    const [near, setNear] = useState<NearTarget>(null);
+    const [nearSerpent, setNearSerpent] = useState<string | null>(null);
     const [relicClaimed, setRelicClaimed] = useState(character.inventory.includes('relic_eden_leaf'));
     const [activeFight, setActiveFight] = useState<string | null>(null);
+    const [overlay, setOverlay] = useState<Overlay>(null);
+    const [bedRuntime, setBedRuntime] = useState<Record<string, EdenBedRuntime>>({});
+    const [fruitBuff, setFruitBuff] = useState<FruitBuff | null>(null);
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(
         isGuardianCleared
-            ? { speaker: 'The Gardener', text: 'The cherub has fallen. Attune the four rivers and claim the Leaf — the hour before the lie.', color: '#34d399' }
-            : { speaker: 'The Gardener', text: 'Welcome back. Roam the open garden — read the golden stones, clear the shades, and walk north to the Tree.', color: '#34d399' },
+            ? { speaker: 'The Gardener', text: 'The cherub has fallen. Walk north to the Tree of Life and claim the Leaf — the hour before the lie.', color: '#34d399' }
+            : { speaker: 'The Gardener', text: 'Welcome back to the hour before shame. Roam the open garden — name the living creatures, light the four rivers, and walk north to the Tree.', color: '#34d399' },
     );
     const [barrierActive, setBarrierActive] = useState(!isSolved);
-    const [playerPos, setPlayerPos] = useState({
-        x: (EDEN_SPAWN.gx + 0.5) * EDEN_TILE,
-        y: (EDEN_SPAWN.gy + 0.5) * EDEN_TILE,
-    });
+    const [playerPos, setPlayerPos] = useState({ x: (EDEN_SPAWN.gx + 0.5) * EDEN_TILE, y: (EDEN_SPAWN.gy + 0.5) * EDEN_TILE });
     const [exploredVersion, setExploredVersion] = useState(0);
     const exploredRef = useRef(exploredChunksFromDiscovered(character.discovered, 'eden'));
     const mapSyncRef = useRef({ lastAt: 0 });
@@ -112,44 +175,50 @@ export default function EdenWorld({
     const touchedRef = useRef(new Set<string>());
     const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
     const lastWingRef = useRef<string | null>(null);
-    const riverParticlesRef = useRef<{ ox: number; oy: number; tx: number; ty: number; color: string; t: number; speed: number }[]>([]);
     const ambientRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
-    const temptOfferShownRef = useRef(false);
+    const riverParticlesRef = useRef<{ ox: number; oy: number; tx: number; ty: number; color: string; t: number; speed: number }[]>([]);
+    const serpOfferShownRef = useRef<string | null>(null);
     const fightWarnRef = useRef<Record<string, number>>({});
+    const dayPhaseRef = useRef<EdenDayPhase>('morning');
+    const dayBrightnessRef = useRef(1);
+
     const levelRef = useRef(level);
     levelRef.current = level;
     const barrierRef = useRef(barrierActive);
     barrierRef.current = barrierActive;
+    const overlayRef = useRef(overlay);
+    overlayRef.current = overlay;
+    const bedRuntimeRef = useRef(bedRuntime);
+    bedRuntimeRef.current = bedRuntime;
+    const nearSerpentRef = useRef(nearSerpent);
+    nearSerpentRef.current = nearSerpent;
 
     const edenTerrain = useMemo(() => edenMinimapTerrain(), []);
     const minimapPois = useMemo(() => edenMinimapPois(level, {
-        secretVisible: canRevealEdenSecret(level, character),
-        riversLit: sequence,
-        relicClaimed,
-    }), [level, character, sequence, relicClaimed]);
+        secretVisible: canRevealEdenSecret(level, character), relicClaimed,
+    }), [level, character, relicClaimed]);
     const minimapGates = useMemo(() => edenMinimapGates(level), [level]);
     const showMinimap = loadSettings().showMinimap;
 
     const guideStep = useMemo(() => edenGuideStep(level, {
-        isGuardianCleared, isSolved, minigameDone, barrierActive, relicClaimed,
-        hasWeapon: !!character.equipped.weapon, riversLit: sequence.length,
-    }), [level, isGuardianCleared, isSolved, minigameDone, barrierActive, relicClaimed, character.equipped.weapon, sequence.length]);
+        isGuardianCleared, isSolved, relicClaimed, hasWeapon: !!character.equipped.weapon,
+    }), [level, isGuardianCleared, isSolved, relicClaimed, character.equipped.weapon]);
 
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
-    const combatStatProps = useMemo(() => {
+    const baseBonuses = useMemo(() => {
         const cSkill = skillBonuses(character.skills);
         const cFounder = founderBonuses(founderNumber);
         const cCloth = clothingBonus(character.equipped.clothing);
-        const combatBlessing = combatRelicBonuses(character.inventory, character.equipped.relic);
+        const blessing = combatRelicBonuses(character.inventory, character.equipped.relic);
         const pathMods = pathCombatMods(character.path, character.skills);
         return {
-            bonusHp: combatBlessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
-            bonusDamage: combatBlessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
-            bonusReach: combatBlessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
-            bonusRegen: cSkill.regen + cCloth.regen + combatBlessing.regen,
-            bonusLifesteal: combatBlessing.lifesteal,
-            bonusCrit: combatBlessing.crit,
-            bonusKnockback: combatBlessing.knockback,
+            bonusHp: blessing.hp + cSkill.hp + cFounder.hp + cCloth.hp,
+            bonusDamage: blessing.damage + cSkill.damage + cFounder.damage + cCloth.damage,
+            bonusReach: blessing.reach + cSkill.reach + cFounder.reach + cCloth.reach,
+            bonusRegen: cSkill.regen + cCloth.regen + blessing.regen,
+            bonusLifesteal: blessing.lifesteal,
+            bonusCrit: blessing.crit,
+            bonusKnockback: blessing.knockback,
             enemyHpMult: pathMods.enemyHpMult,
             enemyDmgMult: pathMods.enemyDmgMult,
             playerDamageMult: pathMods.playerDamageMult,
@@ -189,59 +258,122 @@ export default function EdenWorld({
         walkT: 0,
         facing: 'down' as 'down' | 'up' | 'left' | 'right',
         t: 0,
-        rivers: EDEN_RIVERS.map((r) => ({ ...r, active: false })),
+        dayStart: 0,
+        // roaming lesson shades (flavour for the southern trials)
         shades: [
-            { x: 20 * EDEN_TILE, y: 34 * EDEN_TILE, vx: 14, vy: -10, fightId: 'fight_1' },
-            { x: 42 * EDEN_TILE, y: 28 * EDEN_TILE, vx: -12, vy: 11, fightId: 'fight_2' },
-            { x: 40 * EDEN_TILE, y: 16 * EDEN_TILE, vx: 10, vy: 13, fightId: 'fight_3' },
+            { x: 40 * EDEN_TILE, y: 56 * EDEN_TILE, vx: 14, vy: -10, fightId: 'fight_lesson_1' },
+            { x: 20 * EDEN_TILE, y: 52 * EDEN_TILE, vx: -12, vy: 11, fightId: 'fight_lesson_2' },
+            { x: 74 * EDEN_TILE, y: 52 * EDEN_TILE, vx: 10, vy: 13, fightId: 'fight_lesson_3' },
         ],
+        // roaming creatures
+        creatures: EDEN_CREATURES.map((c) => ({
+            id: c.id,
+            x: (c.home.gx + 0.5) * EDEN_TILE,
+            y: (c.home.gy + 0.5) * EDEN_TILE,
+            hx: (c.home.gx + 0.5) * EDEN_TILE,
+            hy: (c.home.gy + 0.5) * EDEN_TILE,
+            vx: (th(c.home.gx, c.home.gy, 1) - 0.5) * 18,
+            vy: (th(c.home.gx, c.home.gy, 2) - 0.5) * 18,
+            roam: c.roam * EDEN_TILE,
+            glyph: c.glyph,
+            phases: c.phases,
+        })),
     });
 
-    const acceptTemptation = useCallback(() => {
-        if (level.temptationResolved !== 'none') return;
-        const st = gameStateRef.current;
-        st.px = (EDEN_TEMPTATION_SHORTCUT.gx + 0.5) * EDEN_TILE;
-        st.py = (EDEN_TEMPTATION_SHORTCUT.gy + 0.5) * EDEN_TILE;
-        setLevel((prev) => {
-            const next = { ...prev, temptationResolved: 'accepted' as const };
-            onDiscover(edenDiscoveriesFromState(next));
-            return next;
-        });
-        setNearTemptation(false);
-        setDialogue({ speaker: 'A whisper', text: EDEN_SERPENT_LINES.accepted, color: '#ef4444' });
+    // ---- creature naming ----
+    const nameCreature = useCallback((creatureId: string) => {
+        if (level.named.includes(creatureId)) { setOverlay(null); return; }
+        const cr = EDEN_CREATURES.find((c) => c.id === creatureId);
+        setLevel((prev) => updateEdenProgress({ ...prev, named: [...prev.named, creatureId] }));
+        const keys = [nameCreatureKey(creatureId)];
+        if (cr?.reward?.key) keys.push(cr.reward.key);
+        onDiscover(keys);
+        if (cr?.reward?.skillPoint) grantSkillPoints(1);
+        if (cr?.lore) {
+            const bonus = cr.reward?.skillPoint ? ' (+1 skill point)' : '';
+            setDialogue({ speaker: cr.name, text: cr.lore + bonus, color: '#fbbf24' });
+        }
+        sfx.victory();
+        setOverlay(null);
+    }, [level.named, onDiscover, grantSkillPoints]);
+
+    // ---- cultivation ----
+    const plantSeed = useCallback((bedId: string, seedId: string) => {
+        setBedRuntime((prev) => ({ ...prev, [bedId]: { seedId, plantedAt: Date.now(), spent: false } }));
+        const seed = seedById(seedId);
+        setDialogue({ speaker: 'The Gardener', text: `You press a ${seed?.name ?? 'seed'} into the soil. Let the cool of the day pass over it.`, color: '#86efac' });
+        sfx.pickup();
+        setOverlay(null);
+    }, []);
+
+    const harvestBed = useCallback((bedId: string, seed: EdenSeed) => {
+        setBedRuntime((prev) => ({ ...prev, [bedId]: { seedId: null, plantedAt: 0, spent: true } }));
+        const f = seed.fruit;
+        if (f.heal) setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + f.heal!));
+        if (f.buff) {
+            setFruitBuff((prev) => ({
+                hp: (prev?.hp ?? 0) + (f.buff!.hp ?? 0),
+                damage: (prev?.damage ?? 0) + (f.buff!.damage ?? 0),
+                regen: (prev?.regen ?? 0) + (f.buff!.regen ?? 0),
+                fights: Math.max(prev?.fights ?? 0, f.buff!.fights),
+            }));
+        }
+        if (!level.fruitsHarvested.includes(f.id)) {
+            setLevel((prev) => ({ ...prev, fruitsHarvested: [...prev.fruitsHarvested, f.id] }));
+            onDiscover([harvestFruitKey(f.id)]);
+        }
+        setDialogue({ speaker: 'The Garden', text: f.line, color: '#a3e635' });
+        sfx.victory();
+        setOverlay(null);
+    }, [level.fruitsHarvested, onDiscover]);
+
+    // ---- serpent arc ----
+    const resolveSerpent = useCallback((beatId: string, choice: 'resisted' | 'listened') => {
+        const beat = serpentBeatById(beatId);
+        if (!beat) return;
+        setNearSerpent(null);
+        serpOfferShownRef.current = null;
+
+        if (beat.climax) {
+            // the moral fork at the Tree of Knowledge
+            const taste = choice === 'listened';
+            const res = climaxResolution(taste);
+            const keys = [serpentChoiceKey(beatId, choice), knowledgeOutcomeKey(res.outcome)];
+            setLevel((prev) => ({ ...prev, serpent: { ...prev.serpent, [beatId]: choice }, knowledgeOutcome: res.outcome }));
+            onDiscover(keys);
+            setDialogue({ speaker: res.title, text: res.line, color: taste ? '#ef4444' : '#34d399' });
+            taste ? sfx.hit() : sfx.victory();
+            return;
+        }
+
+        setLevel((prev) => ({ ...prev, serpent: { ...prev.serpent, [beatId]: choice } }));
+        onDiscover([serpentChoiceKey(beatId, choice)]);
+
+        if (choice === 'resisted') {
+            setDialogue({ speaker: 'The Gardener', text: beat.resistedLine, color: '#34d399' });
+            sfx.strike();
+            return;
+        }
+        // listened — the shortcut buckles into a trap
+        setDialogue({ speaker: 'A whisper', text: beat.listenedLine, color: '#ef4444' });
+        if (beat.shortcut) {
+            gameStateRef.current.px = (beat.shortcut.gx + 0.5) * EDEN_TILE;
+            gameStateRef.current.py = (beat.shortcut.gy + 0.5) * EDEN_TILE;
+        }
         setDungeonHp((hp) => {
-            const next = hp - 35;
+            const next = hp - 25;
             if (next <= 0) { setTimeout(() => softRespawn(), 50); return 0; }
             return next;
         });
-        const temptFight = level.fights.find((f) => f.combatId === 'eden_temptation');
-        if (temptFight && !temptFight.cleared && character.equipped.weapon) {
-            fightTriggeredRef.current = temptFight.id;
+        if (beat.listenedFight && character.equipped.weapon) {
+            fightTriggeredRef.current = `serpent_${beatId}`;
             fightBonusRef.current = consumeFightBonusHp();
-            setActiveFight('eden_temptation');
+            setActiveFight(beat.listenedFight);
         }
         sfx.hit();
-    }, [level, character.equipped.weapon, onDiscover, consumeFightBonusHp, softRespawn]);
+    }, [onDiscover, character.equipped.weapon, consumeFightBonusHp, softRespawn]);
 
-    const resistTemptation = useCallback(() => {
-        if (level.temptationResolved !== 'none') return;
-        setLevel((prev) => {
-            const next = { ...prev, temptationResolved: 'resisted' as const };
-            onDiscover(edenDiscoveriesFromState(next));
-            return next;
-        });
-        setNearTemptation(false);
-        setDialogue({ speaker: 'The Gardener', text: EDEN_SERPENT_LINES.resisted, color: '#34d399' });
-        sfx.strike();
-    }, [level, onDiscover]);
-
-    const resetSequence = useCallback(() => {
-        setSequence([]);
-        gameStateRef.current.rivers.forEach((r) => { r.active = false; });
-        setDialogue({ speaker: 'The Gardener', text: 'The resonance breaks. Begin again from Pishon in the south-west.', color: '#34d399' });
-        sfx.defeat();
-    }, []);
-
+    // ---- fights ----
     const markFightCleared = useCallback((fightId: string, combatId: string) => {
         setLevel((prev) => {
             const next = updateEdenProgress({
@@ -249,22 +381,21 @@ export default function EdenWorld({
                 fights: prev.fights.map((f) => (f.id === fightId ? { ...f, cleared: true } : f)),
             });
             onDiscover(edenDiscoveriesFromState(next));
-            if (combatId === 'eden_boss') onGuardianCleared();
+            if (combatId === EDEN_CHERUB.combatId) onGuardianCleared();
             return next;
         });
         fightTriggeredRef.current = null;
         setActiveFight(null);
         setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + 10));
+        // tick down the fruit buff
+        setFruitBuff((prev) => (prev && prev.fights > 1 ? { ...prev, fights: prev.fights - 1 } : null));
     }, [onGuardianCleared, onDiscover]);
 
     const readLoreStone = useCallback((stoneId: string) => {
         const stone = level.loreStones.find((s) => s.id === stoneId);
         if (!stone || stone.read) return;
         setLevel((prev) => {
-            const next = {
-                ...prev,
-                loreStones: prev.loreStones.map((s) => (s.id === stoneId ? { ...s, read: true } : s)),
-            };
+            const next = { ...prev, loreStones: prev.loreStones.map((s) => (s.id === stoneId ? { ...s, read: true } : s)) };
             onDiscover(edenDiscoveriesFromState(next));
             return next;
         });
@@ -279,18 +410,26 @@ export default function EdenWorld({
     }, []);
 
     const handleInteract = useCallback(() => {
-        if (nearLore) readLoreStone(nearLore);
-    }, [nearLore, readLoreStone]);
+        const n = near;
+        if (!n) return;
+        if (n.kind === 'lore') readLoreStone(n.id);
+        else if (n.kind === 'name') setOverlay({ kind: 'naming', creatureId: n.id });
+        else if (n.kind === 'tend') setOverlay({ kind: 'tend', bedId: n.id });
+    }, [near, readLoreStone]);
 
+    // music
     useEffect(() => {
         if (activeFight) {
-            const boss = activeFight === 'eden_boss';
+            const boss = activeFight === EDEN_CHERUB.combatId;
             gameMusic.crossfadeBgm(boss ? 'combat_eden_cherub' : 'combat_skirmish', 700, boss ? 'main' : gameMusic.pickVariant('combat_skirmish'));
         } else {
             gameMusic.crossfadeBgm('eden_garden', 1200, gameMusic.pickVariant('eden_garden'));
         }
     }, [activeFight]);
 
+    // ============================================================
+    //  CANVAS LOOP
+    // ============================================================
     useEffect(() => {
         if (activeFight) return;
         const canvas = canvasRef.current!;
@@ -308,56 +447,19 @@ export default function EdenWorld({
         let avatarFrames = buildFrames(charRef.current.avatar);
         let avatarKey = JSON.stringify(charRef.current.avatar);
         const st = gameStateRef.current;
+        if (!st.dayStart) st.dayStart = performance.now() - 0.18 * EDEN_DAY_SECONDS * 1000; // begin mid-morning
         let raf = 0;
         let last = performance.now();
         let running = true;
-        let Z = 2.5;
-        let ox = 0;
-        let oy = 0;
+        let Z = 2.5, ox = 0, oy = 0;
 
-        const GRASS = ['#5d9e41', '#6bb04c', '#549238'];
-        function th(c: number, r: number, s = 0) {
-            let x = (c * 374761393 + r * 668265263 + s * 2246822519) | 0;
-            x = Math.imul(x ^ (x >>> 13), 1274126177);
-            return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
-        }
-
-        const groundLayer = document.createElement('canvas');
-        groundLayer.width = EDEN_MAP_W * 16;
-        groundLayer.height = EDEN_MAP_H * 16;
-        const gctx = groundLayer.getContext('2d')!;
-        for (let r = 0; r < EDEN_MAP_H; r++) {
-            for (let c = 0; c < EDEN_MAP_W; c++) {
-                const gv = ow.ground[r][c];
-                const x = c * 16, y = r * 16;
-                if (gv === 2) { gctx.fillStyle = '#1e4d7a'; gctx.fillRect(x, y, 16, 16); }
-                else if (gv === 1) { gctx.fillStyle = '#b58a52'; gctx.fillRect(x, y, 16, 16); }
-                else {
-                    gctx.fillStyle = GRASS[Math.floor(th(c >> 2, r >> 2, 1) * 3) % 3];
-                    gctx.fillRect(x, y, 16, 16);
-                }
-                const d = ow.decor[r][c];
-                if (d === 1) {
-                    gctx.fillStyle = '#2e6a30';
-                    gctx.beginPath();
-                    gctx.ellipse(x + 8, y + 6, 7, 7, 0, 0, Math.PI * 2);
-                    gctx.fill();
-                    gctx.fillStyle = '#6e4a28';
-                    gctx.fillRect(x + 6, y + 10, 4, 6);
-                } else if (d === 2) {
-                    gctx.fillStyle = '#357a39';
-                    gctx.beginPath();
-                    gctx.ellipse(x + 8, y + 10, 6, 5, 0, 0, Math.PI * 2);
-                    gctx.fill();
-                }
-            }
-        }
+        // static biome-tinted ground+decor, baked once per page load
+        const groundLayer = edenGroundLayer(ow);
 
         function computeZoom() {
-            const vw = canvas.clientWidth;
-            const vh = canvas.clientHeight;
+            const vw = canvas.clientWidth, vh = canvas.clientHeight;
             const desktop = vw >= 1024;
-            const viewTiles = desktop ? 14 : 11;
+            const viewTiles = desktop ? 15 : 12;
             Z = clamp(Math.round(Math.min(vw, vh) / (viewTiles * EDEN_TILE)), 2, desktop ? 5 : 4);
         }
         function resize() {
@@ -382,17 +484,28 @@ export default function EdenWorld({
             st.t = now;
             const lvl = levelRef.current;
             const barrier = barrierRef.current;
+            const serpentPending = !!nearSerpentRef.current && !lvl.serpent[nearSerpentRef.current];
+            const paused = !!overlayRef.current || serpentPending;
 
-            let ix = joyRef.current.x, iy = joyRef.current.y;
-            const k = keysRef.current;
-            if (k.has('arrowleft') || k.has('a')) ix = -1;
-            if (k.has('arrowright') || k.has('d')) ix = 1;
-            if (k.has('arrowup') || k.has('w')) iy = -1;
-            if (k.has('arrowdown') || k.has('s')) iy = 1;
-            const mag = Math.hypot(ix, iy);
-            if (mag > 1) { ix /= mag; iy /= mag; }
+            // cool of the day
+            const dayT = ((now - st.dayStart) / 1000 / EDEN_DAY_SECONDS) % 1;
+            const ds = edenDayState(dayT);
+            dayPhaseRef.current = ds.phase;
+            dayBrightnessRef.current = ds.brightness;
+
+            let ix = 0, iy = 0;
+            if (!paused) {
+                ix = joyRef.current.x; iy = joyRef.current.y;
+                const k = keysRef.current;
+                if (k.has('arrowleft') || k.has('a')) ix = -1;
+                if (k.has('arrowright') || k.has('d')) ix = 1;
+                if (k.has('arrowup') || k.has('w')) iy = -1;
+                if (k.has('arrowdown') || k.has('s')) iy = 1;
+                const mag = Math.hypot(ix, iy);
+                if (mag > 1) { ix /= mag; iy /= mag; }
+            }
             const moving = Math.hypot(ix, iy) > 0.15;
-            const spd = 78;
+            const spd = 84;
 
             if (moving) {
                 st.walkT += dt;
@@ -407,205 +520,190 @@ export default function EdenWorld({
             const pgx = Math.floor(st.px / EDEN_TILE);
             const pgy = Math.floor(st.py / EDEN_TILE);
             const zl = edenZoneLabel(pgx, pgy);
-            if (zl) setZoneLabel(zl);
+            if (zl) setZoneLabel((p) => (p === zl ? p : zl));
+            setDayLabel((p) => (p === ds.label ? p : ds.label));
 
+            // first-entry wing greeting
             const wingId = edenWingId(pgx, pgy);
             if (wingId && wingId !== lastWingRef.current) {
                 lastWingRef.current = wingId;
-                const discId = `eden_${wingId}`;
+                const discId = edenKey('wing', wingId);
                 if (!wingsSeenRef.current.has(discId)) {
                     wingsSeenRef.current.add(discId);
                     onDiscover([discId]);
-                    setDialogue({ speaker: 'The Gardener', text: EDEN_GARDENER_LINES[wingId], color: '#34d399' });
+                    setDialogue({ speaker: 'The Gardener', text: edenWingGreeting(wingId), color: '#34d399' });
                 }
             }
 
-            // roaming shades
-            for (const sh of st.shades) {
-                const fight = lvl.fights.find((f) => f.id === sh.fightId);
-                if (!fight || fight.cleared) continue;
-                let nx = sh.x + sh.vx * dt;
-                let ny = sh.y + sh.vy * dt;
-                if (solidAt(nx, sh.y)) { sh.vx *= -1; nx = sh.x; }
-                if (solidAt(sh.x, ny)) { sh.vy *= -1; ny = sh.y; }
-                sh.x = nx; sh.y = ny;
-                if (Math.hypot(sh.x - st.px, sh.y - st.py) < 20 && character.equipped.weapon && fightTriggeredRef.current !== fight.id) {
-                    fightTriggeredRef.current = fight.id;
-                    fightBonusRef.current = consumeFightBonusHp();
-                    setActiveFight(fight.combatId);
-                    setDialogue({ speaker: 'The Gardener', text: fight.hint, color: '#34d399' });
-                }
-            }
-
-            // temptation
-            const temptNear = lvl.temptationResolved === 'none'
-                && Math.hypot((EDEN_TEMPTATION.gx + 0.5) * EDEN_TILE - st.px, (EDEN_TEMPTATION.gy + 0.5) * EDEN_TILE - st.py) < 24;
-            if (temptNear !== nearTemptation) setNearTemptation(temptNear);
-            if (temptNear && !temptOfferShownRef.current) {
-                temptOfferShownRef.current = true;
-                setDialogue({ speaker: 'A whisper', text: EDEN_SERPENT_LINES.offer, color: '#ef4444' });
-            }
-            if (!temptNear) temptOfferShownRef.current = false;
-
-            // lore proximity
-            let closestLore: string | null = null;
-            let closestD = Infinity;
-            for (const ls of lvl.loreStones) {
-                const d = Math.hypot((ls.gx + 0.5) * EDEN_TILE - st.px, (ls.gy + 0.5) * EDEN_TILE - st.py);
-                if (d < 28 && d < closestD) { closestD = d; closestLore = ls.id; }
-            }
-            if (closestLore !== nearLore) {
-                setNearLore(closestLore);
-                const stone = closestLore ? lvl.loreStones.find((s) => s.id === closestLore) : null;
-                setNear(closestLore ? { kind: 'lore', label: stone?.title ?? 'Lore stone' } : null);
-            }
-
-            // pickups, chests (auto on walk-over)
-            for (const pk of lvl.pickups) {
-                if (pk.collected || touchedRef.current.has(pk.id)) continue;
-                if (Math.hypot((pk.gx + 0.5) * EDEN_TILE - st.px, (pk.gy + 0.5) * EDEN_TILE - st.py) < 18) {
-                    touchedRef.current.add(pk.id);
-                    setLevel((prev) => {
-                        const next = { ...prev, pickups: prev.pickups.map((p) => (p.id === pk.id ? { ...p, collected: true } : p)) };
-                        onDiscover(edenDiscoveriesFromState(next));
-                        return next;
-                    });
-                    setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + pk.amount));
-                    sfx.pickup();
-                }
-            }
-
-            const secretVisible = canRevealEdenSecret(lvl, charRef.current);
-            for (const ch of lvl.chests) {
-                if (ch.opened || touchedRef.current.has(ch.id)) continue;
-                if (ch.hidden && !secretVisible) continue;
-                if (Math.hypot((ch.gx + 0.5) * EDEN_TILE - st.px, (ch.gy + 0.5) * EDEN_TILE - st.py) < 20) {
-                    touchedRef.current.add(ch.id);
-                    setLevel((prev) => {
-                        const next = updateEdenProgress({
-                            ...prev,
-                            chests: prev.chests.map((c) => (c.id === ch.id ? { ...c, opened: true } : c)),
-                            keysFound: ch.keyId && !prev.keysFound.includes(ch.keyId) ? [...prev.keysFound, ch.keyId] : prev.keysFound,
-                        });
-                        onDiscover(edenDiscoveriesFromState(next));
-                        return next;
-                    });
-                    if (ch.health) setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + ch.health!));
-                    sfx.pickup();
-                }
-            }
-
-            // boss / temptation fight zones
-            for (const fz of lvl.fights) {
-                if (fz.cleared || fightTriggeredRef.current === fz.id) continue;
-                if (fz.combatId === 'eden_temptation') continue;
-                const dist = Math.hypot((fz.gx + 0.5) * EDEN_TILE - st.px, (fz.gy + 0.5) * EDEN_TILE - st.py);
-                if (fz.radius > 0 && dist < fz.radius) {
-                    if (!character.equipped.weapon) break;
-                    if (fz.combatId === 'eden_boss' && !lvl.bossGateOpen) break;
-                    const warnedAt = fightWarnRef.current[fz.id];
-                    if (!warnedAt) { fightWarnRef.current[fz.id] = now; break; }
-                    if (now - warnedAt < 1200) break;
-                    fightTriggeredRef.current = fz.id;
-                    fightBonusRef.current = consumeFightBonusHp();
-                    setActiveFight(fz.combatId);
-                    setDialogue({ speaker: 'The Gardener', text: fz.hint, color: '#34d399' });
-                    break;
-                }
-            }
-
-            // rivers puzzle
-            if (lvl.sanctumOpen && !isSolved) {
-                for (const r of st.rivers) {
-                    if (r.active) continue;
-                    if (Math.hypot((r.gx + 0.5) * EDEN_TILE - st.px, (r.gy + 0.5) * EDEN_TILE - st.py) < 20) {
-                        if (!minigameDone) break;
-                        r.active = true;
-                        sfx.strike();
-                        setSequence((prev) => {
-                            const next = [...prev, r.id];
-                            const expected = [0, 1, 2, 3];
-                            if (!next.every((v, i) => v === expected[i])) {
-                                setTimeout(() => resetSequence(), 100);
-                                return [];
-                            }
-                            if (next.length === 4) {
-                                setBarrierActive(false);
-                                onSolve();
-                                setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge. The Tree of Life opens.', color: '#34d399' });
-                                sfx.victory();
-                            }
-                            return next;
-                        });
+            if (!paused) {
+                // roaming lesson shades
+                for (const sh of st.shades) {
+                    const fight = lvl.fights.find((f) => f.id === sh.fightId);
+                    if (!fight || fight.cleared) continue;
+                    let nx = sh.x + sh.vx * dt, ny = sh.y + sh.vy * dt;
+                    if (solidAt(nx, sh.y)) { sh.vx *= -1; nx = sh.x; }
+                    if (solidAt(sh.x, ny)) { sh.vy *= -1; ny = sh.y; }
+                    sh.x = nx; sh.y = ny;
+                    if (Math.hypot(sh.x - st.px, sh.y - st.py) < 20 && character.equipped.weapon && fightTriggeredRef.current !== fight.id) {
+                        fightTriggeredRef.current = fight.id;
+                        fightBonusRef.current = consumeFightBonusHp();
+                        setActiveFight(fight.combatId);
+                        setDialogue({ speaker: 'The Gardener', text: fight.hint, color: '#34d399' });
                     }
                 }
-            }
 
-            if (!relicClaimed && !barrier && lvl.sanctumOpen) {
-                const tx = (EDEN_TREE.gx + 0.5) * EDEN_TILE;
-                const ty = (EDEN_TREE.gy + 1.5) * EDEN_TILE;
-                if (Math.hypot(tx - st.px, ty - st.py) < 18) {
-                    setRelicClaimed(true);
-                    onClaim();
-                    setDialogue({ speaker: 'The Gardener', text: 'You claim the Leaf of the Tree of Life.', color: '#34d399' });
+                // roaming creatures (gentle wander around home)
+                for (const cr of st.creatures) {
+                    let nx = cr.x + cr.vx * dt, ny = cr.y + cr.vy * dt;
+                    if (Math.hypot(nx - cr.hx, ny - cr.hy) > cr.roam || solidAt(nx, ny)) { cr.vx *= -1; cr.vy *= -1; nx = cr.x; ny = cr.y; }
+                    cr.x = nx; cr.y = ny;
+                    if (th(Math.floor(now / 900), cr.id.length) > 0.94) { cr.vx = (Math.random() - 0.5) * 18; cr.vy = (Math.random() - 0.5) * 18; }
+                }
+
+                // springs (auto)
+                for (const sp of lvl.springs) {
+                    if (sp.collected || touchedRef.current.has(sp.id)) continue;
+                    if (Math.hypot((sp.gx + 0.5) * EDEN_TILE - st.px, (sp.gy + 0.5) * EDEN_TILE - st.py) < 18) {
+                        touchedRef.current.add(sp.id);
+                        setLevel((prev) => {
+                            const next = { ...prev, springs: prev.springs.map((p) => (p.id === sp.id ? { ...p, collected: true } : p)) };
+                            onDiscover(edenDiscoveriesFromState(next));
+                            return next;
+                        });
+                        setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + sp.amount));
+                        sfx.pickup();
+                    }
+                }
+                // chests (auto)
+                const secretVisible = canRevealEdenSecret(lvl, charRef.current);
+                for (const ch of lvl.chests) {
+                    if (ch.opened || touchedRef.current.has(ch.id)) continue;
+                    if (ch.hidden && !secretVisible) continue;
+                    if (Math.hypot((ch.gx + 0.5) * EDEN_TILE - st.px, (ch.gy + 0.5) * EDEN_TILE - st.py) < 20) {
+                        touchedRef.current.add(ch.id);
+                        setLevel((prev) => {
+                            const next = updateEdenProgress({
+                                ...prev,
+                                chests: prev.chests.map((c) => (c.id === ch.id ? { ...c, opened: true } : c)),
+                            });
+                            onDiscover(edenDiscoveriesFromState(next));
+                            return next;
+                        });
+                        if (ch.health) setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + ch.health!));
+                        if (ch.hidden) setDialogue({ speaker: 'The Compartment Beneath Memory', text: 'A hollow no map recorded — the Gardener\'s last cache. The garden was meant to be walked, not believed in from exile.', color: '#fbbf24' });
+                        sfx.pickup();
+                    }
+                }
+
+                // guardian / cherub fight zones
+                for (const fz of lvl.fights) {
+                    if (fz.cleared || fightTriggeredRef.current === fz.id) continue;
+                    if (fz.id.startsWith('fight_lesson')) continue; // handled by roaming shades
+                    const dist = Math.hypot((fz.gx + 0.5) * EDEN_TILE - st.px, (fz.gy + 0.5) * EDEN_TILE - st.py);
+                    if (fz.radius > 0 && dist < fz.radius) {
+                        if (!character.equipped.weapon) break;
+                        if (fz.boss && !lvl.bossGateOpen) break;
+                        const warnedAt = fightWarnRef.current[fz.id];
+                        if (!warnedAt) { fightWarnRef.current[fz.id] = now; setDialogue({ speaker: 'The Gardener', text: fz.hint, color: '#34d399' }); break; }
+                        if (now - warnedAt < 1200) break;
+                        fightTriggeredRef.current = fz.id;
+                        fightBonusRef.current = consumeFightBonusHp();
+                        setActiveFight(fz.combatId);
+                        break;
+                    }
+                }
+
+                // river attunement (guardian-gated, Genesis order)
+                const nextIdx = lvl.riversLit.length;
+                if (nextIdx < EDEN_RIVER_ORDER.length) {
+                    const id = EDEN_RIVER_ORDER[nextIdx];
+                    const rv = EDEN_RIVERS_V2[id];
+                    const guardianDone = lvl.fights.find((f) => f.river === id)?.cleared ?? false;
+                    const riverTouch = `river_${id}`;
+                    if (guardianDone && !touchedRef.current.has(riverTouch) && Math.hypot((rv.fountain.gx + 0.5) * EDEN_TILE - st.px, (rv.fountain.gy + 0.5) * EDEN_TILE - st.py) < 20) {
+                        touchedRef.current.add(riverTouch);
+                        const lit = nextIdx + 1;
+                        setLevel((prev) => updateEdenProgress({ ...prev, riversLit: [...prev.riversLit, nextIdx] }));
+                        onDiscover([edenKey('river', id)]);
+                        sfx.strike();
+                        if (lit >= EDEN_RIVER_ORDER.length) {
+                            setBarrierActive(false);
+                            onSolve();
+                            markMinigameCleared('mg_eden_match');
+                            setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge and the ordering is whole. The Cherub road north opens — the Tree of Life waits beyond.', color: '#34d399' });
+                            sfx.victory();
+                        } else {
+                            setDialogue({ speaker: 'The Gardener', text: rv.litLine, color: rv.color });
+                        }
+                    }
+                }
+
+                // claim the leaf
+                if (!relicClaimed && !barrier && lvl.sanctumOpen) {
+                    const tx = (EDEN_TREE_OF_LIFE.gx + 0.5) * EDEN_TILE;
+                    const ty = (EDEN_TREE_OF_LIFE.gy + 2.5) * EDEN_TILE;
+                    if (Math.hypot(tx - st.px, ty - st.py) < 20) {
+                        setRelicClaimed(true);
+                        onClaim();
+                        setDialogue({ speaker: 'The Gardener', text: 'You take the Leaf of the Tree of Life. It will not wither — it remembers the first morning, and now, so do you.', color: '#34d399' });
+                        sfx.victory();
+                    }
+                }
+
+                // proximity targets (lore / creature / bed) + serpent beats
+                let target: NearTarget = null;
+                let bestD = Infinity;
+                for (const ls of lvl.loreStones) {
+                    if (ls.read) continue;
+                    const d = Math.hypot((ls.gx + 0.5) * EDEN_TILE - st.px, (ls.gy + 0.5) * EDEN_TILE - st.py);
+                    if (d < 26 && d < bestD) { bestD = d; target = { kind: 'lore', id: ls.id, label: ls.title }; }
+                }
+                for (const cr of st.creatures) {
+                    if (lvl.named.includes(cr.id)) continue;
+                    const def = EDEN_CREATURES.find((c) => c.id === cr.id);
+                    if (def?.phases && !def.phases.includes(dayPhaseRef.current)) continue;
+                    const d = Math.hypot(cr.x - st.px, cr.y - st.py);
+                    if (d < 26 && d < bestD) { bestD = d; target = { kind: 'name', id: cr.id, label: `Name the ${def?.name ?? 'creature'}` }; }
+                }
+                for (const bed of EDEN_BEDS) {
+                    const d = Math.hypot((bed.at.gx + 0.5) * EDEN_TILE - st.px, (bed.at.gy + 0.5) * EDEN_TILE - st.py);
+                    if (d < 22 && d < bestD) { bestD = d; target = { kind: 'tend', id: bed.id, label: 'Tend the bed' }; }
+                }
+                setNear((p) => (p?.kind === target?.kind && p?.id === (target as any)?.id ? p : target));
+
+                // serpent whispers — once a beat is entered, freeze the prompt
+                // (movement is paused above while it is up) so the climax fork
+                // can never be lost by drifting out of range. The whisper text
+                // is shown inside the choice panel, not as a separate dialogue.
+                if (!nearSerpentRef.current) {
+                    for (const b of EDEN_SERPENT_BEATS) {
+                        if (lvl.serpent[b.id]) continue;
+                        if (Math.hypot((b.at.gx + 0.5) * EDEN_TILE - st.px, (b.at.gy + 0.5) * EDEN_TILE - st.py) < 24) { setNearSerpent(b.id); break; }
+                    }
+                }
+
+                // map reveal sync (~12 Hz)
+                if (now - mapSyncRef.current.lastAt > 80) {
+                    mapSyncRef.current.lastAt = now;
+                    const added = newRevealDiscoveries('eden', pgx, pgy, exploredRef.current, EDEN_MAP_W, EDEN_MAP_H);
+                    if (added.length) { onDiscover(added); setExploredVersion((v) => v + 1); }
+                    setPlayerPos({ x: st.px, y: st.py });
                 }
             }
 
-            // map reveal + minimap sync (~12 Hz)
-            if (now - mapSyncRef.current.lastAt > 80) {
-                mapSyncRef.current.lastAt = now;
-                const pgx = Math.floor(st.px / EDEN_TILE);
-                const pgy = Math.floor(st.py / EDEN_TILE);
-                const added = newRevealDiscoveries('eden', pgx, pgy, exploredRef.current, EDEN_MAP_W, EDEN_MAP_H);
-                if (added.length) {
-                    onDiscover(added);
-                    setExploredVersion((v) => v + 1);
-                }
-                setPlayerPos({ x: st.px, y: st.py });
-            }
-
-            // camera
-            const vw = canvas.clientWidth;
-            const vh = canvas.clientHeight;
-            const halfW = vw / (2 * Z);
-            const halfH = vh / (2 * Z);
+            // ---------- camera ----------
+            const vw = canvas.clientWidth, vh = canvas.clientHeight;
+            const halfW = vw / (2 * Z), halfH = vh / (2 * Z);
             const camX = clamp(st.px, halfW, EDEN_MAP_W * EDEN_TILE - halfW);
             const camY = clamp(st.py, halfH, EDEN_MAP_H * EDEN_TILE - halfH);
             ox = Math.round(vw / 2 - camX * Z);
             oy = Math.round(vh / 2 - camY * Z);
 
-            // ambient pollen / fireflies
-            if (ambientRef.current.length < 28 && Math.random() < 0.06) {
-                ambientRef.current.push({
-                    x: st.px + (Math.random() - 0.5) * vw / Z,
-                    y: st.py + (Math.random() - 0.5) * vh / Z,
-                    vx: (Math.random() - 0.5) * 8,
-                    vy: -4 - Math.random() * 6,
-                    life: 2.5 + Math.random() * 2,
-                    color: Math.random() > 0.5 ? '#34d399' : '#fbbf24',
-                });
-            }
-            for (let i = ambientRef.current.length - 1; i >= 0; i--) {
-                const p = ambientRef.current[i];
-                p.life -= dt;
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                if (p.life <= 0) { ambientRef.current.splice(i, 1); continue; }
-                const a = Math.min(1, p.life) * (0.35 + Math.sin(st.t / 200 + i) * 0.15);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = a;
-                ctx.beginPath();
-                ctx.arc(SX(p.x), SY(p.y), 1.5 * Z, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
-
-            // render
+            // ---------- render ----------
             ctx.fillStyle = '#0a1410';
             ctx.fillRect(0, 0, vw, vh);
             ctx.drawImage(groundLayer, 0, 0, groundLayer.width, groundLayer.height, ox, oy, groundLayer.width * Z, groundLayer.height * Z);
 
-            // water shimmer overlay (viewport only)
             const visL = Math.max(0, Math.floor((-ox / Z) / EDEN_TILE) - 1);
             const visT = Math.max(0, Math.floor((-oy / Z) / EDEN_TILE) - 1);
             const visR = Math.min(EDEN_MAP_W, Math.ceil((vw - ox) / Z / EDEN_TILE) + 1);
@@ -614,165 +712,171 @@ export default function EdenWorld({
                 for (let c = visL; c < visR; c++) {
                     if (ow.ground[r][c] !== 2) continue;
                     const shimmer = 0.06 + Math.sin(st.t / 500 + c * 0.4 + r * 0.3) * 0.04;
-                    ctx.fillStyle = `rgba(56, 189, 248, ${shimmer})`;
+                    ctx.fillStyle = `rgba(120, 200, 255, ${shimmer})`;
                     ctx.fillRect(SX(c * EDEN_TILE), SY(r * EDEN_TILE), EDEN_TILE * Z, EDEN_TILE * Z);
                 }
             }
 
-            // lore stones — pulsing diamond markers
+            // lore stones
             for (const ls of lvl.loreStones) {
-                const wx = (ls.gx + 0.5) * EDEN_TILE;
-                const wy = (ls.gy + 0.5) * EDEN_TILE;
+                const wx = (ls.gx + 0.5) * EDEN_TILE, wy = (ls.gy + 0.5) * EDEN_TILE;
                 const pulse = 0.55 + Math.sin(st.t / 280 + ls.gx) * 0.25;
-                const bob = Math.sin(st.t / 420 + ls.gy) * 2 * Z;
                 const sz = (6 + Math.sin(st.t / 350) * 1.5) * Z;
-                const col = ls.read ? 'rgba(52,211,153,0.65)' : `rgba(251,191,36,${pulse})`;
                 ctx.strokeStyle = ls.read ? 'rgba(52,211,153,0.35)' : `rgba(251,191,36,${pulse * 0.4})`;
                 ctx.lineWidth = Z * 0.75;
-                ctx.beginPath();
-                ctx.arc(SX(wx), SY(wy + bob / Z) - 2 * Z, (sz + 4 * Z), 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.fillStyle = col;
-                ctx.save();
-                ctx.translate(SX(wx), SY(wy + bob / Z));
-                ctx.rotate(Math.PI / 4);
-                ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
-                ctx.restore();
+                ctx.beginPath(); ctx.arc(SX(wx), SY(wy) - 2 * Z, sz + 4 * Z, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = ls.read ? 'rgba(52,211,153,0.65)' : `rgba(251,191,36,${pulse})`;
+                ctx.save(); ctx.translate(SX(wx), SY(wy)); ctx.rotate(Math.PI / 4);
+                ctx.fillRect(-sz / 2, -sz / 2, sz, sz); ctx.restore();
             }
 
-            // chests / pickups
+            // chests + springs
+            const secretVisible = canRevealEdenSecret(lvl, charRef.current);
             for (const ch of lvl.chests) {
                 if (ch.opened || (ch.hidden && !secretVisible)) continue;
                 const bob = Math.sin(st.t / 380 + ch.gx) * 2 * Z;
-                const cx = SX((ch.gx + 0.5) * EDEN_TILE);
-                const cy = SY((ch.gy + 0.5) * EDEN_TILE) + bob;
+                const cx = SX((ch.gx + 0.5) * EDEN_TILE), cy = SY((ch.gy + 0.5) * EDEN_TILE) + bob;
                 const glow = 0.35 + Math.sin(st.t / 300 + ch.gy) * 0.2;
-                ctx.fillStyle = `rgba(252, 211, 77, ${glow})`;
-                ctx.fillRect(cx - 6 * Z, cy - 5 * Z, 12 * Z, 10 * Z);
-                ctx.fillStyle = '#fcd34d';
-                ctx.fillRect(cx - 4 * Z, cy - 3 * Z, 8 * Z, 6 * Z);
+                ctx.fillStyle = `rgba(252, 211, 77, ${glow})`; ctx.fillRect(cx - 6 * Z, cy - 5 * Z, 12 * Z, 10 * Z);
+                ctx.fillStyle = ch.hidden ? '#c084fc' : '#fcd34d'; ctx.fillRect(cx - 4 * Z, cy - 3 * Z, 8 * Z, 6 * Z);
             }
-            for (const pk of lvl.pickups) {
-                if (pk.collected) continue;
-                const pulse = 0.7 + Math.sin(st.t / 220 + pk.gx) * 0.3;
+            for (const sp of lvl.springs) {
+                if (sp.collected) continue;
+                const pulse = 0.7 + Math.sin(st.t / 220 + sp.gx) * 0.3;
                 const rad = (5 + Math.sin(st.t / 180) * 1.5) * Z;
                 ctx.fillStyle = `rgba(248, 113, 113, ${pulse * 0.35})`;
-                ctx.beginPath();
-                ctx.arc(SX((pk.gx + 0.5) * EDEN_TILE), SY((pk.gy + 0.5) * EDEN_TILE), rad + 3 * Z, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(SX((sp.gx + 0.5) * EDEN_TILE), SY((sp.gy + 0.5) * EDEN_TILE), rad + 3 * Z, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#f87171';
-                ctx.beginPath();
-                ctx.arc(SX((pk.gx + 0.5) * EDEN_TILE), SY((pk.gy + 0.5) * EDEN_TILE), rad, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(SX((sp.gx + 0.5) * EDEN_TILE), SY((sp.gy + 0.5) * EDEN_TILE), rad, 0, Math.PI * 2); ctx.fill();
             }
 
-            // rivers
-            const treeCx = (EDEN_TREE.gx + 0.5) * EDEN_TILE;
-            const treeCy = (EDEN_TREE.gy + 0.5) * EDEN_TILE;
-            for (const r of st.rivers) {
-                const fx = (r.gx + 0.5) * EDEN_TILE;
-                const fy = (r.gy + 0.5) * EDEN_TILE;
-                const lit = r.active || isSolved;
-                const fountainPulse = lit ? 0.85 + Math.sin(st.t / 260 + r.id) * 0.15 : 0.55 + Math.sin(st.t / 400 + r.id) * 0.1;
-                ctx.fillStyle = lit ? r.color : '#64748b';
-                ctx.globalAlpha = fountainPulse;
-                ctx.fillRect(SX(fx) - 7 * Z, SY(fy) - 7 * Z, 14 * Z, 14 * Z);
-                ctx.globalAlpha = 1;
-                if (lit) {
-                    ctx.strokeStyle = r.color;
-                    ctx.lineWidth = 2 * Z;
-                    ctx.globalAlpha = 0.5 + Math.sin(st.t / 320) * 0.2;
-                    ctx.beginPath();
-                    ctx.moveTo(SX(fx), SY(fy));
-                    ctx.lineTo(SX(treeCx), SY(treeCy));
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                    if (Math.random() < 0.14) {
-                        riverParticlesRef.current.push({
-                            ox: fx, oy: fy, tx: treeCx, ty: treeCy,
-                            color: r.color, t: 0, speed: 0.55 + Math.random() * 0.35,
-                        });
+            // garden beds + crops
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (const bed of EDEN_BEDS) {
+                const bx = SX((bed.at.gx + 0.5) * EDEN_TILE), by = SY((bed.at.gy + 0.5) * EDEN_TILE);
+                ctx.fillStyle = '#5a3d22'; ctx.fillRect(bx - 7 * Z, by - 5 * Z, 14 * Z, 10 * Z);
+                ctx.fillStyle = '#3f2a17';
+                for (let i = 0; i < 3; i++) ctx.fillRect(bx - 6 * Z + i * 4.5 * Z, by - 4 * Z, 1.5 * Z, 8 * Z);
+                const rt = bedRuntimeRef.current[bed.id];
+                if (rt?.seedId) {
+                    const seed = seedById(rt.seedId);
+                    if (seed) {
+                        const stage = growthStage(seed, Date.now() - rt.plantedAt);
+                        const glyph = stage === 'ripe' ? seed.fruit.glyph : stage === 'growing' ? '🌿' : '🌱';
+                        ctx.font = `${(stage === 'ripe' ? 11 : 8) * Z}px serif`;
+                        ctx.fillText(glyph, bx, by - 2 * Z);
+                        if (stage === 'ripe') {
+                            ctx.strokeStyle = `rgba(163,230,53,${0.5 + Math.sin(st.t / 240) * 0.3})`;
+                            ctx.lineWidth = Z; ctx.beginPath(); ctx.arc(bx, by - 2 * Z, 9 * Z, 0, Math.PI * 2); ctx.stroke();
+                        }
                     }
                 }
             }
-            riverParticlesRef.current = riverParticlesRef.current.filter((p) => {
-                const dx = p.tx - p.ox;
-                const dy = p.ty - p.oy;
-                const len = Math.hypot(dx, dy) || 1;
-                p.t += dt * p.speed;
-                if (p.t >= 1) return false;
-                const px = p.ox + dx * p.t;
-                const py = p.oy + dy * p.t;
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = 0.5 + (1 - p.t) * 0.5;
-                ctx.beginPath();
-                ctx.arc(SX(px), SY(py), 2.5 * Z, 0, Math.PI * 2);
-                ctx.fill();
+
+            // fountains + lit rivers
+            const tlx = (EDEN_TREE_OF_LIFE.gx + 0.5) * EDEN_TILE, tly = (EDEN_TREE_OF_LIFE.gy + 0.5) * EDEN_TILE;
+            EDEN_RIVER_ORDER.forEach((id, i) => {
+                const rv = EDEN_RIVERS_V2[id];
+                const fx = (rv.fountain.gx + 0.5) * EDEN_TILE, fy = (rv.fountain.gy + 0.5) * EDEN_TILE;
+                const lit = lvl.riversLit.includes(i);
+                const pulse = lit ? 0.85 + Math.sin(st.t / 260 + i) * 0.15 : 0.5 + Math.sin(st.t / 400 + i) * 0.1;
+                ctx.fillStyle = lit ? rv.color : '#64748b'; ctx.globalAlpha = pulse;
+                ctx.fillRect(SX(fx) - 7 * Z, SY(fy) - 7 * Z, 14 * Z, 14 * Z);
                 ctx.globalAlpha = 1;
-                return true;
+                if (lit) {
+                    ctx.strokeStyle = rv.color; ctx.lineWidth = 2 * Z;
+                    ctx.globalAlpha = 0.45 + Math.sin(st.t / 320) * 0.2;
+                    ctx.beginPath(); ctx.moveTo(SX(fx), SY(fy)); ctx.lineTo(SX(tlx), SY(tly)); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    if (Math.random() < 0.12) riverParticlesRef.current.push({ ox: fx, oy: fy, tx: tlx, ty: tly, color: rv.color, t: 0, speed: 0.5 + Math.random() * 0.35 });
+                }
+            });
+            riverParticlesRef.current = riverParticlesRef.current.filter((p) => {
+                const dx = p.tx - p.ox, dy = p.ty - p.oy;
+                p.t += dt * p.speed; if (p.t >= 1) return false;
+                ctx.fillStyle = p.color; ctx.globalAlpha = 0.5 + (1 - p.t) * 0.5;
+                ctx.beginPath(); ctx.arc(SX(p.ox + dx * p.t), SY(p.oy + dy * p.t), 2.5 * Z, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1; return true;
             });
 
-            // tree of life
+            // tree of knowledge (verge centre — always present, ominous)
+            {
+                const kx = (EDEN_TREE_OF_KNOWLEDGE.gx + 0.5) * EDEN_TILE, ky = (EDEN_TREE_OF_KNOWLEDGE.gy + 0.5) * EDEN_TILE;
+                const resolved = !!lvl.serpent['serpent_tree'];
+                ctx.fillStyle = `rgba(239,68,68,${0.18 + Math.sin(st.t / 500) * 0.1})`;
+                ctx.beginPath(); ctx.arc(SX(kx), SY(ky - 8), 16 * Z, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = resolved ? '#3a2a3a' : '#4a2030';
+                ctx.beginPath(); ctx.arc(SX(kx), SY(ky - 8), 12 * Z, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#7a1f2e'; ctx.fillRect(SX(kx) - 2 * Z, SY(ky - 8), 4 * Z, 12 * Z);
+            }
+
+            // tree of life (north sanctum)
             if (lvl.sanctumOpen) {
                 const treeGlow = 0.4 + Math.sin(st.t / 400) * 0.25;
                 ctx.fillStyle = `rgba(52, 211, 153, ${treeGlow})`;
-                ctx.beginPath();
-                ctx.arc(SX(treeCx), SY(treeCy - 8), (18 + Math.sin(st.t / 350) * 3) * Z, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(SX(tlx), SY(tly - 8), (18 + Math.sin(st.t / 350) * 3) * Z, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#166534';
-                ctx.beginPath();
-                ctx.arc(SX(treeCx), SY(treeCy - 8), 14 * Z, 0, Math.PI * 2);
-                ctx.fill();
-                if (!barrier && lvl.sanctumOpen) {
+                ctx.beginPath(); ctx.arc(SX(tlx), SY(tly - 8), 14 * Z, 0, Math.PI * 2); ctx.fill();
+                if (!barrier && !relicClaimed) {
                     ctx.fillStyle = `rgba(251, 191, 36, ${0.5 + Math.sin(st.t / 280) * 0.3})`;
-                    ctx.beginPath();
-                    ctx.arc(SX(treeCx), SY(treeCy + 6), 4 * Z, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(SX(tlx), SY(tly + 6), 4 * Z, 0, Math.PI * 2); ctx.fill();
                 }
             }
 
-            // fight zones + roaming shades
+            // fight zones (guardians + cherub)
             const dashOff = -(st.t / 35) % 20;
             for (const fz of lvl.fights) {
-                if (fz.cleared || fz.radius <= 0) continue;
-                const isBoss = fz.combatId === 'eden_boss';
+                if (fz.cleared || fz.radius <= 0 || fz.id.startsWith('fight_lesson')) continue;
                 const pulse = 0.55 + Math.sin(st.t / 380 + fz.gx) * 0.2;
-                ctx.strokeStyle = isBoss ? `rgba(239, 68, 68, ${pulse})` : `rgba(251, 191, 36, ${pulse})`;
-                ctx.lineWidth = Z;
-                ctx.setLineDash([5 * Z, 5 * Z]);
-                ctx.lineDashOffset = dashOff;
-                ctx.beginPath();
-                ctx.arc(SX((fz.gx + 0.5) * EDEN_TILE), SY((fz.gy + 0.5) * EDEN_TILE), fz.radius * Z, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.strokeStyle = fz.boss ? `rgba(239, 68, 68, ${pulse})` : `rgba(251, 191, 36, ${pulse})`;
+                ctx.lineWidth = Z; ctx.setLineDash([5 * Z, 5 * Z]); ctx.lineDashOffset = dashOff;
+                ctx.beginPath(); ctx.arc(SX((fz.gx + 0.5) * EDEN_TILE), SY((fz.gy + 0.5) * EDEN_TILE), fz.radius * Z, 0, Math.PI * 2); ctx.stroke();
                 ctx.setLineDash([]);
             }
+            // lesson shades
             for (const sh of st.shades) {
                 const fight = lvl.fights.find((f) => f.id === sh.fightId);
                 if (!fight || fight.cleared) continue;
                 const shBob = Math.sin(st.t / 200 + sh.x) * 1.5 * Z;
-                ctx.globalAlpha = 0.35 + Math.sin(st.t / 180) * 0.15;
-                ctx.fillStyle = '#1e1b4b';
-                ctx.beginPath();
-                ctx.arc(SX(sh.x), SY(sh.y) - 4 * Z + shBob, 10 * Z, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.globalAlpha = 0.35 + Math.sin(st.t / 180) * 0.15; ctx.fillStyle = '#1e1b4b';
+                ctx.beginPath(); ctx.arc(SX(sh.x), SY(sh.y) - 4 * Z + shBob, 10 * Z, 0, Math.PI * 2); ctx.fill();
                 ctx.globalAlpha = 1;
-                ctx.drawImage(charImg, SHADE_TILE.col * 17, SHADE_TILE.row * 17, 16, 16,
-                    SX(sh.x) - 8 * Z, SY(sh.y) - 12 * Z + shBob, 16 * Z, 16 * Z);
+                ctx.drawImage(charImg, SHADE_TILE.col * 17, SHADE_TILE.row * 17, 16, 16, SX(sh.x) - 8 * Z, SY(sh.y) - 12 * Z + shBob, 16 * Z, 16 * Z);
+            }
+
+            // creatures
+            for (const cr of st.creatures) {
+                const def = EDEN_CREATURES.find((c) => c.id === cr.id);
+                const named = lvl.named.includes(cr.id);
+                if (def?.phases && !def.phases.includes(dayPhaseRef.current)) continue;
+                const bob = Math.sin(st.t / 260 + cr.x) * 2 * Z;
+                if (!named) {
+                    ctx.strokeStyle = `rgba(251,191,36,${0.4 + Math.sin(st.t / 300 + cr.x) * 0.25})`;
+                    ctx.lineWidth = Z; ctx.beginPath(); ctx.arc(SX(cr.x), SY(cr.y) - 3 * Z + bob, 9 * Z, 0, Math.PI * 2); ctx.stroke();
+                }
+                ctx.globalAlpha = named ? 0.95 : 0.85;
+                ctx.font = `${11 * Z}px serif`;
+                ctx.fillText(cr.glyph, SX(cr.x), SY(cr.y) - 4 * Z + bob);
+                ctx.globalAlpha = 1;
             }
 
             // gardener NPC at spawn
-            const gwx = (EDEN_GARDENER.gx + 0.5) * EDEN_TILE;
-            const gwy = (EDEN_GARDENER.gy + 0.5) * EDEN_TILE;
-            const gPulse = 0.3 + Math.sin(st.t / 450) * 0.2;
-            ctx.strokeStyle = `rgba(52, 211, 153, ${gPulse})`;
-            ctx.lineWidth = Z;
-            ctx.beginPath();
-            ctx.arc(SX(gwx), SY(gwy), (8 + Math.sin(st.t / 500) * 2) * Z, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillStyle = '#34d399';
-            ctx.beginPath();
-            ctx.arc(SX(gwx), SY(gwy), 5 * Z, 0, Math.PI * 2);
-            ctx.fill();
+            {
+                const gwx = (EDEN_GARDENER.gx + 0.5) * EDEN_TILE, gwy = (EDEN_GARDENER.gy + 0.5) * EDEN_TILE;
+                const gPulse = 0.3 + Math.sin(st.t / 450) * 0.2;
+                ctx.strokeStyle = `rgba(52, 211, 153, ${gPulse})`; ctx.lineWidth = Z;
+                ctx.beginPath(); ctx.arc(SX(gwx), SY(gwy), (8 + Math.sin(st.t / 500) * 2) * Z, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = '#34d399'; ctx.beginPath(); ctx.arc(SX(gwx), SY(gwy), 5 * Z, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // serpent beats (unresolved markers)
+            for (const b of EDEN_SERPENT_BEATS) {
+                if (lvl.serpent[b.id] || b.climax) continue;
+                const sx = (b.at.gx + 0.5) * EDEN_TILE, sy = (b.at.gy + 0.5) * EDEN_TILE;
+                ctx.globalAlpha = 0.5 + Math.sin(st.t / 220 + b.at.gx) * 0.3;
+                ctx.font = `${10 * Z}px serif`; ctx.fillText('🐍', SX(sx), SY(sy));
+                ctx.globalAlpha = 1;
+            }
 
             // player
             const curKey = JSON.stringify(charRef.current.avatar);
@@ -780,42 +884,60 @@ export default function EdenWorld({
             const wphase = Math.floor(st.walkT * 7) % 2;
             const dirFrames = avatarFrames[st.facing];
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
-            const pw = 16 * Z * 1.05;
-            const ph = 24 * Z * 1.05;
+            const pw = 16 * Z * 1.05, ph = 24 * Z * 1.05;
             ctx.drawImage(wframe, SX(st.px) - pw / 2, SY(st.py) - ph + 5 * Z, pw, ph);
 
-            // quest trail — marching dashes toward objective
-            const wp = guideStep.waypoint;
+            // quest trail
+            const wp = guideStepRef.current.waypoint;
             if (wp) {
-                const wx = (wp.gx + 0.5) * EDEN_TILE;
-                const wy = (wp.gy + 0.5) * EDEN_TILE;
+                const wx = (wp.gx + 0.5) * EDEN_TILE, wy = (wp.gy + 0.5) * EDEN_TILE;
                 const trailPulse = 0.35 + Math.sin(st.t / 300) * 0.2;
-                ctx.strokeStyle = `rgba(52,211,153,${trailPulse})`;
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5 * Z, 7 * Z]);
-                ctx.lineDashOffset = dashOff;
-                ctx.beginPath();
-                ctx.moveTo(SX(st.px), SY(st.py));
-                ctx.lineTo(SX(wx), SY(wy));
-                ctx.stroke();
+                ctx.strokeStyle = `rgba(52,211,153,${trailPulse})`; ctx.lineWidth = 2;
+                ctx.setLineDash([5 * Z, 7 * Z]); ctx.lineDashOffset = dashOff;
+                ctx.beginPath(); ctx.moveTo(SX(st.px), SY(st.py)); ctx.lineTo(SX(wx), SY(wy)); ctx.stroke();
                 ctx.setLineDash([]);
-                const markerPulse = 4 + Math.sin(st.t / 250) * 2;
+                const mk = 4 + Math.sin(st.t / 250) * 2;
                 ctx.fillStyle = `rgba(52,211,153,${0.5 + Math.sin(st.t / 280) * 0.3})`;
-                ctx.beginPath();
-                ctx.arc(SX(wx), SY(wy), markerPulse * Z, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(SX(wx), SY(wy), mk * Z, 0, Math.PI * 2); ctx.fill();
             }
+
+            // ambient motes (more at night = fireflies)
+            const night = dayPhaseRef.current === 'night' || dayPhaseRef.current === 'dusk';
+            const moteCap = night ? 40 : 24;
+            if (ambientRef.current.length < moteCap && Math.random() < 0.06) {
+                ambientRef.current.push({
+                    x: st.px + (Math.random() - 0.5) * vw / Z, y: st.py + (Math.random() - 0.5) * vh / Z,
+                    vx: (Math.random() - 0.5) * 8, vy: -4 - Math.random() * 6,
+                    life: 2.5 + Math.random() * 2, color: night ? '#fde68a' : (Math.random() > 0.5 ? '#34d399' : '#fbbf24'),
+                });
+            }
+            for (let i = ambientRef.current.length - 1; i >= 0; i--) {
+                const p = ambientRef.current[i];
+                p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+                if (p.life <= 0) { ambientRef.current.splice(i, 1); continue; }
+                const a = Math.min(1, p.life) * (night ? 0.55 : 0.4) * (0.6 + Math.sin(st.t / 200 + i) * 0.4);
+                ctx.fillStyle = p.color; ctx.globalAlpha = a;
+                ctx.beginPath(); ctx.arc(SX(p.x), SY(p.y), (night ? 1.8 : 1.5) * Z, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+
+            // ---------- cool-of-the-day overlay ----------
+            if (ds.tint !== 'rgba(255, 255, 255, 0.00)') { ctx.fillStyle = ds.tint; ctx.fillRect(0, 0, vw, vh); }
+            if (ds.brightness < 1) { ctx.fillStyle = `rgba(8,12,26,${(1 - ds.brightness) * 0.7})`; ctx.fillRect(0, 0, vw, vh); }
 
             raf = requestAnimationFrame(loop);
         };
 
         const kd = (e: KeyboardEvent) => {
+            if (overlayRef.current) return; // a panel owns the keyboard
             keysRef.current.add(e.key.toLowerCase());
-            if ((e.key === 'e' || e.key === 'Enter') && nearLore) readLoreStone(nearLore);
+            if ((e.key === 'e' || e.key === 'Enter')) handleInteractRef.current();
         };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+        const blur = () => keysRef.current.clear(); // never resume auto-walk on a missed keyup
         window.addEventListener('keydown', kd);
         window.addEventListener('keyup', ku);
+        window.addEventListener('blur', blur);
         raf = requestAnimationFrame(loop);
 
         return () => {
@@ -824,13 +946,33 @@ export default function EdenWorld({
             window.removeEventListener('resize', resize);
             window.removeEventListener('keydown', kd);
             window.removeEventListener('keyup', ku);
+            window.removeEventListener('blur', blur);
         };
-    }, [activeFight, isSolved, minigameDone, relicClaimed, nearLore, nearTemptation, onSolve, onClaim, onDiscover, consumeFightBonusHp, readLoreStone, resetSequence, solidAt, character.equipped.weapon, guideStep.waypoint]);
+    }, [activeFight, character.equipped.weapon, relicClaimed, onSolve, onClaim, onDiscover, consumeFightBonusHp, markMinigameCleared, solidAt]);
 
+    // keep latest guideStep + interact handler available to the loop without re-mounting it
+    const guideStepRef = useRef(guideStep);
+    guideStepRef.current = guideStep;
+    const handleInteractRef = useRef(handleInteract);
+    handleInteractRef.current = handleInteract;
+
+    // ---- combat hand-off ----
     const activeFightZone = level.fights.find((f) => f.combatId === activeFight && !f.cleared);
     const fightDest = activeFight ? edenDestinationStub(activeFight) : null;
+    const liveBonuses = useMemo(() => {
+        const fb = fruitBuff;
+        return {
+            ...baseBonuses,
+            bonusHp: baseBonuses.bonusHp + (fb?.hp ?? 0) + fightBonusRef.current,
+            bonusDamage: baseBonuses.bonusDamage + (fb?.damage ?? 0),
+            bonusRegen: baseBonuses.bonusRegen + (fb?.regen ?? 0),
+        };
+    }, [baseBonuses, fruitBuff, activeFight]);
 
     const nearPoi = near ? { name: near.label, type: 'npc' as const } : null;
+    const openCreature = overlay?.kind === 'naming' ? EDEN_CREATURES.find((c) => c.id === overlay.creatureId) : null;
+    const openBed = overlay?.kind === 'tend' ? EDEN_BEDS.find((b) => b.id === overlay.bedId) : null;
+    const openBedRt: EdenBedRuntime = (openBed && bedRuntime[openBed.id]) || { seedId: null, plantedAt: 0 };
 
     return (
         <div className="relative flex-1 w-full min-h-0 overflow-hidden select-none" style={{ touchAction: 'none', background: '#0a1f17' }}>
@@ -841,10 +983,10 @@ export default function EdenWorld({
                     weaponDamage={wpn.damage}
                     weaponReach={wpn.reach}
                     exploreBgm="eden_garden"
-                    {...combatStatProps}
-                    bonusHp={combatStatProps.bonusHp + fightBonusRef.current}
+                    {...liveBonuses}
                     onVictory={() => {
                         if (activeFightZone) markFightCleared(activeFightZone.id, activeFight);
+                        else { fightTriggeredRef.current = null; setActiveFight(null); setFruitBuff((p) => (p && p.fights > 1 ? { ...p, fights: p.fights - 1 } : null)); }
                         setDialogue({ speaker: 'The Gardener', text: fightDest.combat!.victory, color: '#34d399' });
                         sfx.victory();
                     }}
@@ -868,168 +1010,90 @@ export default function EdenWorld({
             <div className="absolute top-0 inset-x-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)' }} />
             <div className="absolute bottom-0 inset-x-0 h-36 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.45), transparent)' }} />
 
-            <div
-                className="absolute top-0 inset-x-0 z-10 grid grid-cols-[auto_1fr_auto] items-start gap-x-2 px-3 sm:px-4 pointer-events-none"
-                style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
-            >
-                <button
-                    type="button"
-                    onClick={onExit}
-                    className="pointer-events-auto shrink-0 flex items-center gap-1 text-[10px] sm:text-xs text-zinc-300 hover:text-white bg-black/50 border border-white/10 rounded-full px-2.5 sm:px-3 py-1.5 sm:py-2"
-                >
-                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="leading-none">Leave</span>
+            {/* top bar */}
+            <div className="absolute top-0 inset-x-0 z-10 grid grid-cols-[auto_1fr_auto] items-start gap-x-2 px-3 sm:px-4 pointer-events-none" style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}>
+                <button type="button" onClick={onExit} className="pointer-events-auto shrink-0 flex items-center gap-1 text-[10px] sm:text-xs text-zinc-300 hover:text-white bg-black/50 border border-white/10 rounded-full px-2.5 sm:px-3 py-1.5 sm:py-2">
+                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /><span className="leading-none">Leave</span>
                 </button>
-
                 <div className="text-center min-w-0 px-0.5 sm:px-1 pt-0.5">
-                    <p
-                        className="font-black uppercase text-emerald-400 leading-tight text-balance"
-                        style={{ fontSize: 'clamp(7px, 2.2vw, 9px)', letterSpacing: '0.2em' }}
-                    >
-                        Eden · Before the Lie
-                    </p>
-                    <p
-                        key={zoneLabel}
-                        className="eden-zone-in text-zinc-400 leading-snug mt-0.5 text-balance break-words hyphens-auto"
-                        style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.14em' }}
-                    >
-                        {zoneLabel}
+                    <p className="font-black uppercase text-emerald-400 leading-tight text-balance" style={{ fontSize: 'clamp(7px, 2.2vw, 9px)', letterSpacing: '0.2em' }}>Eden · Before the Lie</p>
+                    <p key={zoneLabel} className="eden-zone-in text-zinc-400 leading-snug mt-0.5 text-balance break-words" style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.14em' }}>
+                        {zoneLabel} · <span className="text-amber-300/70">{dayLabel}</span>
                     </p>
                 </div>
-
                 <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
-                    {onOpenRecords && (
-                        <button
-                            type="button"
-                            onClick={onOpenRecords}
-                            className="px-2 py-1.5 rounded-full bg-black/50 border border-white/10 font-black uppercase text-zinc-300 hover:text-white leading-none"
-                            style={{ fontSize: 'clamp(7px, 1.9vw, 9px)', letterSpacing: '0.12em' }}
-                        >
-                            Records
-                        </button>
-                    )}
+                    <button type="button" onClick={() => setOverlay({ kind: 'codex' })} className="flex items-center gap-1 px-2 py-1.5 rounded-full bg-black/50 border border-white/10 text-zinc-300 hover:text-white leading-none" style={{ fontSize: 'clamp(7px, 1.9vw, 9px)', letterSpacing: '0.1em' }}>
+                        <BookOpen className="w-3 h-3" /> Codex
+                    </button>
                     <button type="button" onClick={toggleMute} className="p-1.5 sm:p-2 rounded-full bg-black/50 border border-white/10 text-zinc-300 shrink-0">
                         {muted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                     </button>
                 </div>
             </div>
 
-            {showMinimap && !activeFight && (
-                <div
-                    className="absolute right-3 sm:right-4 z-10 pointer-events-none"
-                    style={{ top: 'calc(3.25rem + env(safe-area-inset-top))' }}
-                >
-                    <DestinationMinimap
-                        label="Eden"
-                        mapW={EDEN_MAP_W}
-                        mapH={EDEN_MAP_H}
-                        terrain={edenTerrain}
-                        terrainColors={EDEN_MINIMAP_TERRAIN_COLORS}
-                        explored={exploredRef.current}
-                        exploredVersion={exploredVersion}
-                        playerX={playerPos.x}
-                        playerY={playerPos.y}
-                        tileSize={EDEN_TILE}
-                        pois={minimapPois}
-                        gates={minimapGates}
-                        questWaypoint={guideStep.waypoint ?? null}
-                        size={isDesktop ? 96 : 80}
-                    />
+            {showMinimap && !activeFight && !overlay && (
+                <div className="absolute right-3 sm:right-4 z-10 pointer-events-none" style={{ top: 'calc(3.25rem + env(safe-area-inset-top))' }}>
+                    <DestinationMinimap label="Eden" mapW={EDEN_MAP_W} mapH={EDEN_MAP_H} terrain={edenTerrain} terrainColors={EDEN_MINIMAP_TERRAIN_COLORS} explored={exploredRef.current} exploredVersion={exploredVersion} playerX={playerPos.x} playerY={playerPos.y} tileSize={EDEN_TILE} pois={minimapPois} gates={minimapGates} questWaypoint={guideStep.waypoint ?? null} size={isDesktop ? 96 : 80} />
                 </div>
             )}
 
-            <div
-                key={guideStep.id}
-                className="eden-animate-in absolute left-3 sm:left-4 z-10 pointer-events-none glass-panel rounded-xl border border-emerald-500/20 bg-black/40 backdrop-blur-sm px-2.5 py-2"
-                style={{
-                    top: 'calc(3.25rem + env(safe-area-inset-top))',
-                    maxWidth: 'min(280px, calc(100vw - 5.5rem))',
-                }}
-            >
+            {/* objective + HP + fruit buff */}
+            <div key={guideStep.id} className="eden-animate-in absolute left-3 sm:left-4 z-10 pointer-events-none glass-panel rounded-xl border border-emerald-500/20 bg-black/40 backdrop-blur-sm px-2.5 py-2" style={{ top: 'calc(3.25rem + env(safe-area-inset-top))', maxWidth: 'min(280px, calc(100vw - 5.5rem))' }}>
                 <div className="flex items-center gap-2 mb-1.5">
                     <Heart className="w-3 h-3 text-red-400 shrink-0" />
                     <div className="flex-1 min-w-0 h-2 rounded-full bg-black/50 border border-white/10 overflow-hidden">
-                        <div
-                            className="eden-hp-bar h-full rounded-full"
-                            style={{
-                                width: `${(dungeonHp / MAX_DUNGEON_HP) * 100}%`,
-                                background: dungeonHp > 35 ? '#34d399' : '#ef4444',
-                            }}
-                        />
+                        <div className="eden-hp-bar h-full rounded-full" style={{ width: `${(dungeonHp / MAX_DUNGEON_HP) * 100}%`, background: dungeonHp > 35 ? '#34d399' : '#ef4444' }} />
                     </div>
                     <span className="text-[7px] font-mono text-zinc-500 shrink-0 tabular-nums">{dungeonHp}</span>
                 </div>
-                <p
-                    className="text-emerald-300/95 leading-snug break-words text-pretty font-medium"
-                    style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.04em' }}
-                >
-                    {guideStep.objective}
-                </p>
-                {level.keysFound.length > 0 && (
-                    <p
-                        className="text-amber-400/85 mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 leading-snug"
-                        style={{ fontSize: 'clamp(6px, 1.8vw, 7px)' }}
-                    >
-                        <Key className="w-2.5 h-2.5 shrink-0" />
-                        {level.keysFound.map((k, i) => (
-                            <span key={k} className="whitespace-nowrap">
-                                {i > 0 && <span className="opacity-50 mx-0.5">·</span>}
-                                {k.replace('key_', '')}
-                            </span>
-                        ))}
+                <p className="text-emerald-300/95 leading-snug break-words text-pretty font-medium" style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.04em' }}>{guideStep.objective}</p>
+                <p className="text-emerald-200/50 leading-snug mt-0.5" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>{level.riversLit.length}/4 rivers · {level.named.length}/{EDEN_CREATURES.length} named</p>
+                {fruitBuff && (
+                    <p className="text-lime-300/85 mt-1 leading-snug" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>
+                        🍃 Garden vigour · {fruitBuff.damage ? `+${fruitBuff.damage} strike ` : ''}{fruitBuff.hp ? `+${fruitBuff.hp} vit ` : ''}{fruitBuff.regen ? `+${fruitBuff.regen} renew ` : ''}· {fruitBuff.fights} fight{fruitBuff.fights > 1 ? 's' : ''}
                     </p>
                 )}
             </div>
 
             {dialogue && (
-                <WorldDialogueBox
-                    speaker={dialogue.speaker}
-                    text={dialogue.text}
-                    color={dialogue.color}
-                    onClose={() => setDialogue(null)}
-                    controlsHidden={!isDesktop}
-                />
+                <WorldDialogueBox speaker={dialogue.speaker} text={dialogue.text} color={dialogue.color} onClose={() => setDialogue(null)} controlsHidden={!isDesktop} />
             )}
 
-            {nearTemptation && level.temptationResolved === 'none' && !activeFight && (
-                <div
-                    className="eden-animate-in absolute left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto px-4 w-full max-w-xs"
-                    style={{ bottom: isDesktop ? 'calc(5.5rem + env(safe-area-inset-bottom))' : 'calc(6.5rem + env(safe-area-inset-bottom))' }}
-                >
-                    <p className="text-[8px] uppercase tracking-[0.2em] text-red-300/80 text-center text-balance leading-snug">
-                        A whisper at the forbidden verge
-                    </p>
-                    <div className="flex gap-2 w-full justify-center">
-                        <button
-                            type="button"
-                            onClick={acceptTemptation}
-                            className="flex-1 max-w-[9rem] px-3 py-2 rounded-lg font-black uppercase bg-red-900/70 border border-red-500/40 text-red-100 leading-tight text-center"
-                            style={{ fontSize: 'clamp(8px, 2.2vw, 9px)', letterSpacing: '0.1em' }}
-                        >
-                            Listen
-                        </button>
-                        <button
-                            type="button"
-                            onClick={resistTemptation}
-                            className="flex-1 max-w-[9rem] px-3 py-2 rounded-lg font-black uppercase bg-emerald-900/70 border border-emerald-500/40 text-emerald-100 leading-tight text-center"
-                            style={{ fontSize: 'clamp(8px, 2.2vw, 9px)', letterSpacing: '0.1em' }}
-                        >
-                            Walk on
-                        </button>
+            {/* serpent choice — whisper + fork, movement paused while this is up */}
+            {nearSerpent && !level.serpent[nearSerpent] && !activeFight && !overlay && (() => {
+                const beat = serpentBeatById(nearSerpent);
+                const climax = !!beat?.climax;
+                const whisper = (beat?.whisper ?? '').replace(/^【[^】]*】\s*/, '');
+                return (
+                    <div className="absolute inset-x-0 z-30 flex justify-center px-4 pointer-events-none" style={{ bottom: isDesktop ? 'calc(5rem + env(safe-area-inset-bottom))' : 'calc(6.25rem + env(safe-area-inset-bottom))' }}>
+                        <div className="eden-animate-in pointer-events-auto w-full max-w-sm rounded-xl border border-red-500/30 bg-black/85 backdrop-blur-md p-3" style={{ boxShadow: '0 0 30px rgba(239,68,68,0.25)' }}>
+                            <p className="text-center uppercase text-red-300/80 mb-1.5" style={{ fontSize: 'clamp(7px,1.9vw,8px)', letterSpacing: '0.22em' }}>
+                                {climax ? 'The tree of knowing good and evil' : 'A whisper at the water'}
+                            </p>
+                            <p className="text-red-100/90 text-center leading-snug mb-2.5 text-pretty" style={{ fontSize: 'clamp(8px,2.3vw,10px)' }}>{whisper}</p>
+                            <div className="flex gap-2 justify-center">
+                                <button type="button" onClick={() => resolveSerpent(nearSerpent, 'listened')} className="flex-1 max-w-[9rem] px-3 py-2.5 rounded-lg font-black uppercase bg-red-900/70 border border-red-500/40 text-red-100 leading-tight text-center" style={{ fontSize: 'clamp(8px, 2.2vw, 9px)', letterSpacing: '0.1em', minHeight: 40 }}>
+                                    {climax ? 'Taste' : 'Listen'}
+                                </button>
+                                <button type="button" onClick={() => resolveSerpent(nearSerpent, 'resisted')} className="flex-1 max-w-[9rem] px-3 py-2.5 rounded-lg font-black uppercase bg-emerald-900/70 border border-emerald-500/40 text-emerald-100 leading-tight text-center" style={{ fontSize: 'clamp(8px, 2.2vw, 9px)', letterSpacing: '0.1em', minHeight: 40 }}>
+                                    Walk on
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
-            {!activeFight && !dialogue && (
-                <WorldControlPad
-                    profile={profile}
-                    joy={joy}
-                    joyRadius={joyR}
-                    near={nearPoi ? { name: nearPoi.name, type: 'npc' } : null}
-                    onInteract={handleInteract}
-                />
+            {/* overlays */}
+            {overlay?.kind === 'codex' && <EdenCodex character={character} level={level} onClose={() => setOverlay(null)} accent="#34d399" />}
+            {overlay?.kind === 'naming' && openCreature && <NamingPanel creature={openCreature} onName={nameCreature} onClose={() => setOverlay(null)} accent="#34d399" />}
+            {overlay?.kind === 'tend' && openBed && <TendPanel bed={openBed} runtime={openBedRt} onPlant={(seedId) => plantSeed(openBed.id, seedId)} onHarvest={(seed) => harvestBed(openBed.id, seed)} onClose={() => setOverlay(null)} accent="#34d399" />}
+
+            {/* controls */}
+            {!activeFight && !dialogue && !overlay && (
+                <WorldControlPad profile={profile} joy={joy} joyRadius={joyR} near={nearPoi ? { name: nearPoi.name, type: 'npc' } : null} onInteract={handleInteract} />
             )}
-            {!activeFight && dialogue && !isDesktop && (
+            {!activeFight && dialogue && !isDesktop && !overlay && (
                 <WorldControlPad profile={profile} joy={joy} joyRadius={joyR} near={null} onInteract={() => {}} />
             )}
         </div>

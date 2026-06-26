@@ -161,6 +161,7 @@ interface GameState {
     markSolved: (puzzleId: string) => void;
     markMinigameCleared: (minigameId: string) => void;
     claimQuest: (questId: string, skillPointsReward: number) => void;
+    grantSkillPoints: (n: number) => void;
     returnToSource: () => void;
     completeAwakening: () => void;
     /** @deprecated use restartJourney */
@@ -388,6 +389,9 @@ export const useGameStore = create<GameState>()(
                     if (c.questsClaimed.includes(questId)) return {};
                     return { character: { ...c, questsClaimed: [...c.questsClaimed, questId], skillPoints: c.skillPoints + skillPointsReward } };
                 }),
+
+            grantSkillPoints: (n) =>
+                set((s) => (n ? { character: { ...s.character, skillPoints: s.character.skillPoints + n } } : {})),
 
             returnToSource: () =>
                 set((s) => (s.character.sourceReturned ? {} : { character: { ...s.character, sourceReturned: true } })),
