@@ -34,12 +34,14 @@ export const EDEN_CREATURES: EdenCreature[] = [
         glyph: '🦌', masked: 'S _ _ G', letters: ['A', 'T', 'S', 'N', 'G', 'R'],
         clue: 'It wears a crown of branches and pants after the river-springs at dawn.',
         lore: 'It carries the morning on its brow. As the hart longs for the water, so the garden longed to be named.',
+        phases: ['dawn', 'morning', 'noon', 'cool'],
     },
     {
         id: 'fox', name: 'Fox', region: 'outer_grove', home: tile(8, 66), roam: 4,
         glyph: '🦊', masked: 'F _ _', letters: ['X', 'F', 'O', 'A', 'E'],
-        clue: 'A small flame slips between the vines and is gone before you finish looking.',
+        clue: 'A small flame slips between the vines at dusk, and is gone before you finish looking.',
         lore: 'Quickest of the small ones. It learned every hidden path while the garden was still young, and forgot none.',
+        phases: ['dusk', 'night', 'dawn'],
     },
 
     // ---- The Eastern Garden (SE) — abundance ----

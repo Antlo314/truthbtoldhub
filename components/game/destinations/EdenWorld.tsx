@@ -178,6 +178,7 @@ export default function EdenWorld({
     const [level, setLevel] = useState<EdenLevelState>(() => hydrateEdenState(character));
     const [zoneLabel, setZoneLabel] = useState('The Threshold');
     const [dayLabel, setDayLabel] = useState('Morning');
+    const [dayT, setDayT] = useState(0.18);
     const [near, setNear] = useState<NearTarget>(null);
     const [nearSerpent, setNearSerpent] = useState<string | null>(null);
     const [relicClaimed, setRelicClaimed] = useState(character.inventory.includes('relic_eden_leaf'));
@@ -215,6 +216,8 @@ export default function EdenWorld({
     const fightWarnRef = useRef<Record<string, number>>({});
     const dayPhaseRef = useRef<EdenDayPhase>('morning');
     const dayBrightnessRef = useRef(1);
+    const gardenerWorldRef = useRef({ x: (EDEN_GARDENER.gx + 0.5) * EDEN_TILE, y: (EDEN_GARDENER.gy + 0.5) * EDEN_TILE });
+    const dawnBlessedRef = useRef(false);
 
     const levelRef = useRef(level);
     levelRef.current = level;
@@ -552,10 +555,20 @@ export default function EdenWorld({
             const paused = !!overlayRef.current || serpentPending;
 
             // cool of the day
-            const dayT = ((now - st.dayStart) / 1000 / EDEN_DAY_SECONDS) % 1;
-            const ds = edenDayState(dayT);
+            const dayTime = ((now - st.dayStart) / 1000 / EDEN_DAY_SECONDS) % 1;
+            const ds = edenDayState(dayTime);
             dayPhaseRef.current = ds.phase;
             dayBrightnessRef.current = ds.brightness;
+            // surface the clock to the HUD sun-arc, quantized so it doesn't re-render every frame
+            setDayT((p) => (Math.abs(p - dayTime) > 0.01 && Math.abs(p - dayTime) < 0.99 ? dayTime : p));
+            // the Gardener walks in the cool of the day (Gen 3:8): he leaves his
+            // post and strolls the threshold road at 'cool'/'dusk', then returns.
+            {
+                const gbx = (EDEN_GARDENER.gx + 0.5) * EDEN_TILE, gby = (EDEN_GARDENER.gy + 0.5) * EDEN_TILE;
+                const strolling = ds.phase === 'cool' || ds.phase === 'dusk';
+                gardenerWorldRef.current.x = strolling ? gbx + Math.sin(now / 2600) * 3.2 * EDEN_TILE : gbx;
+                gardenerWorldRef.current.y = strolling ? gby - (1.4 + Math.sin(now / 3400) * 1.2) * EDEN_TILE : gby;
+            }
 
             let ix = 0, iy = 0;
             if (!paused) {
@@ -616,10 +629,19 @@ export default function EdenWorld({
                     }
                 }
 
-                // roaming creatures (gentle wander around home)
+                // roaming creatures — named ones follow the one who named them
+                // (within a generous leash of home); unnamed grow curious and slow
+                // when you draw near, so they're easier, not harder, to approach.
                 for (const cr of st.creatures) {
+                    const named = lvl.named.includes(cr.id);
+                    const leash = named ? cr.roam + 6 * EDEN_TILE : cr.roam;
+                    const pdx = st.px - cr.x, pdy = st.py - cr.y, pd = Math.hypot(pdx, pdy) || 1;
+                    if (named && pd < 120 && pd > 22) { cr.vx += (pdx / pd) * 60 * dt; cr.vy += (pdy / pd) * 60 * dt; }
+                    else if (!named && pd < 40) { cr.vx *= 0.9; cr.vy *= 0.9; }
+                    const sp = Math.hypot(cr.vx, cr.vy), cap = named ? 34 : 22;
+                    if (sp > cap) { cr.vx = (cr.vx / sp) * cap; cr.vy = (cr.vy / sp) * cap; }
                     let nx = cr.x + cr.vx * dt, ny = cr.y + cr.vy * dt;
-                    if (Math.hypot(nx - cr.hx, ny - cr.hy) > cr.roam || solidAt(nx, ny)) { cr.vx *= -1; cr.vy *= -1; nx = cr.x; ny = cr.y; }
+                    if (Math.hypot(nx - cr.hx, ny - cr.hy) > leash || solidAt(nx, ny)) { cr.vx *= -1; cr.vy *= -1; nx = cr.x; ny = cr.y; }
                     cr.x = nx; cr.y = ny;
                     if (th(Math.floor(now / 900), cr.id.length) > 0.94) { cr.vx = (Math.random() - 0.5) * 18; cr.vy = (Math.random() - 0.5) * 18; }
                 }
@@ -702,6 +724,21 @@ export default function EdenWorld({
                     }
                 }
 
+                // first light — a one-time dawn blessing at any lit fountain
+                if (!dawnBlessedRef.current && dayPhaseRef.current === 'dawn') {
+                    for (let i = 0; i < EDEN_RIVER_ORDER.length; i++) {
+                        if (!lvl.riversLit.includes(i)) continue;
+                        const rv = EDEN_RIVERS_V2[EDEN_RIVER_ORDER[i]];
+                        if (Math.hypot((rv.fountain.gx + 0.5) * EDEN_TILE - st.px, (rv.fountain.gy + 0.5) * EDEN_TILE - st.py) < 22) {
+                            dawnBlessedRef.current = true;
+                            setDungeonHp((hp) => Math.min(MAX_DUNGEON_HP, hp + 20));
+                            setDialogue({ speaker: 'The Gardener', text: 'First light finds the water, and the water remembers. The dawn restores what the night spent — go strengthened.', color: '#fbbf24' });
+                            sfx.pickup();
+                            break;
+                        }
+                    }
+                }
+
                 // claim the leaf
                 if (!relicClaimed && !barrier && lvl.sanctumOpen) {
                     const tx = (EDEN_TREE_OF_LIFE.gx + 0.5) * EDEN_TILE;
@@ -719,7 +756,8 @@ export default function EdenWorld({
                 let target: NearTarget = null;
                 let bestD = Infinity;
                 {
-                    const gd = Math.hypot((EDEN_GARDENER.gx + 0.5) * EDEN_TILE - st.px, (EDEN_GARDENER.gy + 0.5) * EDEN_TILE - st.py);
+                    const gp = gardenerWorldRef.current;
+                    const gd = Math.hypot(gp.x - st.px, gp.y - st.py);
                     if (gd < 24 && gd < bestD) { bestD = gd; target = { kind: 'gardener', id: 'gardener', label: 'Speak with the Gardener' }; }
                 }
                 for (const ls of lvl.loreStones) {
@@ -808,10 +846,12 @@ export default function EdenWorld({
                 ctx.fillRect(-sz / 2, -sz / 2, sz, sz); ctx.restore();
             }
 
-            // chests + springs
+            // chests + springs. Hidden caches only glimmer by moonlight — found
+            // at night/dusk (still openable any phase once you've walked onto one).
             const secretVisible = canRevealEdenSecret(lvl, charRef.current);
+            const nightish = dayPhaseRef.current === 'night' || dayPhaseRef.current === 'dusk';
             for (const ch of lvl.chests) {
-                if (ch.opened || (ch.hidden && !secretVisible)) continue;
+                if (ch.opened || (ch.hidden && (!secretVisible || !nightish))) continue;
                 const bob = Math.sin(st.t / 380 + ch.gx) * 2 * Z;
                 const cx = SX((ch.gx + 0.5) * EDEN_TILE), cy = SY((ch.gy + 0.5) * EDEN_TILE) + bob;
                 const glow = 0.35 + Math.sin(st.t / 300 + ch.gy) * 0.2;
@@ -952,9 +992,11 @@ export default function EdenWorld({
                 ctx.globalAlpha = 1;
             }
 
-            // gardener NPC at spawn
+            // gardener NPC — walks the garden in the cool of the day
             {
-                const gwx = (EDEN_GARDENER.gx + 0.5) * EDEN_TILE, gwy = (EDEN_GARDENER.gy + 0.5) * EDEN_TILE;
+                const gp = gardenerWorldRef.current;
+                const strolling = dayPhaseRef.current === 'cool' || dayPhaseRef.current === 'dusk';
+                const gwx = gp.x, gwy = gp.y + (strolling ? Math.sin(st.t / 150) * 1.2 * Z : 0);
                 const gPulse = 0.3 + Math.sin(st.t / 450) * 0.2;
                 ctx.strokeStyle = `rgba(52, 211, 153, ${gPulse})`; ctx.lineWidth = Z;
                 ctx.beginPath(); ctx.arc(SX(gwx), SY(gwy), (8 + Math.sin(st.t / 500) * 2) * Z, 0, Math.PI * 2); ctx.stroke();
@@ -1144,6 +1186,20 @@ export default function EdenWorld({
                     <p key={zoneLabel} className="eden-zone-in text-zinc-400 leading-snug mt-0.5 text-balance break-words" style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.14em' }}>
                         {zoneLabel} · <span className="text-amber-300/70">{dayLabel}</span>
                     </p>
+                    {/* sun-arc clock — the sun (amber) by day, the moon (slate) by night */}
+                    <div className="mx-auto mt-0.5 flex justify-center">
+                        <svg viewBox="0 0 80 18" width="60" height="14" aria-hidden style={{ overflow: 'visible' }}>
+                            <path d="M4,16 Q40,-3 76,16" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
+                            {(() => {
+                                const u = Math.max(0, Math.min(1, dayT));
+                                const bz = (a: number, b: number, c: number) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * b + u * u * c;
+                                const cx = bz(4, 40, 76), cy = bz(16, -3, 16);
+                                const isNight = dayT >= 0.85 || dayT < 0.02;
+                                const col = isNight ? '#cbd5e1' : '#fcd34d';
+                                return <circle cx={cx} cy={cy} r={3} fill={col} style={{ filter: `drop-shadow(0 0 3px ${col})` }} />;
+                            })()}
+                        </svg>
+                    </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
                     <button type="button" onClick={() => setOverlay({ kind: 'codex' })} className="flex items-center gap-1 px-2 py-1.5 rounded-full bg-black/50 border border-white/10 text-zinc-300 hover:text-white leading-none" style={{ fontSize: 'clamp(7px, 1.9vw, 9px)', letterSpacing: '0.1em' }}>
