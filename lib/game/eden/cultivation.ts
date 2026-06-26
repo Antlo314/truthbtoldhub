@@ -88,6 +88,35 @@ export const EDEN_SEEDS: EdenSeed[] = [
             line: 'A hundred chambers, a hundred mercies. The rarest crop heals deep and steels the hand.',
         },
     },
+    // ---- Rare cuttings — sown only once the four rivers run again ----
+    {
+        id: 'myrtle',
+        name: 'Cutting of the Myrtle',
+        glyph: '🪴',
+        growSeconds: 44,
+        locked: 'rivers',
+        fruit: {
+            id: 'myrtle',
+            name: 'Anointing Myrtle',
+            glyph: '🍃',
+            buff: { lifesteal: 0.18, fights: 2 },
+            line: 'Oil for the wound that returns the blood to the heart. What you spend in the strike, the myrtle gives back.',
+        },
+    },
+    {
+        id: 'spikenard',
+        name: 'Root of the Spikenard',
+        glyph: '🌷',
+        growSeconds: 48,
+        locked: 'rivers',
+        fruit: {
+            id: 'spikenard',
+            name: 'Keen Spikenard',
+            glyph: '🌸',
+            buff: { crit: 0.18, damage: 3, fights: 2 },
+            line: 'A fragrance so pure it sharpens the eye. Now and then the hand finds the seam and the blow lands twice.',
+        },
+    },
 ];
 
 // ------------------------------------------------------------

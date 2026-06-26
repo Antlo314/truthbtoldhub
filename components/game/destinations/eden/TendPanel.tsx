@@ -17,6 +17,8 @@ interface Props {
     onHarvest: (seed: EdenSeed) => void;
     onClose: () => void;
     accent?: string;
+    /** Whether the rare river-gated cuttings can be sown yet. */
+    rareUnlocked?: boolean;
 }
 
 /** Compact "heals N · +regen/dmg/hp · Mf" line for a seed's fruit. */
@@ -29,6 +31,8 @@ function fruitSummary(seed: EdenSeed): string {
         if (b.hp) parts.push(`+${b.hp} hp`);
         if (b.damage) parts.push(`+${b.damage} dmg`);
         if (b.regen) parts.push(`+${b.regen} regen`);
+        if (b.lifesteal) parts.push(`+${Math.round(b.lifesteal * 100)}% leech`);
+        if (b.crit) parts.push(`+${Math.round(b.crit * 100)}% edge`);
         parts.push(`${b.fights}f`);
     }
     return parts.join(' · ') || '—';
@@ -46,6 +50,7 @@ export default function TendPanel({
     onHarvest,
     onClose,
     accent = '#34d399',
+    rareUnlocked = false,
 }: Props) {
     const planted = useMemo(
         () => (runtime.seedId ? seedById(runtime.seedId) : undefined),
@@ -169,46 +174,51 @@ export default function TendPanel({
         heading = 'Sow this bed';
         body = (
             <div className="grid grid-cols-1 gap-2">
-                {EDEN_SEEDS.map((seed) => (
-                    <button
-                        key={seed.id}
-                        type="button"
-                        onClick={() => {
-                            onPlant(seed.id);
-                            onClose();
-                        }}
-                        className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-black/40 px-3 py-2.5 text-left backdrop-blur-sm transition active:scale-[0.98] hover:border-emerald-400/45 hover:bg-emerald-950/30"
-                        style={{ minHeight: 44 }}
-                    >
-                        <span
-                            className="flex shrink-0 items-center justify-center rounded-lg bg-emerald-900/40"
-                            style={{ width: 36, height: 36, fontSize: 'clamp(16px,5vw,20px)' }}
+                {EDEN_SEEDS.map((seed) => {
+                    const locked = seed.locked === 'rivers' && !rareUnlocked;
+                    return (
+                        <button
+                            key={seed.id}
+                            type="button"
+                            disabled={locked}
+                            onClick={() => {
+                                if (locked) return;
+                                onPlant(seed.id);
+                                onClose();
+                            }}
+                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left backdrop-blur-sm transition ${locked ? 'cursor-not-allowed border-white/5 bg-black/30 opacity-55' : 'border-emerald-500/20 bg-black/40 active:scale-[0.98] hover:border-emerald-400/45 hover:bg-emerald-950/30'}`}
+                            style={{ minHeight: 44 }}
                         >
-                            {seed.glyph}
-                        </span>
-                        <span className="min-w-0 flex-1">
                             <span
-                                className="block truncate font-semibold text-emerald-100"
-                                style={{ fontSize: 'clamp(9px,2.6vw,11px)', letterSpacing: '0.02em' }}
+                                className="flex shrink-0 items-center justify-center rounded-lg bg-emerald-900/40"
+                                style={{ width: 36, height: 36, fontSize: 'clamp(16px,5vw,20px)', filter: locked ? 'grayscale(1)' : 'none' }}
                             >
-                                {seed.name}
+                                {seed.glyph}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span
+                                    className="block truncate font-semibold text-emerald-100"
+                                    style={{ fontSize: 'clamp(9px,2.6vw,11px)', letterSpacing: '0.02em' }}
+                                >
+                                    {seed.name}
+                                </span>
+                                <span
+                                    className="mt-0.5 flex items-center gap-1.5 text-emerald-300/70"
+                                    style={microStyle}
+                                >
+                                    <span>{seed.fruit.glyph}</span>
+                                    <span>{fruitSummary(seed)}</span>
+                                </span>
                             </span>
                             <span
-                                className="mt-0.5 flex items-center gap-1.5 text-emerald-300/70"
-                                style={microStyle}
+                                className={`shrink-0 uppercase ${locked ? 'text-white/40' : 'text-amber-300/80'}`}
+                                style={labelStyle}
                             >
-                                <span>{seed.fruit.glyph}</span>
-                                <span>{fruitSummary(seed)}</span>
+                                {locked ? 'Light 4 rivers' : `${seed.growSeconds}s`}
                             </span>
-                        </span>
-                        <span
-                            className="shrink-0 uppercase text-amber-300/80"
-                            style={labelStyle}
-                        >
-                            {seed.growSeconds}s
-                        </span>
-                    </button>
-                ))}
+                        </button>
+                    );
+                })}
             </div>
         );
     }

@@ -233,7 +233,10 @@ export function allEdenLoreRead(level: EdenLevelState): boolean {
     return level.loreStones.every((s) => s.read);
 }
 export function canRevealEdenSecret(level: EdenLevelState, character: GameCharacter): boolean {
-    return allEdenLoreRead(level) || canSeeHiddenPlaces(character);
+    // all inscriptions read, the Seer's sight, OR the knowing bought at the Tree.
+    return allEdenLoreRead(level)
+        || canSeeHiddenPlaces(character)
+        || knowledgeOutcomeFrom(character.discovered) === 'tasted';
 }
 export function edenZoneLabel(gx: number, gy: number): string | null {
     return edenRegionAt(gx, gy)?.name ?? null;

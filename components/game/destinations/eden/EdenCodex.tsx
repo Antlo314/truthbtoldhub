@@ -11,12 +11,16 @@
 //  summary (edenCodex) — nothing is re-derived from discovered[].
 // ============================================================
 
+import { useState } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { EdenLevelState } from '@/lib/game/edenLevel';
 import { edenCodex } from '@/lib/game/eden/codex';
 import type { EdenCodexLine } from '@/lib/game/eden/types';
+import { EDEN_REGIONS } from '@/lib/game/eden/atlas';
+import { EDEN_CREATURES } from '@/lib/game/eden/bestiary';
+import { serpentBeatById } from '@/lib/game/eden/serpent';
 import {
-    X, Sparkles, Leaf, Droplets, PawPrint, Apple, Shield, Flame, ShieldCheck,
+    X, Sparkles, Leaf, Droplets, PawPrint, Apple, Shield, Flame, ShieldCheck, Navigation,
 } from 'lucide-react';
 
 interface Props {
@@ -24,7 +28,11 @@ interface Props {
     level: EdenLevelState;
     onClose: () => void;
     accent?: string;
+    /** Fast-travel to a tile; only offered for wings already walked. */
+    onWarp?: (gx: number, gy: number) => void;
 }
+
+const CREATURE_LORE: Record<string, string> = Object.fromEntries(EDEN_CREATURES.map((c) => [c.id, c.lore]));
 
 const TINY = { fontSize: 'clamp(7px,2vw,9px)', letterSpacing: '0.08em' } as const;
 const MICRO = { fontSize: 'clamp(6px,1.7vw,8px)', letterSpacing: '0.1em' } as const;
@@ -106,12 +114,23 @@ function ProgressRing({ p, accent }: { p: number; accent: string }) {
 //  Component
 // ------------------------------------------------------------
 
-export default function EdenCodex({ character, level, onClose, accent = '#34d399' }: Props) {
+export default function EdenCodex({ character, level, onClose, accent = '#34d399', onWarp }: Props) {
     const summary = edenCodex(character, level);
     const overall = pct(summary.overall.done, summary.overall.total);
 
     const namedCount = summary.creatures.filter((c) => c.named).length;
     const harvestedCount = summary.fruits.filter((f) => f.harvested).length;
+    const complete = summary.overall.total > 0 && summary.overall.done >= summary.overall.total;
+    const rankName = summary.untempted ? 'Keeper of the Garden · Undivided' : 'Keeper of the Garden';
+
+    // tap-to-read detail (creature lore / serpent words / inscription)
+    const [detail, setDetail] = useState<{ title: string; text: string } | null>(null);
+
+    // wings already walked — the only places fast-travel will fold the distance to
+    const visited = new Set(
+        character.discovered.filter((d) => d.startsWith('eden_wing_')).map((d) => d.slice('eden_wing_'.length)),
+    );
+    const wayfare = EDEN_REGIONS.filter((r) => visited.has(r.id));
 
     return (
         <div
@@ -164,6 +183,17 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
             <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ scrollbarWidth: 'thin' }}>
                 <div className="mx-auto flex max-w-md flex-col gap-4">
 
+                    {/* completion rank */}
+                    {complete && (
+                        <div
+                            className="flex items-center justify-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-3 py-2.5 uppercase text-amber-100"
+                            style={{ ...TINY, boxShadow: '0 0 18px rgba(252,211,77,0.25)' }}
+                        >
+                            <Sparkles size={13} className="text-amber-300" />
+                            <span className="font-bold tracking-wider">{rankName}</span>
+                        </div>
+                    )}
+
                     {/* 1. Progress lines */}
                     <section className="glass-panel rounded-xl border border-emerald-500/20 bg-black/40 p-3 backdrop-blur-sm">
                         <SectionLabel icon={<Sparkles size={10} />}>The Reckoning</SectionLabel>
@@ -173,6 +203,26 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                             ))}
                         </div>
                     </section>
+
+                    {/* 1b. Wayfare — fast-travel to a wing you've already walked */}
+                    {onWarp && wayfare.length > 0 && (
+                        <section className="glass-panel rounded-xl border border-emerald-500/20 bg-black/40 p-3 backdrop-blur-sm">
+                            <SectionLabel icon={<Navigation size={10} />}>Wayfare</SectionLabel>
+                            <div className="mt-2.5 grid grid-cols-2 gap-2">
+                                {wayfare.map((r) => (
+                                    <button
+                                        key={r.id}
+                                        type="button"
+                                        onClick={() => onWarp(Math.round((r.rect[0] + r.rect[2]) / 2), Math.round((r.rect[1] + r.rect[3]) / 2))}
+                                        className="truncate rounded-lg border border-emerald-500/20 bg-white/[0.02] px-2.5 py-2 text-left uppercase text-emerald-200/80 transition hover:border-emerald-400/45 hover:bg-emerald-950/30 active:bg-emerald-900/30"
+                                        style={{ ...MICRO, minHeight: 36 }}
+                                    >
+                                        {r.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* 2. The Four Rivers */}
                     <section className="glass-panel rounded-xl border border-emerald-500/20 bg-black/40 p-3 backdrop-blur-sm">
@@ -223,9 +273,12 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                         </div>
                         <div className="mt-2.5 grid grid-cols-4 gap-1.5 sm:grid-cols-4">
                             {summary.creatures.map((c) => (
-                                <div
+                                <button
                                     key={c.id}
-                                    className="flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-center transition-all"
+                                    type="button"
+                                    disabled={!c.named}
+                                    onClick={() => c.named && setDetail({ title: c.name, text: CREATURE_LORE[c.id] ?? '' })}
+                                    className="flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-center transition-all enabled:hover:border-amber-300/60 enabled:active:scale-[0.97] disabled:cursor-default"
                                     style={{
                                         borderColor: c.named ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.06)',
                                         backgroundColor: c.named ? 'rgba(251,191,36,0.08)' : 'rgba(255,255,255,0.015)',
@@ -252,7 +305,7 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                     >
                                         {c.named ? c.name : '? ? ?'}
                                     </span>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </section>
@@ -316,10 +369,24 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                     ? 'rgba(255,255,255,0.25)'
                                     : resisted ? '#34d399' : '#ef4444';
                                 const verb = !resolved ? 'unheard' : resisted ? 'resisted' : 'listened';
+                                const openWords = () => {
+                                    if (!resolved) return;
+                                    const beat = serpentBeatById(b.id);
+                                    if (!beat) return;
+                                    const strip = (s: string) => s.replace(/^【[^】]*】\s*/, '');
+                                    const chosen = resisted ? beat.resistedLine : beat.listenedLine;
+                                    setDetail({
+                                        title: b.climax ? 'The Tree of Knowledge' : `The ${ordinal(i + 1)} Whisper`,
+                                        text: `${strip(beat.whisper)}\n\n— ${strip(chosen)}`,
+                                    });
+                                };
                                 return (
-                                    <div
+                                    <button
                                         key={b.id}
-                                        className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5"
+                                        type="button"
+                                        disabled={!resolved}
+                                        onClick={openWords}
+                                        className="flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-all enabled:hover:brightness-125 enabled:active:scale-[0.99] disabled:cursor-default"
                                         style={{
                                             borderColor: b.climax
                                                 ? withAlpha(resolved ? color : '#ef4444', 0.4)
@@ -353,7 +420,7 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                         <span className="shrink-0 uppercase" style={{ ...MICRO, color: resolved ? color : 'rgba(255,255,255,0.3)' }}>
                                             {verb}
                                         </span>
-                                    </div>
+                                    </button>
                                 );
                             })}
                         </div>
@@ -393,6 +460,29 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                     <div style={{ height: 8 }} />
                 </div>
             </div>
+
+            {/* tap-to-read detail — creature lore / the serpent's words */}
+            {detail && (
+                <button
+                    type="button"
+                    onClick={() => setDetail(null)}
+                    aria-label="Close"
+                    className="absolute inset-0 z-20 flex items-end bg-black/60 p-3 text-left backdrop-blur-[1px]"
+                >
+                    <div
+                        className="glass-panel w-full rounded-xl border border-emerald-400/30 bg-black/90 p-3"
+                        style={{ boxShadow: `0 -6px 30px ${withAlpha(accent, 0.25)}` }}
+                    >
+                        <div className="mb-1.5 flex items-center justify-between">
+                            <span className="font-semibold uppercase text-emerald-200" style={TINY}>{detail.title}</span>
+                            <X size={14} className="text-white/55" />
+                        </div>
+                        <p className="whitespace-pre-line italic leading-relaxed text-emerald-100/85" style={{ fontSize: 'clamp(9px,2.4vw,11px)' }}>
+                            {detail.text}
+                        </p>
+                    </div>
+                </button>
+            )}
         </div>
     );
 }

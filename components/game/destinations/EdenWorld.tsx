@@ -30,7 +30,7 @@ import {
     EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, EDEN_KEYS, edenDayState, EDEN_DAY_SECONDS,
     type EdenDayPhase, type EdenRiverId,
 } from '@/lib/game/eden/atlas';
-import { buildEdenOverworld } from '@/lib/game/edenOverworld';
+import { buildEdenOverworld, edenNearestWalkable } from '@/lib/game/edenOverworld';
 import {
     hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
     edenZoneLabel, edenDiscoveriesFromState, edenWingId, edenWingGreeting, canRevealEdenSecret,
@@ -41,9 +41,10 @@ import { EDEN_CREATURES, EDEN_CREATURE_COUNT, nameCreatureKey } from '@/lib/game
 import { edenEchoId } from '@/lib/game/eden/combats';
 import { EDEN_BEDS, EDEN_SEEDS, seedById, harvestFruitKey, growthStage } from '@/lib/game/eden/cultivation';
 import {
-    EDEN_SERPENT_BEATS, serpentBeatById, serpentChoiceKey, climaxResolution, knowledgeOutcomeKey,
+    EDEN_SERPENT_BEATS, serpentBeatById, serpentChoiceKey, climaxResolution, knowledgeOutcomeKey, listenedAny,
 } from '@/lib/game/eden/serpent';
 import type { EdenBedRuntime, EdenSeed } from '@/lib/game/eden/types';
+import { edenCodex } from '@/lib/game/eden/codex';
 import EdenCodex from '@/components/game/destinations/eden/EdenCodex';
 import NamingPanel from '@/components/game/destinations/eden/NamingPanel';
 import TendPanel from '@/components/game/destinations/eden/TendPanel';
@@ -153,12 +154,12 @@ type Overlay =
     | { kind: 'tend'; bedId: string }
     | null;
 
-interface FruitBuff { hp: number; damage: number; regen: number; fights: number; }
+interface FruitBuff { hp: number; damage: number; regen: number; lifesteal: number; crit: number; fights: number; }
 
 // The garden strengthens, but it does not break the trials: fruit buffs stack
 // additively only up to these ceilings, so farming the beds can't trivialise
 // the guardians or the Cherub.
-const FRUIT_BUFF_CAP = { hp: 30, damage: 12, regen: 8 } as const;
+const FRUIT_BUFF_CAP = { hp: 30, damage: 12, regen: 8, lifesteal: 0.3, crit: 0.3 } as const;
 
 export default function EdenWorld({
     character, isSolved, isGuardianCleared,
@@ -207,6 +208,7 @@ export default function EdenWorld({
     const [fightBonus, setFightBonus] = useState(0);
     const serpentResolvingRef = useRef(false);
     const rematchRef = useRef<string | null>(null);
+    const completeFiredRef = useRef(character.discovered.includes(edenKey('milestone', 'complete')));
     const touchedRef = useRef(new Set<string>());
     const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
     const lastWingRef = useRef<string | null>(null);
@@ -273,6 +275,36 @@ export default function EdenWorld({
         setDialogue({ speaker: 'The Gardener', text: EDEN_RESPAWN_LINE, color: '#34d399' });
         sfx.defeat();
     }, []);
+
+    // fast-travel from the codex — fold the distance to a known wing
+    const warpTo = useCallback((gx: number, gy: number) => {
+        const snap = edenNearestWalkable(gx, gy, levelRef.current);
+        const st = gameStateRef.current;
+        st.px = (snap.gx + 0.5) * EDEN_TILE;
+        st.py = (snap.gy + 0.5) * EDEN_TILE;
+        setOverlay(null);
+        setPlayerPos({ x: st.px, y: st.py });
+        setDialogue({ speaker: 'The Gardener', text: 'The garden folds the distance for one who has walked it before.', color: '#34d399' });
+        sfx.pickup();
+    }, []);
+
+    // 100% — every road of the garden walked. Fires once, grants the title + reward.
+    useEffect(() => {
+        if (completeFiredRef.current) return;
+        const sum = edenCodex(character, level);
+        if (sum.overall.total > 0 && sum.overall.done >= sum.overall.total) {
+            completeFiredRef.current = true;
+            onDiscover([edenKey('milestone', 'complete')]);
+            grantSkillPoints(2);
+            const rank = sum.untempted ? 'Keeper of the Garden, Undivided' : 'Keeper of the Garden';
+            setDialogue({
+                speaker: 'The Gardener',
+                text: `You have walked every road of the garden and left nothing unmet — every creature named, every river lit, every word read, every shade and echo answered. Eden is whole in you. Take the name the first keeper bore: ${rank}. (+2 skill points)`,
+                color: '#fde68a',
+            });
+            sfx.victory();
+        }
+    }, [character, level, onDiscover, grantSkillPoints]);
 
     useEffect(() => {
         const explored = exploredChunksFromDiscovered(character.discovered, 'eden');
@@ -361,6 +393,8 @@ export default function EdenWorld({
                 hp: Math.min(FRUIT_BUFF_CAP.hp, (prev?.hp ?? 0) + (f.buff!.hp ?? 0)),
                 damage: Math.min(FRUIT_BUFF_CAP.damage, (prev?.damage ?? 0) + (f.buff!.damage ?? 0)),
                 regen: Math.min(FRUIT_BUFF_CAP.regen, (prev?.regen ?? 0) + (f.buff!.regen ?? 0)),
+                lifesteal: Math.min(FRUIT_BUFF_CAP.lifesteal, (prev?.lifesteal ?? 0) + (f.buff!.lifesteal ?? 0)),
+                crit: Math.min(FRUIT_BUFF_CAP.crit, (prev?.crit ?? 0) + (f.buff!.crit ?? 0)),
                 fights: Math.max(prev?.fights ?? 0, f.buff!.fights),
             }));
         }
@@ -389,15 +423,19 @@ export default function EdenWorld({
         serpOfferShownRef.current = null;
 
         if (beat.climax) {
-            // the moral fork at the Tree of Knowledge — both endings are
-            // honourable, so each carries a reflective blessing (+1 skill point).
+            // the moral fork at the Tree of Knowledge — both endings are honourable
+            // and the river history shapes the words. Each grants a real blessing:
+            // tasting opens the eyes to every hidden cache; refusing pays in strength.
             const taste = choice === 'listened';
-            const res = climaxResolution(taste);
+            const listenedCount = Object.entries(levelRef.current.serpent)
+                .filter(([id, c]) => id !== 'serpent_tree' && c === 'listened').length;
+            const res = climaxResolution(taste, listenedCount);
+            const sp = res.power === 'extra-skill' ? 2 : 1;
             const keys = [serpentChoiceKey(beatId, choice), knowledgeOutcomeKey(res.outcome)];
             setLevel((prev) => ({ ...prev, serpent: { ...prev.serpent, [beatId]: choice }, knowledgeOutcome: res.outcome }));
             onDiscover(keys);
-            grantSkillPoints(1);
-            setDialogue({ speaker: res.title, text: `${res.line}\n\n${res.blessingLabel} · +1 skill point`, color: taste ? '#ef4444' : '#34d399' });
+            grantSkillPoints(sp);
+            setDialogue({ speaker: res.title, text: `${res.line}\n\n${res.blessingLabel} · +${sp} skill point${sp > 1 ? 's' : ''}`, color: taste ? '#ef4444' : '#34d399' });
             taste ? sfx.hit() : sfx.victory();
             return;
         }
@@ -1119,6 +1157,8 @@ export default function EdenWorld({
             bonusHp: baseBonuses.bonusHp + (fb?.hp ?? 0) + fightBonus,
             bonusDamage: baseBonuses.bonusDamage + (fb?.damage ?? 0),
             bonusRegen: baseBonuses.bonusRegen + (fb?.regen ?? 0),
+            bonusLifesteal: baseBonuses.bonusLifesteal + (fb?.lifesteal ?? 0),
+            bonusCrit: baseBonuses.bonusCrit + (fb?.crit ?? 0),
         };
     }, [baseBonuses, fruitBuff, fightBonus]);
 
@@ -1230,7 +1270,7 @@ export default function EdenWorld({
                 <p className="text-emerald-200/50 leading-snug mt-0.5" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>{level.riversLit.length}/4 rivers · {level.named.length}/{EDEN_CREATURES.length} named</p>
                 {fruitBuff && (
                     <p className="text-lime-300/85 mt-1 leading-snug" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>
-                        🍃 Garden vigour · {fruitBuff.damage ? `+${fruitBuff.damage} strike ` : ''}{fruitBuff.hp ? `+${fruitBuff.hp} vit ` : ''}{fruitBuff.regen ? `+${fruitBuff.regen} renew ` : ''}· {fruitBuff.fights} fight{fruitBuff.fights > 1 ? 's' : ''}
+                        🍃 Garden vigour · {fruitBuff.damage ? `+${fruitBuff.damage} strike ` : ''}{fruitBuff.hp ? `+${fruitBuff.hp} vit ` : ''}{fruitBuff.regen ? `+${fruitBuff.regen} renew ` : ''}{fruitBuff.lifesteal ? `+${Math.round(fruitBuff.lifesteal * 100)}% leech ` : ''}{fruitBuff.crit ? `+${Math.round(fruitBuff.crit * 100)}% edge ` : ''}· {fruitBuff.fights} fight{fruitBuff.fights > 1 ? 's' : ''}
                     </p>
                 )}
             </div>
@@ -1251,6 +1291,11 @@ export default function EdenWorld({
                                 {climax ? 'The tree of knowing good and evil' : 'A whisper at the water'}
                             </p>
                             <p className="text-red-100/90 text-center leading-snug mb-2.5 text-pretty" style={{ fontSize: 'clamp(8px,2.3vw,10px)' }}>{whisper}</p>
+                            {listenedAny(character.discovered) && (
+                                <p className="text-center italic text-red-300/55 mb-2 leading-snug" style={{ fontSize: 'clamp(7px,1.8vw,8px)' }}>
+                                    …it speaks softer now, the way a voice does once you have listened.
+                                </p>
+                            )}
                             <div className="flex gap-2 justify-center">
                                 <button type="button" onClick={() => resolveSerpent(nearSerpent, 'listened')} className="flex-1 max-w-[9rem] px-3 py-2.5 rounded-lg font-black uppercase bg-red-900/70 border border-red-500/40 text-red-100 leading-tight text-center" style={{ fontSize: 'clamp(8px, 2.2vw, 9px)', letterSpacing: '0.1em', minHeight: 40 }}>
                                     {climax ? 'Taste' : 'Listen'}
@@ -1265,9 +1310,9 @@ export default function EdenWorld({
             })()}
 
             {/* overlays */}
-            {overlay?.kind === 'codex' && <EdenCodex character={character} level={level} onClose={() => setOverlay(null)} accent="#34d399" />}
+            {overlay?.kind === 'codex' && <EdenCodex character={character} level={level} onClose={() => setOverlay(null)} accent="#34d399" onWarp={warpTo} />}
             {overlay?.kind === 'naming' && openCreature && <NamingPanel creature={openCreature} onName={nameCreature} onClose={() => setOverlay(null)} accent="#34d399" />}
-            {overlay?.kind === 'tend' && openBed && <TendPanel bed={openBed} runtime={openBedRt} onPlant={(seedId) => plantSeed(openBed.id, seedId)} onHarvest={(seed) => harvestBed(openBed.id, seed)} onClose={() => setOverlay(null)} accent="#34d399" />}
+            {overlay?.kind === 'tend' && openBed && <TendPanel bed={openBed} runtime={openBedRt} onPlant={(seedId) => plantSeed(openBed.id, seedId)} onHarvest={(seed) => harvestBed(openBed.id, seed)} onClose={() => setOverlay(null)} accent="#34d399" rareUnlocked={level.bossGateOpen} />}
 
             {/* controls */}
             {!activeFight && !dialogue && !overlay && (

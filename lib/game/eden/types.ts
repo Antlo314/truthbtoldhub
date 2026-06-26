@@ -59,7 +59,7 @@ export interface EdenFruit {
     /** Instant heal on harvest (dungeon HP). */
     heal?: number;
     /** Temporary combat buff carried into the next fight(s). */
-    buff?: { hp?: number; damage?: number; regen?: number; fights: number };
+    buff?: { hp?: number; damage?: number; regen?: number; lifesteal?: number; crit?: number; fights: number };
     line: string;
 }
 
@@ -70,6 +70,8 @@ export interface EdenSeed {
     /** Real seconds of in-level time to ripen. */
     growSeconds: number;
     fruit: EdenFruit;
+    /** Gated rare seed — only sowable once this condition is met. */
+    locked?: 'rivers';
 }
 
 export interface EdenBed {

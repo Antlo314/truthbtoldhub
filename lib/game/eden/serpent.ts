@@ -190,30 +190,40 @@ export function knowledgeOutcomeFrom(discovered: string[]): EdenKnowledgeOutcome
  *            truer road. Both endings are honourable: the premise is a
  *            return to the Source, by whichever path you walked here.
  */
-export function climaxResolution(listened: boolean): {
+export function climaxResolution(listened: boolean, listenedCount = 0): {
     outcome: 'tasted' | 'refused';
     title: string;
     line: string;
     blessingLabel: string;
+    /** The mechanical blessing this ending grants. */
+    power: 'reveal-secrets' | 'extra-skill';
 } {
     if (listened) {
+        const echo = listenedCount >= 2
+            ? ' You listened at the rivers, and the tree only finished what those whispers began.'
+            : ' Even past every river-whisper, here at the last you reached out.';
         return {
             outcome: 'tasted',
             title: 'The Long Way Home',
             line:
                 'You know good and evil now — wholly, heavily, all at once. The shortcut was real; ' +
-                'so is its weight. The road back to the Source did not close. It only grew honest. ' +
-                'Walk it eyes open, and you will arrive carrying everything you learned the hard way.',
-            blessingLabel: 'The Knowing — the harder, truer road',
+                'so is its weight.' + echo + ' The road back to the Source did not close. It only grew ' +
+                'honest. But your eyes are open now — and the garden hides nothing more from you.',
+            blessingLabel: 'The Knowing — eyes opened to every hidden thing',
+            power: 'reveal-secrets',
         };
     }
+    const held = listenedCount === 0
+        ? ' Not once did you trade the road for a whisper.'
+        : ' You faltered at the water, but at the tree itself you held.';
     return {
         outcome: 'refused',
         title: 'The Untempted',
         line:
-            'You turned from the tree and kept the long road whole. Not because you feared the knowing, ' +
-            'but because you trusted the walking. The Source was never at the end of a shortcut — ' +
-            'it was in every mile you refused to skip. You arrive undivided.',
-        blessingLabel: 'The Untempted — the whole road kept',
+            'You turned from the tree and kept the long road whole.' + held + ' The Source was never at ' +
+            'the end of a shortcut — it was in every mile you refused to skip. You arrive undivided, and ' +
+            'the strength you earned the long way stays with you.',
+        blessingLabel: 'The Whole Road — strength earned, not seized',
+        power: 'extra-skill',
     };
 }
