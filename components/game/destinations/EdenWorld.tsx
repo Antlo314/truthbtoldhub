@@ -28,7 +28,7 @@ import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt, edenRegionAt,
     EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
     EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, EDEN_KEYS, edenDayState, EDEN_DAY_SECONDS,
-    type EdenDayPhase,
+    type EdenDayPhase, type EdenRiverId,
 } from '@/lib/game/eden/atlas';
 import { buildEdenOverworld } from '@/lib/game/edenOverworld';
 import {
@@ -38,6 +38,7 @@ import {
     EDEN_MINIMAP_TERRAIN_COLORS, type EdenLevelState,
 } from '@/lib/game/edenLevel';
 import { EDEN_CREATURES, EDEN_CREATURE_COUNT, nameCreatureKey } from '@/lib/game/eden/bestiary';
+import { edenEchoId } from '@/lib/game/eden/combats';
 import { EDEN_BEDS, EDEN_SEEDS, seedById, harvestFruitKey, growthStage } from '@/lib/game/eden/cultivation';
 import {
     EDEN_SERPENT_BEATS, serpentBeatById, serpentChoiceKey, climaxResolution, knowledgeOutcomeKey,
@@ -143,6 +144,7 @@ type NearTarget =
     | { kind: 'name'; id: string; label: string }
     | { kind: 'tend'; id: string; label: string }
     | { kind: 'gardener'; id: string; label: string }
+    | { kind: 'rematch'; id: string; label: string }
     | null;
 
 type Overlay =
@@ -203,6 +205,7 @@ export default function EdenWorld({
     const fightTriggeredRef = useRef<string | null>(null);
     const [fightBonus, setFightBonus] = useState(0);
     const serpentResolvingRef = useRef(false);
+    const rematchRef = useRef<string | null>(null);
     const touchedRef = useRef(new Set<string>());
     const wingsSeenRef = useRef(new Set(character.discovered.filter((d) => d.startsWith('eden_wing_'))));
     const lastWingRef = useRef<string | null>(null);
@@ -470,7 +473,13 @@ export default function EdenWorld({
             const g = guideStepRef.current;
             setDialogue({ speaker: 'The Gardener', text: `${g.objective}. ${g.tip}`, color: '#34d399' });
         }
-    }, [near, readLoreStone]);
+        else if (n.kind === 'rematch') {
+            // NG+ — re-challenge a fallen guardian's echo for a deeper blessing.
+            rematchRef.current = n.id;
+            setFightBonus(consumeFightBonusHp());
+            setActiveFight(edenEchoId(n.id as EdenRiverId));
+        }
+    }, [near, readLoreStone, consumeFightBonusHp]);
 
     // music
     useEffect(() => {
@@ -729,6 +738,15 @@ export default function EdenWorld({
                     const d = Math.hypot((bed.at.gx + 0.5) * EDEN_TILE - st.px, (bed.at.gy + 0.5) * EDEN_TILE - st.py);
                     if (d < 22 && d < bestD) { bestD = d; target = { kind: 'tend', id: bed.id, label: 'Tend the bed' }; }
                 }
+                // NG+ echo rematch at a cleared river-guardian arena (weapon required)
+                if (character.equipped.weapon) {
+                    for (const fz of lvl.fights) {
+                        if (!fz.cleared || !fz.river) continue;
+                        if (charRef.current.discovered.includes(edenKey('milestone', `rematch_${fz.river}`))) continue;
+                        const d = Math.hypot((fz.gx + 0.5) * EDEN_TILE - st.px, (fz.gy + 0.5) * EDEN_TILE - st.py);
+                        if (d < fz.radius && d < bestD) { bestD = d; target = { kind: 'rematch', id: fz.river, label: `Challenge the Echo of ${EDEN_RIVERS_V2[fz.river].name}` }; }
+                    }
+                }
                 setNear((p) => (p?.kind === target?.kind && p?.id === (target as any)?.id ? p : target));
 
                 // serpent whispers — once a beat is entered, freeze the prompt
@@ -892,6 +910,20 @@ export default function EdenWorld({
                 ctx.lineWidth = Z; ctx.setLineDash([5 * Z, 5 * Z]); ctx.lineDashOffset = dashOff;
                 ctx.beginPath(); ctx.arc(SX((fz.gx + 0.5) * EDEN_TILE), SY((fz.gy + 0.5) * EDEN_TILE), fz.radius * Z, 0, Math.PI * 2); ctx.stroke();
                 ctx.setLineDash([]);
+            }
+            // NG+ echo markers — a faint violet ↺ at cleared guardian arenas
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (const fz of lvl.fights) {
+                if (!fz.cleared || !fz.river) continue;
+                if (charRef.current.discovered.includes(edenKey('milestone', `rematch_${fz.river}`))) continue;
+                const ex = SX((fz.gx + 0.5) * EDEN_TILE), ey = SY((fz.gy + 0.5) * EDEN_TILE);
+                const ep = 0.35 + Math.sin(st.t / 320 + fz.gx) * 0.2;
+                ctx.strokeStyle = `rgba(192,132,252,${ep})`; ctx.lineWidth = Z;
+                ctx.setLineDash([3 * Z, 4 * Z]); ctx.lineDashOffset = dashOff;
+                ctx.beginPath(); ctx.arc(ex, ey, fz.radius * 0.6 * Z, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = `rgba(216,180,254,${ep + 0.2})`; ctx.font = `${9 * Z}px serif`;
+                ctx.fillText('↺', ex, ey);
             }
             // lesson shades
             for (const sh of st.shades) {
@@ -1065,12 +1097,25 @@ export default function EdenWorld({
                     {...liveBonuses}
                     onVictory={() => {
                         if (activeFightZone) markFightCleared(activeFightZone.id, activeFight);
-                        else { fightTriggeredRef.current = null; setActiveFight(null); setFruitBuff((p) => (p && p.fights > 1 ? { ...p, fights: p.fights - 1 } : null)); }
+                        else {
+                            fightTriggeredRef.current = null;
+                            setActiveFight(null);
+                            setFruitBuff((p) => (p && p.fights > 1 ? { ...p, fights: p.fights - 1 } : null));
+                            // NG+ echo cleared — grant the one-time deeper blessing.
+                            // Gate on the won fight actually being an echo so a
+                            // stale ref can never pay out on an unrelated fight.
+                            if (rematchRef.current && activeFight?.startsWith('eden_echo_')) {
+                                const key = edenKey('milestone', `rematch_${rematchRef.current}`);
+                                if (!charRef.current.discovered.includes(key)) { onDiscover([key]); grantSkillPoints(1); }
+                            }
+                            rematchRef.current = null;
+                        }
                         setDialogue({ speaker: 'The Gardener', text: fightDest.combat!.victory, color: '#34d399' });
                         sfx.victory();
                     }}
                     onDefeat={() => {
                         fightTriggeredRef.current = null;
+                        rematchRef.current = null;
                         setActiveFight(null);
                         setDungeonHp((hp) => {
                             const next = hp - 40;
@@ -1080,7 +1125,7 @@ export default function EdenWorld({
                             return Math.max(0, next);
                         });
                     }}
-                    onExit={() => { fightTriggeredRef.current = null; setActiveFight(null); }}
+                    onExit={() => { fightTriggeredRef.current = null; rematchRef.current = null; setActiveFight(null); }}
                 />
             )}
 

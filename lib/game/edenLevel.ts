@@ -259,7 +259,7 @@ export function isEdenSolid(gx: number, gy: number, level: EdenLevelState, barri
 export function edenCombatAccent(combatId: string): string {
     if (combatId === EDEN_CHERUB.combatId) return '#ef4444';
     for (const id of EDEN_RIVER_ORDER) {
-        if (combatId === `eden_g_${id}` || combatId === `eden_serpent_${id}`) {
+        if (combatId === `eden_g_${id}` || combatId === `eden_serpent_${id}` || combatId === `eden_echo_${id}`) {
             return EDEN_RIVERS_V2[id].color;
         }
     }

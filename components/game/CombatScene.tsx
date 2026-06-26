@@ -405,11 +405,19 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 f.x += -uy * 20 * dt * Math.sin(tsec * 0.8); f.y += ux * 20 * dt * Math.sin(tsec * 0.8);
                 f.moveCd -= dt;
                 if (f.moveCd <= 0) {
-                    const opts: string[] = pd < 46 ? ['slam', 'slam', 'charge'] : pd > 80 ? ['volley', 'volley', 'charge'] : ['charge', 'volley', 'slam'];
+                    let opts: string[] = pd < 46 ? ['slam', 'slam', 'charge'] : pd > 80 ? ['volley', 'volley', 'charge'] : ['charge', 'volley', 'slam'];
+                    // signature move-kits — bias each boss toward a distinct fight
+                    switch (cfg.bossPattern) {
+                        case 'slammer': opts = pd < 64 ? ['slam', 'slam', 'slam'] : ['charge', 'slam', 'volley']; break;
+                        case 'arc': opts = pd > 56 ? ['volley', 'volley', 'charge'] : ['charge', 'volley']; break;
+                        case 'blink': opts = ['blink', 'volley', 'blink', 'charge']; break;
+                        case 'sweep': opts = pd < 80 ? ['sweep', 'slam', 'sweep'] : ['charge', 'sweep']; break;
+                        case 'rings': opts = pd < 100 ? ['slam', 'volley', 'slam'] : ['volley', 'charge']; break;
+                    }
                     if (f.phase >= 2 && f.summons < (f.phase >= 3 ? 2 : 1) && st.foes.filter((x) => !x.boss).length < 2) opts.push('summon');
                     f.move = opts[Math.floor(Math.random() * opts.length)];
                     f.state = 'windup';
-                    f.t = f.move === 'slam' ? (bossTier === 1 ? 0.95 : 0.7) : 0.6;
+                    f.t = f.move === 'slam' ? (bossTier === 1 ? 0.95 : 0.7) : f.move === 'sweep' ? 0.9 : f.move === 'blink' ? 0.45 : 0.6;
                     f.hit = false;
                     if (f.move === 'charge') { f.vx = ux; f.vy = uy; }
                 }
@@ -421,8 +429,31 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         const slamDur = bossTier === 1 ? 0.58 : bossTier === 2 ? 0.42 : 0.3;
                         const slamMult = bossTier === 1 ? 0.75 : bossTier === 2 ? 1.1 : 1.5;
                         st.rings.push({ x: st.px, y: st.py, r: slamR, t: 0, dur: slamDur, dmg: bossDmg * slamMult, done: false });
+                        // the Cherub's flaming sword: escalating concentric rings
+                        // centered on it in later phases — dodge through the gaps.
+                        if (cfg.bossPattern === 'rings' && f.phase >= 2) {
+                            const extra = f.phase >= 3 ? 2 : 1;
+                            for (let k = 1; k <= extra; k++) {
+                                st.rings.push({ x: f.x, y: f.y, r: slamR + 18 * k + 12, t: 0, dur: slamDur + 0.13 * k, dmg: bossDmg * 0.85, done: false });
+                            }
+                        }
                         sfx.slam(); st.shake = Math.max(st.shake, 5);
                         f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
+                    } else if (f.move === 'sweep') {
+                        // half-arena AoE centered on the boss — big, telegraphed.
+                        const sweepR = bossTier >= 3 ? 86 : 72;
+                        st.rings.push({ x: f.x, y: f.y, r: sweepR, t: 0, dur: 0.5, dmg: bossDmg * 1.15, done: false });
+                        sfx.slam(); st.shake = Math.max(st.shake, 6);
+                        f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase);
+                    } else if (f.move === 'blink') {
+                        // vanish and reappear at a flank, then jab — punish standing still.
+                        const ba = Math.atan2(uy, ux) + (Math.random() < 0.5 ? 1 : -1) * (Math.PI * 0.55);
+                        f.x = Math.max(TILE + 6, Math.min(W - TILE - 6, st.px + Math.cos(ba) * 60));
+                        f.y = Math.max(TILE + 6, Math.min(H - TILE - 6, st.py + Math.sin(ba) * 60));
+                        const ja = Math.atan2(st.py - f.y, st.px - f.x);
+                        fireProj(f.x, f.y - 4, ja, 108, bossDmg * 0.6, d.accent, 3.2);
+                        sfx.cast(); st.flash = Math.max(st.flash, 0.22);
+                        f.move = ''; f.state = 'approach'; f.moveCd = bossMoveCd(f.phase) * 0.7;
                     } else if (f.move === 'volley') {
                         const n = f.phase === 1 ? 3 : f.phase === 2 ? 5 : 8;
                         const base = Math.atan2(uy, ux);

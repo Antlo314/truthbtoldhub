@@ -58,6 +58,14 @@ export interface CombatConfig {
     bossDifficulty?: number;
     /** Optional foe roster override (wild shade variety). */
     enemyKinds?: ('grunt' | 'caster' | 'brute' | 'flanker')[];
+    /**
+     * Optional signature move-kit. Undefined = the default mixed kit (every
+     * existing boss). Each biases the boss toward a distinct, readable fight:
+     *  slammer — heavy ground slams · arc — ranged fans + lunges ·
+     *  blink — teleporting jabber · sweep — half-arena AoE ·
+     *  rings — escalating concentric burning rings (multi-phase finale).
+     */
+    bossPattern?: 'slammer' | 'arc' | 'blink' | 'sweep' | 'rings';
 }
 
 export type BossArt = 'wraith' | 'golem' | 'serpent' | 'sentinel' | 'titan';

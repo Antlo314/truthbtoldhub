@@ -11,8 +11,10 @@
 // ============================================================
 
 import type { EdenCombatDef } from '@/lib/game/eden/types';
-import type { BossArt } from '@/lib/game/destinations';
+import type { BossArt, CombatConfig } from '@/lib/game/destinations';
 import { EDEN_RIVERS_V2, EDEN_RIVER_ORDER, type EdenRiverId } from '@/lib/game/eden/atlas';
+
+type BossPattern = NonNullable<CombatConfig['bossPattern']>;
 
 // ------------------------------------------------------------
 //  Tutorial skirmishes — the southern garden teaches the hand.
@@ -74,6 +76,8 @@ interface GuardianSpec {
     addDmg: number;
     /** Add roster — matches the guardian's flavour (echoes/lungers/etc). */
     kinds: FoeKind[];
+    /** Signature move-kit so each river fights distinctly. */
+    pattern: BossPattern;
     difficulty: number;
     challenge: string;
 }
@@ -87,6 +91,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         addHp: 26,
         addDmg: 10,
         kinds: ['grunt', 'grunt'],
+        pattern: 'slammer',
         difficulty: 1,
         challenge: 'A figure of gold-veined stone rises from the riverbed of Havilah. It strikes slow but sure — read the wind-up, sidestep, and answer between blows.',
     },
@@ -98,6 +103,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         addHp: 28,
         addDmg: 11,
         kinds: ['caster', 'flanker'],
+        pattern: 'arc',
         difficulty: 2,
         challenge: 'A coiled thing wreathed in the cold springs of Cush bars the source. It lunges in long arcs — never stand where it last struck, and the water will not drown you.',
     },
@@ -109,6 +115,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         addHp: 28,
         addDmg: 12,
         kinds: ['flanker', 'flanker', 'caster'],
+        pattern: 'blink',
         difficulty: 2,
         challenge: 'A pale wraith moves faster than thought above the swift water toward Assyria. It blinks across the arena — clear its echoes first, then chase it into its own recovery.',
     },
@@ -120,6 +127,7 @@ const GUARDIAN_SPEC: Record<EdenRiverId, GuardianSpec> = {
         addHp: 30,
         addDmg: 13,
         kinds: ['brute', 'flanker', 'grunt'],
+        pattern: 'sweep',
         difficulty: 3,
         challenge: 'The Keeper of the great river stands like a wall over the deepest water. Its sweep covers half the bank — bait the swing, roll wide, and close before it sets again.',
     },
@@ -140,6 +148,7 @@ function guardianDef(id: EdenRiverId): EdenCombatDef {
         bossHp: spec.hp,
         bossDmg: spec.dmg,
         bossDifficulty: spec.difficulty,
+        bossPattern: spec.pattern,
         victory: `${river.guardian.name} sinks back into the current and is still. The ${river.name} fountain catches light — ${river.land} drinks again, and the dashed line bends toward the Tree.`,
     };
 }
@@ -227,8 +236,39 @@ const CHERUB: EdenCombatDef = {
     bossHp: 196,
     bossDmg: 16,
     bossDifficulty: 3,
+    bossPattern: 'rings',
     victory: 'The flaming sword lowers and goes still. The four rivers are attuned, the garden whole — and beyond the gate, the Tree of Life remembers the first morning, and you.',
 };
+
+// ------------------------------------------------------------
+//  NG+ ECHOES — once a guardian has fallen, its river remembers it.
+//  A harder spectre can be re-challenged for a one-time deeper
+//  blessing. Buffed clones; ids 'eden_echo_<river>'.
+// ------------------------------------------------------------
+function echoDef(id: EdenRiverId): EdenCombatDef {
+    const base = guardianDef(id);
+    const river = EDEN_RIVERS_V2[id];
+    return {
+        ...base,
+        id: `eden_echo_${id}`,
+        bossName: `Echo of ${river.guardian.name}`,
+        bossHp: Math.round(base.bossHp * 1.6),
+        bossDmg: Math.round(base.bossDmg * 1.2),
+        bossDifficulty: Math.min(5, (base.bossDifficulty ?? 3) + 1),
+        enemyCount: base.enemyCount + 1,
+        enemyHp: Math.round(base.enemyHp * 1.2),
+        challenge: `The ${river.name} remembers its guardian, and the memory has teeth. ${river.guardian.name} returns swifter and surer — the trial beyond the trial.`,
+        victory: `The echo disperses. You have mastered the ${river.name} not once but twice, and it yields its deeper blessing.`,
+    };
+}
+const ECHOES: Record<string, EdenCombatDef> = Object.fromEntries(
+    EDEN_RIVER_ORDER.map((id) => { const d = echoDef(id); return [d.id, d]; }),
+);
+
+/** The NG+ echo combat id for a river guardian. */
+export function edenEchoId(river: EdenRiverId): string {
+    return `eden_echo_${river}`;
+}
 
 // ------------------------------------------------------------
 //  The whole record.
@@ -237,6 +277,7 @@ export const EDEN_COMBATS: Record<string, EdenCombatDef> = {
     ...TUTORIALS,
     ...GUARDIANS,
     ...SERPENT_TRAPS,
+    ...ECHOES,
     eden_boss: CHERUB,
 };
 
