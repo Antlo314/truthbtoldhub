@@ -363,7 +363,10 @@ export default function WorldPage() {
                 return;
             }
             const needsFight = !!dest.combat && !ch.cleared.includes(dest.poiId);
-            if (needsFight && !ch.equipped.weapon) {
+            // Eden opens straight into its walkable garden (the Cherub is fought
+            // in-world, and each guardian/Cherub fight is individually weapon-gated
+            // there) — so an unarmed soul may still enter to name, tend, and roam.
+            if (needsFight && !ch.equipped.weapon && dest.poiId !== 'dest_eden') {
                 setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truth’s Hut and forge your first weapon.', color: dest.accent });
             } else if (needsFight && dest.poiId !== 'dest_eden') {
                 setCombatIntroDest(dest);

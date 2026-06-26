@@ -6,8 +6,8 @@ import { DEST_BY_POI } from '@/lib/game/destinations';
 //  Eden first, fully complete, then Giza → Fair → Kolbrin → Emerald.
 // ============================================================
 
-// Eden is sealed while it's being built out — focus stays on Truth's Hut.
-export const EDEN_SEALED = true;
+// Eden is fully built out — the garden portal is open (first age in the chain).
+export const EDEN_SEALED = false;
 
 export const DESTINATION_ORDER = [
     'dest_eden',
