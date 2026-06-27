@@ -98,21 +98,23 @@ export default function PowerSelf() {
 
             const file = event.target.files[0];
             if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
-            if (file.size > 5 * 1024 * 1024) throw new Error('Image too large — keep it under 5 MB.');
-            const fileExt = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'png';
-            const filePath = `${user?.id}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+            if (file.size > 4 * 1024 * 1024) throw new Error('Image too large — keep it under 4 MB.');
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file);
+            // Upload via the server (service-role) so it works without hand-set
+            // storage policies — the bucket is auto-created/repaired on the server.
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Sign in to change your portrait.');
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/profile/avatar', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+                body: fd,
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || !json?.url) throw new Error(json?.error || 'Upload failed — please try again.');
 
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            await updateProfile({ avatar_url: publicUrl });
+            await updateProfile({ avatar_url: json.url });
             playClick();
         } catch (error: any) {
             alert(error.message);

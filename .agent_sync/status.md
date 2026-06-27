@@ -259,3 +259,12 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Welcome + rules**: new `components/archive/SanctumWelcome.tsx` — a first-visit modal (localStorage `tbth-sanctum-welcomed`) with 6 generic house rules (respect / no spam / stay on topic / keep it safe / privacy / Architects keep the peace). Wired into `ArchiveClient` after bootstrap.
 - **Hall trim**: dropped **Inner Sanctum** (`supporters-lounge`, `architects-table`) and **#the-path**. `community_schema.sql` seed updated + a self-healing DELETE added; new **`community_update_halls.sql`** is the one-shot the USER must run in Supabase (the original migration already created those Halls). Categories are dynamic, so removing the rows removes "Inner Sanctum" automatically.
 - **Handoff**: ONE manual user step — run `community_update_halls.sql` in the Supabase SQL editor to delete the 3 retired Halls. No game-store/schema changes beyond that. claude → idle.
+
+---
+
+## 2026-06-27 (Claude) — FIX: avatar upload ("not allowed")
+
+- **Status**: Built + verified (tsc 0; `npm run build` exit 0). User reported profile-picture upload failing with "not allowed".
+- **Cause**: the browser uploaded straight to the `avatars` storage bucket, whose RLS policies were never set up (the avatars setup lives at the bottom of `secure_dispatches_storage.sql`, evidently never run) → storage rejected the insert.
+- **Fix (no user SQL)**: new `app/api/profile/avatar/route.ts` — service-role endpoint (verifies the caller's bearer token, then uploads with `SUPABASE_SERVICE_ROLE_KEY`, bypassing storage RLS, and auto-creates/repairs the public `avatars` bucket on first use). `app/self/page.tsx` `uploadAvatar` rewired to POST the file there; clearer error messages; cap lowered 5→4 MB (now passes through the serverless function, under the ~4.5 MB body limit). Same service-role key as /api/admin + /api/stripe, so if those work this does too.
+- **Handoff**: no manual step. If uploads still fail, check `SUPABASE_SERVICE_ROLE_KEY` is the live (rotated) key per [[leaked-supabase-keys]]. claude → idle.
