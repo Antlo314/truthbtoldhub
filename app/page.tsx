@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { Hexagon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import CinematicVideo from '@/components/game/CinematicVideo';
@@ -244,10 +245,95 @@ function TitleCardInner() {
     );
 }
 
+// Keep the middleware gate cookie in lock-step before navigating to a gated
+// route (/world), so the redirect can't bounce on a not-yet-rebuilt cookie.
+function writeGate(token: string) {
+    if (typeof document === 'undefined') return;
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `sb-access-token=${token}; path=/; SameSite=Lax${secure}`;
+}
+
+// Where should a signed-in soul land? The CLOUD game_state is authoritative, so
+// this works on any device (a returning Google user on a new phone still lands
+// in their game). Demo/offline souls read the local journey instead.
+async function resolveDestination(userId: string | undefined, isDemo: boolean): Promise<string> {
+    if (isDemo || !userId) {
+        try {
+            const raw = localStorage.getItem('tbth-journey');
+            if (raw) {
+                const st = JSON.parse(raw)?.state;
+                if (st?.initiated && st?.character?.path) return '/world';
+                if (st?.initiated || st?.character?.name?.trim()) return '/awakening/path';
+            }
+        } catch { /* ignore */ }
+        return '/awakening';
+    }
+    try {
+        const { data } = await supabase.from('game_state').select('character, initiated').eq('user_id', userId).maybeSingle();
+        const ch = data?.character as any;
+        if (data?.initiated && ch?.path) return '/world';            // ready to play
+        if (data?.initiated || (ch && ch.name)) return '/awakening/path'; // finish onboarding
+    } catch { /* ignore — fall through to onboarding */ }
+    return '/awakening';
+}
+
+// The landing gate: a signed-in soul (incl. right after Google sign-in, and on
+// every return visit) is sent straight into the game; only logged-out visitors
+// see the title card. Add ?stay=1 to force the title card while signed in.
+function LandingGate() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [phase, setPhase] = useState<'checking' | 'title'>('checking');
+
+    useEffect(() => {
+        // capture a referral cipher even if we're about to redirect
+        const cipher = searchParams.get('cipher');
+        if (cipher) { try { localStorage.setItem('cipher_referral', cipher); } catch { /* */ } }
+
+        if (searchParams.get('stay')) { setPhase('title'); return; }
+
+        const isDemo = typeof window !== 'undefined' && localStorage.getItem('tbth-demo') === 'true';
+        let done = false;
+        const go = async (session: any) => {
+            if (done) return;
+            done = true;
+            const token = session?.access_token || (isDemo ? 'demo-token' : null);
+            if (token) writeGate(token);
+            router.replace(await resolveDestination(session?.user?.id, isDemo));
+        };
+
+        // A Google OAuth return establishes the session asynchronously — catch it.
+        const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+            if (session) go(session);
+        });
+
+        supabase.auth.getSession().then(({ data }) => {
+            if (data.session) { go(data.session); return; }
+            if (isDemo) { go(null); return; }
+            const oauth = typeof window !== 'undefined' && /[#&?](access_token|code)=/.test(window.location.href);
+            if (!oauth) { if (!done) setPhase('title'); }
+            else { setTimeout(() => { if (!done) setPhase('title'); }, 5000); } // fallback if OAuth fails
+        });
+
+        return () => { sub.subscription.unsubscribe(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    if (phase === 'checking') {
+        return (
+            <main className="relative min-h-screen bg-black flex flex-col items-center justify-center gap-6">
+                <Hexagon className="w-12 h-12 text-aether-gold animate-spin-slow drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]" />
+                <p className="font-mono text-[9px] text-zinc-500 tracking-[0.4em] uppercase animate-pulse">Returning to the Source…</p>
+            </main>
+        );
+    }
+    return <TitleCardInner />;
+}
+
 export default function Home() {
     return (
         <Suspense fallback={<div className="min-h-screen bg-black" />}>
-            <TitleCardInner />
+            <LandingGate />
         </Suspense>
     );
 }

@@ -289,3 +289,12 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Welcome message**: seeds a PINNED welcome into #welcome (guarded: only if empty), authored by an Architect profile if present. In `community_schema.sql` seed + the one-shot.
 - **Run once**: new **`update_sanctum_extras.sql`** (robust can_post_channel + set_message_pin + welcome seed). Needs `can_manage_sanctum` from `update_sanctum_staff_perms.sql`.
 - **Handoff**: run `update_sanctum_extras.sql` (after `update_sanctum_staff_perms.sql`). claude → idle.
+
+---
+
+## 2026-06-27 (Claude) — Landing flow: signed-in souls go straight to the game
+
+- **Status**: Built + verified (tsc 0; `npm run build` exit 0). UNCOMMITTED. No SQL. User: after Google sign-in (and on every return) take them directly to the game instead of the title card.
+- **Change (`app/page.tsx` only)**: new `LandingGate` wraps the title card. On `/`, it resolves the session (incl. catching the async Google OAuth return via `onAuthStateChange`, plus demo via localStorage `tbth-demo`) and **router.replace** to the right place; only logged-out visitors see `<TitleCardInner/>`. Destination via authoritative CLOUD `game_state` (`select character, initiated`): `initiated && character.path` → `/world`; partial → `/awakening/path`; none → `/awakening` (works cross-device — a new phone still lands a returning Google user in their game). Writes the `sb-access-token` gate cookie BEFORE redirecting so the gated `/world` doesn't bounce. `?stay=1` forces the title card (restart / founder view escape hatch). Brief gold-hexagon loader during the check.
+- **OAuth**: AuthModal still `redirectTo: window.location.origin` (→ `/`); LandingGate handles the rest.
+- **Handoff**: no manual step. claude → idle.
