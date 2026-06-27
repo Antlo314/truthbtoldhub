@@ -298,3 +298,12 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Change (`app/page.tsx` only)**: new `LandingGate` wraps the title card. On `/`, it resolves the session (incl. catching the async Google OAuth return via `onAuthStateChange`, plus demo via localStorage `tbth-demo`) and **router.replace** to the right place; only logged-out visitors see `<TitleCardInner/>`. Destination via authoritative CLOUD `game_state` (`select character, initiated`): `initiated && character.path` → `/world`; partial → `/awakening/path`; none → `/awakening` (works cross-device — a new phone still lands a returning Google user in their game). Writes the `sb-access-token` gate cookie BEFORE redirecting so the gated `/world` doesn't bounce. `?stay=1` forces the title card (restart / founder view escape hatch). Brief gold-hexagon loader during the check.
 - **OAuth**: AuthModal still `redirectTo: window.location.origin` (→ `/`); LandingGate handles the rest.
 - **Handoff**: no manual step. claude → idle.
+
+---
+
+## 2026-06-27 (Claude) — Welcome msg in #welcome + auto-announce uploads
+
+- **Status**: Built + verified (tsc 0; `npm run build` exit 0). UNCOMMITTED. Two asks: put the popup welcome (with rules) into the #welcome CHANNEL too; and let Architect posts (videos/audio/books/bulletins) optionally announce in the Sanctum's update section.
+- **Welcome in channel**: the seeded #welcome message now carries the FULL welcome + 6-rule "Sanctum Code" (same as the `SanctumWelcome` popup, which stays). Updated in `community_schema.sql` + `update_sanctum_extras.sql` seeds; new **`update_welcome_message.sql`** REPLACES the existing #welcome message (DELETE + INSERT) — the one-shot the user runs.
+- **Auto-announce**: new `announceInSanctum(text)` in `lib/game/hut.ts` posts into the Sanctum `#announcements` hall (admins can post there via the locked-hall bypass — NO new SQL). `app/hut-admin/page.tsx` gets an **"Announce in The Sanctum"** checkbox (default ON) on both the Compose (bulletins) and Shelf (media) forms; on a new post/upload it cross-posts a kind-aware message (vision/scroll/frequency/transmission/word) with the link. Edits don't re-announce; failures are non-fatal (flash a notice). Note: message URLs render as plain text (not yet auto-linkified).
+- **Handoff**: ONE manual user step — run `update_welcome_message.sql`. Announce works without SQL. claude → idle.

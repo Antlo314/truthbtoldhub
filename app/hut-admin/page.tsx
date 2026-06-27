@@ -14,6 +14,7 @@ import {
     deleteMedia,
     getArchitectStatus,
     formatBytes,
+    announceInSanctum,
     MAX_UPLOAD_BYTES,
 } from '@/lib/game/hut';
 import {
@@ -42,6 +43,7 @@ export default function HutAdminPage() {
     const [pinned, setPinned] = useState(false);
     const [pubDate, setPubDate] = useState(today);
     const [posting, setPosting] = useState(false);
+    const [announce, setAnnounce] = useState(true);   // cross-post bulletin to #announcements
     const [msg, setMsg] = useState<string | null>(null);
 
     // the Quill — Gemini draft assistant
@@ -54,6 +56,7 @@ export default function HutAdminPage() {
     const [mCat, setMCat] = useState('General');
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [mAnnounce, setMAnnounce] = useState(true);  // cross-post upload to #announcements
     const fileRef = useRef<HTMLInputElement>(null);
 
     const [query, setQuery] = useState('');
@@ -122,7 +125,17 @@ export default function HutAdminPage() {
                 flash('Dispatch updated.');
             } else {
                 await createBulletin({ title, body, pinned, published_at: pubDate });
-                flash('Dispatch posted to the Hut.');
+                if (announce) {
+                    try {
+                        const excerpt = body.trim().replace(/\s+/g, ' ').slice(0, 160);
+                        await announceInSanctum(`📜 New word from Truth — “${title}”${excerpt ? `\n${excerpt}${body.length > 160 ? '…' : ''}` : ''}\n\nRead it in the Hut’s Ledger.`);
+                        flash('Dispatch posted — and announced in The Sanctum.');
+                    } catch (e: any) {
+                        flash(`Posted to the Hut, but the Sanctum announcement failed: ${e.message || ''}`.trim());
+                    }
+                } else {
+                    flash('Dispatch posted to the Hut.');
+                }
             }
             resetCompose();
             await refresh();
@@ -167,8 +180,24 @@ export default function HutAdminPage() {
         if (file.size > MAX_UPLOAD_BYTES) return flash(`That file is ${formatBytes(file.size)} — over the ${formatBytes(MAX_UPLOAD_BYTES)} limit. Compress or trim it first.`);
         setUploading(true);
         try {
-            await uploadMedia(file, { title: mTitle, description: mDesc, category: mCat });
+            const created = await uploadMedia(file, { title: mTitle, description: mDesc, category: mCat });
             flash('Dispatch added to the shelf.');
+            if (mAnnounce) {
+                const meta: Record<string, { word: string; emoji: string; where: string }> = {
+                    video: { word: 'vision', emoji: '🎬', where: 'the Seeing Glass' },
+                    image: { word: 'vision', emoji: '🖼️', where: 'the Seeing Glass' },
+                    audio: { word: 'frequency', emoji: '🎵', where: 'The Archive · Frequencies' },
+                    pdf: { word: 'scroll', emoji: '📜', where: 'The Archive · Scrolls' },
+                    link: { word: 'transmission', emoji: '🔗', where: 'The Archive' },
+                };
+                const m = meta[created.kind] || meta.link;
+                try {
+                    await announceInSanctum(`${m.emoji} New ${m.word}: “${created.title}” — find it in ${m.where}.\n${created.url}`);
+                    flash('Added to the shelf — and announced in The Sanctum.');
+                } catch (e: any) {
+                    flash(`Added to the shelf, but the Sanctum announcement failed: ${e.message || ''}`.trim());
+                }
+            }
             setMTitle('');
             setMDesc('');
             setFile(null);
@@ -328,6 +357,12 @@ export default function HutAdminPage() {
                                     Date
                                     <input type="date" value={pubDate} onChange={(e) => setPubDate(e.target.value)} className="bg-black/50 border border-white/10 rounded-lg px-2 py-1 text-xs text-white" />
                                 </label>
+                                {!editId && (
+                                    <label className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-zinc-400 cursor-pointer">
+                                        <input type="checkbox" checked={announce} onChange={(e) => setAnnounce(e.target.checked)} className="accent-amber-500" />
+                                        <Megaphone className="w-3.5 h-3.5" /> Announce in The Sanctum
+                                    </label>
+                                )}
                             </div>
                             <button
                                 onClick={post}
@@ -427,6 +462,10 @@ export default function HutAdminPage() {
                                 </select>
                             </div>
                             <input value={mDesc} onChange={(e) => setMDesc(e.target.value)} placeholder="Short description" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold" />
+                            <label className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-zinc-400 cursor-pointer">
+                                <input type="checkbox" checked={mAnnounce} onChange={(e) => setMAnnounce(e.target.checked)} className="accent-amber-500" />
+                                <Megaphone className="w-3.5 h-3.5" /> Announce in The Sanctum
+                            </label>
                             <button onClick={doUpload} disabled={uploading || !file} className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black flex items-center justify-center gap-2 disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Add Dispatch
                             </button>

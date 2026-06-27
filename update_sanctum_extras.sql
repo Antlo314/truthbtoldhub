@@ -67,7 +67,7 @@ BEGIN
         INSERT INTO public.archive_messages (channel_id, author_id, content, pinned, pinned_by, pinned_at)
         VALUES (
             wid, aid,
-            E'Welcome to The Sanctum. \U0001F54A️\n\nThis is our gathering place — a hall for every soul walking the journey. Here we meet, speak, and lift one another.\n\n• Read the Sanctum Code (it pops up on your first visit).\n• Say hello in #general and tell us who you are.\n• Bear witness in #testimonies; ask for guidance in #support.\n\nWalk in good faith. We are glad you are here.',
+            E'Welcome to The Sanctum. \U0001F54A️\n\nA gathering place for every soul on the journey — live halls, whispers, and voice. Speak freely, and walk in good faith.\n\n— THE SANCTUM CODE —\n1. Honor every soul — no harassment, hate, slurs, threats, or personal attacks. We are all on the journey.\n2. Keep it genuine — no spam, scams, raids, or relentless self-promotion. Quality over noise.\n3. Stay on the path — read each hall''s topic and keep conversations where they belong.\n4. Keep it safe — no NSFW, illegal, or harmful content. This is a sanctuary for all ages of soul.\n5. Guard privacy — never share others'' personal information, and never impersonate another soul.\n6. The Architects keep the peace — moderation guidance stands. Disagree? Raise it calmly in a Whisper, not a brawl.\n\nBy entering, you agree to walk these halls in good faith. ✦',
             true, aid, NOW()
         );
     END IF;

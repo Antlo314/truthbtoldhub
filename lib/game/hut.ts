@@ -175,6 +175,26 @@ export interface CommunityLedger {
     leaders: LedgerLeader[];
 }
 
+const SANCTUM_WORKSPACE = '00000000-0000-0000-0000-000000000000';
+
+// Cross-post an announcement into the Sanctum's #announcements hall (the
+// "update section") — used by the Architect console when a new dispatch or
+// shelf item is posted. The caller must be an Architect (RLS lets admins post
+// in the locked announcements hall). Throws a readable message on failure.
+export async function announceInSanctum(text: string, channelName = 'announcements'): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Sign in to announce.');
+    const { data: ch } = await supabase
+        .from('archive_channels')
+        .select('id')
+        .eq('workspace_id', SANCTUM_WORKSPACE)
+        .eq('name', channelName)
+        .maybeSingle();
+    if (!ch) throw new Error('The Sanctum’s announcements hall is missing — run community_schema.sql.');
+    const { error } = await supabase.from('archive_messages').insert({ channel_id: ch.id, author_id: user.id, content: text });
+    if (error) throw new Error(error.message);
+}
+
 export async function fetchCommunityLedger(): Promise<CommunityLedger> {
     try {
         const res = await fetch('/api/community/ledger', { cache: 'no-store' });
