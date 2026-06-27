@@ -245,6 +245,19 @@ BEGIN
 END;
 $$;
 
+-- May the caller change the STRUCTURE of a Sanctum (create/rename/reorder/lock/
+-- delete Halls)? Architects (admin email) OR a Moderator/Admin of that
+-- workspace. Regular souls never can.
+CREATE OR REPLACE FUNCTION public.can_manage_sanctum(_workspace UUID)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT public.is_sanctum_admin() OR EXISTS (
+        SELECT 1 FROM public.archive_workspace_members m
+        WHERE m.user_id = auth.uid() AND m.workspace_id = _workspace AND m.role IN ('Admin', 'Moderator')
+    );
+$$;
+
 
 -- ============================================================================
 -- 5. RPCs (membership, roles, DMs, read markers)
@@ -337,6 +350,7 @@ GRANT EXECUTE ON FUNCTION public.can_post_channel(UUID)          TO authenticate
 GRANT EXECUTE ON FUNCTION public.is_chat_banned(UUID)            TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_sanctum_admin()             TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.soul_is_supporter()            TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.can_manage_sanctum(UUID)       TO authenticated, anon;
 
 
 -- ============================================================================
@@ -405,12 +419,14 @@ DROP POLICY IF EXISTS "Channels are viewable by everyone" ON public.archive_chan
 DROP POLICY IF EXISTS "Admins can insert channels" ON public.archive_channels;
 DROP POLICY IF EXISTS "Halls are viewable when permitted" ON public.archive_channels;
 DROP POLICY IF EXISTS "Architects manage halls" ON public.archive_channels;
+DROP POLICY IF EXISTS "Staff manage halls" ON public.archive_channels;
 -- Visible only when the gate allows it (hides supporters/architects halls).
 CREATE POLICY "Halls are viewable when permitted" ON public.archive_channels FOR SELECT
     USING (public.can_view_channel(id));
--- Architects create / rename / reorder / lock / delete halls.
-CREATE POLICY "Architects manage halls" ON public.archive_channels FOR ALL
-    USING (public.is_sanctum_admin()) WITH CHECK (public.is_sanctum_admin());
+-- STAFF (Architects + workspace Moderators) create / rename / reorder / lock /
+-- delete halls. Regular souls can't change the Sanctum's structure.
+CREATE POLICY "Staff manage halls" ON public.archive_channels FOR ALL
+    USING (public.can_manage_sanctum(workspace_id)) WITH CHECK (public.can_manage_sanctum(workspace_id));
 
 -- ---- Workspace Members ----
 DROP POLICY IF EXISTS "Members are viewable by everyone" ON public.archive_workspace_members;

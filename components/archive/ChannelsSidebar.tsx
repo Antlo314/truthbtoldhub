@@ -17,13 +17,17 @@ export default function ChannelsSidebar() {
     const {
         activeWorkspaceId, workspaces, channels, setChannels,
         activeChannelId, setActiveChannelId, setActiveDmId,
-        unreadChannelIds, setIsMobileMenuOpen,
+        unreadChannelIds, setIsMobileMenuOpen, members,
     } = useArchiveStore();
     const { user } = useSoulStore();
 
     const { join: joinVoice, activeVoiceId, participantsByChannel: voiceParticipants, connecting: voiceConnecting } = useVoice();
 
     const architect = isArchitect(user?.email);
+    // Who may change the STRUCTURE (forge/edit/delete Halls): Architects + the
+    // workspace's Moderators (Sentinels). Mirrors the can_manage_sanctum RLS.
+    const myRole = activeWorkspaceId && user ? (members[activeWorkspaceId] || []).find((m) => m.user_id === user.id)?.role : null;
+    const canManage = architect || myRole === 'Admin' || myRole === 'Moderator';
     const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
     const workspaceChannels = activeWorkspaceId ? (channels[activeWorkspaceId] || []) : [];
 
@@ -84,7 +88,7 @@ export default function ChannelsSidebar() {
             {/* Header */}
             <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 group">
                 <h2 className="font-ritual text-white text-[13px] tracking-widest uppercase truncate">{activeWorkspace?.name || 'Sanctum'}</h2>
-                {architect && (
+                {canManage && (
                     <button onClick={() => openCreate()} title="Forge a hall" className="p-1 text-zinc-500 hover:text-aether-gold transition-colors">
                         <Plus className="w-4 h-4" />
                     </button>
@@ -100,7 +104,7 @@ export default function ChannelsSidebar() {
                                 <ChevronDown className="w-3 h-3" />
                                 {category}
                             </div>
-                            {architect && (
+                            {canManage && (
                                 <button onClick={() => openCreate(category)} className="opacity-0 group-hover/cat:opacity-100 transition-opacity text-zinc-500 hover:text-aether-gold">
                                     <Plus className="w-3 h-3" />
                                 </button>
@@ -137,7 +141,7 @@ export default function ChannelsSidebar() {
                                             {unread && <span className="ml-auto w-2 h-2 rounded-full bg-aether-gold shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />}
                                             {isActive && <div className="absolute right-0 top-0 w-1 h-full bg-aether-gold" />}
                                         </button>
-                                        {architect && (
+                                        {canManage && (
                                             <button
                                                 onClick={() => openEdit(channel)}
                                                 title="Edit hall"
@@ -173,7 +177,7 @@ export default function ChannelsSidebar() {
 
                 {grouped.length === 0 && (
                     <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 text-center py-8 px-3">
-                        No halls here yet.{architect ? ' Forge the first one.' : ''}
+                        No halls here yet.{canManage ? ' Forge the first one.' : ''}
                     </p>
                 )}
             </div>
