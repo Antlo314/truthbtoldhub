@@ -98,6 +98,14 @@ export const sfx = {
     charge() { tone({ freq: 70, to: 200, type: 'sawtooth', dur: 0.5, gain: 0.13 }); noise({ dur: 0.4, gain: 0.06, type: 'bandpass', freq: 220 }); },
     // a guardian's ground slam
     slam() { tone({ freq: 130, to: 38, type: 'square', dur: 0.32, gain: 0.22 }); noise({ dur: 0.28, gain: 0.18, type: 'lowpass', freq: 320 }); },
+    // a perfectly-timed parry — a bright metallic clang that deflects the blow
+    parry() { tone({ freq: 1300, to: 620, type: 'square', dur: 0.12, gain: 0.13 }); tone({ freq: 2100, to: 900, type: 'triangle', dur: 0.1, gain: 0.07 }); noise({ dur: 0.08, gain: 0.1, type: 'highpass', freq: 3200 }); },
+    // an enemy's poise breaks — staggered, wide open
+    stagger() { tone({ freq: 170, to: 48, type: 'sawtooth', dur: 0.3, gain: 0.17 }); noise({ dur: 0.22, gain: 0.13, type: 'lowpass', freq: 260 }); },
+    // a perfect dodge — time bends as you slip the strike
+    perfect() { tone({ freq: 680, to: 1360, type: 'sine', dur: 0.18, gain: 0.1 }); tone({ freq: 1020, to: 1530, type: 'triangle', dur: 0.14, gain: 0.07, delay: 0.05 }); },
+    // a charged heavy blow lands with weight
+    heavy() { tone({ freq: 120, to: 40, type: 'square', dur: 0.26, gain: 0.22 }); tone({ freq: 220, to: 70, type: 'sawtooth', dur: 0.2, gain: 0.1 }); noise({ dur: 0.16, gain: 0.16, type: 'lowpass', freq: 440 }); },
     // you take a wound
     hurt() { tone({ freq: 210, to: 85, type: 'square', dur: 0.17, gain: 0.17 }); noise({ dur: 0.11, gain: 0.11, freq: 320, type: 'lowpass' }); },
     // the guardian falls

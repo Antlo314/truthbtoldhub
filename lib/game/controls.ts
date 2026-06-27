@@ -25,3 +25,15 @@ export function actionSize(profile: InputProfile, large = false): number {
     if (profile === 'keyboard') return 0;
     return large ? 84 : MOBILE_ACTION;
 }
+
+// ============================================================
+//  COMBAT CONTROLS — deliberately tighter + translucent than the world's, so
+//  the fight keeps the screen. The pad also auto-fades when idle.
+// ============================================================
+export const COMBAT_JOY_R = 44;
+export const COMBAT_ACTION = 60;
+export const COMBAT_BAR_H = 150;
+
+export function combatJoyRadius(large = false): number {
+    return large ? 52 : COMBAT_JOY_R;
+}
