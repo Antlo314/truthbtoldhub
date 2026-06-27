@@ -114,7 +114,8 @@ export default function PowerSelf() {
             const json = await res.json().catch(() => ({}));
             if (!res.ok || !json?.url) throw new Error(json?.error || 'Upload failed — please try again.');
 
-            await updateProfile({ avatar_url: json.url });
+            // The server already saved avatar_url (service role) — just refresh.
+            await fetchIdentity();
             playClick();
         } catch (error: any) {
             alert(error.message);

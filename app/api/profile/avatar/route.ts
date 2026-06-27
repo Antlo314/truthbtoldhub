@@ -73,6 +73,16 @@ export async function POST(req: Request) {
         await admin.storage.updateBucket('avatars', { public: true }).catch(() => { /* ignore */ });
 
         const { data: { publicUrl } } = admin.storage.from('avatars').getPublicUrl(path);
+
+        // Save it to the profile HERE with the service role — this sidesteps the
+        // profiles table grants/RLS that can otherwise reject the client write
+        // ("permission denied for table profiles"). avatar_url isn't a privileged
+        // column, and the privilege trigger waves service_role through.
+        const { error: profErr } = await admin.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+        if (profErr) {
+            return NextResponse.json({ error: `Image uploaded, but saving it to your profile failed: ${profErr.message}` }, { status: 500 });
+        }
+
         return NextResponse.json({ url: publicUrl });
     } catch (e: any) {
         console.error('avatar upload error:', e);
