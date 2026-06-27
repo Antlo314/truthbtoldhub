@@ -494,6 +494,42 @@ export default function PowerSelf() {
                                             profileUpdates.theme_color = colorVal;
                                         }
 
+                                        // --- Community profile fields ---
+                                        const statusVal = formData.get('status') as string;
+                                        const pronounsVal = formData.get('pronouns') as string;
+                                        const locationVal = formData.get('location') as string;
+                                        const bannerVal = formData.get('bannerUrl') as string;
+                                        const linksRaw = formData.get('links') as string;
+
+                                        if (statusVal !== undefined && statusVal !== (profile?.status || '')) {
+                                            profileUpdates.status = statusVal;
+                                        }
+                                        if (pronounsVal !== undefined && pronounsVal !== (profile?.pronouns || '')) {
+                                            profileUpdates.pronouns = pronounsVal;
+                                        }
+                                        if (locationVal !== undefined && locationVal !== (profile?.location || '')) {
+                                            profileUpdates.location = locationVal;
+                                        }
+                                        if (bannerVal !== undefined && bannerVal !== (profile?.banner_url || '')) {
+                                            profileUpdates.banner_url = bannerVal;
+                                        }
+                                        if (linksRaw !== undefined) {
+                                            const parsedLinks = linksRaw
+                                                .split('\n')
+                                                .map((l) => l.trim())
+                                                .filter(Boolean)
+                                                .map((line) => {
+                                                    const [label, ...rest] = line.split('|');
+                                                    const url = rest.join('|').trim();
+                                                    return url ? { label: (label || 'link').trim().slice(0, 24), url } : null;
+                                                })
+                                                .filter(Boolean)
+                                                .slice(0, 6);
+                                            if (JSON.stringify(parsedLinks) !== JSON.stringify(profile?.links || [])) {
+                                                profileUpdates.links = parsedLinks;
+                                            }
+                                        }
+
                                         if (Object.keys(profileUpdates).length > 0) {
                                             await updateProfile(profileUpdates);
                                             msg += "Profile details updated successfully.\n";
@@ -555,6 +591,28 @@ export default function PowerSelf() {
                                                     <option value="green">Matrix Green</option>
                                                     <option value="red">Blood Red</option>
                                                 </select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Status (short)</label>
+                                                <input name="status" type="text" maxLength={80} defaultValue={profile?.status || ''} placeholder="What's stirring within you?" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Pronouns</label>
+                                                    <input name="pronouns" type="text" maxLength={24} defaultValue={profile?.pronouns || ''} placeholder="they/them" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Location</label>
+                                                    <input name="location" type="text" maxLength={48} defaultValue={profile?.location || ''} placeholder="The Earthly Plane" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Banner Image (URL)</label>
+                                                <input name="bannerUrl" type="url" defaultValue={profile?.banner_url || ''} placeholder="https://… (wide image for your profile header)" className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500">Links — one per line, “Label | https://url”</label>
+                                                <textarea name="links" rows={3} defaultValue={(profile?.links || []).map((l: any) => `${l.label} | ${l.url}`).join('\n')} placeholder={"Website | https://example.com\nX | https://x.com/you"} className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors resize-none font-mono"></textarea>
                                             </div>
                                         </div>
                                     </div>

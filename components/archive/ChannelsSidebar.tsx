@@ -1,162 +1,195 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useArchiveStore } from '@/lib/store/useArchiveStore';
+import { useEffect, useState } from 'react';
+import { useArchiveStore, ArchiveChannel } from '@/lib/store/useArchiveStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { supabase } from '@/lib/supabase';
-import { Hash, Volume2, ChevronDown, Plus, Settings, Shield } from 'lucide-react';
+import { isArchitect, accessBadge, groupChannelsByCategory } from '@/lib/archive/access';
+import UserFooter from './UserFooter';
+import DMSidebar from './DMSidebar';
+import ChannelAdminModal from './ChannelAdminModal';
+import VoicePanel from './VoicePanel';
+import { useVoice } from './VoiceProvider';
+import { DEFAULT_AVATAR } from '@/lib/archive/access';
+import { Hash, Volume2, ChevronDown, Plus, Lock, Settings2, ShieldAlert, MicOff, Loader2 } from 'lucide-react';
 
 export default function ChannelsSidebar() {
-    const { activeWorkspaceId, workspaces, channels, setChannels, activeChannelId, setActiveChannelId } = useArchiveStore();
-    const { profile } = useSoulStore();
-    
-    const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+    const {
+        activeWorkspaceId, workspaces, channels, setChannels,
+        activeChannelId, setActiveChannelId, setActiveDmId,
+        unreadChannelIds, setIsMobileMenuOpen,
+    } = useArchiveStore();
+    const { user } = useSoulStore();
+
+    const { join: joinVoice, activeVoiceId, participantsByChannel: voiceParticipants, connecting: voiceConnecting } = useVoice();
+
+    const architect = isArchitect(user?.email);
+    const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
     const workspaceChannels = activeWorkspaceId ? (channels[activeWorkspaceId] || []) : [];
+
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editChannel, setEditChannel] = useState<ArchiveChannel | null>(null);
+    const [modalCategory, setModalCategory] = useState<string | undefined>(undefined);
+
+    const fetchChannels = async () => {
+        if (!activeWorkspaceId) return;
+        const { data } = await supabase
+            .from('archive_channels')
+            .select('*')
+            .eq('workspace_id', activeWorkspaceId)
+            .order('position', { ascending: true })
+            .order('created_at', { ascending: true });
+        if (data) {
+            setChannels(activeWorkspaceId, data as ArchiveChannel[]);
+            // Only auto-select a hall if THIS workspace is still the active one
+            // (guards against a late fetch resolving after a rapid switch) and
+            // nothing is selected yet. Read live store state, not a stale closure.
+            const st = useArchiveStore.getState();
+            if (st.activeWorkspaceId === activeWorkspaceId && !st.activeChannelId) {
+                const firstText = data.find((c: any) => c.type === 'text');
+                if (firstText) setActiveChannelId(firstText.id);
+            }
+        }
+    };
 
     useEffect(() => {
         if (!activeWorkspaceId) return;
-
-        // Fetch channels for this workspace
-        const fetchChannels = async () => {
-            const { data } = await supabase
-                .from('archive_channels')
-                .select('*')
-                .eq('workspace_id', activeWorkspaceId)
-                .order('created_at', { ascending: true });
-            
-            if (data) {
-                setChannels(activeWorkspaceId, data);
-                // Auto-select first channel if none selected
-                if (!activeChannelId && data.length > 0) {
-                    setActiveChannelId(data[0].id);
-                }
-            } else {
-                // Mock data if table empty/not existing yet to allow UI dev
-                const mockChannels = [
-                    { id: '1', workspace_id: activeWorkspaceId, name: 'general', type: 'text' as const },
-                    { id: '2', workspace_id: activeWorkspaceId, name: 'protocols', type: 'text' as const },
-                    { id: '3', workspace_id: activeWorkspaceId, name: 'voice-comm', type: 'voice' as const }
-                ];
-                setChannels(activeWorkspaceId, mockChannels);
-                setActiveChannelId('1');
-            }
-        };
-
         fetchChannels();
-
-        // Subscribe to real-time channel inserts for this workspace
         const channelSub = supabase.channel(`workspace_${activeWorkspaceId}_channels`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_channels', filter: `workspace_id=eq.${activeWorkspaceId}` }, (payload) => {
-                fetchChannels(); // Simple refetch on change
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_channels', filter: `workspace_id=eq.${activeWorkspaceId}` }, () => {
+                fetchChannels();
             }).subscribe();
-
-        return () => {
-            supabase.removeChannel(channelSub);
-        };
+        return () => { supabase.removeChannel(channelSub); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWorkspaceId]);
 
+    // No workspace selected => the Whispers (DM) rail.
     if (!activeWorkspaceId) {
-        return (
-            <div className="w-[240px] min-w-[240px] h-full bg-zinc-900 flex flex-col shrink-0 rounded-tl-2xl border-t border-l border-white/5 shadow-inner">
-                <div className="h-12 border-b border-white/5 shadow-sm flex items-center px-4">
-                    <h2 className="font-ritual text-white text-[13px] tracking-widest uppercase">Direct Whispers</h2>
-                </div>
-                {/* DM List would go here */}
-                <div className="flex-1 flex items-center justify-center p-4 text-center">
-                    <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">Whispers are localized.</p>
-                </div>
-                {/* User Footer Shared Below */}
-            </div>
-        );
+        return <DMSidebar />;
     }
 
+    const grouped = groupChannelsByCategory(workspaceChannels);
+
+    const openCreate = (category?: string) => { setEditChannel(null); setModalCategory(category); setModalOpen(true); };
+    const openEdit = (c: ArchiveChannel) => { setEditChannel(c); setModalCategory(c.category); setModalOpen(true); };
+
+    const selectChannel = (id: string) => {
+        setActiveDmId(null);
+        setActiveChannelId(id);
+        setIsMobileMenuOpen(false);
+    };
+
     return (
-        <div className="w-[240px] min-w-[240px] h-full bg-zinc-900 flex flex-col shrink-0 rounded-tl-2xl border-t border-l border-white/5 shadow-inner" id="archive-channels-sidebar">
+        <div className="w-[240px] min-w-[240px] h-full bg-aether-surface/40 backdrop-blur-xl flex flex-col shrink-0 border-r border-white/5" id="archive-channels-sidebar">
             {/* Header */}
-            <div className="h-12 border-b border-white/5 shadow-sm flex items-center justify-between px-4 hover:bg-white/5 cursor-pointer transition-colors group">
-                <h2 className="font-ritual text-white text-[13px] tracking-widest uppercase truncate">{activeWorkspace?.name || 'Workspace'}</h2>
-                <ChevronDown className="w-4 h-4 text-zinc-500 opacity-80 group-hover:opacity-100" />
-            </div>
-
-            {/* Channel List */}
-            <div className="flex-1 overflow-y-auto pt-4 px-2 custom-scrollbar space-y-4" id="archive-channels-list">
-                
-                <div>
-                    <div className="flex items-center justify-between text-zinc-500 hover:text-white group px-1 mb-1 cursor-pointer">
-                        <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em]">
-                            <ChevronDown className="w-3 h-3" />
-                            Text Protocols
-                        </div>
-                        <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                    </div>
-
-                    <div className="space-y-[2px]">
-                        {workspaceChannels.filter(c => c.type === 'text').map(channel => (
-                            <button
-                                key={channel.id}
-                                onClick={() => setActiveChannelId(channel.id)}
-                                className={`w-full flex items-center px-2 py-1.5 rounded-lg transition-all group relative overflow-hidden
-                                    ${activeChannelId === channel.id 
-                                        ? 'bg-orange-600/10 text-orange-400 border border-orange-500/20 shadow-[0_0_10px_rgba(234,88,12,0.1)]' 
-                                        : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-200'}
-                                `}
-                            >
-                                <Hash className={`w-5 h-5 mr-1.5 shrink-0 transition-colors ${activeChannelId === channel.id ? 'text-orange-500' : 'opacity-40'}`} />
-                                <span className={`font-mono text-[13px] tracking-wide truncate ${activeChannelId === channel.id ? 'font-bold' : ''}`}>{channel.name}</span>
-                                {activeChannelId === channel.id && <div className="absolute right-0 top-0 w-1 h-full bg-orange-500" />}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <div className="flex items-center justify-between text-zinc-500 hover:text-white group px-1 mb-1 cursor-pointer">
-                        <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em]">
-                            <ChevronDown className="w-3 h-3" />
-                            Voice Nodes
-                        </div>
-                        <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100" />
-                    </div>
-
-                    <div className="space-y-[2px]">
-                        {workspaceChannels.filter(c => c.type === 'voice').map(channel => (
-                            <button
-                                key={channel.id}
-                                className="w-full flex items-center px-2 py-1.5 rounded-lg transition-all text-zinc-500 hover:bg-white/5 hover:text-zinc-200 group"
-                            >
-                                <Volume2 className="w-5 h-5 opacity-40 mr-1.5 shrink-0" />
-                                <span className="font-mono text-[13px] tracking-wide truncate">{channel.name}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Current User Area Bottom */}
-            <div className="h-[52px] bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-3 border-t border-white/5 mt-auto relative z-30" id="archive-user-footer">
-                <div className="flex items-center min-w-0">
-                    <div className="w-8 h-8 rounded-full border border-orange-500/30 overflow-hidden shrink-0 shadow-[0_0_10px_rgba(234,88,12,0.2)]">
-                        <img src={profile?.avatar_url || "https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/default_avatar.png"} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="ml-2 flex flex-col min-w-0">
-                        <span className="text-[12px] font-bold text-white truncate max-w-[80px]">
-                            {profile?.display_name || profile?.username || 'Initiate'}
-                        </span>
-                        <div className="flex items-center gap-1 text-[9px] font-mono text-zinc-500">
-                            <div className="w-1 h-1 rounded-full bg-green-500"></div>
-                            <span className="truncate uppercase tracking-tighter">{profile?.tier || 'Soul'}</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                    <button className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-md transition-all">
-                        <Shield className="w-4 h-4" />
+            <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 group">
+                <h2 className="font-ritual text-white text-[13px] tracking-widest uppercase truncate">{activeWorkspace?.name || 'Sanctum'}</h2>
+                {architect && (
+                    <button onClick={() => openCreate()} title="Forge a hall" className="p-1 text-zinc-500 hover:text-aether-gold transition-colors">
+                        <Plus className="w-4 h-4" />
                     </button>
-                    <button className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-md transition-all">
-                        <Settings className="w-4 h-4" />
-                    </button>
-                </div>
+                )}
             </div>
+
+            {/* Hall list */}
+            <div className="flex-1 overflow-y-auto pt-4 px-2 custom-scrollbar space-y-5" id="archive-channels-list">
+                {grouped.map(({ category, channels: catChannels }) => (
+                    <div key={category}>
+                        <div className="flex items-center justify-between text-zinc-500 group/cat px-1 mb-1">
+                            <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em]">
+                                <ChevronDown className="w-3 h-3" />
+                                {category}
+                            </div>
+                            {architect && (
+                                <button onClick={() => openCreate(category)} className="opacity-0 group-hover/cat:opacity-100 transition-opacity text-zinc-500 hover:text-aether-gold">
+                                    <Plus className="w-3 h-3" />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="space-y-[2px]">
+                            {catChannels.map((channel) => {
+                                const isVoice = channel.type === 'voice';
+                                const isVoiceActive = isVoice && activeVoiceId === channel.id;
+                                const isActive = isVoice ? isVoiceActive : activeChannelId === channel.id;
+                                const unread = !isVoice && unreadChannelIds.has(channel.id) && activeChannelId !== channel.id;
+                                const badge = accessBadge(channel);
+                                const Icon = isVoice ? Volume2 : Hash;
+                                const vParts = isVoice ? (voiceParticipants[channel.id] || []) : [];
+                                return (
+                                    <div key={channel.id} className="relative group/hall">
+                                        <button
+                                            onClick={() => isVoice ? joinVoice(channel.id) : selectChannel(channel.id)}
+                                            className={`w-full flex items-center px-2 py-1.5 rounded-lg transition-all relative overflow-hidden
+                                                ${isActive
+                                                    ? 'bg-aether-gold/10 text-aether-gold border border-aether-gold/20'
+                                                    : `border border-transparent ${unread ? 'text-white' : 'text-zinc-500'} hover:bg-white/5 hover:text-zinc-200`}`}
+                                        >
+                                            <Icon className={`w-4 h-4 mr-1.5 shrink-0 ${isActive ? 'text-aether-gold' : 'opacity-50'}`} />
+                                            <span className={`font-mono text-[13px] tracking-wide truncate ${isActive || unread ? 'font-bold' : ''}`}>{channel.name}</span>
+                                            {channel.locked && <Lock className="w-3 h-3 ml-1.5 opacity-50 shrink-0" />}
+                                            {channel.access === 'supporters' && <ShieldAlert className="w-3 h-3 ml-1 text-aether-gold/60 shrink-0" />}
+                                            {channel.access === 'architects' && <ShieldAlert className="w-3 h-3 ml-1 text-red-400/70 shrink-0" />}
+                                            {isVoice && voiceConnecting && activeVoiceId === channel.id && <Loader2 className="w-3 h-3 ml-auto animate-spin text-aether-gold shrink-0" />}
+                                            {isVoice && vParts.length > 0 && !(voiceConnecting && activeVoiceId === channel.id) && (
+                                                <span className="ml-auto text-[9px] font-mono text-emerald-400 shrink-0">{vParts.length}</span>
+                                            )}
+                                            {unread && <span className="ml-auto w-2 h-2 rounded-full bg-aether-gold shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />}
+                                            {isActive && <div className="absolute right-0 top-0 w-1 h-full bg-aether-gold" />}
+                                        </button>
+                                        {architect && (
+                                            <button
+                                                onClick={() => openEdit(channel)}
+                                                title="Edit hall"
+                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/hall:opacity-100 transition-opacity p-1 rounded text-zinc-500 hover:text-aether-gold bg-aether-surface/80"
+                                            >
+                                                <Settings2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                        {badge && !isActive && !(isVoice && vParts.length > 0) && (
+                                            <span className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 group-hover/hall:opacity-0 transition-opacity px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest border ${badge.className}`}>
+                                                {badge.label}
+                                            </span>
+                                        )}
+
+                                        {/* Connected souls under a voice Hall */}
+                                        {isVoice && vParts.length > 0 && (
+                                            <div className="pl-7 pr-2 py-1 space-y-1">
+                                                {vParts.map((p) => (
+                                                    <div key={p.id} className="flex items-center gap-2 text-zinc-400">
+                                                        <img src={p.avatar || DEFAULT_AVATAR} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
+                                                        <span className="text-[11px] font-mono truncate flex-1">{p.name}</span>
+                                                        {p.muted && <MicOff className="w-3 h-3 text-red-400/70 shrink-0" />}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+
+                {grouped.length === 0 && (
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 text-center py-8 px-3">
+                        No halls here yet.{architect ? ' Forge the first one.' : ''}
+                    </p>
+                )}
+            </div>
+
+            <VoicePanel />
+            <UserFooter />
+
+            {modalOpen && activeWorkspaceId && (
+                <ChannelAdminModal
+                    workspaceId={activeWorkspaceId}
+                    channel={editChannel}
+                    defaultCategory={modalCategory}
+                    onClose={() => setModalOpen(false)}
+                    onSaved={fetchChannels}
+                />
+            )}
         </div>
     );
 }

@@ -204,6 +204,16 @@ function TitleCardInner() {
                     )}
                 </motion.div>
 
+                <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.95, duration: 0.8 }}
+                    onClick={() => enter('/archive')}
+                    className="mt-5 pointer-events-auto text-[10px] uppercase tracking-[0.3em] text-amber-200/70 hover:text-amber-200 transition-colors"
+                >
+                    Commune in the Sanctum →
+                </motion.button>
+
                 {founders !== null && (
                     <div ref={countRef} className="mt-9 pointer-events-none">
                         {remaining !== null && remaining > 0 ? (

@@ -14,7 +14,20 @@ const SAFE_PROFILE_COLUMNS = [
     'bio',
     'custom_title',
     'theme_color',
+    // Community profile fields — cosmetic, self-owned. The DB grants column-level
+    // UPDATE on these (community_schema.sql); privileged columns stay server-only.
+    'banner_url',
+    'pronouns',
+    'location',
+    'status',
+    'links',
+    'last_seen_at',
 ] as const;
+
+export interface ProfileLink {
+    label: string;
+    url: string;
+}
 
 interface SoulProfile {
     id: string;
@@ -28,6 +41,13 @@ interface SoulProfile {
     bio?: string;
     theme_color?: string;
     is_supporter?: boolean;
+    // Richer community profile
+    banner_url?: string;
+    pronouns?: string;
+    location?: string;
+    status?: string;
+    links?: ProfileLink[];
+    last_seen_at?: string;
 }
 
 interface SoulState {

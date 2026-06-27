@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, User, Zap, Trophy, History, ArrowUpRight, ArrowDownLeft, Sparkles, Hexagon, ShieldCheck, Mail, Calendar } from 'lucide-react';
+import { useArchiveStore } from '@/lib/store/useArchiveStore';
+import { presenceLabel } from '@/lib/archive/access';
+import { ArrowLeft, User, Zap, Trophy, History, ArrowUpRight, ArrowDownLeft, Sparkles, Hexagon, ShieldCheck, Mail, Calendar, MessageSquare, Link as LinkIcon, MapPin, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -27,6 +29,10 @@ export default function ProfileDetailPage() {
     const [globalRank, setGlobalRank] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
+    const [meId, setMeId] = useState<string | null>(null);
+    const [whispering, setWhispering] = useState(false);
+
+    const { setActiveWorkspaceId, setActiveDmId, upsertDmConversation } = useArchiveStore();
 
     const bgRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +63,7 @@ export default function ProfileDetailPage() {
                     router.push('/');
                     return;
                 }
+                setMeId(session.user.id);
 
                 // Fetch profile
                 const { data: profData, error: profErr } = await supabase
@@ -173,6 +180,34 @@ export default function ProfileDetailPage() {
         }
     };
 
+    const startWhisper = async () => {
+        if (!profile || meId === id) return;
+        setWhispering(true);
+        try {
+            const { data: convId, error } = await supabase.rpc('start_dm', { _other: id });
+            if (error) throw error;
+            upsertDmConversation({
+                id: convId, user_lo: '', user_hi: '',
+                created_at: new Date().toISOString(), last_message_at: new Date().toISOString(),
+                other: {
+                    id,
+                    display_name: profile.display_name || profile.username || 'Soul',
+                    avatar_url: profile.avatar_url,
+                    tier: profile.tier,
+                    status: profile.status,
+                    last_seen_at: profile.last_seen_at,
+                },
+                unread: 0,
+            });
+            setActiveWorkspaceId(null);
+            setActiveDmId(convId);
+            router.push('/archive');
+        } catch (e) {
+            console.error('whisper failed', e);
+            setWhispering(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-void flex flex-col items-center justify-center relative overflow-hidden">
@@ -208,6 +243,10 @@ export default function ProfileDetailPage() {
     const theme = getThemeConfig(profile.theme_color || 'sky');
     const avatarUrl = profile.avatar_url || "https://api.dicebear.com/7.x/identicon/svg?seed=" + profile.id;
     const isArchitect = profile.tier === 'Architect';
+    const lastSeen = profile.last_seen_at as string | undefined;
+    const isOnline = !!lastSeen && (Date.now() - new Date(lastSeen).getTime() < 2 * 60000);
+    const profileLinks: { label: string; url: string }[] = Array.isArray(profile.links) ? profile.links : [];
+    const canWhisper = !!meId && meId !== id;
 
     return (
         <div className="relative min-h-screen bg-void text-white selection:bg-aether-gold/30 font-sans flex flex-col overflow-x-hidden">
@@ -248,7 +287,15 @@ export default function ProfileDetailPage() {
             </header>
 
             <main className="flex-1 relative z-10 p-4 md:p-8 pb-32 max-w-4xl mx-auto w-full animate-fade-in space-y-8">
-                
+
+                {/* Profile Banner */}
+                {profile.banner_url && (
+                    <div className="relative h-40 md:h-56 rounded-[2rem] overflow-hidden border border-white/5">
+                        <img src={profile.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-void via-void/30 to-transparent" />
+                    </div>
+                )}
+
                 {/* Main Profile Identity Card */}
                 <div className={`glass-panel rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative overflow-hidden border-white/5 transition-all ${theme.glow}`}>
                     <div className={`absolute top-0 right-0 w-64 md:w-80 h-64 md:h-80 bg-[radial-gradient(circle_at_center,${theme.accentColor}08_0%,transparent_70%)] rounded-full blur-3xl pointer-events-none`}></div>
@@ -269,21 +316,59 @@ export default function ProfileDetailPage() {
                         <div className="flex-1 text-center lg:text-left space-y-4">
                             <div className="flex flex-col lg:flex-row items-center gap-3 md:gap-4 justify-center lg:justify-start">
                                 <h1 className="font-ritual text-3xl md:text-4xl font-black tracking-widest text-white uppercase gold-shimmer">{profile.display_name || profile.username}</h1>
-                                <span className={`px-3 md:px-4 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] border ${isArchitect ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-aether-gold/10 text-aether-gold border-aether-gold/20'}`}>
-                                    {profile.tier || 'Initiate'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 md:px-4 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] border ${isArchitect ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-aether-gold/10 text-aether-gold border-aether-gold/20'}`}>
+                                        {profile.tier || 'Initiate'}
+                                    </span>
+                                    {profile.is_supporter && (
+                                        <span title="Supporter" className="text-aether-gold"><Crown className="w-4 h-4" /></span>
+                                    )}
+                                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 border border-white/5">
+                                        <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]' : 'bg-zinc-600'}`} />
+                                        <span className="text-[7px] md:text-[8px] font-mono uppercase tracking-widest text-zinc-400">{presenceLabel(isOnline, lastSeen)}</span>
+                                    </span>
+                                </div>
                             </div>
-                            
+
+                            {profile.status && (
+                                <p className="text-sm text-zinc-300 italic max-w-lg">“{profile.status}”</p>
+                            )}
+
                             <p className="text-[10px] md:text-xs text-zinc-400 font-mono tracking-[0.2em] leading-relaxed uppercase opacity-90 max-w-lg">
                                 {profile.custom_title && <span className="block text-aether-gold font-black mb-1.5">{profile.custom_title}</span>}
-                                {profile.email ? (
-                                    <span className="flex items-center justify-center lg:justify-start gap-2 text-zinc-500 mt-1">
-                                        <Mail className="w-3.5 h-3.5" /> {profile.email}
-                                    </span>
-                                ) : (
-                                    <span className="text-zinc-600">Archival signature: anonymous</span>
-                                )}
+                                <span className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1 text-zinc-500 mt-1">
+                                    {profile.pronouns && <span className="normal-case tracking-normal">{profile.pronouns}</span>}
+                                    {profile.location && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>}
+                                    {profile.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {profile.email}</span>}
+                                </span>
                             </p>
+
+                            {profileLinks.length > 0 && (
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                                    {profileLinks.slice(0, 6).map((l, i) => (
+                                        <a
+                                            key={i}
+                                            href={l.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-mono uppercase tracking-widest text-zinc-300 hover:border-aether-gold/40 hover:text-aether-gold transition-colors"
+                                        >
+                                            <LinkIcon className="w-3 h-3" /> {l.label || 'link'}
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+
+                            {canWhisper && (
+                                <button
+                                    onClick={() => { playClick(); startWhisper(); }}
+                                    onMouseEnter={playHover}
+                                    disabled={whispering}
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-aether-gold text-black font-black text-[10px] uppercase tracking-widest hover:bg-aether-gold-soft transition-colors disabled:opacity-50"
+                                >
+                                    <MessageSquare className="w-4 h-4" /> {whispering ? 'Opening…' : 'Send a Whisper'}
+                                </button>
+                            )}
 
                             <div className="flex flex-wrap justify-center lg:justify-start gap-4 md:gap-6 mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/5">
                                 <div className="flex items-center gap-3">
