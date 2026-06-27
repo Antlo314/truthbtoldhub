@@ -22,7 +22,6 @@ export function middleware(request: NextRequest) {
     '/codex',              // lore codex
     '/cinema',             // films
     '/cineworks',          // film studio showcase
-    '/archive',            // archive content
     '/support',            // donation entry
     '/thanks',             // post-donation thank-you (Stripe return)
     '/mission-confirmed',  // post-action confirmation (Stripe return)

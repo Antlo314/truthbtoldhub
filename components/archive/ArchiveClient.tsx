@@ -10,6 +10,7 @@ import ChatArea from './ChatArea';
 import DMThread from './DMThread';
 import MemberListSidebar from './MemberListSidebar';
 import { VoiceProvider } from './VoiceProvider';
+import SanctumWelcome from './SanctumWelcome';
 import { Hexagon } from 'lucide-react';
 
 const SANCTUM_WS = '00000000-0000-0000-0000-000000000000';
@@ -23,6 +24,7 @@ export default function ArchiveClient() {
     } = useArchiveStore();
 
     const [isLoading, setIsLoading] = useState(true);
+    const [showWelcome, setShowWelcome] = useState(false);
     const initializedRef = useRef(false);
     const activeStateRef = useRef({ activeWorkspaceId, activeDmId: null as string | null });
 
@@ -155,6 +157,8 @@ export default function ArchiveClient() {
             channels.push(dmSub);
 
             setIsLoading(false);
+            // First-visit welcome + house rules.
+            try { if (!localStorage.getItem('tbth-sanctum-welcomed')) setShowWelcome(true); } catch { /* */ }
         };
 
         bootstrap();
@@ -182,6 +186,9 @@ export default function ArchiveClient() {
     return (
         <VoiceProvider>
             <div className="flex h-full w-full overflow-hidden bg-void relative">
+                {showWelcome && (
+                    <SanctumWelcome onClose={() => { try { localStorage.setItem('tbth-sanctum-welcomed', '1'); } catch { /* */ } setShowWelcome(false); }} />
+                )}
                 {/* Mobile overlay */}
                 {isMobileMenuOpen && (
                     <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />

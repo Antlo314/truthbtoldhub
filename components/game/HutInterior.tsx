@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio, Lock } from 'lucide-react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
@@ -38,7 +39,7 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
 const SHEET = '/assets/kenney/roguelikeIndoor.png';
 const KIND_ICON = { pdf: FileText, video: Film, audio: Music, image: ImageIcon, link: Link2 } as const;
 
-type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth' | 'profile' | 'arcade';
+type StationId = 'ledger' | 'archive' | 'visions' | 'offering' | 'forge' | 'map' | 'truth' | 'profile' | 'arcade' | 'sanctum';
 
 // Draw w×h tiles of the indoor sheet onto a crisp, pixel-perfect canvas.
 function KenneyObject({ col, row, w = 1, h = 1, vmin }: { col: number; row: number; w?: number; h?: number; vmin: number }) {
@@ -132,6 +133,46 @@ function ArcadeIcon({ vmin }: { vmin: number }) {
     );
 }
 
+// A drawn doorway to The Sanctum — a warm-lit gathering hall with two souls
+// in the glow, so the station reads unmistakably as "go in and meet people".
+function SanctumIcon({ vmin }: { vmin: number }) {
+    const ref = useRef<HTMLCanvasElement>(null);
+    const W = 16, H = 20, SCALE = 7;
+    useEffect(() => {
+        const cv = ref.current;
+        if (!cv) return;
+        const ctx = cv.getContext('2d');
+        if (!ctx) return;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        const px = (x: number, y: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(x * SCALE, y * SCALE, w * SCALE, h * SCALE); };
+        px(1, 18, 14, 2, '#2c1f14');   // ground shadow
+        px(4, 1, 8, 1, '#6b4a28');     // arch crown
+        px(2, 2, 12, 2, '#5a3d22');    // lintel
+        px(2, 4, 2, 14, '#4a3119');    // left pillar
+        px(12, 4, 2, 14, '#4a3119');   // right pillar
+        px(3, 4, 1, 14, '#6b4a28');    // left pillar highlight
+        px(12, 4, 1, 14, '#3a2a1c');   // right pillar shade
+        // glowing interior
+        px(4, 4, 8, 14, '#160f06');
+        px(5, 6, 6, 11, '#7a3d12');
+        px(6, 8, 4, 8, '#b45309');
+        px(7, 10, 2, 6, '#fcd34d');
+        // two souls in the doorway
+        px(5, 12, 2, 5, '#1a1322'); px(5, 11, 2, 1, '#1a1322');
+        px(9, 13, 2, 4, '#1a1322'); px(9, 12, 2, 1, '#1a1322');
+        px(7, 2, 2, 1, '#fde68a');     // gold gleam
+    }, []);
+    return (
+        <canvas
+            ref={ref}
+            width={W * SCALE}
+            height={H * SCALE}
+            style={{ width: `${vmin}vmin`, height: `${(vmin * H) / W}vmin`, imageRendering: 'pixelated', filter: 'drop-shadow(0 5px 8px rgba(0,0,0,0.5))' }}
+        />
+    );
+}
+
 interface Station {
     id: StationId;
     label: string;
@@ -142,6 +183,8 @@ interface Station {
 }
 
 const STATIONS: Station[] = [
+    // the gathering hall door — upper-centre back wall, a way OUT of the room into the community
+    { id: 'sanctum', label: 'The Sanctum', sub: 'Gather & speak with souls', x: 50, y: 16, sprite: { col: 0, row: 0, vmin: 10 } },
     // wall row (top)
     { id: 'ledger', label: 'The Ledger', sub: "Truth's daily Word", x: 20, y: 17, sprite: { col: 18, row: 0, vmin: 11 } },
     { id: 'visions', label: 'The Seeing Glass', sub: 'Visions & films', x: 78, y: 15, sprite: { col: 22, row: 14, h: 2, vmin: 11 } },
@@ -157,6 +200,7 @@ const STATIONS: Station[] = [
 ];
 
 const TOUR: [string, string][] = [
+    ['The Sanctum', 'gather with fellow souls — live halls, whispers & voice'],
     ['The Ledger', 'my daily Word — and the testimonies of souls'],
     ['Your Soul', 'shape your name, title & testament in the glass'],
     ['The Seeing Glass', 'visions & films I leave for you'],
@@ -182,8 +226,14 @@ interface HutInteriorProps {
 }
 
 export default function HutInterior({ character, bulletins, media, isArchitect, worldEvent, onClose, onOpenForge, onToast, initialStation }: HutInteriorProps) {
+    const router = useRouter();
     const [active, setActive] = useState<StationId | null>(initialStation ?? null);
-    const openStation = useCallback((id: StationId) => setActive(id), []);
+    const openStation = useCallback((id: StationId) => {
+        // The Sanctum isn't a panel — it's the community space at /archive (gated
+        // to signed-in souls). Walk out the gathering-hall door into it.
+        if (id === 'sanctum') { router.push('/archive'); return; }
+        setActive(id);
+    }, [router]);
 
     // first-visit walkthrough — a one-time legend of the room
     const [showTour, setShowTour] = useState(false);
@@ -270,7 +320,9 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     <div className="transition-transform group-hover:-translate-y-0.5 group-active:translate-y-0">
                         {s.id === 'arcade'
                             ? <ArcadeIcon vmin={s.sprite.vmin} />
-                            : <KenneyObject col={s.sprite.col} row={s.sprite.row} w={s.sprite.w} h={s.sprite.h} vmin={s.sprite.vmin} />}
+                            : s.id === 'sanctum'
+                                ? <SanctumIcon vmin={s.sprite.vmin} />
+                                : <KenneyObject col={s.sprite.col} row={s.sprite.row} w={s.sprite.w} h={s.sprite.h} vmin={s.sprite.vmin} />}
                     </div>
                     <span className="mt-1 px-2 py-0.5 rounded-full bg-black/55 border border-aether-gold/25 text-[8px] font-black uppercase tracking-[0.18em] text-aether-gold/90 opacity-90 group-hover:opacity-100 whitespace-nowrap">{s.label}</span>
                 </button>

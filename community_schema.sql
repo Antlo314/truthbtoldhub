@@ -594,6 +594,12 @@ UPDATE public.archive_channels SET category = 'The Commons', position = 10
 UPDATE public.archive_channels SET category = 'Welcome', position = 1, locked = true
     WHERE workspace_id = '00000000-0000-0000-0000-000000000000' AND name = 'announcements';
 
+-- Retired Halls — drop the Inner Sanctum (supporters/architects) and #the-path
+-- if a prior run created them (self-healing; messages cascade-delete).
+DELETE FROM public.archive_channels
+    WHERE workspace_id = '00000000-0000-0000-0000-000000000000'
+      AND name IN ('the-path', 'supporters-lounge', 'architects-table');
+
 -- Insert the themed seed Halls only when absent (no unique key on name, so guard
 -- each insert explicitly to stay idempotent).
 DO $$
@@ -603,14 +609,11 @@ DECLARE
 BEGIN
     FOR seed IN
         SELECT * FROM (VALUES
-            ('welcome',           'text', 'Welcome', 0,  true,  'everyone',   'Orientation for every soul who enters'),
-            ('announcements',     'text', 'Welcome', 1,  true,  'everyone',   'Official transmissions from the Architects'),
-            ('general',           'text', 'The Commons', 10, false, 'everyone', 'Open frequency for all souls'),
-            ('the-path',          'text', 'The Commons', 11, false, 'everyone', 'Walk the journey together — share your steps'),
-            ('testimonies',       'text', 'The Commons', 12, false, 'everyone', 'Bear witness — what has shifted within you'),
-            ('support',           'text', 'The Commons', 13, false, 'everyone', 'Ask for guidance; lift one another'),
-            ('supporters-lounge', 'text', 'Inner Sanctum', 20, false, 'supporters', 'A quiet hall for those who sustain the work'),
-            ('architects-table',  'text', 'Inner Sanctum', 21, false, 'architects', 'Strategy & stewardship for the Architects')
+            ('welcome',       'text', 'Welcome', 0,  true,  'everyone',   'Orientation for every soul who enters'),
+            ('announcements', 'text', 'Welcome', 1,  true,  'everyone',   'Official transmissions from the Architects'),
+            ('general',       'text', 'The Commons', 10, false, 'everyone', 'Open frequency for all souls'),
+            ('testimonies',   'text', 'The Commons', 12, false, 'everyone', 'Bear witness — what has shifted within you'),
+            ('support',       'text', 'The Commons', 13, false, 'everyone', 'Ask for guidance; lift one another')
         ) AS s(name, type, category, position, locked, access, topic)
     LOOP
         IF NOT EXISTS (
