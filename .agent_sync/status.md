@@ -278,3 +278,14 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **DB**: new `can_manage_sanctum(_workspace)` predicate (is_sanctum_admin OR membership role in Admin/Moderator) in `community_schema.sql`; the `archive_channels` policy is now **"Staff manage halls"** (was "Architects manage halls"). New **`update_sanctum_staff_perms.sql`** is the one-shot the USER runs (helper + grant + policy swap). Workspace creation + promote/demote + mute-ban + pins stay Architect-only.
 - **Client**: `ChannelsSidebar.tsx` gates the create/edit-Hall controls on `canManage = architect || my workspace role ∈ {Admin, Moderator}` (was `architect`), mirroring the RLS. Sentinels are made via the profile popout "Make Sentinel".
 - **Handoff**: ONE manual user step — run `update_sanctum_staff_perms.sql` in the Supabase SQL editor. claude → idle.
+
+---
+
+## 2026-06-27 (Claude) — Sanctum extras: mod pins + welcome message + locked-post fix
+
+- **Status**: Built + verified (tsc 0; `npm run build` exit 0). UNCOMMITTED. Three asks: let mods pin; a welcome message in #welcome; admins able to post in locked Halls ("i put a message in but it didnt save").
+- **Mods pin**: new `set_message_pin(_message_id,_pinned)` SECURITY DEFINER RPC gated on `can_manage_sanctum` (mods can pin without a broad message-UPDATE grant → can't edit others' text). `ChatArea.handlePinToggle` now calls the RPC; `MessageBubble` pin prop `isArchitect`→`canPin`, fed `canModerate` (Architects + Moderators).
+- **Locked posting (hardened)**: `can_post_channel` bypass is now `is_sanctum_admin() OR stamped workspace Admin` (membership check covers any JWT-email gap); client `gateCtx.isArchitect = architect || myRole==='Admin'` so the composer opens in locked halls. Added a visible **send-error** line in ChatArea (was a silent vanish). Mods still can't post in locked halls (admins only), by design.
+- **Welcome message**: seeds a PINNED welcome into #welcome (guarded: only if empty), authored by an Architect profile if present. In `community_schema.sql` seed + the one-shot.
+- **Run once**: new **`update_sanctum_extras.sql`** (robust can_post_channel + set_message_pin + welcome seed). Needs `can_manage_sanctum` from `update_sanctum_staff_perms.sql`.
+- **Handoff**: run `update_sanctum_extras.sql` (after `update_sanctum_staff_perms.sql`). claude → idle.

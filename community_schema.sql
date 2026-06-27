@@ -227,12 +227,20 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
     _locked BOOLEAN;
+    _ws UUID;
 BEGIN
     IF auth.uid() IS NULL THEN
         RETURN false;
     END IF;
-    IF public.is_sanctum_admin() THEN
-        RETURN true; -- Architects can always post (even in locked halls)
+    SELECT locked, workspace_id INTO _locked, _ws FROM public.archive_channels WHERE id = _channel_id;
+    -- Architects (by signed email) OR a stamped workspace Admin can post
+    -- ANYWHERE, including locked announcement halls. The membership check makes
+    -- this robust even if the JWT email claim isn't available on a given request.
+    IF public.is_sanctum_admin() OR EXISTS (
+        SELECT 1 FROM public.archive_workspace_members m
+        WHERE m.user_id = auth.uid() AND m.workspace_id = _ws AND m.role = 'Admin'
+    ) THEN
+        RETURN true;
     END IF;
     IF NOT public.can_view_channel(_channel_id) THEN
         RETURN false;
@@ -240,7 +248,6 @@ BEGIN
     IF public.is_chat_banned(auth.uid()) THEN
         RETURN false;
     END IF;
-    SELECT locked INTO _locked FROM public.archive_channels WHERE id = _channel_id;
     RETURN NOT COALESCE(_locked, false);
 END;
 $$;
@@ -341,10 +348,35 @@ BEGIN
 END;
 $$;
 
+-- Staff (Architects + workspace Moderators) pin / unpin any message. Done via
+-- an RPC (not a broad UPDATE policy) so mods can pin WITHOUT gaining the power
+-- to edit other souls' message text.
+CREATE OR REPLACE FUNCTION public.set_message_pin(_message_id UUID, _pinned BOOLEAN)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE _ws UUID;
+BEGIN
+    SELECT c.workspace_id INTO _ws
+    FROM public.archive_messages msg
+    JOIN public.archive_channels c ON c.id = msg.channel_id
+    WHERE msg.id = _message_id;
+    IF NOT public.can_manage_sanctum(_ws) THEN
+        RAISE EXCEPTION 'Staff power required to pin';
+    END IF;
+    UPDATE public.archive_messages
+    SET pinned = _pinned,
+        pinned_by = CASE WHEN _pinned THEN auth.uid() ELSE NULL END,
+        pinned_at = CASE WHEN _pinned THEN NOW() ELSE NULL END
+    WHERE id = _message_id;
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.join_sanctum(UUID)              TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_member_role(UUID, UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.start_dm(UUID)                  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.mark_channel_read(UUID)         TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_message_pin(UUID, BOOLEAN)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_view_channel(UUID)          TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.can_post_channel(UUID)          TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.is_chat_banned(UUID)            TO authenticated, anon;
@@ -640,6 +672,26 @@ BEGIN
             VALUES (ws, seed.name, seed.type, seed.category, seed.position, seed.locked, seed.access, seed.topic);
         END IF;
     END LOOP;
+END $$;
+
+-- Seed a pinned welcome message into #welcome (only if the hall has none yet).
+-- Authored by an Architect if one already has a profile, else left author-less.
+DO $$
+DECLARE
+    ws  UUID := '00000000-0000-0000-0000-000000000000';
+    wid UUID;
+    aid UUID;
+BEGIN
+    SELECT id INTO wid FROM public.archive_channels WHERE workspace_id = ws AND name = 'welcome' LIMIT 1;
+    SELECT id INTO aid FROM public.profiles WHERE email IN ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com') ORDER BY created_at LIMIT 1;
+    IF wid IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.archive_messages WHERE channel_id = wid) THEN
+        INSERT INTO public.archive_messages (channel_id, author_id, content, pinned, pinned_by, pinned_at)
+        VALUES (
+            wid, aid,
+            E'Welcome to The Sanctum. \U0001F54A️\n\nThis is our gathering place — a hall for every soul walking the journey. Here we meet, speak, and lift one another.\n\n• Read the Sanctum Code (it pops up on your first visit).\n• Say hello in #general and tell us who you are.\n• Bear witness in #testimonies; ask for guidance in #support.\n\nWalk in good faith. We are glad you are here.',
+            true, aid, NOW()
+        );
+    END IF;
 END $$;
 
 -- ============================================================================

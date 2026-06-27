@@ -21,6 +21,7 @@ export default function ChatArea() {
     const [isSending, setIsSending] = useState(false);
     const [replyingTo, setReplyingTo] = useState<ArchiveMessage | null>(null);
     const [showPins, setShowPins] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
     const [profileId, setProfileId] = useState<string | null>(null);
     const [typers, setTypers] = useState<Record<string, { name: string; at: number }>>({});
     const [cooldown, setCooldown] = useState(0);
@@ -41,10 +42,13 @@ export default function ChatArea() {
 
     const activeMembers = activeWorkspaceId ? (members[activeWorkspaceId] || []) : [];
     const myRole = myId ? activeMembers.find((m) => m.user_id === myId)?.role : null;
-    const canModerate = architect || myRole === 'Moderator' || myRole === 'Admin';
+    const isAdmin = architect || myRole === 'Admin';                 // can post in locked halls
+    const canModerate = isAdmin || myRole === 'Moderator';           // delete-any + pin
 
     const iAmBanned = myId ? bannedUserIds.has(myId) : false;
-    const gateCtx = { isArchitect: architect, isSupporter: !!myProfile?.is_supporter, isChatBanned: iAmBanned };
+    // Treat a stamped workspace Admin as an Architect for posting gates, so the
+    // composer opens in locked halls even if the email match is unavailable.
+    const gateCtx = { isArchitect: isAdmin, isSupporter: !!myProfile?.is_supporter, isChatBanned: iAmBanned };
     const canPost = activeChannel ? canPostChannel(activeChannel, gateCtx) : false;
 
     // Scroll to bottom on new messages
@@ -226,10 +230,17 @@ export default function ChatArea() {
             if (data) updateMessage(tempId, { id: data.id, created_at: data.created_at, optimistic: false });
             lastSentAt.current = Date.now();
             if (slow > 0 && !architect) setCooldown(slow);
-        } catch (err) {
+        } catch (err: any) {
             console.error('send failed', err);
             deleteMessage(tempId);
             setNewMessage(content);
+            const msg = String(err?.message || '');
+            setSendError(
+                /row-level|permission|denied|policy|42501/i.test(msg)
+                    ? 'You don’t have permission to post in this hall.'
+                    : 'Message didn’t send — please try again.'
+            );
+            setTimeout(() => setSendError(null), 4000);
         } finally {
             setIsSending(false);
         }
@@ -260,10 +271,13 @@ export default function ChatArea() {
     };
 
     const handlePinToggle = async (m: ArchiveMessage) => {
-        if (!architect) return;
+        if (!canModerate) return;
         const next = !m.pinned;
         updateMessage(m.id, { pinned: next, pinned_by: next ? myId : null, pinned_at: next ? new Date().toISOString() : null });
-        await supabase.from('archive_messages').update({ pinned: next, pinned_by: next ? myId : null, pinned_at: next ? new Date().toISOString() : null }).eq('id', m.id);
+        // Pin via the staff-gated RPC so Moderators can pin without holding a
+        // broad message-edit grant.
+        const { error } = await supabase.rpc('set_message_pin', { _message_id: m.id, _pinned: next });
+        if (error) updateMessage(m.id, { pinned: m.pinned, pinned_by: m.pinned_by, pinned_at: m.pinned_at }); // revert
     };
 
     // ---- empty state ----
@@ -361,7 +375,7 @@ export default function ChatArea() {
                                 reactions={reactions[msg.id]}
                                 myId={myId}
                                 canModerate={canModerate}
-                                isArchitect={architect}
+                                canPin={canModerate}
                                 onDelete={() => handleDelete(msg.id)}
                                 onSaveEdit={(content) => handleEdit(msg.id, content)}
                                 onReact={(emoji) => handleReact(msg.id, emoji)}
@@ -376,13 +390,15 @@ export default function ChatArea() {
                 </div>
             </div>
 
-            {/* Typing indicator */}
+            {/* Typing indicator / send error */}
             <div className="px-6 h-5 shrink-0">
-                {typingNames.length > 0 && (
+                {sendError ? (
+                    <span className="text-[10px] font-mono text-red-400">{sendError}</span>
+                ) : typingNames.length > 0 ? (
                     <span className="text-[10px] font-mono text-zinc-500 italic">
                         {typingNames.slice(0, 3).join(', ')} {typingNames.length === 1 ? 'is' : 'are'} transmitting…
                     </span>
-                )}
+                ) : null}
             </div>
 
             {/* Reply preview */}

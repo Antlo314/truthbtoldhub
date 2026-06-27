@@ -11,7 +11,7 @@ interface MessageBubbleProps {
     reactions?: ArchiveReaction[];
     myId?: string;
     canModerate?: boolean;   // delete any (Architect or Moderator)
-    isArchitect?: boolean;   // pin power
+    canPin?: boolean;        // staff (Architects + Moderators) pin power
     onDelete?: () => void;
     onSaveEdit?: (content: string) => void;
     onReact?: (emoji: string) => void;
@@ -23,7 +23,7 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({
     message, isGrouped = false, reactions = [], myId,
-    canModerate = false, isArchitect = false,
+    canModerate = false, canPin = false,
     onDelete, onSaveEdit, onReact, onUnreact, onReply, onPinToggle, onOpenProfile,
 }: MessageBubbleProps) {
     const [editing, setEditing] = useState(false);
@@ -78,7 +78,7 @@ export default function MessageBubble({
                     <Pencil className="w-4 h-4" />
                 </button>
             )}
-            {isArchitect && (
+            {canPin && (
                 <button onClick={onPinToggle} title={message.pinned ? 'Unpin' : 'Pin'} className="p-1.5 text-zinc-400 hover:text-aether-gold hover:bg-white/5 transition-colors">
                     {message.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                 </button>
