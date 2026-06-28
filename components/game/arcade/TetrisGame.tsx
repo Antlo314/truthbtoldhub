@@ -15,7 +15,7 @@ import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/ga
 
 const COLS = 10;
 const ROWS = 20;
-const MAX_CELL = 34;
+const MAX_CELL = 40;
 const LOCK_DELAY = 500; // ms a grounded piece waits before locking
 const MAX_LOCK_RESETS = 15;
 const LINE_SCORE = [0, 100, 300, 500, 800];
@@ -69,7 +69,7 @@ function vibrate(ms: number) {
     }
 }
 
-interface Piece { id: PieceId; matrix: number[][]; color: string; x: number; y: number; }
+interface Piece { id: PieceId; matrix: number[][]; color: string; x: number; y: number; rot: 0 | 1 | 2 | 3; }
 // cell-space cosmetic particle (x in cols, y in rows)
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; }
 interface Fx { kind: 'sink'; count: number; start: number; }
@@ -89,11 +89,14 @@ interface GameState {
     lockResets: number;
     softDrop: boolean;
     combo: number;   // -1 = no active combo
-    b2b: boolean;    // last clear was a tetris (back-to-back chain)
+    b2b: boolean;    // last clear was a difficult clear (tetris or line-clearing T-spin)
+    lastWasRotation: boolean; // last successful piece action was a kick/rotate (T-spin gate)
     charge: number;  // Aether meter (0..MAX_CHARGE)
     powerCdUntil: number;
     slowUntil: number;
     wasReady: boolean;
+    shakeUntil: number; // screen-shake end (cosmetic, reduceRef-gated)
+    shakeMag: number;   // screen-shake magnitude in px
     fx: Fx[];
     particles: Particle[];
     last: number;
@@ -112,14 +115,18 @@ interface Props {
 }
 
 // small static preview of a piece (hold / next)
-function MiniPiece({ id }: { id: PieceId | null }) {
+function MiniPiece({ id, size = 52 }: { id: PieceId | null; size?: number }) {
     const ref = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         const cv = ref.current;
         if (!cv) return;
         const ctx = cv.getContext('2d');
         if (!ctx) return;
-        ctx.clearRect(0, 0, cv.width, cv.height);
+        // DPR-back the canvas so small Next/Hold previews stay crisp on high-DPI phones
+        const dpr = Math.min(3, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+        if (cv.width !== Math.round(size * dpr)) { cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr); }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, size, size);
         if (!id) return;
         const { cells, color } = PIECES[id];
         let minR = 99, maxR = -1, minC = 99, maxC = -1;
@@ -127,9 +134,9 @@ function MiniPiece({ id }: { id: PieceId | null }) {
             if (cells[r][c]) { minR = Math.min(minR, r); maxR = Math.max(maxR, r); minC = Math.min(minC, c); maxC = Math.max(maxC, c); }
         }
         const pw = maxC - minC + 1, ph = maxR - minR + 1;
-        const cell = Math.floor(Math.min(cv.width / 4, cv.height / 4));
-        const ox = (cv.width - pw * cell) / 2 - minC * cell;
-        const oy = (cv.height - ph * cell) / 2 - minR * cell;
+        const cell = Math.floor(size / 4);
+        const ox = (size - pw * cell) / 2 - minC * cell;
+        const oy = (size - ph * cell) / 2 - minR * cell;
         for (let r = 0; r < cells.length; r++) for (let c = 0; c < cells[r].length; c++) {
             if (!cells[r][c]) continue;
             const x = ox + c * cell, y = oy + r * cell;
@@ -138,8 +145,8 @@ function MiniPiece({ id }: { id: PieceId | null }) {
             ctx.fillStyle = 'rgba(255,255,255,0.22)';
             ctx.fillRect(x + 1, y + 1, cell - 2, Math.max(1, cell * 0.2));
         }
-    }, [id]);
-    return <canvas ref={ref} width={52} height={52} style={{ width: 52, height: 52, imageRendering: 'pixelated' }} />;
+    }, [id, size]);
+    return <canvas ref={ref} width={size} height={size} style={{ width: size, height: size, imageRendering: 'pixelated' }} />;
 }
 
 export default function TetrisGame({ accent, onExit, onGameOver, onReset, submitState = 'idle', submitMessage, isNewBest }: Props) {
@@ -159,7 +166,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     const [lines, setLines] = useState(0);
     const [level, setLevel] = useState(1);
     const [holdId, setHoldId] = useState<PieceId | null>(null);
-    const [nextId, setNextId] = useState<PieceId | null>(null);
+    const [nextIds, setNextIds] = useState<PieceId[]>([]);
     const [muted, setMuted] = useState(false);
     const [charge, setCharge] = useState(0);
     const [powerReady, setPowerReady] = useState(false);
@@ -184,7 +191,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             const el = wrapRef.current;
             const cv = canvasRef.current;
             if (!el || !cv) return;
-            const cell = Math.max(8, Math.min(MAX_CELL, Math.floor(Math.min(el.clientWidth / COLS, el.clientHeight / ROWS))));
+            const cell = Math.max(10, Math.min(MAX_CELL, Math.floor(Math.min(el.clientWidth / COLS, el.clientHeight / ROWS))));
             const w = cell * COLS, h = cell * ROWS;
             const dpr = Math.min(3, window.devicePixelRatio || 1);
             cv.width = Math.floor(w * dpr);
@@ -240,7 +247,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
         const newPiece = (st: GameState, id: PieceId): Piece => {
             const p = PIECES[id];
-            return { id, matrix: cloneMatrix(p.cells), color: p.color, x: spawnX(p.cells), y: 0 };
+            return { id, matrix: cloneMatrix(p.cells), color: p.color, x: spawnX(p.cells), y: 0, rot: 0 };
         };
 
         const spawn = (st: GameState) => {
@@ -251,46 +258,121 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             st.dropAcc = 0;
             st.lockAcc = 0;
             st.lockResets = 0;
-            setNextId(st.queue[0] ?? null);
+            st.lastWasRotation = false; // a fresh spawn is not a rotation
+            setNextIds(st.queue.slice(0, 5));
             if (collides(st, st.piece.matrix, st.piece.x, st.piece.y)) gameOver(st);
+        };
+
+        // T-Spin (3-corner rule): only valid if the last action was a rotation and the
+        // piece is a T. Tests the 4 diagonal corners of the 3x3 box (OOB counts as filled).
+        // 'full' if BOTH front corners are filled, else 'mini'. Call BEFORE the board write,
+        // while st.piece still occupies its landing cells.
+        const cornerFilled = (st: GameState, bx: number, by: number) => {
+            if (bx < 0 || bx >= COLS || by < 0 || by >= ROWS) return true; // OOB = filled
+            return !!st.board[by][bx];
+        };
+        const detectTSpin = (st: GameState): 'none' | 'mini' | 'full' => {
+            const p = st.piece;
+            if (p.id !== 'T' || !st.lastWasRotation) return 'none';
+            const ox = p.x, oy = p.y; // T uses a 3x3 box; corners are box-local (0,0)(2,0)(0,2)(2,2)
+            const tl = cornerFilled(st, ox + 0, oy + 0);
+            const tr = cornerFilled(st, ox + 2, oy + 0);
+            const bl = cornerFilled(st, ox + 0, oy + 2);
+            const br = cornerFilled(st, ox + 2, oy + 2);
+            const filled = (tl ? 1 : 0) + (tr ? 1 : 0) + (bl ? 1 : 0) + (br ? 1 : 0);
+            if (filled < 3) return 'none';
+            // front pair by rotation: 0=>TL,TR  1=>TR,BR  2=>BL,BR  3=>TL,BL
+            const front =
+                p.rot === 0 ? (tl && tr) :
+                p.rot === 1 ? (tr && br) :
+                p.rot === 2 ? (bl && br) :
+                              (tl && bl);
+            return front ? 'full' : 'mini';
+        };
+
+        // cosmetic squares emitted along each cleared row (mirrors spawnSinkParticles)
+        const spawnClearParticles = (st: GameState, rows: number[]) => {
+            if (reduceRef.current) return;
+            for (const ry of rows) {
+                for (let c = 0; c < COLS; c++) {
+                    if (st.particles.length >= 80) st.particles.shift();
+                    st.particles.push({ x: c + 0.5, y: ry + 0.5, vx: (Math.random() * 2 - 1) * 3, vy: (Math.random() * 2 - 1) * 4 - 1, life: 0, max: 0.4 + Math.random() * 0.4, color: c % 3 === 0 ? accent : 'rgba(255,255,255,0.85)' });
+                }
+            }
         };
 
         const lockAndNext = (st: GameState) => {
             asfx.lock();
+            // detect T-spin while the piece still occupies its landing position (before the board write)
+            const tspin = detectTSpin(st);
             const { matrix, x, y, color } = st.piece;
             for (let r = 0; r < matrix.length; r++) for (let c = 0; c < matrix[r].length; c++) {
                 if (!matrix[r][c]) continue;
                 const by = y + r, bx = x + c;
                 if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) st.board[by][bx] = color;
             }
-            // clear full lines
+            // clear full lines (record their y for clear particles)
             let cleared = 0;
-            st.board = st.board.filter((row) => { if (row.every((v) => v)) { cleared++; return false; } return true; });
+            const clearedYs: number[] = [];
+            for (let r = 0; r < ROWS; r++) { if (st.board[r].every((v) => v)) { cleared++; clearedYs.push(r); } }
+            st.board = st.board.filter((row) => !row.every((v) => v));
             while (st.board.length < ROWS) st.board.unshift(Array(COLS).fill(''));
-            if (cleared > 0) {
+            if (cleared > 0 || tspin !== 'none') {
                 st.lines += cleared;
-                const difficult = cleared >= 4;          // a tetris
+                // any line-clearing T-spin (or a tetris) is "difficult" and sustains the x1.5 B2B chain
+                const difficult = cleared >= 4 || (tspin !== 'none' && cleared > 0);
                 const wasB2b = st.b2b;
-                let gain = LINE_SCORE[cleared] * st.level;
+                // base score by event
+                const TSPIN_FULL = [400, 800, 1200, 1600];
+                const TSPIN_MINI = [100, 200, 200, 200];
+                let gain = (tspin === 'full' ? TSPIN_FULL[cleared] : tspin === 'mini' ? TSPIN_MINI[cleared] : LINE_SCORE[cleared]) * st.level;
                 if (difficult && wasB2b) gain = Math.floor(gain * 1.5); // back-to-back bonus
-                st.b2b = difficult;
-                st.combo += 1;
-                if (st.combo > 0) gain += 50 * st.combo * st.level;     // combo bonus
+                // a 0-line T-spin scores its base but leaves combo/b2b untouched
+                if (cleared > 0) {
+                    st.b2b = difficult;
+                    st.combo += 1;
+                    if (st.combo > 0) { gain += 50 * st.combo * st.level; asfx.combo(st.combo + 1); } // combo bonus + crescendo cue
+                }
                 st.score += gain;
                 const oldLevel = st.level;
                 const newLevel = Math.floor(st.lines / 10) + 1;
                 if (newLevel !== oldLevel) { st.level = newLevel; st.gravityMs = gravityFor(newLevel); }
-                // Aether charge — earned only here, from clears (+1/line, +1 for a tetris or B2B)
-                const gained = cleared + ((cleared >= 4 || wasB2b) ? 1 : 0);
+                // Perfect Clear (All Clear): board fully empty after a real clear. Big rare payoff.
+                let perfectClear = false;
+                if (cleared > 0) {
+                    perfectClear = st.board.every((row) => row.every((v) => !v));
+                    if (perfectClear) {
+                        const PC = [0, 800, 1200, 1800, 2000];
+                        const bonus = (cleared >= 4 && wasB2b) ? 3200 : PC[cleared];
+                        st.score += bonus * st.level;
+                    }
+                }
+                // Aether charge — earned only here, from clears/skill (+1/line, +1 difficult, +1 for a
+                // 0-line full T-spin, +2 for a Perfect Clear). Keeps powers tied to scored skill.
+                let gained = cleared + (difficult ? 1 : 0);
+                if (cleared === 0 && tspin === 'full') gained += 1;
+                if (perfectClear) gained += 2;
                 for (let i = 0; i < gained && st.charge < MAX_CHARGE; i++) { st.charge++; asfx.charge(st.charge); }
-                // feedback
-                asfx.lineClear(cleared);
-                let text = difficult ? (wasB2b ? 'B2B TETRIS!' : 'TETRIS!')
+                // feedback — flash + sfx
+                if (cleared > 0) asfx.lineClear(cleared);
+                const tName = tspin === 'mini' ? 'T-SPIN MINI'
+                    : tspin === 'full' ? (cleared === 0 ? 'T-SPIN'
+                        : `T-SPIN ${['', 'SINGLE', 'DOUBLE', 'TRIPLE'][cleared] || ''}`.trim())
+                    : '';
+                let text = tspin !== 'none' ? tName
+                    : (cleared >= 4) ? (wasB2b ? 'B2B TETRIS!' : 'TETRIS!')
                     : st.combo >= 1 ? `COMBO ×${st.combo + 1}`
                     : (['', 'SINGLE', 'DOUBLE', 'TRIPLE'][cleared] || '');
-                if (newLevel !== oldLevel) { text = `LEVEL ${newLevel}`; asfx.levelUp(); }
+                if (newLevel !== oldLevel) { if (!perfectClear) text = `LEVEL ${newLevel}`; asfx.levelUp(); }
+                if (perfectClear) text = 'PERFECT CLEAR'; // rarest payoff wins the banner over a coincident level-up
                 showFlash(text);
+                if (tspin !== 'none') asfx.tspin();
+                if (perfectClear) asfx.perfectClear();
                 vibrate(difficult ? 40 : 18);
+                // big-clear juice: screen shake + clear particles (both reduceRef-gated inside)
+                const mag = perfectClear ? 8 : (cleared >= 4 || (tspin === 'full' && cleared >= 2)) ? 6 : cleared >= 3 ? 4 : cleared > 0 ? 2 : 0;
+                if (mag > 0 && !reduceRef.current) { st.shakeMag = mag; st.shakeUntil = performance.now() + 180; }
+                if (clearedYs.length) spawnClearParticles(st, clearedYs);
             } else {
                 st.combo = -1;   // a non-clearing lock breaks the combo (b2b persists)
             }
@@ -306,7 +388,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
         const move = (dx: number) => {
             const st = stRef.current; if (!st || statusRef.current !== 'playing') return;
-            if (!collides(st, st.piece.matrix, st.piece.x + dx, st.piece.y)) { st.piece.x += dx; touchLock(st); asfx.move(); }
+            if (!collides(st, st.piece.matrix, st.piece.x + dx, st.piece.y)) { st.piece.x += dx; st.lastWasRotation = false; touchLock(st); asfx.move(); }
         };
 
         const rotate = (dir: 1 | -1) => {
@@ -314,7 +396,10 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             const rotated = dir === 1 ? rotateCW(st.piece.matrix) : rotateCCW(st.piece.matrix);
             for (const k of KICKS) {
                 if (!collides(st, rotated, st.piece.x + k, st.piece.y)) {
-                    st.piece.matrix = rotated; st.piece.x += k; touchLock(st); asfx.rotate(); return;
+                    st.piece.matrix = rotated; st.piece.x += k;
+                    st.piece.rot = ((st.piece.rot + dir + 4) % 4) as 0 | 1 | 2 | 3;
+                    st.lastWasRotation = true; // gates T-spin detection
+                    touchLock(st); asfx.rotate(); return;
                 }
             }
         };
@@ -323,6 +408,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             const st = stRef.current; if (!st || statusRef.current !== 'playing') return;
             let d = 0;
             while (!collides(st, st.piece.matrix, st.piece.x, st.piece.y + 1)) { st.piece.y++; d++; }
+            if (d > 0) st.lastWasRotation = false; // a hard drop that actually fell is not a rotation
             st.score += d * 2;
             vibrate(12);
             lockAndNext(st);
@@ -335,6 +421,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             else { const h = st.hold; st.hold = cur; st.piece = newPiece(st, h); if (collides(st, st.piece.matrix, st.piece.x, st.piece.y)) gameOver(st); }
             st.holdUsed = true;
             st.lockAcc = 0; st.lockResets = 0;
+            st.lastWasRotation = false; // swapped piece is fresh, rot already 0 via newPiece
             asfx.hold();
             setHoldId(st.hold);
         };
@@ -361,7 +448,8 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 st.slowUntil = now + SLOW_MS;
                 asfx.slowVeil(); showFlash('SLOW VEIL'); vibrate(20);
             } else {
-                // AETHER SINK — dissolve the lowest (<=4) filled rows
+                // AETHER SINK — dissolve the lowest (<=4) filled rows. This NEVER routes through
+                // lockAndNext, so it can never trigger a Perfect Clear bonus (structurally safe).
                 const drop: number[] = [];
                 for (let r = ROWS - 1; r >= 0 && drop.length < 4; r--) { if (st.board[r].some((v) => v)) drop.push(r); }
                 const removed = drop.length;
@@ -386,8 +474,8 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 piece: newPiece({} as GameState, 'I'),
                 queue: [], hold: null, holdUsed: false,
                 score: 0, lines: 0, level: 1, gravityMs: gravityFor(1),
-                dropAcc: 0, lockAcc: 0, lockResets: 0, softDrop: false, combo: -1, b2b: false,
-                charge: 0, powerCdUntil: 0, slowUntil: 0, wasReady: false, fx: [], particles: [], last: 0,
+                dropAcc: 0, lockAcc: 0, lockResets: 0, softDrop: false, combo: -1, b2b: false, lastWasRotation: false,
+                charge: 0, powerCdUntil: 0, slowUntil: 0, wasReady: false, shakeUntil: 0, shakeMag: 0, fx: [], particles: [], last: 0,
             };
             stRef.current = st;
             overRef.current = false;
@@ -430,6 +518,16 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             const ctx = cv.getContext('2d');
             if (!ctx) return;
             ctx.clearRect(0, 0, w, h);
+            // big-clear screen shake — cosmetic (Math.random in draw is allowed; mirrors particles).
+            // ctx.restore() at the end of draw() rebalances every save() so frames never drift.
+            const nowShake = performance.now();
+            let shook = false;
+            if (!reduceRef.current && nowShake < st.shakeUntil) {
+                const k = (st.shakeUntil - nowShake) / 180;
+                const jx = (Math.random() * 2 - 1) * st.shakeMag * k;
+                const jy = (Math.random() * 2 - 1) * st.shakeMag * k;
+                ctx.save(); ctx.translate(jx, jy); shook = true;
+            }
             ctx.fillStyle = '#070b12';
             ctx.fillRect(0, 0, w, h);
             ctx.strokeStyle = 'rgba(255,255,255,0.045)';
@@ -478,6 +576,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 ctx.fillStyle = `rgba(34,211,238,${reduce ? 0.06 : 0.05 + 0.05 * k})`;
                 ctx.fillRect(0, 0, w, h);
             }
+            if (shook) ctx.restore(); // rebalance the screen-shake save()
         };
 
         // ---- loop ----
@@ -500,6 +599,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                             st.piece.y++;
                             st.lockResets = 0;
                             st.lockAcc = 0;
+                            st.lastWasRotation = false; // gravity/soft-drop movement is not a rotation
                             if (st.softDrop) st.score += 1;
                         }
                     }
@@ -645,13 +745,8 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     const toggleMute = () => { const m = !muted; setArcadeMuted(m); setMuted(m); };
     const canSlow = powerReady && charge >= POWERS.slow.cost;
     const canSink = powerReady && charge >= POWERS.sink.cost;
-    const padBtn = 'flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] active:bg-white/[0.12] text-white/90 select-none touch-none h-14';
-    const stat = (label: string, val: number | string) => (
-        <div className="text-center px-1">
-            <p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">{label}</p>
-            <p className="font-ritual text-lg leading-tight" style={{ color: accent }}>{val}</p>
-        </div>
-    );
+    const padBtn = 'flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] active:bg-white/[0.12] text-white/90 select-none touch-none h-11';
+    const pct = MAX_CHARGE > 0 ? Math.min(100, (charge / MAX_CHARGE) * 100) : 0;
 
     return (
         <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -672,43 +767,37 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 </div>
             </div>
 
-            {/* hold · stats · next */}
-            <div className="flex items-center justify-between gap-2 px-3 pt-2 shrink-0">
-                <div className="flex flex-col items-center">
-                    <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/40 mb-0.5 flex items-center gap-1"><Box className="w-2.5 h-2.5" /> Hold</p>
-                    <div className="rounded-xl border border-white/10 bg-black/30 p-1"><MiniPiece id={holdId} /></div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    {stat('Score', score)}
-                    {stat('Lines', lines)}
-                    {stat('Level', level)}
-                </div>
-                <div className="flex flex-col items-center">
-                    <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/40 mb-0.5">Next</p>
-                    <div className="rounded-xl border border-white/10 bg-black/30 p-1"><MiniPiece id={nextId} /></div>
-                </div>
+            {/* inline stat strip (replaces the old hold/stats/next row + standalone Aether meter) */}
+            <div className="flex items-center justify-center gap-3 px-3 pt-1 shrink-0 font-mono">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Score <b className="font-ritual text-sm align-middle" style={{ color: accent }}>{score}</b></span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Lines <b className="font-ritual text-sm align-middle text-white">{lines}</b></span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Lvl <b className="font-ritual text-sm align-middle text-white">{level}</b></span>
             </div>
 
-            {/* Aether charge meter */}
-            <div className="px-3 pt-2 shrink-0">
-                <div className="flex items-center justify-between mb-1">
-                    <span className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45">Aether</span>
-                    <span className="text-[8px] font-mono uppercase tracking-[0.25em]" style={{ color: powerReady ? accent : 'rgba(255,255,255,0.4)' }}>{powerReady ? 'Ready' : `${charge}/${MAX_CHARGE}`}</span>
-                </div>
-                <div
-                    data-ready-glow={powerReady ? '1' : undefined}
-                    className="flex gap-0.5 rounded-lg p-1 border transition-colors"
-                    style={{ borderColor: powerReady ? `${accent}66` : 'rgba(255,255,255,0.08)', boxShadow: powerReady ? `0 0 14px ${accent}55` : 'none', animation: powerReady ? 'arcadeReady 1.4s ease-in-out infinite' : 'none' }}
-                >
-                    {Array.from({ length: MAX_CHARGE }).map((_, i) => (
-                        <div key={i} className="flex-1 h-2 rounded-sm" style={{ background: i < charge ? accent : 'rgba(255,255,255,0.08)', boxShadow: i < charge ? 'inset 0 1px 0 rgba(255,255,255,0.28)' : 'none' }} />
-                    ))}
-                </div>
-            </div>
-
+            {/* board + controls — centered card on wide screens, full bleed on phones */}
+            <div className="flex-1 min-h-0 flex flex-col mx-auto w-full max-w-[420px]">
             {/* board */}
-            <div ref={wrapRef} className="relative flex-1 min-h-0 flex items-center justify-center px-3 py-2">
+            <div ref={wrapRef} className="relative flex-1 min-h-0 flex items-center justify-center px-3 py-1">
                 <canvas ref={canvasRef} className="rounded-xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none' }} />
+
+                {/* Hold — top-left board overlay (0 layout px; pointer-events-none so gestures pass through) */}
+                <div data-noboard className="absolute left-3 top-2 pointer-events-none rounded-lg bg-black/45 backdrop-blur px-1.5 py-1 flex flex-col items-center">
+                    <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/50 leading-none mb-0.5">Hold</span>
+                    <MiniPiece id={holdId} size={30} />
+                </div>
+
+                {/* Next (5-deep) — top-right board overlay */}
+                <div data-noboard className="absolute right-3 top-2 pointer-events-none rounded-lg bg-black/45 backdrop-blur px-1.5 py-1 flex flex-col items-center">
+                    <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/50 leading-none mb-0.5">Next</span>
+                    {nextIds.length === 0
+                        ? <MiniPiece id={null} size={30} />
+                        : nextIds.map((id, i) => <MiniPiece key={i} id={id} size={i === 0 ? 30 : 22} />)}
+                </div>
+
+                {/* Aether charge — board-edge hairline; glows when a power is ready */}
+                <div data-noboard className="absolute left-2 right-2 bottom-2 h-1 rounded-full pointer-events-none overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: accent, boxShadow: powerReady ? `0 0 8px ${accent}` : 'none' }} />
+                </div>
 
                 {flash && status === 'playing' && (
                     <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
@@ -750,30 +839,28 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 )}
             </div>
 
-            {/* power-ups */}
-            <div className="shrink-0 px-3 pt-1 grid grid-cols-2 gap-2" style={{ touchAction: 'none' }}>
+            {/* controls — 2 rows of h-11 (powers merged into Row 1) */}
+            <div className="shrink-0 px-3 pb-2 pt-1.5 grid grid-cols-6 gap-1.5" style={{ touchAction: 'none' }}>
+                {/* Row 1 */}
                 <button
                     data-noboard disabled={!canSlow}
                     onPointerDown={(e) => { e.preventDefault(); a.firePower?.('slow'); }}
-                    className={`${padBtn} h-12 ${canSlow ? '' : 'opacity-40'}`}
+                    className={`${padBtn} relative ${canSlow ? '' : 'opacity-40'}`}
                     style={canSlow ? { borderColor: `${accent}66`, boxShadow: `0 0 10px ${accent}33`, color: accent } : undefined}
                     aria-label="Slow Veil power"
-                ><span className="text-[10px] font-black uppercase tracking-[0.12em]">◐ Slow Veil</span><span className="ml-1 text-[9px] opacity-70">·{POWERS.slow.cost}</span></button>
+                ><span className="text-base leading-none">◐</span><span className="absolute top-0.5 right-1 text-[8px] font-mono opacity-70">{POWERS.slow.cost}</span></button>
                 <button
                     data-noboard disabled={!canSink}
                     onPointerDown={(e) => { e.preventDefault(); a.firePower?.('sink'); }}
-                    className={`${padBtn} h-12 ${canSink ? '' : 'opacity-40'}`}
+                    className={`${padBtn} relative ${canSink ? '' : 'opacity-40'}`}
                     style={canSink ? { borderColor: `${accent}66`, boxShadow: `0 0 10px ${accent}33`, color: accent } : undefined}
                     aria-label="Aether Sink power"
-                ><span className="text-[10px] font-black uppercase tracking-[0.12em]">▼▼ Aether Sink</span><span className="ml-1 text-[9px] opacity-70">·{POWERS.sink.cost}</span></button>
-            </div>
-
-            {/* controls */}
-            <div className="shrink-0 px-3 pb-3 pt-2 grid grid-cols-3 gap-2" style={{ touchAction: 'none' }}>
+                ><span className="text-xs font-black leading-none">▼▼</span><span className="absolute top-0.5 right-1 text-[8px] font-mono opacity-70">{POWERS.sink.cost}</span></button>
                 <button className={padBtn} onPointerDown={(e) => { e.preventDefault(); a.rotate?.(-1); }} aria-label="Rotate left"><RotateCcw className="w-5 h-5" /></button>
-                <button className={padBtn} onPointerDown={(e) => { e.preventDefault(); a.rotate?.(1); }} aria-label="Rotate right"><RotateCw className="w-6 h-6" /></button>
-                <button className={padBtn} onPointerDown={(e) => { e.preventDefault(); a.doHold?.(); }} aria-label="Hold"><Box className="w-5 h-5" /></button>
+                <button className={padBtn} onPointerDown={(e) => { e.preventDefault(); a.rotate?.(1); }} aria-label="Rotate right"><RotateCw className="w-5 h-5" /></button>
+                <button className={`${padBtn} col-span-2`} onPointerDown={(e) => { e.preventDefault(); a.doHold?.(); }} aria-label="Hold"><Box className="w-5 h-5 mr-1" /> <span className="text-[11px] font-black uppercase tracking-[0.2em]">Hold</span></button>
 
+                {/* Row 2 */}
                 <button
                     className={padBtn}
                     onPointerDown={(e) => { e.preventDefault(); startPress('L', () => a.move?.(-1), 140, 40); }}
@@ -787,18 +874,18 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                     aria-label="Move right"
                 >▶</button>
                 <button
-                    className={`${padBtn} flex-col gap-0`}
+                    className={`${padBtn} col-span-2`}
                     onPointerDown={(e) => { e.preventDefault(); a.setSoft?.(true); }}
                     onPointerUp={() => a.setSoft?.(false)} onPointerLeave={() => a.setSoft?.(false)} onPointerCancel={() => a.setSoft?.(false)}
                     aria-label="Soft drop"
                 ><ChevronDown className="w-5 h-5" /></button>
-
                 <button
-                    className={`${padBtn} col-span-3 h-12`}
+                    className={`${padBtn} col-span-2`}
                     style={{ background: `${accent}1c`, borderColor: `${accent}55`, color: accent }}
                     onPointerDown={(e) => { e.preventDefault(); a.hardDrop?.(); }}
                     aria-label="Hard drop"
                 ><ChevronsDown className="w-5 h-5 mr-1" /> <span className="text-[11px] font-black uppercase tracking-[0.3em]">Drop</span></button>
+            </div>
             </div>
         </div>
     );

@@ -24,16 +24,22 @@ export const TERMINAL_VY = 34;
 
 export const CEIL = 6.0;            // ship/flip ceiling height above floor
 export const SHIP_MIN_CORRIDOR = 4; // min flyable gap in a ship section
+export const WAVE_SLOPE = 1.0;          // wave climbs/dives at exactly 45° (vy = ±vx)
+export const WAVE_MIN_CORRIDOR = 3.2;   // min flyable gap in a wave section (tighter than ship)
 
 export const GAP_SAFETY_MARGIN = 0.85;
 export const SAFE_GAP_START = 6;
 export const SAFE_GAP_MIN = 3.5;
 export const PORTAL_LEAD_IN = 5;
-export const TIER_UNITS = 220;
-export const MAX_TIER = 6;
+export const TIER_UNITS = 200;
+export const MAX_TIER = 7;
 export const START_PAD = 6;
 
-export type ModeKind = 'cube' | 'ship';
+// Cosmetic names for the difficulty tiers (engine still reads the numeric index).
+export const TIER_NAMES = ['Stillness', 'Stirring', 'Current', 'Rapids', 'Torrent', 'Maelstrom', 'Abyss', 'Eventide'];
+export function tierName(t: number) { return TIER_NAMES[Math.max(0, Math.min(TIER_NAMES.length - 1, t))]; }
+
+export type ModeKind = 'cube' | 'ship' | 'wave';
 export type ObstacleKind = 'spike' | 'block' | 'gravityPortal' | 'modePortal' | 'speedPortal' | 'orb' | 'pad' | 'coin' | 'shard';
 
 export interface Obstacle {
@@ -48,6 +54,7 @@ export interface Obstacle {
     sign?: 1 | -1;                  // gravityPortal target gravity
     tier?: number;                  // speedPortal tier 1..5
     taken?: boolean;                // coin collected (runtime)
+    near?: boolean;                 // shard near-miss telegraph fired (runtime)
 }
 
 interface JumpSpec { takeoff: number; gapStart: number; gapEnd: number; maxH: number; kind?: 'spike' | 'block'; }
@@ -100,9 +107,9 @@ function validateTemplate(t: SegmentTemplate): boolean {
     return (t.jumps || []).every((j) => isJumpClearable(vx, j.takeoff, j.gapStart, j.gapEnd, j.maxH, j.kind));
 }
 
-function validateShipCorridor(t: SegmentTemplate): boolean {
+function validateCorridor(t: SegmentTemplate, minGap: number): boolean {
     // sample x across the segment; the open corridor between floor-mounted and
-    // ceiling-mounted solids must always be at least SHIP_MIN_CORRIDOR tall.
+    // ceiling-mounted solids must always be at least minGap tall.
     for (let x = 0; x <= t.length; x += 0.25) {
         let floorTop = 0;       // highest floor obstruction at x
         let ceilBottom = CEIL;  // lowest ceiling obstruction at x
@@ -121,9 +128,17 @@ function validateShipCorridor(t: SegmentTemplate): boolean {
                 else ceilBottom = Math.min(ceilBottom, o.y);
             }
         }
-        if (ceilBottom - floorTop < SHIP_MIN_CORRIDOR) return false;
+        if (ceilBottom - floorTop < minGap) return false;
     }
     return true;
+}
+
+function validateShipCorridor(t: SegmentTemplate): boolean {
+    return validateCorridor(t, SHIP_MIN_CORRIDOR);
+}
+
+function validateWaveCorridor(t: SegmentTemplate): boolean {
+    return validateCorridor(t, WAVE_MIN_CORRIDOR);
 }
 
 // ---- seed template library ----
@@ -190,6 +205,82 @@ const RAW_TEMPLATES: SegmentTemplate[] = [
         jumps: [], // gravity-flip section: floor spike avoided by hugging the ceiling — hand-tuned
         coins: [{ x: 6, y: 4.2 }],
     },
+    // ---- tier 1 — staircase ----
+    {
+        id: 'c1_stair', mode: 'cube', tier: 1, speedTier: 2, length: 11,
+        obstacles: [{ kind: 'block', x: 3.5, y: 0, w: 1, h: 1 }, { kind: 'spike', x: 6.4, y: 0, h: 1 }],
+        jumps: [
+            { takeoff: 2, gapStart: 3.5, gapEnd: 4.5, maxH: 1, kind: 'block' },
+            { takeoff: 5.4, gapStart: 6, gapEnd: 7.4, maxH: 1 },
+        ],
+        coins: [{ x: 4, y: 2.0 }],
+    },
+    // ---- tier 2 — three-beat rhythm (spike · block · spike) ----
+    {
+        id: 'c2_rhythm', mode: 'cube', tier: 2, speedTier: 2, length: 13,
+        obstacles: [
+            { kind: 'spike', x: 3, y: 0, h: 1 },
+            { kind: 'block', x: 6, y: 0, w: 1, h: 1 },
+            { kind: 'spike', x: 9, y: 0, h: 1 },
+        ],
+        jumps: [
+            { takeoff: 2, gapStart: 2.6, gapEnd: 4, maxH: 1 },
+            { takeoff: 5, gapStart: 6, gapEnd: 7, maxH: 1, kind: 'block' },
+            { takeoff: 8, gapStart: 8.6, gapEnd: 10, maxH: 1 },
+        ],
+        coins: [{ x: 4.5, y: 2.4 }, { x: 7.5, y: 2.4 }],
+    },
+    // ---- tier 2 — double pad bounce over a tall wall ----
+    {
+        id: 'c2_padwall', mode: 'cube', tier: 2, speedTier: 2, length: 13,
+        obstacles: [
+            { kind: 'pad', x: 3, y: 0, variant: 'yellow' },
+            { kind: 'block', x: 6, y: 0, w: 1, h: 4 },
+            { kind: 'pad', x: 9, y: 0, variant: 'yellow' },
+        ],
+        jumps: [], // pad-assisted bounce clears the tall wall — hand-tuned, generous spacing
+        coins: [{ x: 6, y: 5.2 }],
+    },
+    // ---- tier 3 — pink-orb gravity weave (reuses the flip mechanic) ----
+    {
+        id: 'c3_pinkweave', mode: 'cube', tier: 3, speedTier: 2, length: 15,
+        obstacles: [
+            { kind: 'spike', x: 3, y: 0, h: 1 },
+            { kind: 'orb', x: 5.6, y: 2.6, variant: 'pink' },   // flip + boost: hug the ceiling
+            { kind: 'spike', x: 8, y: 0, h: 1 },
+            { kind: 'orb', x: 10.6, y: 3.4, variant: 'pink' },  // flip back down
+        ],
+        jumps: [{ takeoff: 2, gapStart: 2.6, gapEnd: 4, maxH: 1 }], // first jump proven; pink-orb arcs hand-tuned
+        coins: [{ x: 5.6, y: 4.0 }, { x: 10.6, y: 4.6 }],
+    },
+    // ---- tier 4 — fast triple (speedTier 3) ----
+    {
+        id: 'c5_tripfast', mode: 'cube', tier: 4, speedTier: 3, length: 15,
+        obstacles: [
+            { kind: 'spike', x: 3, y: 0, h: 1 },
+            { kind: 'spike', x: 7, y: 0, h: 1 },
+            { kind: 'spike', x: 11, y: 0, h: 1 },
+        ],
+        jumps: [
+            { takeoff: 2, gapStart: 2.6, gapEnd: 4, maxH: 1 },
+            { takeoff: 6, gapStart: 6.6, gapEnd: 8, maxH: 1 },
+            { takeoff: 10, gapStart: 10.6, gapEnd: 12, maxH: 1 },
+        ],
+        coins: [{ x: 5, y: 2.6 }, { x: 9, y: 2.6 }, { x: 13, y: 2.2 }], // greedy coin arc — high-score route
+    },
+    // ---- tier 4 — block canyon with a pit coin ----
+    {
+        id: 'c6_canyon', mode: 'cube', tier: 4, speedTier: 2, length: 14,
+        obstacles: [
+            { kind: 'block', x: 3.5, y: 0, w: 1, h: 1 },
+            { kind: 'block', x: 8.5, y: 0, w: 1, h: 1 },
+        ],
+        jumps: [
+            { takeoff: 2, gapStart: 3.5, gapEnd: 4.5, maxH: 1, kind: 'block' },
+            { takeoff: 7, gapStart: 8.5, gapEnd: 9.5, maxH: 1, kind: 'block' },
+        ],
+        coins: [{ x: 6, y: 0.6 }, { x: 6, y: 1.6 }, { x: 6, y: 2.6 }], // pit-floor coin stack between the walls
+    },
     // ---- ship ----
     {
         id: 's2_corridor', mode: 'ship', tier: 2, speedTier: 2, length: 18,
@@ -201,11 +292,37 @@ const RAW_TEMPLATES: SegmentTemplate[] = [
         jumps: [],
         coins: [{ x: 7, y: 3 }, { x: 11, y: 3 }],
     },
+    {
+        id: 's3_zig', mode: 'ship', tier: 3, speedTier: 2, length: 20,
+        obstacles: [
+            { kind: 'spike', x: 4, y: 0, h: 1 },
+            { kind: 'spike', x: 8, y: CEIL, h: 1, dir: 'down' },
+            { kind: 'spike', x: 12, y: 0, h: 1 },
+            { kind: 'spike', x: 16, y: CEIL, h: 1, dir: 'down' },
+        ],
+        jumps: [],
+        coins: [{ x: 6, y: 3 }, { x: 10, y: 3 }, { x: 14, y: 3 }],
+        shards: [{ x: 18, y: 3 }],
+    },
+    // ---- wave (45° corridor flying) ----
+    {
+        id: 'w4_thread', mode: 'wave', tier: 4, speedTier: 2, length: 20,
+        obstacles: [
+            { kind: 'spike', x: 5, y: 0, h: 1 },
+            { kind: 'spike', x: 9, y: CEIL, h: 1, dir: 'down' },
+            { kind: 'spike', x: 13, y: 0, h: 1 },
+            { kind: 'spike', x: 17, y: CEIL, h: 1, dir: 'down' },
+        ],
+        jumps: [],
+        coins: [{ x: 7, y: 3 }, { x: 11, y: 3 }, { x: 15, y: 3 }],
+    },
 ];
 
 // Drop any template that fails its check — it never reaches a player.
 export const VALID_TEMPLATES: SegmentTemplate[] = RAW_TEMPLATES.filter((t) => {
-    const ok = t.mode === 'ship' ? validateShipCorridor(t) : validateTemplate(t);
+    const ok = t.mode === 'wave' ? validateWaveCorridor(t)
+        : t.mode === 'ship' ? validateShipCorridor(t)
+            : validateTemplate(t);
     if (!ok && typeof console !== 'undefined') console.warn(`[veil] template "${t.id}" failed beatability check — dropped`);
     return ok;
 });
@@ -270,8 +387,8 @@ export function generateAhead(gen: VeilGen, out: Obstacle[], targetX: number): v
 // so a change never invalidates an in-flight jump.
 function maybeTransition(gen: VeilGen, out: Obstacle[], tier: number): void {
     const r = gen.rng();
-    if (gen.mode === 'ship') {
-        // ships are short bursts — return to cube
+    if (gen.mode === 'ship' || gen.mode === 'wave') {
+        // ship/wave are short bursts — return to cube
         if (r < 0.55) {
             out.push({ kind: 'modePortal', x: gen.cursorX + 1, y: CEIL / 2, to: 'cube' });
             gen.mode = 'cube';
@@ -282,6 +399,14 @@ function maybeTransition(gen: VeilGen, out: Obstacle[], tier: number): void {
     if (tier >= 2 && r < 0.12 && VALID_TEMPLATES.some((t) => t.mode === 'ship' && t.speedTier === gen.speedTier)) {
         out.push({ kind: 'modePortal', x: gen.cursorX + 1, y: CEIL / 2, to: 'ship' });
         gen.mode = 'ship';
+        gen.cursorX += PORTAL_LEAD_IN;
+        return;
+    }
+    // wave occupies the disjoint [0.12, 0.18) slice so the single rng draw above
+    // keeps the same seed sequence whether or not wave is eligible.
+    if (tier >= 4 && r >= 0.12 && r < 0.18 && VALID_TEMPLATES.some((t) => t.mode === 'wave' && t.speedTier === gen.speedTier)) {
+        out.push({ kind: 'modePortal', x: gen.cursorX + 1, y: CEIL / 2, to: 'wave' });
+        gen.mode = 'wave';
         gen.cursorX += PORTAL_LEAD_IN;
         return;
     }

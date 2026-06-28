@@ -127,6 +127,37 @@ export const asfx = {
     // Veil: Source Shard collected (Aegis armed) / the Aegis absorbing a hit
     shardPickup() { tone({ freq: 660, to: 1245, type: 'triangle', dur: 0.16, gain: 0.09 }); tone({ freq: 1320, to: 1760, type: 'sine', dur: 0.18, gain: 0.05, delay: 0.05 }); noise({ dur: 0.05, type: 'bandpass', freq: 5000, gain: 0.03 }); },
     shieldBreak() { tone({ freq: 520, to: 130, type: 'sawtooth', dur: 0.22, gain: 0.12 }); tone({ freq: 1320, to: 660, type: 'triangle', dur: 0.14, gain: 0.06 }); noise({ dur: 0.16, type: 'bandpass', freq: 2400, gain: 0.07 }); },
+    // Tetra: go-all-out cues (T-Spin / Perfect Clear / combo) ----
+    // T-Spin landing — descending saw whoosh + rising triangle shimmer
+    tspin() { tone({ freq: 320, to: 140, type: 'sawtooth', dur: 0.26, gain: 0.10 }); tone({ freq: 600, to: 1100, type: 'triangle', dur: 0.24, gain: 0.06, delay: 0.03 }); noise({ dur: 0.14, type: 'bandpass', freq: 700, gain: 0.04, delay: 0.02 }); },
+    // Perfect Clear — the big rare payoff: 5-note triangle arpeggio + bell + sparkle tail
+    perfectClear() { CLEAR_NOTES.forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.35, gain: 0.13, delay: i * 0.08 })); tone({ freq: 1568, type: 'sine', dur: 0.5, gain: 0.09, delay: 0.4 }); noise({ dur: 0.4, type: 'highpass', freq: 6000, gain: 0.035, delay: 0.42 }); },
+    // Combo step — single blip rising with combo depth (n = combo+1)
+    combo(n: number) { const f = 440 + Math.min(n, 12) * 60; tone({ freq: f, type: 'square', dur: 0.05, gain: 0.05 }); tone({ freq: f * 1.5, type: 'triangle', dur: 0.05, gain: 0.025, delay: 0.005 }); },
+    // Serpent: go-all-out cues (zones / chain / boons) ----------
+    // Zone shift — deep rising sweep + airy noise wash (heavier than levelUp)
+    zoneShift() { tone({ freq: 110, to: 660, type: 'sawtooth', dur: 0.5, gain: 0.11 }); tone({ freq: 220, to: 990, type: 'triangle', dur: 0.5, gain: 0.05, delay: 0.05 }); noise({ dur: 0.45, type: 'bandpass', freq: 1400, gain: 0.05, delay: 0.04 }); },
+    // Chain tier-up — bright blip rising with combo tier
+    chainUp(tier: number) { const f = 620 + tier * 120; tone({ freq: f, type: 'triangle', dur: 0.06, gain: 0.07 }); tone({ freq: f * 2, type: 'sine', dur: 0.05, gain: 0.03, delay: 0.01 }); },
+    // Magnet (Lodestone) — low warbling pull-tone wobbling ~300<->420
+    magnet() { tone({ freq: 300, to: 420, type: 'sine', dur: 0.15, gain: 0.08 }); tone({ freq: 420, to: 300, type: 'sine', dur: 0.15, gain: 0.07, delay: 0.15 }); },
+    // Molt (Shrink) — quick descending shed flutter + soft puff
+    molt() { tone({ freq: 760, to: 240, type: 'triangle', dur: 0.12, gain: 0.07 }); noise({ dur: 0.10, type: 'lowpass', freq: 500, gain: 0.05, delay: 0.02 }); },
+    // Frenzy (Ardor) start — hot ascending double-tone igniting
+    frenzy() { tone({ freq: 440, to: 880, type: 'sawtooth', dur: 0.3, gain: 0.10 }); tone({ freq: 660, to: 1320, type: 'triangle', dur: 0.3, gain: 0.05, delay: 0.04 }); },
+    // Frenzy end — brief cooling downward pair (mirror of veilEnd)
+    frenzyEnd() { tone({ freq: 880, to: 440, type: 'sawtooth', dur: 0.22, gain: 0.06 }); tone({ freq: 1320, to: 660, type: 'triangle', dur: 0.2, gain: 0.03, delay: 0.03 }); },
+    // Near-miss — very short low-gain airy brushed-past tick
+    nearMiss() { noise({ dur: 0.06, type: 'bandpass', freq: 3200, gain: 0.03 }); tone({ freq: 520, to: 760, type: 'sine', dur: 0.04, gain: 0.02 }); },
+    // Veil: go-all-out cues (coin streak / tiers / wave / shard) -
+    // Coin streak — coin pickup rising with streak n (replaces flat coin())
+    coinStreak(n: number) { const f = 988 + n * 70; tone({ freq: f, type: 'square', dur: 0.06, gain: 0.06 }); tone({ freq: f * 1.5, type: 'sine', dur: 0.10, gain: 0.035, delay: 0.05 }); },
+    // Tier entry — short ascending riser marking a new difficulty tier
+    tierUp() { tone({ freq: 330, to: 990, type: 'triangle', dur: 0.28, gain: 0.10 }); tone({ freq: 660, to: 1320, type: 'sine', dur: 0.28, gain: 0.05, delay: 0.05 }); },
+    // Wave portal entered — airy descending-then-rising sine swell
+    waveEnter() { tone({ freq: 880, to: 360, type: 'sine', dur: 0.18, gain: 0.08 }); tone({ freq: 360, to: 1180, type: 'sine', dur: 0.26, gain: 0.07, delay: 0.16 }); noise({ dur: 0.22, type: 'bandpass', freq: 1600, gain: 0.035, delay: 0.04 }); },
+    // Shard near — soft high shimmer telegraphing an approaching un-collected shard
+    shardNear() { tone({ freq: 1245, type: 'sine', dur: 0.10, gain: 0.04 }); tone({ freq: 1760, type: 'sine', dur: 0.12, gain: 0.03, delay: 0.04 }); },
     // shared -----------------------------------------------
     gameOver() { [392, 294, 196].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.5, gain: 0.15, delay: i * 0.14 })); },
 };

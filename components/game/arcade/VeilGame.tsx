@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import { ArrowLeft, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { asfx, arcadeMusic, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
 import {
-    SPEED, SPEED_MULTS, GRAVITY, JUMP_VELOCITY, TERMINAL_VY, CEIL, START_PAD,
+    SPEED, SPEED_MULTS, GRAVITY, JUMP_VELOCITY, TERMINAL_VY, CEIL, START_PAD, WAVE_SLOPE, TIER_UNITS, tierName,
     createGen, generateAhead, type Obstacle, type ModeKind, type VeilGen,
 } from '@/lib/game/veilLevels';
 
@@ -69,11 +69,16 @@ interface VS {
     shield: boolean;        // Aegis from a Source Shard (one-hit)
     invulnUntil: number;    // sim-time i-frames after an Aegis break
     shardsUsed: number;
+    // coin-streak combo (sim-derived; folds into existing coins/score only)
+    coinStreak: number;
+    lastCoinX: number;
     // visual-only
     trail: { x: number; y: number }[];
     particles: Particle[];
     shakeUntil: number; shakeMag: number;
     flash: number;          // wall-clock ms of a portal flash
+    lastTierShown: number;      // last difficulty tier we banner'd
+    tierBannerUntil: number;    // wall-clock ms the tier banner fades by
 }
 
 export type VeilResult = { score: number; lines: number; level: number };
@@ -218,6 +223,11 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     inp.tapPending = false;
                     asfx.jump();
                 }
+            } else if (st.mode === 'wave') {
+                // constant-velocity 45° climb/dive — no gravity. inp.held sampled
+                // exactly like ship; vy is a pure function of input + speed.
+                const dir = inp.held ? 1 : -1;
+                st.vy = dir * (SPEED * st.speedMult) * WAVE_SLOPE * st.gravitySign;
             } else {
                 const a = inp.held ? SHIP_THRUST : -SHIP_GRAVITY;
                 st.vy += a * st.gravitySign * dt;
@@ -241,13 +251,13 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             const IN = HITBOX_INSET;
             const insL = st.px + IN, insR = st.px + 1 - IN;
 
-            // world floor / ceiling
+            // world floor / ceiling (wave shares the ship clamp paths)
             if (st.gravitySign === 1) {
                 if (st.py < 0) { st.py = 0; if (st.vy < 0) st.vy = 0; st.onSurface = true; }
-                if (st.mode === 'ship' && st.py + 1 > CEIL) { st.py = CEIL - 1; if (st.vy > 0) st.vy = 0; st.onSurface = true; }
+                if (st.mode !== 'cube' && st.py + 1 > CEIL) { st.py = CEIL - 1; if (st.vy > 0) st.vy = 0; st.onSurface = true; }
             } else {
                 if (st.py + 1 > CEIL) { st.py = CEIL - 1; if (st.vy > 0) st.vy = 0; st.onSurface = true; }
-                if (st.mode === 'ship' && st.py < 0) { st.py = 0; if (st.vy < 0) st.vy = 0; st.onSurface = true; }
+                if (st.mode !== 'cube' && st.py < 0) { st.py = 0; if (st.vy < 0) st.vy = 0; st.onSurface = true; }
             }
 
             for (const o of st.obstacles) {
@@ -301,7 +311,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 const within = Math.abs((o.x) - cx) < 0.7;
                 switch (o.kind) {
                     case 'modePortal':
-                        if (within && !o.taken) { st.mode = o.to ?? 'cube'; st.vy *= 0.6; o.taken = true; asfx.portal(); st.flash = performance.now() + 140; }
+                        if (within && !o.taken) { st.mode = o.to ?? 'cube'; st.vy *= 0.6; o.taken = true; if (o.to === 'wave') asfx.waveEnter(); else asfx.portal(); st.flash = performance.now() + 140; }
                         break;
                     case 'gravityPortal':
                         if (within && !o.taken) { if (o.sign && st.gravitySign !== o.sign) { st.gravitySign = o.sign; asfx.portal(); st.flash = performance.now() + 140; } o.taken = true; }
@@ -330,12 +340,25 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         break;
                     }
                     case 'coin': {
-                        if (!o.taken && Math.hypot(o.x - cx, o.y - cy) < 0.7) { o.taken = true; st.coins++; asfx.coin(); spawnParticles(st, o.x, o.y, 6, PAL.coin, 3, 4); }
+                        if (!o.taken && Math.hypot(o.x - cx, o.y - cy) < 0.7) {
+                            o.taken = true; st.coins++;
+                            // coin-streak combo: chained coins (close in x) crescendo —
+                            // pure audio/visual juice; coins still pay the flat COIN_BONUS.
+                            st.coinStreak = (st.px - st.lastCoinX < 6) ? st.coinStreak + 1 : 1;
+                            st.lastCoinX = st.px;
+                            asfx.coinStreak(Math.min(st.coinStreak, 8));
+                            spawnParticles(st, o.x, o.y, 4 + Math.min(8, st.coinStreak), PAL.coin, 3, 4);
+                        }
                         break;
                     }
                     case 'shard': {
                         // Source Shard → arms the Aegis (one held; no score/coin, deterministic)
-                        if (!o.taken && !st.shield && Math.hypot(o.x - cx, o.y - cy) < 0.75) { o.taken = true; st.shield = true; asfx.shardPickup(); spawnParticles(st, o.x, o.y, 8, PAL.shard, 3, 4); }
+                        if (!o.taken && !st.shield) {
+                            // near-miss telegraph: chirp once as an un-collected shard first
+                            // enters ~5 units ahead while shieldless (mirrors the o.taken flag pattern)
+                            if (o.near !== true && o.x - cx < 5 && o.x - cx > 0) { o.near = true; asfx.shardNear(); }
+                            if (Math.hypot(o.x - cx, o.y - cy) < 0.75) { o.taken = true; st.shield = true; asfx.shardPickup(); spawnParticles(st, o.x, o.y, 8, PAL.shard, 3, 4); }
+                        }
                         break;
                     }
                 }
@@ -350,7 +373,9 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 onSurface: true, wasOnSurface: true, lastHoldJumpT: -1, simTime: 0, acc: 0, last: 0,
                 obstacles: [], gen, coins: 0, distance: 0,
                 shield: false, invulnUntil: 0, shardsUsed: 0,
+                coinStreak: 0, lastCoinX: -999,
                 trail: [], particles: [], shakeUntil: 0, shakeMag: 0, flash: 0,
+                lastTierShown: 0, tierBannerUntil: 0,
             };
             generateAhead(gen, st.obstacles, PLAYER_SCREEN_X + dimRef.current.viewUnits + SPAWN_AHEAD);
             stRef.current = st;
@@ -408,9 +433,10 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 ctx.translate((Math.random() * 2 - 1) * m, (Math.random() * 2 - 1) * m);
             }
 
-            // section hue mix
+            // section hue mix — push warmer when a speed portal is firing fast
             const sectionIdx = Math.floor(st.px / 220) % SECTION_HUES.length;
-            const hue = SECTION_HUES[sectionIdx];
+            const hue = SECTION_HUES[sectionIdx] + (!reduce && st.speedMult > 1.3 ? 18 : 0);
+            const fast = !reduce && st.speedMult > 1.3;
 
             // parallax grid (two layers)
             ctx.globalCompositeOperation = 'lighter';
@@ -438,7 +464,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             ctx.shadowBlur = 0;
             ctx.fillStyle = 'rgba(124,92,255,0.08)';
             ctx.fillRect(0, floorY, W, H - floorY);
-            if (st.mode === 'ship') {
+            if (st.mode !== 'cube') {
                 const cyPx = sy(CEIL);
                 ctx.shadowColor = PAL.ground; ctx.shadowBlur = reduce ? 0 : 8;
                 ctx.strokeStyle = PAL.ground; ctx.lineWidth = 2;
@@ -456,7 +482,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         const baseYpx = sy(o.y);
                         const apexYpx = sy(o.dir === 'down' ? o.y - h : o.y + h);
                         ctx.save();
-                        ctx.shadowColor = PAL.spike; ctx.shadowBlur = reduce ? 0 : 8;
+                        ctx.shadowColor = PAL.spike; ctx.shadowBlur = reduce ? 0 : 8 + pulse * 5;
                         ctx.fillStyle = PAL.spike;
                         ctx.beginPath();
                         ctx.moveTo(ox, baseYpx); ctx.lineTo(ox + P, baseYpx); ctx.lineTo(ox + P / 2, apexYpx); ctx.closePath(); ctx.fill();
@@ -466,10 +492,13 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     case 'block': {
                         const w = (o.w ?? 1) * P, h = (o.h ?? 1) * P;
                         const topY = sy(o.y + (o.h ?? 1));
+                        ctx.save();
+                        ctx.shadowColor = PAL.block; ctx.shadowBlur = reduce ? 0 : 8 + pulse * 5;
                         ctx.fillStyle = 'rgba(91,140,255,0.18)';
                         ctx.fillRect(ox, topY, w, h);
                         ctx.strokeStyle = PAL.block; ctx.lineWidth = 2;
                         ctx.strokeRect(ox + 1, topY + 1, w - 2, h - 2);
+                        ctx.restore();
                         break;
                     }
                     case 'coin': {
@@ -552,6 +581,15 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 ctx.fillStyle = 'rgba(255,255,255,0.85)';
                 ctx.fillRect(-s2 * 0.2, -s2 * 0.2, s2 * 0.4, s2 * 0.4);
                 ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.strokeRect(-s2 / 2, -s2 / 2, s2, s2);
+            } else if (st.mode === 'wave') {
+                // 45°-rotated diamond
+                ctx.rotate(Math.PI / 4);
+                const s2 = P * 0.58;
+                ctx.fillStyle = accent;
+                ctx.fillRect(-s2 / 2, -s2 / 2, s2, s2);
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillRect(-s2 * 0.18, -s2 * 0.18, s2 * 0.36, s2 * 0.36);
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.strokeRect(-s2 / 2, -s2 / 2, s2, s2);
             } else {
                 const tilt = Math.max(-0.5, Math.min(0.5, -st.vy / 30)) * st.gravitySign;
                 ctx.rotate(tilt);
@@ -590,8 +628,24 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             }
             const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7);
             vig.addColorStop(0, 'rgba(0,0,0,0)');
-            vig.addColorStop(1, `rgba(0,0,0,${0.45 + (reduce ? 0 : pulse * 0.1)})`);
+            vig.addColorStop(1, `rgba(0,0,0,${0.45 + (reduce ? 0 : pulse * 0.1) + (fast ? 0.08 : 0)})`);
             ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+
+            // tier banner — named difficulty tier announcement (render-only)
+            const curTier = Math.min(7, Math.floor(st.px / TIER_UNITS));
+            if (now < st.tierBannerUntil) {
+                const k = reduce ? 1 : (st.tierBannerUntil - now) / 900; // 1→0 fade
+                const alpha = reduce ? 0.9 : Math.min(1, k * 1.6);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = `hsl(${hue},80%,72%)`;
+                ctx.shadowColor = `hsl(${hue},80%,60%)`;
+                ctx.shadowBlur = reduce ? 0 : 18;
+                ctx.font = `700 ${Math.round(P * 1.1)}px ui-serif, Georgia, serif`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(tierName(curTier).toUpperCase(), W / 2, H * 0.32);
+                ctx.restore();
+            }
         };
 
         // ---- loop ----
@@ -625,6 +679,13 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     const visDt = n * SIM_DT_S;
                     for (const pt of st.particles) { pt.life += visDt; pt.x += pt.vx * visDt; pt.y += pt.vy * visDt; pt.vy -= 9 * visDt; }
                     st.particles = st.particles.filter((p) => p.life < p.max);
+                    // tier banner — wall-clock + render-only; mirrors st.flash/shakeUntil, never touches the sim
+                    const curTier = Math.min(7, Math.floor(st.px / TIER_UNITS));
+                    if (curTier > st.lastTierShown) {
+                        st.lastTierShown = curTier;
+                        st.tierBannerUntil = performance.now() + 900;
+                        if (curTier > 0) asfx.tierUp();
+                    }
                     // HUD
                     const sc = Math.floor(st.distance) + st.coins * COIN_BONUS;
                     if (sc !== shown.current.score) { shown.current.score = sc; setScore(sc); }
