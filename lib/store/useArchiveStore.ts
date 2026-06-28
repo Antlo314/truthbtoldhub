@@ -124,7 +124,8 @@ interface ArchiveState {
     dmMessages: Record<string, DMMessage[]>;           // conversation_id -> messages
 
     // Presence / moderation
-    onlineUsers: Set<string>;
+    onlineUsers: Set<string>;                         // online anywhere in the Sanctum
+    onlineLocations: Record<string, string | null>;   // userId -> workspace currently viewed (null = DMs/home)
     bannedUserIds: Set<string>;                        // currently banned/muted from chat
 
     // Unread tracking
@@ -157,6 +158,7 @@ interface ArchiveState {
 
     // Presence / bans
     setOnlineStatus: (userId: string, isOnline: boolean) => void;
+    setPresenceState: (state: Record<string, Array<{ workspace_id?: string | null }>>) => void;
     setBannedUsers: (ids: string[]) => void;
     setUserBanned: (userId: string, banned: boolean) => void;
 
@@ -189,6 +191,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
     dmMessages: {},
 
     onlineUsers: new Set(),
+    onlineLocations: {},
     bannedUserIds: new Set(),
     unreadChannelIds: new Set(),
 
@@ -273,6 +276,21 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
         if (isOnline) newOnline.add(userId);
         else newOnline.delete(userId);
         return { onlineUsers: newOnline };
+    }),
+
+    // Rebuild presence from a full Supabase presence snapshot. Each key is a
+    // user id; its metas carry the workspace they're currently viewing. We take
+    // the most recent meta so a soul with several tabs reflects their last move.
+    setPresenceState: (state) => set(() => {
+        const online = new Set<string>();
+        const locations: Record<string, string | null> = {};
+        for (const userId in state) {
+            online.add(userId);
+            const metas = state[userId];
+            const meta = Array.isArray(metas) ? metas[metas.length - 1] : undefined;
+            locations[userId] = meta?.workspace_id ?? null;
+        }
+        return { onlineUsers: online, onlineLocations: locations };
     }),
 
     setBannedUsers: (ids) => set({ bannedUserIds: new Set(ids) }),

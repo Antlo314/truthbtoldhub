@@ -19,7 +19,7 @@ export default function ArchiveClient() {
     const { fetchIdentity, user } = useSoulStore();
     const {
         activeWorkspaceId, setWorkspaces, setActiveWorkspaceId, isMobileMenuOpen, setIsMobileMenuOpen,
-        setOnlineStatus, setBannedUsers, setUserBanned, addReaction, removeReaction,
+        setPresenceState, setBannedUsers, setUserBanned, addReaction, removeReaction,
         setDmConversations, bumpDmConversation, incrementDmUnread,
     } = useArchiveStore();
 
@@ -27,6 +27,8 @@ export default function ArchiveClient() {
     const [showWelcome, setShowWelcome] = useState(false);
     const initializedRef = useRef(false);
     const activeStateRef = useRef({ activeWorkspaceId, activeDmId: null as string | null });
+    const presenceRef = useRef<any>(null);
+    const presenceReadyRef = useRef(false);
 
     // Keep a ref of the current view so realtime handlers can read it without re-subscribing.
     useEffect(() => {
@@ -103,17 +105,23 @@ export default function ArchiveClient() {
                 }
             }
 
-            // 3. Presence
+            // 3. Presence — global online + the Hall each soul is currently in.
+            // `sync` carries the authoritative full state (fires on join/leave/track),
+            // so we rebuild from it rather than tracking joins/leaves piecemeal.
             const presence = supabase.channel('archive_global_presence', { config: { presence: { key: myId } } });
             presence.on('presence', { event: 'sync' }, () => {
-                const state = presence.presenceState();
-                Object.keys(state).forEach((id) => setOnlineStatus(id, true));
+                setPresenceState(presence.presenceState() as any);
             });
-            presence.on('presence', { event: 'join' }, ({ key }: any) => setOnlineStatus(key, true));
-            presence.on('presence', { event: 'leave' }, ({ key }: any) => setOnlineStatus(key, false));
             presence.subscribe(async (status: string) => {
-                if (status === 'SUBSCRIBED') await presence.track({ online_at: new Date().toISOString() });
+                if (status === 'SUBSCRIBED') {
+                    presenceReadyRef.current = true;
+                    await presence.track({
+                        workspace_id: activeStateRef.current.activeWorkspaceId,
+                        online_at: new Date().toISOString(),
+                    });
+                }
             });
+            presenceRef.current = presence;
             channels.push(presence);
 
             // 4. Persisted "last seen" for profile pages
@@ -166,9 +174,21 @@ export default function ArchiveClient() {
         return () => {
             channels.forEach((ch) => supabase.removeChannel(ch));
             if (lastSeenTimer) clearInterval(lastSeenTimer);
+            presenceRef.current = null;
+            presenceReadyRef.current = false;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
+
+    // Re-broadcast presence whenever the soul moves between Halls so the member
+    // list can show who's actually *here* vs. elsewhere in the Sanctum.
+    useEffect(() => {
+        if (!presenceReadyRef.current || !presenceRef.current) return;
+        presenceRef.current.track({
+            workspace_id: activeWorkspaceId,
+            online_at: new Date().toISOString(),
+        });
+    }, [activeWorkspaceId]);
 
     if (isLoading) {
         return (

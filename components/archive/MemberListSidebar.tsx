@@ -8,7 +8,7 @@ import { roleLabel, roleColor, DEFAULT_AVATAR } from '@/lib/archive/access';
 import { Crown } from 'lucide-react';
 
 export default function MemberListSidebar() {
-    const { activeWorkspaceId, members, setMembers, onlineUsers } = useArchiveStore();
+    const { activeWorkspaceId, members, setMembers, onlineUsers, onlineLocations } = useArchiveStore();
     const [profileId, setProfileId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -35,10 +35,17 @@ export default function MemberListSidebar() {
 
     const activeMembers = activeWorkspaceId ? (members[activeWorkspaceId] || []) : [];
 
+    // "Here" = online AND currently viewing this Hall. "Elsewhere" = online in the
+    // Sanctum but in another Hall / DMs. Everything else is offline.
+    const isHere = (uid: string) => onlineUsers.has(uid) && onlineLocations[uid] === activeWorkspaceId;
+    const isElsewhere = (uid: string) => onlineUsers.has(uid) && onlineLocations[uid] !== activeWorkspaceId;
+    const hereCount = activeMembers.filter((m) => isHere(m.user_id)).length;
+
     const groups: { key: string; label: string; members: typeof activeMembers; dim?: boolean }[] = [
         { key: 'Admin', label: roleLabel('Admin'), members: activeMembers.filter((m) => m.role === 'Admin') },
         { key: 'Moderator', label: roleLabel('Moderator'), members: activeMembers.filter((m) => m.role === 'Moderator') },
-        { key: 'Online', label: 'Souls — Online', members: activeMembers.filter((m) => m.role === 'Member' && onlineUsers.has(m.user_id)) },
+        { key: 'Here', label: 'Souls — In This Hall', members: activeMembers.filter((m) => m.role === 'Member' && isHere(m.user_id)) },
+        { key: 'Elsewhere', label: 'Souls — Elsewhere', members: activeMembers.filter((m) => m.role === 'Member' && isElsewhere(m.user_id)) },
         { key: 'Offline', label: 'Souls — Offline', members: activeMembers.filter((m) => m.role === 'Member' && !onlineUsers.has(m.user_id)), dim: true },
     ];
 
@@ -48,20 +55,30 @@ export default function MemberListSidebar() {
 
     return (
         <div className="hidden lg:flex w-[240px] min-w-[240px] h-full bg-void flex-col shrink-0 border-l border-white/5" id="archive-members-sidebar">
-            <div className="h-12 border-b border-white/5 flex items-center px-4 shrink-0">
+            <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 shrink-0">
                 <span className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500">Gathered Souls — {activeMembers.length}</span>
+                {hereCount > 0 && (
+                    <span className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-[0.15em] text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)] animate-pulse" />
+                        {hereCount} here
+                    </span>
+                )}
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pt-4">
                 {groups.map((g) => {
                     if (g.members.length === 0) return null;
                     return (
                         <div key={g.key} className="mb-6">
-                            <h3 className={`text-[9px] font-bold uppercase tracking-[0.2em] px-2 mb-2 font-mono ${g.dim ? 'text-zinc-700' : roleColor(g.key)}`}>
+                            <h3 className={`text-[9px] font-bold uppercase tracking-[0.2em] px-2 mb-2 font-mono ${g.dim ? 'text-zinc-700' : g.key === 'Here' ? 'text-emerald-400' : g.key === 'Elsewhere' ? 'text-zinc-500' : roleColor(g.key)}`}>
                                 {g.label} — {g.members.length}
                             </h3>
                             <div className="space-y-0.5">
                                 {g.members.map((member) => {
-                                    const online = onlineUsers.has(member.user_id);
+                                    const here = isHere(member.user_id);
+                                    const elsewhere = isElsewhere(member.user_id);
+                                    const dotClass = here
+                                        ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]'
+                                        : elsewhere ? 'bg-amber-400/70' : 'bg-zinc-700';
                                     return (
                                         <button
                                             key={member.user_id}
@@ -73,7 +90,7 @@ export default function MemberListSidebar() {
                                                     <img src={member.profile?.avatar_url || DEFAULT_AVATAR} alt="" className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-void flex items-center justify-center">
-                                                    <div className={`w-2 h-2 rounded-full ${online ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-zinc-700'}`} />
+                                                    <div className={`w-2 h-2 rounded-full ${dotClass}`} />
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0">
