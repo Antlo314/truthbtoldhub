@@ -33,7 +33,9 @@ export function avatarOffscreen(config: AvatarConfig, step = 0, dir: Facing = 'd
     return c;
 }
 
-export default function AvatarCanvas({ config, scale = 8, className, style }: { config: AvatarConfig; scale?: number; className?: string; style?: React.CSSProperties }) {
+export default function AvatarCanvas({ config, scale = 8, step = 0, dir = 'down', className, style }: {
+    config: AvatarConfig; scale?: number; step?: number; dir?: Facing; className?: string; style?: React.CSSProperties;
+}) {
     const ref = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -46,8 +48,8 @@ export default function AvatarCanvas({ config, scale = 8, className, style }: { 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, AV_W * scale, AV_H * scale);
-        paintGrid(ctx, buildAvatarPixels(config), scale);
-    }, [config, scale]);
+        paintGrid(ctx, buildAvatarPixels(config, step, dir), scale);
+    }, [config, scale, step, dir]);
 
     return (
         <canvas

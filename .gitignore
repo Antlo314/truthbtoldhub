@@ -41,3 +41,7 @@ next-env.d.ts
 
 # terminals and logs
 /terminals/
+
+# scratch and Claude tools
+/scratch/
+/.claude/

@@ -75,7 +75,7 @@ interface Foe {
     summons: number;
 }
 
-interface Proj { x: number; y: number; vx: number; vy: number; life: number; dmg: number; color: string; r: number; }
+interface Proj { x: number; y: number; vx: number; vy: number; life: number; dmg: number; color: string; r: number; owner?: Foe; }
 interface Ring { x: number; y: number; r: number; t: number; dur: number; dmg: number; done: boolean; }
 
 // Floating combat text — a damage/crit/heal/keyword number that pops up & fades.
@@ -194,6 +194,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
     const chargeShownRef = useRef(0);
     const empoweredShownRef = useRef(false);
     const parryReadyShownRef = useRef(true);
+    const weakPointShownRef = useRef(false);
+    const bossShownRef = useRef<{ hp: number } | null>(null);
     const musicRestoredRef = useRef(false);
 
     const restoreExploreBgm = useCallback(() => {
@@ -384,7 +386,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         // apply a wound to the player — negated by a dodge (i-frames) or a parry.
         // Returns whether it landed. A fresh dodge or an active parry turns the
         // tables (perfect dodge / perfect parry).
-        const hurtPlayer = (amount: number) => {
+        const hurtPlayer = (amount: number, attacker?: Foe) => {
             // PERFECT PARRY — deflect, stagger the attacker, open a riposte.
             if (st.parryActiveT > 0) {
                 st.parryActiveT = 0; st.parryLockT = 0;
@@ -393,7 +395,9 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 sfx.parry(); st.flash = Math.max(st.flash, 0.5); st.shake = Math.max(st.shake, 4);
                 st.slowmo = Math.max(st.slowmo, 0.5); hitStop(0.07);
                 popFloater(st.px, st.py - 22, 'PARRY', '#67e8f9');
-                const f = nearestFoe();
+                // stagger the foe that actually struck; fall back to nearest only
+                // for unowned damage (rings/hazards) or an attacker already down.
+                const f = attacker && st.foes.includes(attacker) ? attacker : nearestFoe();
                 if (f) { breakPoise(f); f.hp -= Math.round(dmg * 0.4); }
                 return false;
             }
@@ -723,7 +727,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 st.bindT = Math.max(0, st.bindT - dt);
                 st.surgeT = Math.max(0, st.surgeT - dt);
                 if (st.weakPointT > 0) { st.weakPointT -= dt; st.weakPointActive = true; } else { st.weakPointActive = false; }
-                if (st.weakPointActive !== weakPointActive) setWeakPointActive(st.weakPointActive);
+                if (st.weakPointActive !== weakPointShownRef.current) { weakPointShownRef.current = st.weakPointActive; setWeakPointActive(st.weakPointActive); }
 
                 // ===== ENEMY AI =====
                 let committed = 0;
@@ -841,6 +845,7 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                         st.bossSpawned = true;
                         const b: Foe = { x: W / 2, y: TILE * 3, hp: bossHp, max: bossHp, boss: true, hurt: 0, kind: 'brute', state: 'approach', t: 0, cd: 0, slot: 0, vx: 0, vy: 0, hasTok: false, hit: false, poise: bossPoiseMax, poiseMax: bossPoiseMax, staggerT: 0, recoverT: 0, phase: 1, move: '', moveCd: 1.2, summons: 0 };
                         st.foes.push(b);
+                        bossShownRef.current = { hp: Math.round(b.hp) };
                         setBoss({ name: cfg.bossName, hp: b.hp, max: b.max });
                         sfx.bossSpawn(); st.shake = Math.max(st.shake, 6);
                         st.flash = Math.max(st.flash, 0.75); st.slowmo = Math.max(st.slowmo, 0.9); hitStop(0.09);
@@ -848,8 +853,12 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
                 }
                 if (st.bossSpawned) {
                     const b = st.foes.find((f) => f.boss);
-                    if (b) setBoss({ name: cfg.bossName, hp: Math.max(0, Math.round(b.hp)), max: b.max });
-                    else setBoss((prev) => (prev ? { ...prev, hp: 0 } : prev));
+                    const bHp = b ? Math.max(0, Math.round(b.hp)) : 0;
+                    if (bossShownRef.current?.hp !== bHp) {
+                        bossShownRef.current = { hp: bHp };
+                        if (b) setBoss({ name: cfg.bossName, hp: bHp, max: b.max });
+                        else setBoss((prev) => (prev ? { ...prev, hp: 0 } : prev));
+                    }
                 }
 
                 // outcomes

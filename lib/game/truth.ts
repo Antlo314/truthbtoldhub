@@ -121,11 +121,28 @@ function buildTruthProfile(): (string | null)[][] {
     return g;
 }
 
-export function buildTruthPixels(_step = 0, dir: Facing = 'down'): (string | null)[][] {
-    if (dir === 'right') return buildTruthPixels(_step, 'left').map((row) => [...row].reverse());
-    if (dir === 'up') return buildTruthBack();
-    if (dir === 'left') return buildTruthProfile();
-    return buildTruthFront();
+// A 2-frame robe sway: the hem + boots (rows 20+) shift one pixel left or
+// right on alternating steps so Truth strides instead of gliding. Frame 0
+// is untouched — his idle look stays exactly as designed.
+function swayHem(g: (string | null)[][], step: number) {
+    if (step !== 1 && step !== 2) return;
+    const dx = step === 1 ? -1 : 1;
+    for (let y = 20; y < AV_H; y++) {
+        const row = g[y];
+        const swayed = Array<string | null>(AV_W).fill(null);
+        for (let x = 0; x < AV_W; x++) {
+            const nx = x + dx;
+            if (row[x] && nx >= 0 && nx < AV_W) swayed[nx] = row[x];
+        }
+        g[y] = swayed;
+    }
+}
+
+export function buildTruthPixels(step = 0, dir: Facing = 'down'): (string | null)[][] {
+    if (dir === 'right') return buildTruthPixels(step, 'left').map((row) => [...row].reverse());
+    const g = dir === 'up' ? buildTruthBack() : dir === 'left' ? buildTruthProfile() : buildTruthFront();
+    swayHem(g, step);
+    return g;
 }
 
 export function truthOffscreen(step = 0, dir: Facing = 'down'): HTMLCanvasElement {

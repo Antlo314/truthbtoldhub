@@ -1,5 +1,5 @@
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
-import type { AvatarConfig } from '@/lib/game/avatar';
+import type { AvatarConfig, Facing } from '@/lib/game/avatar';
 
 // ============================================================
 //  OVERWORLD NPCs — bespoke avatar configs, predominantly
@@ -36,13 +36,13 @@ export const NPC_AVATARS: Record<string, AvatarConfig> = {
 
 const frameCache = new Map<string, HTMLCanvasElement>();
 
-export function npcOffscreen(npcId: string): HTMLCanvasElement {
+export function npcOffscreen(npcId: string, step = 0, dir: Facing = 'down'): HTMLCanvasElement {
     const cfg = NPC_AVATARS[npcId];
     if (!cfg) throw new Error(`Unknown NPC: ${npcId}`);
-    const key = `${npcId}:down:0`;
+    const key = `${npcId}:${dir}:${step}`;
     let frame = frameCache.get(key);
     if (!frame) {
-        frame = avatarOffscreen(cfg, 0, 'down');
+        frame = avatarOffscreen(cfg, step, dir);
         frameCache.set(key, frame);
     }
     return frame;

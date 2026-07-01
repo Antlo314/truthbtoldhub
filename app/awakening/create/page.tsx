@@ -8,11 +8,11 @@ import CinematicVideo from '@/components/game/CinematicVideo';
 import { AURA_OPTIONS } from '@/components/game/KenneySprite';
 import {
     SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS,
-    HAIR_STYLES, MASC_OUTFITS, FEM_OUTFITS, FACE_STYLES,
+    HAIR_STYLES, MASC_OUTFITS, FEM_OUTFITS, FACE_STYLES, EXTRA_OPTIONS,
     randomAvatar, defaultOutfitFor,
-    type Build, type HairStyle, type OutfitStyle, type FaceStyle,
+    type Build, type HairStyle, type OutfitStyle, type FaceStyle, type Extra, type Facing,
 } from '@/lib/game/avatar';
-import { Loader2, Shuffle, Pencil, Check } from 'lucide-react';
+import { Loader2, Shuffle, Pencil, Check, ChevronLeft, ChevronRight, Footprints } from 'lucide-react';
 import { CINEMA } from '@/lib/game/cutscenes';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
@@ -27,9 +27,13 @@ import { truthAwakeningLine } from '@/lib/game/truthVoice';
 //  bar. Single column on phones, two columns from lg up.
 // ============================================================
 
-const TABS = ['Body', 'Hair', 'Face', 'Outfit', 'Aura'] as const;
+const TABS = ['Body', 'Hair', 'Face', 'Outfit', 'Extras', 'Aura'] as const;
 type Tab = typeof TABS[number];
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// friendly labels for camelCase style ids
+const label = (s: string) => (s === 'highTop' ? 'High-Top' : cap(s));
+// facing carousel for the preview arrows
+const FACING_ORDER: Facing[] = ['down', 'left', 'up', 'right'];
 
 export default function CreatePage() {
     const router = useRouter();
@@ -44,6 +48,19 @@ export default function CreatePage() {
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState<Tab>('Body');
     const [editingName, setEditingName] = useState(false);
+    const [previewDir, setPreviewDir] = useState<Facing>('down');
+    const [walking, setWalking] = useState(false);
+    const [walkFrame, setWalkFrame] = useState(1);
+
+    // a gentle 2-frame stride while the walk toggle is on
+    useEffect(() => {
+        if (!walking) return;
+        const id = setInterval(() => setWalkFrame((f) => (f === 1 ? 2 : 1)), 320);
+        return () => clearInterval(id);
+    }, [walking]);
+
+    const rotatePreview = (dirStep: 1 | -1) =>
+        setPreviewDir((d) => FACING_ORDER[(FACING_ORDER.indexOf(d) + dirStep + FACING_ORDER.length) % FACING_ORDER.length]);
 
     usePageMusic('forging_self');
 
@@ -111,14 +128,50 @@ export default function CreatePage() {
                                 style={{ width: 250, height: 250, background: `radial-gradient(circle, ${aura}38 0%, ${aura}12 45%, transparent 70%)`, filter: 'blur(10px)' }}
                             />
                             <div className="relative flex flex-col items-center px-6 pt-10 pb-7">
-                                <div className="relative">
-                                    <AvatarCanvas config={av} scale={8} className="truth-float" style={{ filter: 'drop-shadow(0 12px 14px rgba(0,0,0,0.55))' }} />
-                                    <div
-                                        aria-hidden
-                                        className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-                                        style={{ bottom: -2, width: 132, height: 18, borderRadius: '50%', background: `radial-gradient(ellipse at center, ${aura}66 0%, transparent 72%)` }}
-                                    />
+                                <div className="relative flex items-center gap-3">
+                                    <button
+                                        onClick={() => rotatePreview(-1)}
+                                        aria-label="Turn left"
+                                        title="Turn"
+                                        className="p-2 rounded-full border border-white/10 bg-white/5 text-zinc-400 hover:text-[#fbbf24] hover:border-[#fbbf24]/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/60"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <div className="relative">
+                                        <AvatarCanvas
+                                            config={av}
+                                            scale={8}
+                                            step={walking ? walkFrame : 0}
+                                            dir={previewDir}
+                                            className="truth-float"
+                                            style={{ filter: 'drop-shadow(0 12px 14px rgba(0,0,0,0.55))' }}
+                                        />
+                                        <div
+                                            aria-hidden
+                                            className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                                            style={{ bottom: -2, width: 132, height: 18, borderRadius: '50%', background: `radial-gradient(ellipse at center, ${aura}66 0%, transparent 72%)` }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => rotatePreview(1)}
+                                        aria-label="Turn right"
+                                        title="Turn"
+                                        className="p-2 rounded-full border border-white/10 bg-white/5 text-zinc-400 hover:text-[#fbbf24] hover:border-[#fbbf24]/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/60"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
                                 </div>
+                                <button
+                                    onClick={() => setWalking((w) => !w)}
+                                    aria-pressed={walking}
+                                    className={`mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/60 ${
+                                        walking
+                                            ? 'border-[#fbbf24]/50 bg-[#fbbf24]/15 text-[#fbbf24]'
+                                            : 'border-white/10 bg-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/25'
+                                    }`}
+                                >
+                                    <Footprints className="w-3 h-3" /> {walking ? 'Walking' : 'Walk'}
+                                </button>
 
                                 {/* name */}
                                 <div className="mt-7 w-full">
@@ -215,7 +268,7 @@ export default function CreatePage() {
                                     <Section label="Style">
                                         <div className="flex flex-wrap gap-1.5">
                                             {HAIR_STYLES.map((h: HairStyle) => (
-                                                <OptBtn key={h} active={av.hairStyle === h} onClick={() => setAvatar({ hairStyle: h })}>{cap(h)}</OptBtn>
+                                                <OptBtn key={h} active={av.hairStyle === h} onClick={() => setAvatar({ hairStyle: h })}>{label(h)}</OptBtn>
                                             ))}
                                         </div>
                                     </Section>
@@ -244,6 +297,15 @@ export default function CreatePage() {
                                     <Section label="Lower"><Swatches colors={CLOTH_COLORS} active={av.bottom} onPick={(i) => setAvatar({ bottom: i })} /></Section>
                                     <Section label="Boots"><Swatches colors={BOOT_COLORS} active={av.boots} onPick={(i) => setAvatar({ boots: i })} /></Section>
                                 </>
+                            )}
+                            {tab === 'Extras' && (
+                                <Section label="Adornment">
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {EXTRA_OPTIONS.map((e: Extra) => (
+                                            <OptBtn key={e} active={(av.extra ?? 'none') === e} onClick={() => setAvatar({ extra: e })}>{cap(e)}</OptBtn>
+                                        ))}
+                                    </div>
+                                </Section>
                             )}
                             {tab === 'Aura' && (
                                 <Section label="Aura glow">

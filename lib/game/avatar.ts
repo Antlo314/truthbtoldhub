@@ -1,10 +1,11 @@
 // ============================================================
 //  AVATAR — a procedural, layered full-body pixel character.
 //  Inspired by the Emberwilds creator: independent skin tone,
-//  hair (style + colour), face, and outfit (top/bottom/boots),
-//  with masculine/feminine builds. The builder is PURE — it
-//  returns a grid of hex colours (or null) so it can be drawn
-//  on the browser canvas AND rendered headless for verification.
+//  hair (style + colour), face, outfit (top/bottom/boots) and
+//  an optional extra (circlet/hood/…), with masculine/feminine
+//  builds. The builder is PURE — it returns a grid of hex
+//  colours (or null) so it can be drawn on the browser canvas
+//  AND rendered headless for verification.
 //  Grid is 16 wide x 24 tall, front-facing.
 // ============================================================
 
@@ -12,9 +13,12 @@ export const AV_W = 16;
 export const AV_H = 24;
 
 export type Build = 'masc' | 'fem';
-export type HairStyle = 'buzz' | 'short' | 'afro' | 'long' | 'bun' | 'braids' | 'locs';
-export type OutfitStyle = 'tunic' | 'robe' | 'vest' | 'dress' | 'gown' | 'cloak';
+export type HairStyle =
+    | 'buzz' | 'short' | 'afro' | 'long' | 'bun' | 'braids' | 'locs'
+    | 'twists' | 'highTop' | 'waves' | 'coils';
+export type OutfitStyle = 'tunic' | 'robe' | 'vest' | 'dress' | 'gown' | 'cloak' | 'wanderer' | 'vestment';
 export type FaceStyle = 'calm' | 'keen' | 'goatee' | 'beard';
+export type Extra = 'none' | 'circlet' | 'hood' | 'earrings' | 'glasses' | 'warpaint';
 
 export interface AvatarConfig {
     build: Build;
@@ -26,6 +30,7 @@ export interface AvatarConfig {
     bottom: number;     // index into CLOTH_COLORS
     boots: number;      // index into BOOT_COLORS
     outfit: OutfitStyle;
+    extra?: Extra;      // optional adornment layer — old saves omit it
 }
 
 // ---- palettes ------------------------------------------------
@@ -44,8 +49,14 @@ export const CLOTH_COLORS = [
 ];
 export const BOOT_COLORS = ['#4a3324', '#2b2b30', '#5a4632', '#3a2a44'];
 
+// Hand-tuned shadow tones for the first tones; any tone without an
+// entry (or new tones appended later) falls back to a derived darken.
 const skinShade = ['#d9a066', '#c68642', '#a96d3c', '#8d5524', '#7a4a22', '#67421d',
     '#523015', '#3d2410', '#2b1a0c', '#1f1209', '#160c06', '#0e0704', '#7d9a5e', '#9a8cc4'];
+
+const TRIM = '#d4a017';     // ceremonial gold
+const TRIM_SH = '#b9882e';
+const LEATHER = '#4a3324';  // traveller's leather
 
 function emptyGrid(): (string | null)[][] {
     return Array.from({ length: AV_H }, () => Array<string | null>(AV_W).fill(null));
@@ -69,13 +80,14 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
     if (dir === 'right') return buildAvatarPixels(cfg, step, 'left').map((row) => [...row].reverse());
     const g = emptyGrid();
     const skin = SKIN_TONES[cfg.skin] ?? SKIN_TONES[4];
-    const shade = skinShade[cfg.skin] ?? '#8d5524';
+    const shade = skinShade[cfg.skin] ?? shadeHex(skin, -40);
     const hair = HAIR_COLORS[cfg.hairColor] ?? HAIR_COLORS[0];
     const top = CLOTH_COLORS[cfg.top] ?? CLOTH_COLORS[0];
     const topShade = shadeHex(top);
     const bottom = CLOTH_COLORS[cfg.bottom] ?? CLOTH_COLORS[6];
     const boot = BOOT_COLORS[cfg.boots] ?? BOOT_COLORS[0];
     const fem = cfg.build === 'fem';
+    const extra = cfg.extra ?? 'none';
 
     // ---- legs / lower body ----
     // Feminine builds read distinctly female: a flared skirt, or — under
@@ -83,7 +95,7 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
     // Masculine builds keep straight, even trousers.
     const lLift = step === 1 ? 1 : 0;
     const rLift = step === 2 ? 1 : 0;
-    const skirted = cfg.outfit === 'dress' || cfg.outfit === 'gown' || (fem && cfg.outfit === 'robe');
+    const skirted = cfg.outfit === 'dress' || cfg.outfit === 'gown' || cfg.outfit === 'vestment' || (fem && cfg.outfit === 'robe');
     if (skirted) {
         // a skirt that flares from a narrow waist down to a wide hem
         rect(g, 6, 16, 4, 1, top);
@@ -97,6 +109,11 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
             rect(g, 3, 19, 10, 2, top);
             rect(g, 3, 20, 10, 1, topShade);
             rect(g, 5, 16, 6, 1, topShade);
+        }
+        if (cfg.outfit === 'vestment') {
+            // floor-length ceremonial fall with a gold-trimmed hem
+            rect(g, 4, 20, 8, 1, TRIM_SH);
+            px(g, 4, 19, TRIM); px(g, 11, 19, TRIM);
         }
     } else if (fem) {
         // wide hips taper to slim legs held close together
@@ -137,6 +154,20 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
         px(g, 3, 18, topShade); px(g, 12, 18, topShade);
         rect(g, 6, 10, 4, 1, topShade);                            // collar clasp
     }
+    if (cfg.outfit === 'wanderer') {
+        // layered travel garb: shoulder mantle, cross-strap, belt + hip pouch
+        rect(g, 5, 10, 6, 1, topShade);                            // travel mantle
+        px(g, 6, 11, LEATHER); px(g, 7, 12, LEATHER); px(g, 8, 13, LEATHER); // satchel strap
+        rect(g, 5, 14, 6, 1, LEATHER);                             // belt
+        px(g, 8, 14, TRIM);                                        // buckle
+        rect(g, 9, 15, 2, 1, '#5a4632');                           // hip pouch
+    }
+    if (cfg.outfit === 'vestment') {
+        // ceremonial: gold collar + a stole falling in two bands
+        rect(g, 6, 10, 4, 1, TRIM);
+        rect(g, 6, 11, 1, 4, topShade); rect(g, 9, 11, 1, 4, topShade);
+        px(g, 6, 15, TRIM); px(g, 9, 15, TRIM);                    // stole ends
+    }
 
     // ---- arms ----
     rect(g, 4, 10, 1, 5, top); rect(g, 11, 10, 1, 5, top);
@@ -153,7 +184,7 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
         rect(g, 5, 3, 6, 6, skin);
         px(g, 4, 6, skin); px(g, 4, 7, shade);     // nose / jaw at the front edge
         drawProfileFace(g, cfg.face, shade, hair);
-        drawHairSide(g, cfg.hairStyle, hair);
+        drawHairSide(g, cfg.hairStyle, hair, fem);
     } else {
         rect(g, 5, 3, 6, 6, skin);
         px(g, 4, 6, skin); px(g, 11, 6, skin);     // ears
@@ -162,17 +193,68 @@ export function buildAvatarPixels(cfg: AvatarConfig, step = 0, dir: Facing = 'do
         drawHair(g, cfg.hairStyle, hair, fem);
     }
 
+    // ---- extras (adornments) — always drawn AFTER the hair ----
+    drawExtra(g, extra, dir, top);
+
     return g;
 }
 
-// Back of the head (facing up): hair covers the crown + back; long styles flow down.
+// Back of the head (facing up): every style gets its own silhouette —
+// long is a smooth sheet, braids segmented columns, locs thick ropes.
 function drawHairBack(g: (string | null)[][], style: HairStyle, hair: string) {
     const hi = lightenHex(hair);
+    const lo = shadeHex(hair);
+    if (style === 'highTop') {
+        // tall flat box, shaved fade beneath — nape skin stays visible
+        rect(g, 5, 0, 6, 5, hair);
+        rect(g, 5, 0, 6, 1, hi);
+        rect(g, 5, 5, 6, 1, lo);
+        return;
+    }
     rect(g, 5, 2, 6, 5, hair);
     rect(g, 4, 3, 1, 3, hair); rect(g, 11, 3, 1, 3, hair);
-    if (style === 'afro') { rect(g, 4, 0, 8, 4, hair); rect(g, 3, 1, 1, 3, hair); rect(g, 12, 1, 1, 3, hair); }
-    else if (style === 'bun') { rect(g, 6, 0, 4, 2, hair); }
-    if (style === 'long' || style === 'braids' || style === 'locs') rect(g, 4, 7, 8, 5, hair);
+    switch (style) {
+        case 'afro':
+            rect(g, 4, 0, 8, 4, hair); rect(g, 3, 1, 1, 3, hair); rect(g, 12, 1, 1, 3, hair);
+            rect(g, 5, 0, 6, 1, hi);
+            break;
+        case 'bun':
+            rect(g, 6, 0, 4, 2, hair); rect(g, 6, 0, 4, 1, hi);
+            px(g, 7, 1, lo); px(g, 8, 1, lo);                      // knot crease
+            break;
+        case 'long':
+            rect(g, 4, 7, 8, 6, hair);                             // one smooth sheet
+            rect(g, 7, 7, 1, 4, hi);                               // sheen streak
+            rect(g, 4, 12, 8, 1, lo);                              // hem shadow
+            break;
+        case 'braids':
+            for (const x of [4, 6, 9, 11]) {                       // segmented columns
+                rect(g, x, 7, 1, 5, hair);
+                px(g, x, 8, hi); px(g, x, 10, hi);                 // segment ties
+                px(g, x, 12, lo);                                  // tip
+            }
+            break;
+        case 'locs':
+            rect(g, 4, 7, 2, 4, hair); rect(g, 7, 7, 2, 5, hair); rect(g, 10, 7, 2, 4, hair); // thick ropes
+            px(g, 4, 11, lo); px(g, 5, 11, hi);                    // tip pixels
+            px(g, 7, 12, lo); px(g, 8, 12, hi);
+            px(g, 10, 11, lo); px(g, 11, 11, hi);
+            break;
+        case 'twists':
+            for (const x of [4, 7, 10]) {                          // spiral-textured strands
+                for (let y = 7; y <= 11; y++) px(g, x, y, y % 2 ? hair : hi);
+                px(g, x, 12, lo);
+            }
+            break;
+        case 'waves':
+            px(g, 5, 3, hi); px(g, 7, 3, hi); px(g, 9, 3, hi);     // ripple rows
+            px(g, 6, 5, hi); px(g, 8, 5, hi); px(g, 10, 5, hi);
+            break;
+        case 'coils':
+            px(g, 5, 1, hair); px(g, 7, 1, hair); px(g, 9, 1, hair); // bumpy crown
+            px(g, 6, 3, hi); px(g, 9, 4, hi); px(g, 7, 5, hi);       // coil glints
+            break;
+    }
     rect(g, 5, 2, 6, 1, hi);
 }
 
@@ -181,18 +263,64 @@ function drawProfileFace(g: (string | null)[][], face: FaceStyle, shade: string,
     px(g, 6, 6, '#2a2030');
     if (face === 'keen') px(g, 6, 5, shade);
     px(g, 5, 8, shade);
-    if (face === 'goatee') { px(g, 5, 8, hair); px(g, 5, 9, hair); }
-    if (face === 'beard') { rect(g, 5, 7, 3, 2, hair); px(g, 5, 6, hair); }
+    if (face === 'goatee') { px(g, 5, 8, hair); px(g, 5, 9, hair); px(g, 6, 9, hair); }
+    if (face === 'beard') { rect(g, 5, 7, 3, 2, hair); px(g, 5, 6, hair); px(g, 5, 9, hair); px(g, 6, 9, hair); }
 }
 
-// Side hair (facing left): hair on top + the back (right) of the head.
-function drawHairSide(g: (string | null)[][], style: HairStyle, hair: string) {
+// Side hair (facing left): hair on top + the back (right) of the head;
+// each long style keeps its own silhouette in profile too.
+function drawHairSide(g: (string | null)[][], style: HairStyle, hair: string, fem = false) {
     const hi = lightenHex(hair);
+    const lo = shadeHex(hair);
+    if (style === 'highTop') {
+        rect(g, 6, 0, 6, 5, hair);                                 // tall flat box
+        rect(g, 6, 0, 6, 1, hi);
+        px(g, 10, 5, lo); px(g, 11, 5, lo);                        // fade at the nape
+        return;
+    }
     rect(g, 6, 2, 5, 4, hair);
     rect(g, 9, 3, 2, 4, hair); rect(g, 11, 3, 1, 3, hair);
-    if (style === 'afro') { rect(g, 6, 0, 6, 4, hair); rect(g, 11, 1, 2, 3, hair); }
-    else if (style === 'bun') { rect(g, 9, 0, 3, 2, hair); }
-    if (style === 'long' || style === 'braids' || style === 'locs') rect(g, 9, 6, 3, 6, hair);
+    switch (style) {
+        case 'afro':
+            rect(g, 6, 0, 6, 4, hair); rect(g, 11, 1, 2, 3, hair);
+            rect(g, 7, 0, 5, 1, hi);
+            break;
+        case 'bun':
+            rect(g, 9, 0, 3, 2, hair); rect(g, 9, 0, 3, 1, hi);
+            break;
+        case 'long': {
+            const len = fem ? 8 : 7;                               // smooth sheet down the back
+            rect(g, 9, 6, 3, len, hair);
+            px(g, 10, 7, hi); px(g, 10, 9, hi);                    // sheen
+            rect(g, 9, 5 + len, 3, 1, lo);                         // hem shadow
+            break;
+        }
+        case 'braids':
+            rect(g, 9, 6, 1, 6, hair);                             // two segmented plaits
+            px(g, 9, 7, hi); px(g, 9, 9, hi); px(g, 9, 11, hi);
+            px(g, 9, 12, lo);
+            rect(g, 11, 6, 1, 5, hair);
+            px(g, 11, 8, hi); px(g, 11, 10, hi);
+            px(g, 11, 11, lo);
+            break;
+        case 'locs':
+            rect(g, 9, 6, 2, 6, hair);                             // one thick rope
+            rect(g, 11, 6, 1, 5, hair);
+            px(g, 9, 12, lo); px(g, 10, 12, hi); px(g, 11, 11, lo); // tip pixels
+            break;
+        case 'twists':
+            for (let y = 5; y <= 10; y++) { px(g, 10, y, y % 2 ? hair : hi); px(g, 11, y, y % 2 ? hi : hair); }
+            px(g, 10, 11, lo); px(g, 11, 11, lo);
+            break;
+        case 'waves':
+            px(g, 6, 3, hi); px(g, 8, 3, hi); px(g, 10, 3, hi);    // ripple arcs
+            px(g, 7, 4, hi); px(g, 9, 4, hi);
+            break;
+        case 'coils':
+            px(g, 7, 1, hair); px(g, 9, 1, hair); px(g, 11, 2, hair); // bumps
+            px(g, 8, 3, hi); px(g, 10, 4, hi);
+            break;
+    }
     rect(g, 6, 2, 5, 1, hi);
 }
 
@@ -200,18 +328,25 @@ function drawFace(g: (string | null)[][], face: FaceStyle, shade: string, hair: 
     const eye = '#2a2030';
     // eyes
     px(g, 6, 6, eye); px(g, 9, 6, eye);
-    px(g, 6, 6, eye);
     // brows for 'keen'
     if (face === 'keen') { px(g, 6, 5, shade); px(g, 9, 5, shade); }
     // mouth hint
     px(g, 7, 8, shade);
-    // facial hair
-    if (face === 'goatee') { px(g, 7, 8, hair); px(g, 8, 8, hair); px(g, 7, 9 - 0, hair); }
-    if (face === 'beard') { rect(g, 5, 7, 6, 2, hair); rect(g, 5, 6, 1, 2, hair); rect(g, 10, 6, 1, 2, hair); px(g, 6, 6, '#2a2030'); px(g, 9, 6, '#2a2030'); }
+    // facial hair — sized to read at 16px
+    if (face === 'goatee') {
+        rect(g, 7, 8, 2, 1, hair);                                 // moustache-to-chin patch
+        rect(g, 7, 9, 2, 1, hair);                                 // pointed chin fall
+    }
+    if (face === 'beard') {
+        rect(g, 5, 7, 6, 2, hair); rect(g, 5, 6, 1, 2, hair); rect(g, 10, 6, 1, 2, hair);
+        rect(g, 6, 9, 4, 1, hair);                                 // full chin fall
+        px(g, 6, 6, eye); px(g, 9, 6, eye);
+    }
 }
 
 function drawHair(g: (string | null)[][], style: HairStyle, hair: string, fem: boolean) {
     const hi = lightenHex(hair);
+    const lo = shadeHex(hair);
     switch (style) {
         case 'buzz':
             rect(g, 5, 2, 6, 2, hair); px(g, 4, 3, hair); px(g, 11, 3, hair);
@@ -238,10 +373,91 @@ function drawHair(g: (string | null)[][], style: HairStyle, hair: string, fem: b
             px(g, 4, 12, hi); px(g, 11, 12, hi);
             break;
         case 'locs':
-            rect(g, 4, 1, 8, 3, hair); rect(g, 4, 4, 1, 8, hair); rect(g, 11, 4, 1, 8, hair); rect(g, 6, 4, 1, 7, hair); rect(g, 9, 4, 1, 7, hair);
+            // crown + side ropes; face-framing strands stop ABOVE the eyes
+            rect(g, 4, 1, 8, 3, hair);
+            rect(g, 5, 1, 6, 1, hi);                               // highlight pass
+            rect(g, 4, 4, 1, 8, hair); rect(g, 11, 4, 1, 8, hair); // ropes down the sides
+            px(g, 5, 4, hair); px(g, 10, 4, hair);                 // framing strands…
+            px(g, 5, 5, lo); px(g, 10, 5, lo);                     // …ending row 5 — eyes stay clear
+            px(g, 4, 11, hi); px(g, 11, 11, hi);                   // rope tips
+            break;
+        case 'twists':
+            rect(g, 5, 1, 6, 3, hair); rect(g, 5, 1, 6, 1, hi);
+            for (let y = 3; y <= 9; y++) { const c = y % 2 ? hair : hi; px(g, 4, y, c); px(g, 11, y, c); } // spiral strands
+            px(g, 4, 10, lo); px(g, 11, 10, lo);                   // tips
+            break;
+        case 'highTop':
+            rect(g, 5, 0, 6, 4, hair);                             // tall flat crown
+            rect(g, 5, 0, 6, 1, hi);                               // flat-top sheen
+            px(g, 5, 4, lo); px(g, 10, 4, lo);                     // temple fade
+            break;
+        case 'waves':
+            rect(g, 5, 1, 6, 3, hair); px(g, 4, 3, hair); px(g, 11, 3, hair);
+            px(g, 6, 1, hi); px(g, 8, 1, hi); px(g, 10, 1, hi);    // ripple pattern
+            px(g, 5, 2, hi); px(g, 7, 2, hi); px(g, 9, 2, hi);
+            px(g, 6, 3, hi); px(g, 8, 3, hi);
+            break;
+        case 'coils':
+            rect(g, 5, 1, 6, 3, hair);
+            px(g, 6, 0, hair); px(g, 8, 0, hair); px(g, 10, 0, hair); // bumpy silhouette
+            px(g, 4, 2, hair); px(g, 11, 2, hair);
+            px(g, 6, 2, hi); px(g, 8, 1, hi); px(g, 10, 2, hi);    // coil glints
+            px(g, 7, 3, lo);
             break;
     }
-    void fem;
+    // subtle build-aware shaping — feminine builds soften / lengthen where it helps
+    if (fem) {
+        if (style === 'long') { px(g, 4, 11, hair); px(g, 11, 11, hair); }              // a touch longer
+        else if (style === 'braids') { px(g, 4, 13, hi); px(g, 11, 13, hi); }           // bead tips
+        else if (style === 'twists') { px(g, 4, 11, lo); px(g, 11, 11, lo); }           // longer twists
+        else if (style === 'bun') { px(g, 5, 1, hair); px(g, 10, 1, hair); }            // fuller bun
+        else if (style === 'short' || style === 'waves' || style === 'buzz') { px(g, 4, 4, hair); px(g, 11, 4, hair); } // soft side sweep
+    }
+}
+
+// Adornments — drawn last so they sit over hair in every facing.
+function drawExtra(g: (string | null)[][], extra: Extra, dir: Facing, top: string) {
+    if (extra === 'none') return;
+    const frame = '#1d2430';
+    const paint = '#b03a2e';
+    switch (extra) {
+        case 'circlet':
+            rect(g, 5, 4, 6, 1, TRIM);                             // brow band over the hair
+            if (dir === 'down') px(g, 7, 4, '#8fd8cc');            // centre gem
+            else if (dir === 'left') px(g, 5, 4, '#8fd8cc');       // gem faces front
+            break;
+        case 'hood': {
+            const h = shadeHex(top, -22);
+            const hs = shadeHex(top, -60);
+            if (dir === 'up') {
+                rect(g, 4, 0, 8, 9, h); rect(g, 3, 2, 1, 5, h); rect(g, 12, 2, 1, 5, h);
+                rect(g, 5, 0, 6, 1, hs); rect(g, 4, 8, 8, 1, hs);  // crown crease + drape hem
+            } else if (dir === 'left') {
+                rect(g, 5, 0, 7, 4, h);                            // cowl over the crown
+                rect(g, 10, 4, 2, 5, h);                           // drape down the back
+                px(g, 4, 2, h); px(g, 4, 3, h);                    // brow overhang
+                rect(g, 6, 3, 5, 1, hs);                           // shadow under the cowl
+            } else {
+                rect(g, 4, 0, 8, 4, h);                            // cowl — eyes stay visible
+                rect(g, 4, 4, 1, 5, h); rect(g, 11, 4, 1, 5, h);   // side frame
+                rect(g, 5, 3, 6, 1, hs);                           // inner shadow at the brow
+                px(g, 5, 9, hs); px(g, 10, 9, hs);                 // drape at the shoulders
+            }
+            break;
+        }
+        case 'earrings':
+            if (dir === 'down') { px(g, 4, 7, TRIM); px(g, 11, 7, TRIM); }
+            else if (dir === 'left') px(g, 8, 7, TRIM);
+            break;
+        case 'glasses':
+            if (dir === 'down') { px(g, 5, 6, frame); px(g, 7, 6, frame); px(g, 8, 6, frame); px(g, 10, 6, frame); }
+            else if (dir === 'left') { px(g, 5, 6, frame); px(g, 7, 6, frame); px(g, 8, 6, frame); }
+            break;
+        case 'warpaint':
+            if (dir === 'down') { px(g, 5, 7, paint); px(g, 6, 7, paint); px(g, 9, 7, paint); px(g, 10, 7, paint); }
+            else if (dir === 'left') { px(g, 5, 7, paint); px(g, 6, 7, paint); }
+            break;
+    }
 }
 
 // ---- colour helpers ----
@@ -262,13 +478,13 @@ function rgbToHex(r: number, g: number, b: number) {
 // ---- presets: 13 distinct men + 13 distinct women ----
 export const MASC_PRESETS: AvatarConfig[] = [
     { build: 'masc', skin: 8, hairStyle: 'afro', hairColor: 0, face: 'goatee', top: 0, bottom: 6, boots: 0, outfit: 'tunic' },
-    { build: 'masc', skin: 4, hairStyle: 'short', hairColor: 2, face: 'keen', top: 2, bottom: 6, boots: 0, outfit: 'vest' },
+    { build: 'masc', skin: 4, hairStyle: 'short', hairColor: 2, face: 'keen', top: 2, bottom: 6, boots: 0, outfit: 'vest', extra: 'glasses' },
     { build: 'masc', skin: 10, hairStyle: 'locs', hairColor: 0, face: 'beard', top: 1, bottom: 0, boots: 1, outfit: 'robe' },
     { build: 'masc', skin: 2, hairStyle: 'buzz', hairColor: 5, face: 'calm', top: 4, bottom: 6, boots: 2, outfit: 'tunic' },
     { build: 'masc', skin: 6, hairStyle: 'short', hairColor: 1, face: 'goatee', top: 5, bottom: 0, boots: 0, outfit: 'tunic' },
     { build: 'masc', skin: 9, hairStyle: 'buzz', hairColor: 0, face: 'beard', top: 10, bottom: 6, boots: 1, outfit: 'vest' },
-    { build: 'masc', skin: 1, hairStyle: 'short', hairColor: 6, face: 'calm', top: 3, bottom: 6, boots: 3, outfit: 'robe' },
-    { build: 'masc', skin: 7, hairStyle: 'afro', hairColor: 8, face: 'keen', top: 8, bottom: 0, boots: 0, outfit: 'tunic' },
+    { build: 'masc', skin: 1, hairStyle: 'short', hairColor: 6, face: 'calm', top: 3, bottom: 6, boots: 3, outfit: 'robe', extra: 'circlet' },
+    { build: 'masc', skin: 7, hairStyle: 'afro', hairColor: 8, face: 'keen', top: 8, bottom: 0, boots: 0, outfit: 'tunic', extra: 'warpaint' },
     { build: 'masc', skin: 5, hairStyle: 'locs', hairColor: 2, face: 'calm', top: 9, bottom: 6, boots: 2, outfit: 'tunic' },
     { build: 'masc', skin: 3, hairStyle: 'short', hairColor: 3, face: 'goatee', top: 6, bottom: 0, boots: 1, outfit: 'vest' },
     { build: 'masc', skin: 11, hairStyle: 'buzz', hairColor: 7, face: 'beard', top: 7, bottom: 6, boots: 0, outfit: 'robe' },
@@ -276,18 +492,18 @@ export const MASC_PRESETS: AvatarConfig[] = [
     { build: 'masc', skin: 8, hairStyle: 'afro', hairColor: 6, face: 'calm', top: 5, bottom: 0, boots: 0, outfit: 'vest' },
 ];
 export const FEM_PRESETS: AvatarConfig[] = [
-    { build: 'fem', skin: 7, hairStyle: 'long', hairColor: 0, face: 'calm', top: 7, bottom: 6, boots: 0, outfit: 'dress' },
+    { build: 'fem', skin: 7, hairStyle: 'long', hairColor: 0, face: 'calm', top: 7, bottom: 6, boots: 0, outfit: 'dress', extra: 'earrings' },
     { build: 'fem', skin: 3, hairStyle: 'bun', hairColor: 2, face: 'keen', top: 3, bottom: 6, boots: 1, outfit: 'tunic' },
     { build: 'fem', skin: 10, hairStyle: 'braids', hairColor: 0, face: 'calm', top: 1, bottom: 0, boots: 0, outfit: 'dress' },
     { build: 'fem', skin: 1, hairStyle: 'long', hairColor: 6, face: 'calm', top: 0, bottom: 6, boots: 2, outfit: 'tunic' },
-    { build: 'fem', skin: 5, hairStyle: 'afro', hairColor: 0, face: 'keen', top: 5, bottom: 0, boots: 0, outfit: 'gown' },
+    { build: 'fem', skin: 5, hairStyle: 'afro', hairColor: 0, face: 'keen', top: 5, bottom: 0, boots: 0, outfit: 'gown', extra: 'circlet' },
     { build: 'fem', skin: 9, hairStyle: 'braids', hairColor: 8, face: 'calm', top: 4, bottom: 6, boots: 1, outfit: 'dress' },
     { build: 'fem', skin: 2, hairStyle: 'bun', hairColor: 3, face: 'calm', top: 10, bottom: 6, boots: 3, outfit: 'tunic' },
     { build: 'fem', skin: 6, hairStyle: 'long', hairColor: 1, face: 'keen', top: 8, bottom: 0, boots: 0, outfit: 'robe' },
     { build: 'fem', skin: 11, hairStyle: 'afro', hairColor: 7, face: 'calm', top: 9, bottom: 6, boots: 2, outfit: 'dress' },
     { build: 'fem', skin: 4, hairStyle: 'long', hairColor: 4, face: 'calm', top: 6, bottom: 6, boots: 0, outfit: 'tunic' },
     { build: 'fem', skin: 8, hairStyle: 'bun', hairColor: 0, face: 'keen', top: 2, bottom: 0, boots: 1, outfit: 'tunic' },
-    { build: 'fem', skin: 0, hairStyle: 'braids', hairColor: 5, face: 'calm', top: 11, bottom: 6, boots: 0, outfit: 'dress' },
+    { build: 'fem', skin: 0, hairStyle: 'braids', hairColor: 5, face: 'calm', top: 11, bottom: 6, boots: 0, outfit: 'dress', extra: 'earrings' },
     { build: 'fem', skin: 7, hairStyle: 'long', hairColor: 9, face: 'calm', top: 3, bottom: 0, boots: 2, outfit: 'tunic' },
 ];
 
@@ -296,17 +512,19 @@ export function defaultAvatar(): AvatarConfig {
 }
 
 // option lists for the creator UI
-export const HAIR_STYLES: HairStyle[] = ['short', 'afro', 'locs', 'long', 'bun', 'braids', 'buzz'];
-export const OUTFIT_STYLES: OutfitStyle[] = ['tunic', 'vest', 'robe', 'dress', 'gown', 'cloak'];
-// Gender-appropriate garment sets for the creator. Some are shared (tunic/robe);
-// gown is feminine-exclusive, vest + cloak are masculine-exclusive.
-export const MASC_OUTFITS: OutfitStyle[] = ['tunic', 'vest', 'robe', 'cloak'];
-export const FEM_OUTFITS: OutfitStyle[] = ['dress', 'gown', 'robe', 'tunic'];
+export const HAIR_STYLES: HairStyle[] = ['short', 'afro', 'locs', 'twists', 'coils', 'waves', 'highTop', 'long', 'bun', 'braids', 'buzz'];
+export const OUTFIT_STYLES: OutfitStyle[] = ['tunic', 'vest', 'robe', 'dress', 'gown', 'cloak', 'wanderer', 'vestment'];
+// Gender-appropriate garment sets for the creator. Some are shared
+// (tunic/robe/wanderer/vestment); gown is feminine-exclusive, vest + cloak
+// are masculine-exclusive.
+export const MASC_OUTFITS: OutfitStyle[] = ['tunic', 'vest', 'robe', 'cloak', 'wanderer', 'vestment'];
+export const FEM_OUTFITS: OutfitStyle[] = ['dress', 'gown', 'robe', 'tunic', 'wanderer', 'vestment'];
 /** The default garment a build wears when its Form is chosen. */
 export function defaultOutfitFor(build: Build): OutfitStyle {
     return build === 'fem' ? 'dress' : 'tunic';
 }
 export const FACE_STYLES: FaceStyle[] = ['calm', 'keen', 'goatee', 'beard'];
+export const EXTRA_OPTIONS: Extra[] = ['none', 'circlet', 'hood', 'earrings', 'glasses', 'warpaint'];
 
 const randI = (n: number) => Math.floor(Math.random() * n);
 
@@ -322,6 +540,8 @@ export function randomAvatar(build?: Build): AvatarConfig {
         top: randI(CLOTH_COLORS.length),
         bottom: randI(CLOTH_COLORS.length),
         boots: randI(BOOT_COLORS.length),
+        // a small chance of a tasteful adornment
+        extra: Math.random() < 0.2 ? EXTRA_OPTIONS[1 + randI(EXTRA_OPTIONS.length - 1)] : 'none',
     };
 }
 
