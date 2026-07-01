@@ -3,9 +3,9 @@
 const TUTORIALS: Record<string, { title: string; body: string }> = {
     roam: { title: 'Roam the Cavern', body: 'Drag the joystick (or WASD) to move. Begin at Truth\'s Hut in the center — forge a weapon, then walk the glowing portals to gather their relics on the way back to the Source.' },
     interact: { title: 'Interact', body: 'Near a portal, cave, or an NPC marked with "!", a prompt appears — tap it to enter or speak. The souls at the edges hand out the missions that sharpen you.' },
-    satchel: { title: 'Your Satchel', body: 'Tap the gem icon to view relics, scrolls, and equipped gear.' },
+    satchel: { title: 'Your Satchel', body: 'Tap the Satchel bag (top right) to view relics, scrolls, tonics, and equipped gear — and to see your total combat blessing before a fight.' },
     forge: { title: 'Truth\'s Forge', body: 'Inside the Hut, open the forge to smelt weapons from gathered ore.' },
-    combat: { title: 'Combat', body: 'Shades will hunt you. Strike with ATTACK. Path abilities appear when you\'ve learned them.' },
+    combat: { title: 'Combat', body: 'Shades will hunt you. STRIKE swings toward where you last moved; DODGE grants a breath of untouchable speed. Watch for the white wind-up rings — everything they throw can be dodged.' },
 };
 
 interface Props {

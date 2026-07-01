@@ -163,6 +163,11 @@ export default function WorldPage() {
     const [tutorial, setTutorial] = useState<TutorialId | null>(null);
     const [worldPresence, setWorldPresence] = useState<WorldPresence>({ walkedToday: 0, fellows: [] });
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const toastQueue = useRef<string[]>([]);
+    const pendingTutorial = useRef<TutorialId | null>(null);
+    // render-time mirrors so the tutorial-surfacing interval reads live values
+    const pausedRef = useRef(true);
+    const tutorialShownRef = useRef(false);
     const ambientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastWalkPing = useRef(0);
     const userIdRef = useRef<string | null>(null);
@@ -282,13 +287,40 @@ export default function WorldPage() {
         }
     }, [hutOpen, bulletins]);
 
+    // tutorials armed from inside a paused overlay (relic claim, forge) would be
+    // hidden by the !worldPaused render gate and pop out of context later — so
+    // they queue here and surface only once the world is actually running again.
+    const queueTutorial = useCallback((id: TutorialId, delayMs = 0) => {
+        if (tutorialsSeen().includes(id)) return;
+        const arm = () => {
+            if (!tutorialsSeen().includes(id)) pendingTutorial.current = id;
+        };
+        if (delayMs > 0) setTimeout(arm, delayMs); else arm();
+    }, []);
+
     const dismissTutorial = useCallback((id: TutorialId) => {
         markTutorialSeen(id);
         setTutorial(null);
+        // the interact lesson follows roaming naturally — give the soul a little
+        // walking time first, then surface it next time the world is running.
+        if (id === 'roam') queueTutorial('interact', 12_000);
+    }, [queueTutorial]);
+
+    // surface a queued tutorial once the world is unpaused and nothing else shows
+    useEffect(() => {
+        const t = setInterval(() => {
+            if (pausedRef.current || tutorialShownRef.current) return;
+            const id = pendingTutorial.current;
+            if (!id) return;
+            pendingTutorial.current = null;
+            if (!tutorialsSeen().includes(id)) setTutorial(id);
+        }, 900);
+        return () => clearInterval(t);
     }, []);
 
     const dismissAllTutorials = useCallback(() => {
         markAllTutorialsSeen();
+        pendingTutorial.current = null;
         setTutorial(null);
     }, []);
 
@@ -305,11 +337,25 @@ export default function WorldPage() {
         showAmbient(line, '#f97316');
     }, [showAmbient]);
 
-    const showToast = useCallback((msg: string) => {
-        setToast(msg);
-        if (toastTimer.current) clearTimeout(toastTimer.current);
-        toastTimer.current = setTimeout(() => setToast(null), 2600);
+    // toasts queue one-at-a-time instead of stomping each other (pickup toasts,
+    // milestone toasts and rhythm toasts used to race for the single slot)
+    const drainToast = useCallback(() => {
+        const next = toastQueue.current.shift();
+        if (next === undefined) {
+            toastTimer.current = null;
+            setToast(null);
+            return;
+        }
+        setToast(next);
+        toastTimer.current = setTimeout(() => drainToast(), 2400);
     }, []);
+
+    const showToast = useCallback((msg: string) => {
+        if (toastQueue.current[toastQueue.current.length - 1] === msg) return;
+        if (toastQueue.current.length > 3) toastQueue.current.shift();
+        toastQueue.current.push(msg);
+        if (!toastTimer.current) drainToast();
+    }, [drainToast]);
 
     const eventDay = worldEventDayKey();
     const worldEvent = useMemo(() => activeWorldEvent(), [eventDay]);
@@ -536,8 +582,9 @@ export default function WorldPage() {
         if (relicLine) {
             setTimeout(() => setDialogue({ speaker: 'Truth', text: relicLine, color: '#f97316' }), 2800);
         }
+        queueTutorial('satchel');
         setTimeout(() => unlockRoamMilestones(), 100);
-    }, [claimRelic, findClothing, saveToCloud, showToast, activeDest, unlockRoamMilestones]);
+    }, [claimRelic, findClothing, saveToCloud, showToast, activeDest, unlockRoamMilestones, queueTutorial]);
 
     const handleForge = useCallback((id: string) => {
         equipWeapon(id);
@@ -545,6 +592,9 @@ export default function WorldPage() {
         setForgeOpen(false);
         hapticTap('medium');
         if (!tutorialsSeen().includes('forge')) setTutorial('forge');
+        // now that a weapon is in hand, the combat lesson is finally relevant —
+        // it surfaces after the forge note (and any Truth line) clears.
+        queueTutorial('combat', 3000);
         showToast(`✦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged — you are armed`);
         setTimeout(() => {
             setDialogue({
@@ -554,7 +604,7 @@ export default function WorldPage() {
             });
         }, 2400);
         setTimeout(() => unlockRoamMilestones(), 100);
-    }, [equipWeapon, saveToCloud, showToast, unlockRoamMilestones]);
+    }, [equipWeapon, saveToCloud, showToast, unlockRoamMilestones, queueTutorial]);
 
     const onVictory = useCallback(() => {
         consumeFightBonusHp();
@@ -654,6 +704,8 @@ export default function WorldPage() {
     const worldPaused = !worldIntroDone || !!combatIntroDest || hutOpen || satchelOpen || !!activeDest ||
         !!combatDest || !!encounter || !!questNpc || questLogOpen || forgeOpen || sourceOpen || !!dialogue ||
         journalOpen || settingsOpen || epilogueOpen || attunementOpen;
+    pausedRef.current = worldPaused;
+    tutorialShownRef.current = !!tutorial;
 
     // secondary HUD actions — inline on desktop, tucked into a menu on mobile so
     // the player's name + path always have room to breathe.
@@ -802,7 +854,7 @@ export default function WorldPage() {
             )}
 
             {hint && (
-                <div className="absolute left-1/2 top-[60%] -translate-x-1/2 pointer-events-none text-center">
+                <div className="absolute left-1/2 top-[60%] -translate-x-1/2 z-[8] pointer-events-none text-center">
                     <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · start at Truth&apos;s Hut</p>
                     {nextMilestone && (
                         <p className="mt-2 text-[9px] uppercase tracking-[0.2em] text-zinc-500/90 max-w-[16rem] mx-auto leading-snug">
@@ -814,16 +866,18 @@ export default function WorldPage() {
 
             {toast && (
                 <div
-                    className="absolute left-1/2 -translate-x-1/2 z-[25] px-4 py-2 rounded-2xl sm:rounded-full bg-black/75 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide pointer-events-none text-center max-w-[min(92vw,28rem)] leading-snug"
+                    className={`absolute inset-x-2 z-[25] pointer-events-none flex justify-center ${settings.showMinimap && worldIntroDone && !worldPaused ? 'pr-28 lg:pr-0' : ''}`}
                     style={{ top: 'calc(4.25rem + env(safe-area-inset-top))' }}
                 >
-                    {toast}
+                    <div className="px-4 py-2 rounded-2xl sm:rounded-full bg-black/75 border border-aether-gold/30 text-[11px] text-aether-gold font-mono tracking-wide text-center max-w-[min(92vw,28rem)] leading-snug">
+                        {toast}
+                    </div>
                 </div>
             )}
 
             {/* ambient Truth — non-blocking bubble above the controls; the world
                 keeps running and the joystick stays under your thumb */}
-            {ambient && worldIntroDone && !worldPaused && (
+            {ambient && worldIntroDone && !worldPaused && !tutorial && (
                 <div
                     className="absolute left-1/2 -translate-x-1/2 z-[15] pointer-events-none w-full max-w-[min(88vw,30rem)] px-4"
                     style={{ bottom: 'calc(8.5rem + env(safe-area-inset-bottom))' }}
@@ -839,8 +893,8 @@ export default function WorldPage() {
             {hasAllRelics(character.inventory) && !character.sourceReturned && (
                 <button
                     onClick={() => setSourceOpen(true)}
-                    className="absolute left-1/2 top-[14%] -translate-x-1/2 z-20 pointer-events-auto px-5 py-3 rounded-2xl text-center animate-pulse"
-                    style={{ background: 'linear-gradient(135deg, rgba(252,211,77,0.96) 0%, rgba(180,83,9,0.96) 100%)', boxShadow: '0 0 44px rgba(251,191,36,0.6)' }}
+                    className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-auto px-5 py-3 rounded-2xl text-center animate-pulse"
+                    style={{ top: 'calc(10.5rem + env(safe-area-inset-top))', background: 'linear-gradient(135deg, rgba(252,211,77,0.96) 0%, rgba(180,83,9,0.96) 100%)', boxShadow: '0 0 44px rgba(251,191,36,0.6)' }}
                 >
                     <span className="block text-[8px] font-black uppercase tracking-[0.35em] text-black/70">The five relics burn as one</span>
                     <span className="block text-[12px] font-black uppercase tracking-[0.25em] text-black mt-0.5">Return to the Source →</span>
@@ -849,7 +903,7 @@ export default function WorldPage() {
 
             {/* the journey, once completed, dwells in the soul */}
             {character.sourceReturned && (
-                <div className="absolute left-1/2 top-[14%] -translate-x-1/2 z-10 pointer-events-none px-4 py-1.5 rounded-full bg-black/50 border border-aether-gold/30">
+                <div className="absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4 py-1.5 rounded-full bg-black/50 border border-aether-gold/30" style={{ top: 'calc(10.5rem + env(safe-area-inset-top))' }}>
                     <span className="text-[9px] font-black uppercase tracking-[0.3em] text-aether-gold">✦ The Source dwells in you</span>
                 </div>
             )}
@@ -881,7 +935,7 @@ export default function WorldPage() {
 
             {/* satchel of relics */}
             {satchelOpen && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setSatchelOpen(false)}>
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} onClick={() => setSatchelOpen(false)}>
                     <div
                         className="w-full max-w-md rounded-[1.75rem] p-6 pt-11 max-h-[82dvh] overflow-y-auto custom-scrollbar relative"
                         style={{ background: 'linear-gradient(165deg,#5a3d22 0%,#3f2a16 55%,#2b1d0f 100%)', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.35), inset 0 0 0 4px rgba(214,160,90,0.22), 0 22px 55px rgba(0,0,0,0.65)' }}
@@ -1161,7 +1215,7 @@ export default function WorldPage() {
 
             {/* NPC mission dialog */}
             {QUESTS_ENABLED && questNpc && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestNpc(null)}>
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} onClick={() => setQuestNpc(null)}>
                     <div className="w-full max-w-lg glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[85dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setQuestNpc(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Mission</p>
@@ -1206,7 +1260,7 @@ export default function WorldPage() {
 
             {/* quest log */}
             {QUESTS_ENABLED && questLogOpen && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setQuestLogOpen(false)}>
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} onClick={() => setQuestLogOpen(false)}>
                     <div className="w-full max-w-md glass-panel rounded-3xl p-6 border border-[rgba(251,191,36,0.2)] max-h-[82dvh] overflow-y-auto custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setQuestLogOpen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
                         <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">Missions</p>
@@ -1301,7 +1355,7 @@ export default function WorldPage() {
             )}
 
             {attunementOpen && (
-                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setAttunementOpen(false)}>
+                <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} onClick={() => setAttunementOpen(false)}>
                     <div className="w-full max-w-md glass-panel rounded-3xl border border-white/10 overflow-hidden max-h-[88dvh]" onClick={(e) => e.stopPropagation()}>
                         <AttunementPanel
                             character={character}

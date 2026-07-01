@@ -291,6 +291,8 @@ h1, h2, h3, .font-ritual {
 }
 @media (prefers-reduced-motion: reduce) {
     .truth-float { animation: none; }
+    .gold-shimmer { animation: none; }
+    .animate-pulse { animation: none; }
 }
 
 .awaken-caret {

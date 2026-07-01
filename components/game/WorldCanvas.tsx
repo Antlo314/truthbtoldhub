@@ -102,6 +102,11 @@ export default function WorldCanvas({
     charRef.current = character;
     const pausedRef = useRef(paused);
     pausedRef.current = paused;
+    // when the loop parks itself under an overlay, this restarts it on unpause
+    const resumeRef = useRef<() => void>(() => {});
+    useEffect(() => {
+        if (!paused) resumeRef.current();
+    }, [paused]);
 
     const profile = useInputProfile();
     const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
@@ -134,6 +139,11 @@ export default function WorldCanvas({
         applyHiddenClears(ow);
         const pickups = buildPickups();
         const justCollected = new Set<string>();
+        // honor the OS "reduce motion" preference — ambient bobs, flickers and
+        // drifts go still; motion the player initiates (walking) stays.
+        const reduceMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        // fellows glide toward their latest reported spot instead of teleporting
+        const fellowDisplay = new Map<string, { x: number; y: number; step: number }>();
 
         const charImg = new Image();
         charImg.src = CHAR_SHEET;
@@ -344,10 +354,10 @@ export default function WorldCanvas({
             const dist = Math.hypot(dx, dy) || 1;
             const steps = Math.min(14, Math.floor(dist / (TILE * 1.8)));
             for (let i = 0; i < steps; i++) {
-                const t = (i + 0.5) / steps + Math.sin(st.t / 400 + i) * 0.04;
+                const t = (i + 0.5) / steps + (reduceMotion ? 0 : Math.sin(st.t / 400 + i) * 0.04);
                 const px = wx + dx * t;
                 const py = wy + dy * t;
-                const alpha = 0.35 + Math.sin(st.t / 300 + i * 0.8) * 0.25;
+                const alpha = reduceMotion ? 0.45 : 0.35 + Math.sin(st.t / 300 + i * 0.8) * 0.25;
                 ctx.fillStyle = `rgba(251,191,36,${alpha})`;
                 ctx.beginPath();
                 ctx.arc(SX(px), SY(py) - 8 * Z, 2.2 * Z, 0, Math.PI * 2);
@@ -357,7 +367,7 @@ export default function WorldCanvas({
 
         // a floating essence mote (loot) — gem that bobs over a soft glow
         function drawPickup(wx: number, wy: number, color: string) {
-            const bob = Math.sin(st.t / 380 + wx * 0.05) * 2;
+            const bob = reduceMotion ? 0 : Math.sin(st.t / 380 + wx * 0.05) * 2;
             aura(wx, wy, color, 7);
             const x = SX(wx);
             const y = SY(wy) + bob;
@@ -482,12 +492,20 @@ export default function WorldCanvas({
         let last = performance.now();
         let running = true;
         let ready = 0;
+        let parked = false;
+        resumeRef.current = () => {
+            if (!running || !parked) return;
+            parked = false;
+            last = performance.now();
+            raf = requestAnimationFrame(loop);
+        };
 
         function loop(now: number) {
             if (!running) return;
-            // an overlay (Hut, satchel, combat, dialogue…) is open — freeze the
-            // world (saves battery, holds position) and keep the loop alive.
-            if (pausedRef.current) { last = now; raf = requestAnimationFrame(loop); return; }
+            // an overlay (Hut, satchel, combat, dialogue…) is open — PARK the
+            // loop entirely (no idle rAF churn, saves battery); the paused-prop
+            // effect calls resumeRef to restart it the moment the world resumes.
+            if (pausedRef.current) { parked = true; return; }
             const dt = Math.min(0.05, (now - last) / 1000);
             last = now;
             st.t = now;
@@ -705,23 +723,38 @@ export default function WorldCanvas({
             }
 
             // Truth companion — follows the player from the Hut
-            const truthBob = Math.sin(st.t / 600) * 0.6;
+            const truthBob = reduceMotion ? 0 : Math.sin(st.t / 600) * 0.6;
             aura(truth.x, truth.y, '#fbbf24', 12);
             shadow(truth.x, truth.y);
             truthSprite(truth.x, truth.y, truthBob);
 
             // shades — varied skins drift the cavern
             for (const sh of st.shades) {
-                const fl = 0.4 + Math.sin(st.t / 240 + sh.x) * 0.12;
+                const fl = reduceMotion ? 0.46 : 0.4 + Math.sin(st.t / 240 + sh.x) * 0.12;
                 aura(sh.x, sh.y, sh.aura ?? '#22d3ee', 11);
                 sprite(charImg, sh.col ?? DEFAULT_SHADE_TILE.col, sh.row ?? DEFAULT_SHADE_TILE.row, sh.x, sh.y, fl);
             }
 
-            // fellow souls — faint walkers who roamed today
+            // fellow souls — faint walkers who roamed today. Presence only
+            // refreshes every ~90s, so each soul GLIDES toward its latest spot
+            // with a step cadence instead of teleporting like a pinned statue.
             for (const f of fellowSoulsRef.current) {
-                const bob = Math.sin(st.t / 520 + f.x * 0.02) * 0.8;
-                const ghostX = f.x + Math.sin(st.t / 900 + f.y * 0.01) * 2;
-                const ghostY = f.y + bob;
+                let dp = fellowDisplay.get(f.id);
+                if (!dp) { dp = { x: f.x, y: f.y, step: 0 }; fellowDisplay.set(f.id, dp); }
+                const ddx = f.x - dp.x;
+                const ddy = f.y - dp.y;
+                const dd = Math.hypot(ddx, ddy);
+                const walking = dd > 1.5;
+                if (dd > TILE * 14) { dp.x = f.x; dp.y = f.y; }
+                else if (walking) {
+                    const wSpd = Math.min(46, 12 + dd * 0.35);
+                    dp.x += (ddx / dd) * wSpd * dt;
+                    dp.y += (ddy / dd) * wSpd * dt;
+                    dp.step += dt * 7;
+                }
+                const bob = reduceMotion ? 0 : walking ? (Math.floor(dp.step) % 2) : Math.sin(st.t / 520 + f.x * 0.02) * 0.8;
+                const ghostX = dp.x + (reduceMotion || walking ? 0 : Math.sin(st.t / 900 + f.y * 0.01) * 2);
+                const ghostY = dp.y + bob;
                 aura(ghostX, ghostY, f.pathColor || f.aura, 10);
                 shadow(ghostX, ghostY);
                 sprite(charImg, f.bodyCol, f.bodyRow, ghostX, ghostY, 0.38);
@@ -729,6 +762,10 @@ export default function WorldCanvas({
                 ctx.font = `bold ${6 * Z}px serif`;
                 ctx.textAlign = 'center';
                 ctx.fillText(f.name, SX(ghostX), SY(ghostY) - 18 * Z);
+            }
+            if (fellowDisplay.size > fellowSoulsRef.current.length + 4) {
+                const live = new Set(fellowSoulsRef.current.map((f) => f.id));
+                for (const key of Array.from(fellowDisplay.keys())) if (!live.has(key)) fellowDisplay.delete(key);
             }
 
             // player — rebuild the avatar frames if the look changed, then draw
