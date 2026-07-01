@@ -68,3 +68,31 @@ export function puzzleHintFor(c: GameCharacter, puzzleId: string, hint?: string)
     }
     return null;
 }
+
+// ============================================================
+//  PATH STAT PROFILE — a 0..100 readout per axis used by the
+//  path-selection preview (PathStatPreview). Curated by hand so
+//  each road reads with a distinct identity at a glance, derived
+//  from each path's base combat modifiers + essence.
+// ============================================================
+export interface PathStatProfile {
+    power: number;
+    reach: number;
+    vitality: number;
+    resilience: number;
+}
+
+const BASE_PROFILES: Record<GamePath, PathStatProfile> = {
+    // The Seer — fragile but strikes from afar; long reach, low vit.
+    seer:     { power: 62, reach: 92, vitality: 40, resilience: 36 },
+    // The Sentinel — the front-line bulwark; high vit & mitigation.
+    sentinel: { power: 78, reach: 52, vitality: 88, resilience: 80 },
+    // The Scribe — knowledge over force; weakest in a straight fight.
+    scribe:   { power: 44, reach: 56, vitality: 58, resilience: 64 },
+    // The Mystic — balanced channeler; regen & sustain, middle of the road.
+    mystic:   { power: 66, reach: 60, vitality: 66, resilience: 78 },
+};
+
+export function pathStatProfile(path: GamePath): PathStatProfile {
+    return BASE_PROFILES[path] ?? { power: 50, reach: 50, vitality: 50, resilience: 50 };
+}

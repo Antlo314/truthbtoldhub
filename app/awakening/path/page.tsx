@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useGameStore, type GamePath } from '@/lib/store/useGameStore';
 import { PATHS, PATH_BY_ID } from '@/lib/game/paths';
+import { pathStatProfile } from '@/lib/game/pathPowers';
 import { Eye, Shield, ScrollText, Sparkles } from 'lucide-react';
 import CinematicVideo from '@/components/game/CinematicVideo';
 import AttunementPanel from '@/components/game/AttunementPanel';
+import PathStatPreview from '@/components/game/PathStatPreview';
 import { CINEMA } from '@/lib/game/cutscenes';
 import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
@@ -117,6 +119,21 @@ export default function PathPage() {
                     })}
                 </div>
 
+                {selected && (
+                    <div
+                        className="shrink-0 mt-2 rounded-xl border px-3 pt-2 pb-2.5"
+                        style={{ borderColor: `${PATH_BY_ID[selected].color}33`, background: `${PATH_BY_ID[selected].color}0a` }}
+                    >
+                        <p className="text-[8px] font-black uppercase tracking-[0.3em]" style={{ color: PATH_BY_ID[selected].color }}>
+                            Combat identity
+                        </p>
+                        <PathStatPreview
+                            profile={pathStatProfile(selected)}
+                            color={PATH_BY_ID[selected].color}
+                            animateKey={selected}
+                        />
+                    </div>
+                )}
                 {selected && (
                     <button
                         onClick={() => embrace(selected)}
