@@ -6,8 +6,8 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import {
     ARCADE_GAMES, LIVE_GAMES, ARCADE_PRIZE, currentSeason, seasonLabel, daysLeftInSeason,
-    fetchLeaderboard, fetchPersonalBest, submitScore,
-    type LeaderRow, type ArcadeGameDef,
+    fetchLeaderboard, fetchPersonalBest, fetchPersonalStats, fetchPastChampions, submitScore,
+    type LeaderRow, type ArcadeGameDef, type PersonalStats, type PastChampion,
 } from '@/lib/game/arcade';
 import { unlockArcadeAudio } from '@/lib/game/arcadeSfx';
 import TetrisGame from '@/components/game/arcade/TetrisGame';
@@ -43,6 +43,8 @@ export default function ArcadeLobby({ character, onClose }: Props) {
     const [rows, setRows] = useState<LeaderRow[]>([]);
     const [loadingBoard, setLoadingBoard] = useState(true);
     const [best, setBest] = useState<number | null>(null);
+    const [stats, setStats] = useState<PersonalStats | null>(null);
+    const [champs, setChamps] = useState<PastChampion[]>([]);
 
     const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [submitMessage, setSubmitMessage] = useState<string | undefined>(undefined);
@@ -50,16 +52,25 @@ export default function ArcadeLobby({ character, onClose }: Props) {
 
     const loadBoard = useCallback(async () => {
         setLoadingBoard(true);
-        const [b, pb] = await Promise.all([
+        const [b, pb, ps] = await Promise.all([
             fetchLeaderboard(boardGame.id, seasonKey),
             fetchPersonalBest(boardGame.id, seasonKey),
+            fetchPersonalStats(boardGame.id, seasonKey),
         ]);
         setRows(b);
         setBest(pb);
+        setStats(ps);
         setLoadingBoard(false);
     }, [boardGame.id, seasonKey]);
 
     useEffect(() => { loadBoard(); }, [loadBoard]);
+
+    // hall of champions — the crowned souls of finished seasons
+    useEffect(() => {
+        let alive = true;
+        fetchPastChampions(boardGame.id, 3).then((c) => { if (alive) setChamps(c); });
+        return () => { alive = false; };
+    }, [boardGame.id]);
 
     const handlePlay = (g: ArcadeGameDef) => {
         if (!g.live) return;
@@ -217,14 +228,45 @@ export default function ArcadeLobby({ character, onClose }: Props) {
                     </div>
                 </div>
 
-                {best != null && (
-                    <div className="flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3" style={{ borderColor: `${acc}40`, background: `${acc}10` }}>
-                        <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: acc }}>Your best · {scope === 'current' ? seasonLabel(currentSeason()) : 'All-Time'}</p>
-                        <p className="font-ritual text-lg" style={{ color: acc }}>{best.toLocaleString()}</p>
+                {(stats || best != null) && (
+                    <div className="rounded-xl border px-3 py-2.5 mb-3" style={{ borderColor: `${acc}40`, background: `${acc}10` }}>
+                        <p className="text-[10px] font-mono uppercase tracking-widest mb-1.5" style={{ color: acc }}>Your record · {scope === 'current' ? seasonLabel(currentSeason()) : 'All-Time'}</p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <p className="text-[8px] uppercase tracking-widest text-white/40">Best</p>
+                                <p className="font-ritual text-lg leading-tight" style={{ color: acc }}>{(stats?.best ?? best ?? 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[8px] uppercase tracking-widest text-white/40">Runs</p>
+                                <p className="font-ritual text-lg leading-tight text-white/85">{stats?.runs ?? '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-[8px] uppercase tracking-widest text-white/40">Average</p>
+                                <p className="font-ritual text-lg leading-tight text-white/85">{stats ? stats.avg.toLocaleString() : '—'}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 <Leaderboard rows={rows} accent={acc} loading={loadingBoard} metric={boardGame.metric} levelLabel={boardGame.levelLabel} />
+
+                {champs.length > 0 && (
+                    <div className="mt-6">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-3">Hall of Champions</p>
+                        <div className="space-y-2">
+                            {champs.map((c) => (
+                                <div key={c.season} className="flex items-center gap-3 rounded-xl border border-aether-gold/20 bg-black/30 px-3 py-2.5">
+                                    <Crown className="w-4 h-4 text-aether-gold shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-white truncate leading-tight">{c.player_name}</p>
+                                        <p className="text-[9px] font-mono uppercase tracking-widest text-white/40">{seasonLabel(c.season)} · {boardGame.title}</p>
+                                    </div>
+                                    <p className="font-ritual text-base shrink-0" style={{ color: acc }}>{c.score.toLocaleString()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <p className="text-[10px] text-zinc-600 text-center mt-5 leading-relaxed">
                     Scores are tied to your soul. Climb the board before the season turns.

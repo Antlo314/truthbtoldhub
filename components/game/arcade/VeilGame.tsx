@@ -125,6 +125,14 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
     const [shield, setShield] = useState(false);
 
     useEffect(() => { propsRef.current = { onGameOver, onReset }; }, [onGameOver, onReset]);
+
+    // farthest distance ever walked on this device — drawn as a golden thread
+    // in the level so every run races the ghost of the last best (render-only;
+    // never touches the deterministic sim).
+    const bestDistRef = useRef(0);
+    useEffect(() => {
+        try { bestDistRef.current = Number(localStorage.getItem('tbth-veil-best-dist')) || 0; } catch { /* ignore */ }
+    }, []);
     useEffect(() => { statusRef.current = status; }, [status]);
     useEffect(() => { setMuted(isArcadeMuted()); }, []);
 
@@ -199,6 +207,10 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             spawnParticles(st, st.px + 0.5, st.py + 0.5, 28, PAL.shard, 9, 9);
             setStatus('over');
             const finalScore = Math.floor(st.distance) + st.coins * COIN_BONUS;
+            if (st.distance > bestDistRef.current) {
+                bestDistRef.current = st.distance;
+                try { localStorage.setItem('tbth-veil-best-dist', String(Math.floor(st.distance))); } catch { /* ignore */ }
+            }
             propsRef.current.onGameOver({ score: finalScore, lines: st.coins, level: attemptsRef.current });
         };
 
@@ -464,6 +476,27 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             ctx.shadowBlur = 0;
             ctx.fillStyle = 'rgba(124,92,255,0.08)';
             ctx.fillRect(0, floorY, W, H - floorY);
+
+            // ✦ the golden thread — where your farthest run ended; beat it
+            {
+                const bd = bestDistRef.current;
+                if (bd > 12) {
+                    const bx = sx(bd);
+                    if (bx > -24 && bx < W + 24) {
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(251,191,36,0.7)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([6, 6]);
+                        ctx.beginPath(); ctx.moveTo(Math.round(bx) + 0.5, 0); ctx.lineTo(Math.round(bx) + 0.5, floorY); ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = 'rgba(253,230,138,0.95)';
+                        ctx.font = `bold ${Math.max(9, Math.round(P * 0.45))}px monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(st.px >= bd ? 'BEYOND' : 'BEST', bx, Math.max(14, floorY * 0.1));
+                        ctx.restore();
+                    }
+                }
+            }
             if (st.mode !== 'cube') {
                 const cyPx = sy(CEIL);
                 ctx.shadowColor = PAL.ground; ctx.shadowBlur = reduce ? 0 : 8;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { X, FileText, Film, Music, Image as ImageIcon, Link2, Pin, ArrowLeft, HelpCircle, ScrollText, Radio, Lock } from 'lucide-react';
@@ -8,6 +8,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { truthOffscreen } from '@/lib/game/truth';
 import { formatBytes, type Bulletin, type DispatchMedia, type MediaKind } from '@/lib/game/hut';
 import type { WorldEvent } from '@/lib/game/worldEvents';
+import { currentSeason } from '@/lib/game/arcade';
 import HutLedger from '@/components/game/HutLedger';
 import HutPortalBoard from '@/components/game/HutPortalBoard';
 import HutFrequencies from '@/components/game/HutFrequencies';
@@ -228,12 +229,41 @@ interface HutInteriorProps {
 export default function HutInterior({ character, bulletins, media, isArchitect, worldEvent, onClose, onOpenForge, onToast, initialStation }: HutInteriorProps) {
     const router = useRouter();
     const [active, setActive] = useState<StationId | null>(initialStation ?? null);
+
+    // ---- "something new dwells here" markers ------------------------------
+    // Each content station remembers the newest thing you SAW there
+    // (localStorage); a gold pulse marks stations that grew since.
+    const [seenTick, setSeenTick] = useState(0);
+    const latestFor = useMemo<Partial<Record<StationId, string>>>(() => {
+        const newest = (items: { created_at: string }[]) =>
+            items.reduce<string>((m, i) => (i.created_at > m ? i.created_at : m), '');
+        return {
+            ledger: newest(bulletins) || undefined,
+            visions: newest(media.filter((m) => m.kind === 'video' || m.kind === 'image')) || undefined,
+            archive: newest(media.filter((m) => m.kind === 'pdf' || m.kind === 'link' || m.kind === 'audio')) || undefined,
+            arcade: currentSeason(), // a fresh season = a fresh ladder
+        };
+    }, [bulletins, media]);
+    const hasNew = useCallback((id: StationId) => {
+        const latest = latestFor[id];
+        if (!latest || typeof window === 'undefined') return false;
+        void seenTick;
+        try { return (localStorage.getItem(`tbth-hut-seen-${id}`) ?? '') < latest; } catch { return false; }
+    }, [latestFor, seenTick]);
+    const markSeen = useCallback((id: StationId) => {
+        const latest = latestFor[id];
+        if (!latest) return;
+        try { localStorage.setItem(`tbth-hut-seen-${id}`, latest); } catch { /* ignore */ }
+        setSeenTick((t) => t + 1);
+    }, [latestFor]);
+
     const openStation = useCallback((id: StationId) => {
+        markSeen(id);
         // The Sanctum isn't a panel — it's the community space at /archive (gated
         // to signed-in souls). Walk out the gathering-hall door into it.
         if (id === 'sanctum') { router.push('/archive'); return; }
         setActive(id);
-    }, [router]);
+    }, [router, markSeen]);
 
     // first-visit walkthrough — a one-time legend of the room
     const [showTour, setShowTour] = useState(false);
@@ -269,7 +299,7 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
             <div className="absolute inset-x-0 pointer-events-none" style={{ top: '44.4%', height: '1%', background: 'linear-gradient(180deg,#7a5126 0%,#5a3a1d 60%,#3a2412 100%)', boxShadow: '0 3px 6px rgba(0,0,0,0.45)' }} />
             {/* cozy vignette */}
             <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: 'inset 0 0 18vmin 5vmin rgba(0,0,0,0.5)' }} />
-            <style>{`@keyframes hutFlicker{0%,100%{opacity:.5}45%{opacity:.92}70%{opacity:.36}}@keyframes hutFloat{0%{transform:translateY(0);opacity:0}12%{opacity:.85}88%{opacity:.5}100%{transform:translateY(-42vmin);opacity:0}}`}</style>
+            <style>{`@keyframes hutFlicker{0%,100%{opacity:.5}45%{opacity:.92}70%{opacity:.36}}@keyframes hutFloat{0%{transform:translateY(0);opacity:0}12%{opacity:.85}88%{opacity:.5}100%{transform:translateY(-42vmin);opacity:0}}@keyframes hutNewPulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.35);opacity:1}}`}</style>
 
             {/* ---- header ---- */}
             <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4" style={{ paddingTop: 'calc(0.7rem + env(safe-area-inset-top))' }}>
@@ -317,14 +347,23 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                     className="absolute z-10 pointer-events-auto flex flex-col items-center group"
                     style={{ left: `${s.x}%`, top: `${s.y}%`, transform: 'translate(-50%,-50%)' }}
                 >
-                    <div className="transition-transform group-hover:-translate-y-0.5 group-active:translate-y-0">
+                    <div className="relative transition-transform group-hover:-translate-y-0.5 group-active:translate-y-0">
                         {s.id === 'arcade'
                             ? <ArcadeIcon vmin={s.sprite.vmin} />
                             : s.id === 'sanctum'
                                 ? <SanctumIcon vmin={s.sprite.vmin} />
                                 : <KenneyObject col={s.sprite.col} row={s.sprite.row} w={s.sprite.w} h={s.sprite.h} vmin={s.sprite.vmin} />}
+                        {hasNew(s.id) && (
+                            <span
+                                aria-hidden
+                                className="absolute rounded-full"
+                                style={{ top: '-0.9vmin', right: '-0.9vmin', width: '2vmin', height: '2vmin', background: 'radial-gradient(circle, #fde68a 0%, #fbbf24 55%, #b45309 100%)', boxShadow: '0 0 1.6vmin rgba(251,191,36,0.9)', animation: 'hutNewPulse 1.8s ease-in-out infinite' }}
+                            />
+                        )}
                     </div>
-                    <span className="mt-1 px-2 py-0.5 rounded-full bg-black/55 border border-aether-gold/25 text-[8px] font-black uppercase tracking-[0.18em] text-aether-gold/90 opacity-90 group-hover:opacity-100 whitespace-nowrap">{s.label}</span>
+                    <span className="mt-1 px-2 py-0.5 rounded-full bg-black/55 border border-aether-gold/25 text-[8px] font-black uppercase tracking-[0.18em] text-aether-gold/90 opacity-90 group-hover:opacity-100 whitespace-nowrap">
+                        {s.label}{hasNew(s.id) ? ' ✦' : ''}
+                    </span>
                 </button>
             ))}
 

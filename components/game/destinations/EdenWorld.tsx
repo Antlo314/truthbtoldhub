@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { wornAvatar } from '@/lib/game/avatar';
 import { ArrowLeft, Heart, Volume2, VolumeX, BookOpen } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import { gameMusic } from '@/lib/game/music';
@@ -549,8 +550,8 @@ export default function EdenWorld({
             for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
             return m;
         };
-        let avatarFrames = buildFrames(charRef.current.avatar);
-        let avatarKey = JSON.stringify(charRef.current.avatar);
+        let avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+        let avatarKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
         const st = gameStateRef.current;
         if (!st.dayStart) st.dayStart = performance.now() - 0.18 * EDEN_DAY_SECONDS * 1000; // begin mid-morning
         let raf = 0;
@@ -754,7 +755,7 @@ export default function EdenWorld({
                             setBarrierActive(false);
                             onSolve();
                             markMinigameCleared('mg_eden_match');
-                            setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge and the ordering is whole. The Cherub road north opens — the Tree of Life waits beyond.', color: '#34d399' });
+                            setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge and the ordering is whole. The Cherub road north opens — and the rare cuttings, myrtle and spikenard, have awakened in the garden beds. Tend them before you ascend, if you would go strengthened.', color: '#34d399' });
                             sfx.victory();
                         } else {
                             setDialogue({ speaker: 'The Gardener', text: rv.litLine, color: rv.color });
@@ -889,7 +890,7 @@ export default function EdenWorld({
             const secretVisible = canRevealEdenSecret(lvl, charRef.current);
             const nightish = dayPhaseRef.current === 'night' || dayPhaseRef.current === 'dusk';
             for (const ch of lvl.chests) {
-                if (ch.opened || (ch.hidden && (!secretVisible || !nightish))) continue;
+                if (ch.opened || (ch.hidden && !secretVisible && !nightish)) continue;
                 const bob = Math.sin(st.t / 380 + ch.gx) * 2 * Z;
                 const cx = SX((ch.gx + 0.5) * EDEN_TILE), cy = SY((ch.gy + 0.5) * EDEN_TILE) + bob;
                 const glow = 0.35 + Math.sin(st.t / 300 + ch.gy) * 0.2;
@@ -1051,8 +1052,8 @@ export default function EdenWorld({
             }
 
             // player
-            const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
+            const curKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing)); }
             const wphase = Math.floor(st.walkT * 7) % 2;
             const dirFrames = avatarFrames[st.facing];
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];

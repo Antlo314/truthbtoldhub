@@ -28,6 +28,11 @@ const FRENZY_MS = 6000;      // duration of the Ardor score doubler
 const CHAIN_WINDOW = 14;     // STEPS a chain survives without an eat (scales with speed)
 const POPS_CAP = 6;          // fixed-cap ring buffer for eat pops
 
+// themed arena names (index = zone) + the serpent's quickening, named
+const ZONE_NAMES = ['The Open Field', 'The Pillars', 'The Serpent Gates', 'The Labyrinth', 'The Inner Coil'];
+const SPEED_TIERS = ['Wandering', 'Slithering', 'Coiling', 'Striking', 'Frenzy', 'Venom', 'Apex', 'Boundless'];
+const speedTier = (s: number) => SPEED_TIERS[Math.min(SPEED_TIERS.length - 1, Math.max(0, s - 1))];
+
 type Vec = { x: number; y: number };
 type PickupKind = 'veil' | 'magnet' | 'shrink' | 'frenzy';
 type EffectKind = 'veil' | 'magnet' | 'frenzy';
@@ -233,7 +238,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             if (st.bonus && onWall(st, st.bonus)) { const v = randEmpty(st); st.bonus.x = v.x; st.bonus.y = v.y; }
             if (st.pickup && onWall(st, st.pickup)) { const v = randEmpty(st); st.pickup.x = v.x; st.pickup.y = v.y; }
             asfx.zoneShift();
-            showFlash('ZONE ' + (z + 1));
+            showFlash((ZONE_NAMES[z] ?? 'ZONE ' + (z + 1)).toUpperCase());
             vibrate(24);
             if (!reduceRef.current) st.zoneSweepUntil = performance.now() + 400;
         };
@@ -731,7 +736,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             <div className="flex items-center justify-center gap-3 px-3 pt-2 shrink-0">
                 {stat('Score', score)}
                 {stat('Orbs', orbs)}
-                {stat('Speed', speed)}
+                {stat(speedTier(speed), speed)}
             </div>
 
             {/* board */}
@@ -762,7 +767,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                             <div className="grid grid-cols-3 gap-2 my-4">
                                 <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score}</p></div>
                                 <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Orbs</p><p className="font-ritual text-xl text-white">{orbs}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Speed</p><p className="font-ritual text-xl text-white">{speed}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">{speedTier(speed)}</p><p className="font-ritual text-xl text-white">{speed}</p></div>
                             </div>
                             <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.6)' }}>
                                 {submitState === 'saving' && 'Recording your score…'}

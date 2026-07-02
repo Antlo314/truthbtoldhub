@@ -211,6 +211,82 @@ export async function fetchLeaderboard(
     }
 }
 
+// ---------- personal stats ----------
+export interface PersonalStats {
+    runs: number;
+    best: number;
+    avg: number;
+}
+
+/** The signed-in soul's record for a game + season (null if no runs). */
+export async function fetchPersonalStats(game: string, season: string): Promise<PersonalStats | null> {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return null;
+        let q = supabase
+            .from('arcade_scores')
+            .select('score')
+            .eq('game', game)
+            .eq('user_id', session.user.id)
+            .order('score', { ascending: false })
+            .limit(200);
+        if (season !== 'all') q = q.eq('season', season);
+        const { data, error } = await q;
+        if (error || !data || data.length === 0) return null;
+        const scores = (data as { score: number }[]).map((r) => r.score);
+        return {
+            runs: scores.length,
+            best: scores[0],
+            avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        };
+    } catch {
+        return null;
+    }
+}
+
+// ---------- hall of champions ----------
+/** The N season ids before the current one, newest first. */
+export function pastSeasons(count: number, d: Date = new Date()): string[] {
+    const out: string[] = [];
+    let y = d.getFullYear();
+    let m = d.getMonth(); // 0-based; start one month back
+    for (let i = 0; i < count; i++) {
+        m -= 1;
+        if (m < 0) { m += 12; y -= 1; }
+        out.push(`${y}-${String(m + 1).padStart(2, '0')}`);
+    }
+    return out;
+}
+
+export interface PastChampion {
+    season: string;
+    player_name: string;
+    score: number;
+}
+
+/** Crowned champions of the last `count` finished seasons (skips empty ones). */
+export async function fetchPastChampions(game: string, count = 3): Promise<PastChampion[]> {
+    try {
+        const out: PastChampion[] = [];
+        for (const s of pastSeasons(count)) {
+            const { data, error } = await supabase
+                .from('arcade_scores')
+                .select('player_name, score')
+                .eq('game', game)
+                .eq('season', s)
+                .order('score', { ascending: false })
+                .limit(1);
+            if (!error && data && data.length > 0) {
+                const top = data[0] as { player_name: string; score: number };
+                out.push({ season: s, player_name: top.player_name, score: top.score });
+            }
+        }
+        return out;
+    } catch {
+        return [];
+    }
+}
+
 /** The signed-in soul's best score for a game + season (null if none). */
 export async function fetchPersonalBest(game: string, season: string): Promise<number | null> {
     try {

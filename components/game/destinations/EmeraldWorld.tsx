@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { wornAvatar } from '@/lib/game/avatar';
 import { Volume2, VolumeX, ArrowLeft, Heart, Compass } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import { gameMusic } from '@/lib/game/music';
@@ -390,8 +391,8 @@ export default function EmeraldWorld({
             for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
             return m;
         };
-        let avatarFrames = buildFrames(charRef.current.avatar);
-        let avatarKey = JSON.stringify(charRef.current.avatar);
+        let avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+        let avatarKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
         const state = gameState.current;
         let raf = 0;
         let last = performance.now();
@@ -759,8 +760,8 @@ export default function EmeraldWorld({
             }
             // the initiate's own reflection, when they walk the upper gallery
             if (state.pay >= 16 * T && state.pay < MIRROR_AXIS) {
-                const curKeyR = JSON.stringify(charRef.current.avatar);
-                if (curKeyR !== avatarKey) { avatarKey = curKeyR; avatarFrames = buildFrames(charRef.current.avatar); }
+                const curKeyR = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+                if (curKeyR !== avatarKey) { avatarKey = curKeyR; avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing)); }
                 const wphaseR = Math.floor(state.walkT * 7) % 2;
                 const framesR = avatarFrames[state.facing];
                 const frameR = moving ? framesR[wphaseR === 0 ? 1 : 2] : framesR[0];
@@ -1009,8 +1010,8 @@ export default function EmeraldWorld({
                 ctx.stroke();
             }
 
-            const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
+            const curKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing)); }
             const wphase = Math.floor(state.walkT * 7) % 2;
             const dirFrames = avatarFrames[state.facing];
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];

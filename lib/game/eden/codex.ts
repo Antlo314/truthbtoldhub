@@ -15,6 +15,7 @@ import {
     EDEN_RIVER_ORDER,
     EDEN_RIVERS_V2,
     EDEN_REGIONS,
+    edenKey,
 } from '@/lib/game/eden/atlas';
 import { EDEN_CREATURES, EDEN_CREATURE_COUNT } from '@/lib/game/eden/bestiary';
 import { EDEN_FRUITS, EDEN_FRUIT_COUNT } from '@/lib/game/eden/cultivation';
@@ -44,6 +45,7 @@ export function edenCodex(character: GameCharacter, level: EdenLevelState): Eden
         glyph: c.glyph,
         named: level.named.includes(c.id),
         region: c.region,
+        phases: c.phases,
     }));
     const creaturesDone = creatures.filter((c) => c.named).length;
 
@@ -90,6 +92,12 @@ export function edenCodex(character: GameCharacter, level: EdenLevelState): Eden
         character.discovered.filter((d) => d.startsWith('eden_wing_')).length,
     );
 
+    // ---- NG+ echoes stilled (display-only; kept OUT of `overall` so the
+    //      Keeper rank stays attainable without the optional rematches) ----
+    const echoesDone = EDEN_RIVER_ORDER.filter((id) =>
+        character.discovered.includes(edenKey('milestone', `rematch_${id}`)),
+    ).length;
+
     // ---- the relic (1) ----
     const relicClaimed = character.inventory.includes(RELIC_ID);
     const relicDone = relicClaimed ? 1 : 0;
@@ -121,6 +129,7 @@ export function edenCodex(character: GameCharacter, level: EdenLevelState): Eden
         creatures,
         fruits,
         serpent,
+        echoes: { done: echoesDone, total: EDEN_RIVER_ORDER.length },
         untempted: wasUntempted(character.discovered),
         relicClaimed,
         knowledgeOutcome: level.knowledgeOutcome,

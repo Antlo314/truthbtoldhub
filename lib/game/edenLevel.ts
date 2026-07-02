@@ -388,11 +388,11 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
     }
     // cherub
     if (level.bossGateOpen) {
-        return step('cherub', 'Face the Cherub', 'The north road has opened past the Verge.',
+        return step('cherub', 'Face the Cherub', 'The north road is open — and rare cuttings (myrtle, spikenard) now take to the beds.',
             { gx: EDEN_CHERUB.at.gx, gy: EDEN_CHERUB.at.gy },
             G('The four rivers are lit — the Cherub road north is open. Approach when your vitality is high.'),
-            G('Red dashed circle ahead: the Cherub of the Flaming Sword. Rest at red springs first.'),
-            G('The pulsing marker leads to the last guardian. This is the final gate.'));
+            G('The rare cuttings woke with the rivers — myrtle and spikenard take to any bed now. Their fruit strengthens the blade and the blood for the fight ahead.'),
+            G('Red dashed circle north: the Cherub of the Flaming Sword. Rest at red springs, harvest what is ripe, then go.'));
     }
 
     // first stone

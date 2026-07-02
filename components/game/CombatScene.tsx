@@ -7,6 +7,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import type { Destination } from '@/lib/game/destinations';
 import { sfx, unlockAudio, setMuted, isMuted } from '@/lib/game/sfx';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { wornAvatar } from '@/lib/game/avatar';
 import { drawWeaponOverlay } from '@/lib/game/weaponVisual';
 import { WEAPON_BY_ID } from '@/lib/game/weapons';
 import { ABILITY_BY_ID, combatAbilities, type AbilityDef } from '@/lib/game/abilities';
@@ -218,7 +219,8 @@ export default function CombatScene({ destination: d, character, weaponDamage, w
         const CDIRS = ['down', 'up', 'left', 'right'] as const;
         type CDir = typeof CDIRS[number];
         const avatarFrames = {} as Record<CDir, HTMLCanvasElement[]>;
-        for (const cd of CDIRS) avatarFrames[cd] = [avatarOffscreen(character.avatar, 0, cd), avatarOffscreen(character.avatar, 1, cd), avatarOffscreen(character.avatar, 2, cd)];
+        const wornCfg = wornAvatar(character.avatar, character.equipped.clothing);
+        for (const cd of CDIRS) avatarFrames[cd] = [avatarOffscreen(wornCfg, 0, cd), avatarOffscreen(wornCfg, 1, cd), avatarOffscreen(wornCfg, 2, cd)];
         let walkTimer = 0;
         let facing: CDir = 'down';
         const cfg = d.combat!;

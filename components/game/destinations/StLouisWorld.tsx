@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { wornAvatar } from '@/lib/game/avatar';
 import { Volume2, VolumeX, ArrowLeft, Heart, Compass, Zap } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import { gameMusic } from '@/lib/game/music';
@@ -341,8 +342,8 @@ export default function StLouisWorld({
             for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
             return m;
         };
-        let avatarFrames = buildFrames(charRef.current.avatar);
-        let avatarKey = JSON.stringify(charRef.current.avatar);
+        let avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+        let avatarKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
         const state = gameState.current;
         let raf = 0;
         let last = performance.now();
@@ -886,8 +887,8 @@ export default function StLouisWorld({
                 ctx.stroke();
             }
 
-            const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
+            const curKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing)); }
             const wphase = Math.floor(state.walkT * 7) % 2;
             const dirFrames = avatarFrames[state.facing];
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];

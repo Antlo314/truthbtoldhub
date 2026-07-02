@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
+import { wornAvatar } from '@/lib/game/avatar';
 import { truthOffscreen } from '@/lib/game/truth';
 import { npcOffscreen, NPC_AVATARS } from '@/lib/game/npcs';
 import {
@@ -158,8 +159,8 @@ export default function WorldCanvas({
             for (const d of DIRS) m[d] = [avatarOffscreen(cfg, 0, d), avatarOffscreen(cfg, 1, d), avatarOffscreen(cfg, 2, d)];
             return m;
         };
-        let avatarFrames = buildFrames(charRef.current.avatar);
-        let avatarKey = JSON.stringify(charRef.current.avatar);
+        let avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+        let avatarKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
         let walkT = 0;
         let facing: Dir = 'down';
 
@@ -771,8 +772,8 @@ export default function WorldCanvas({
             // player — rebuild the avatar frames if the look changed, then draw
             // the right walk frame (idle when still)
             const ap = charRef.current.appearance;
-            const curKey = JSON.stringify(charRef.current.avatar);
-            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(charRef.current.avatar); }
+            const curKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
+            if (curKey !== avatarKey) { avatarKey = curKey; avatarFrames = buildFrames(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing)); }
             shadow(st.px, st.py);
             aura(st.px, st.py, ap.aura, 11);
             const wphase = Math.floor(walkT * 7) % 2;

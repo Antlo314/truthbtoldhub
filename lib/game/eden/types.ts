@@ -203,9 +203,11 @@ export interface EdenCodexSummary {
     overall: { done: number; total: number };
     lines: EdenCodexLine[];
     rivers: { id: EdenRiverId; name: string; lit: boolean; color: string }[];
-    creatures: { id: string; name: string; glyph: string; named: boolean; region: EdenRegionId }[];
+    creatures: { id: string; name: string; glyph: string; named: boolean; region: EdenRegionId; phases?: EdenDayPhase[] }[];
     fruits: { id: string; name: string; glyph: string; harvested: boolean }[];
     serpent: { id: string; choice: EdenSerpentChoice | null; climax: boolean }[];
+    /** NG+ echo rematches stilled (display-only — not part of `overall`). */
+    echoes: { done: number; total: number };
     untempted: boolean;
     relicClaimed: boolean;
     knowledgeOutcome: EdenKnowledgeOutcome;

@@ -7,7 +7,7 @@ import AvatarCanvas from '@/components/game/AvatarCanvas';
 import CinematicVideo from '@/components/game/CinematicVideo';
 import { AURA_OPTIONS } from '@/components/game/KenneySprite';
 import {
-    SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS,
+    SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS, EYE_COLORS, EYE_NAMES,
     HAIR_STYLES, MASC_OUTFITS, FEM_OUTFITS, FACE_STYLES, EXTRA_OPTIONS,
     randomAvatar, defaultOutfitFor,
     type Build, type HairStyle, type OutfitStyle, type FaceStyle, type Extra, type Facing,
@@ -276,13 +276,34 @@ export default function CreatePage() {
                                 </>
                             )}
                             {tab === 'Face' && (
-                                <Section label="Expression">
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {FACE_STYLES.map((f: FaceStyle) => (
-                                            <OptBtn key={f} active={av.face === f} onClick={() => setAvatar({ face: f })}>{cap(f)}</OptBtn>
-                                        ))}
-                                    </div>
-                                </Section>
+                                <>
+                                    <Section label="Expression">
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {FACE_STYLES.map((f: FaceStyle) => (
+                                                <OptBtn key={f} active={av.face === f} onClick={() => setAvatar({ face: f })}>{cap(f)}</OptBtn>
+                                            ))}
+                                        </div>
+                                    </Section>
+                                    <Section label="Eyes">
+                                        <div className="flex flex-wrap gap-2">
+                                            {EYE_COLORS.map((c, i) => {
+                                                const on = (av.eyes ?? 0) === i;
+                                                return (
+                                                    <button key={c} onClick={() => setAvatar({ eyes: i })} title={EYE_NAMES[i]} aria-label={EYE_NAMES[i]} aria-pressed={on}
+                                                        className={`relative w-7 h-7 rounded-full border-2 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${on ? 'scale-110' : 'opacity-80 hover:opacity-100'}`}
+                                                        style={{ background: c, borderColor: on ? '#fff' : 'rgba(255,255,255,0.12)' }}>
+                                                        {on && <Check className="absolute inset-0 m-auto w-3.5 h-3.5 text-white/70" />}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </Section>
+                                    {(av.face === 'goatee' || av.face === 'beard' || av.face === 'mustache') && (
+                                        <Section label="Facial hair colour">
+                                            <Swatches colors={HAIR_COLORS} active={av.beardColor ?? av.hairColor} onPick={(i) => setAvatar({ beardColor: i })} />
+                                        </Section>
+                                    )}
+                                </>
                             )}
                             {tab === 'Outfit' && (
                                 <>

@@ -226,7 +226,14 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
 
                     {/* 2. The Four Rivers */}
                     <section className="glass-panel rounded-xl border border-emerald-500/20 bg-black/40 p-3 backdrop-blur-sm">
-                        <SectionLabel icon={<Droplets size={10} />}>The Four Rivers</SectionLabel>
+                        <div className="flex items-center justify-between">
+                            <SectionLabel icon={<Droplets size={10} />}>The Four Rivers</SectionLabel>
+                            {summary.rivers.some((r) => r.lit) && (
+                                <span className="tabular-nums text-purple-300/90 uppercase" style={MICRO}>
+                                    {summary.echoes.done} / {summary.echoes.total} echoes stilled
+                                </span>
+                            )}
+                        </div>
                         <div className="mt-2.5 grid grid-cols-2 gap-2">
                             {summary.rivers.map((r) => (
                                 <div
@@ -261,6 +268,11 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                 </div>
                             ))}
                         </div>
+                        {summary.rivers.filter((r) => r.lit).length > summary.echoes.done && (
+                            <p className="mt-2 px-0.5 text-white/40 uppercase" style={MICRO}>
+                                ↺ a faint ring waits at each stilled arena — face the river&apos;s echo for a deeper blessing
+                            </p>
+                        )}
                     </section>
 
                     {/* 3. The Bestiary */}
@@ -305,6 +317,14 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                     >
                                         {c.named ? c.name : '? ? ?'}
                                     </span>
+                                    {!c.named && c.phases && c.phases.length > 0 && (
+                                        <span
+                                            className="w-full truncate uppercase text-sky-300/60"
+                                            style={{ fontSize: 'clamp(5px,1.4vw,6px)', letterSpacing: '0.08em' }}
+                                        >
+                                            {c.phases.includes('night') || c.phases.includes('dusk') ? '☾' : '☀'} {c.phases.join('·')}
+                                        </span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -424,6 +444,13 @@ export default function EdenCodex({ character, level, onClose, accent = '#34d399
                                 );
                             })}
                         </div>
+
+                        {/* the Undivided — still possible, worth knowing about */}
+                        {summary.knowledgeOutcome === 'none' && summary.serpent.every((b) => b.choice !== 'listened') && (
+                            <p className="mt-2 px-0.5 text-emerald-200/45 uppercase" style={MICRO}>
+                                refuse every whisper to the end and the road stays whole — the rarer rank of the undivided waits
+                            </p>
+                        )}
 
                         {/* climax outcome */}
                         {summary.knowledgeOutcome !== 'none' && (
