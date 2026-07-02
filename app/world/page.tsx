@@ -37,7 +37,7 @@ import { clothingBonus, CLOTHING_BY_ID } from '@/lib/game/clothing';
 import { DEST_BY_POI, RELIC_BY_ID, hasAllRelics, ALL_RELIC_IDS, type Destination } from '@/lib/game/destinations';
 import { rollWildArchetype, wildEncounter, wildShadeDiscoverId } from '@/lib/game/wildShades';
 import { CONSUMABLE_BY_ID, consumableStock, formatConsumableEffect } from '@/lib/game/consumables';
-import { type Pickup } from '@/lib/game/overworld';
+import { type Pickup, WORLD_HUT_ONLY } from '@/lib/game/overworld';
 import { sfx } from '@/lib/game/sfx';
 import CutscenePlayer from '@/components/game/CutscenePlayer';
 import { cutscene, cutsceneForCombat } from '@/lib/game/cutscenes';
@@ -691,7 +691,8 @@ export default function WorldPage() {
     };
     const wpn = WEAPON_BY_ID[character.equipped.weapon || 'wood_staff'] || WEAPON_BY_ID['wood_staff'];
     const baseShades = shadeCountForTier(resTier);
-    const roamingShades = effectiveShadeCount(baseShades, worldEvent);
+    // HUT-ONLY mode: no wandering shades roam the empty world.
+    const roamingShades = WORLD_HUT_ONLY ? 0 : effectiveShadeCount(baseShades, worldEvent);
     const nextMilestone = nextRoamMilestoneHint(character);
     const questWaypoint = activeQuestWaypoint(character);
     // persistent "go here next" — quests are off, so fall back to a focus
@@ -739,7 +740,7 @@ export default function WorldPage() {
                 onPickup={onPickup}
                 onPositionUpdate={onPositionUpdate}
                 onTruthLine={onTruthLine}
-                fellowSouls={worldPresence.fellows}
+                fellowSouls={WORLD_HUT_ONLY ? [] : worldPresence.fellows}
                 hideControls={!!dialogue && !isDesktop}
             />
 

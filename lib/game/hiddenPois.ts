@@ -1,4 +1,5 @@
 import type { POI } from '@/lib/game/overworld';
+import { WORLD_HUT_ONLY } from '@/lib/game/overworld';
 import type { GameCharacter } from '@/lib/store/useGameStore';
 import { canSeeHiddenPlaces } from '@/lib/game/pathPowers';
 
@@ -92,6 +93,7 @@ function pathHiddenFor(c: GameCharacter): HiddenPOI[] {
 }
 
 export function visibleHiddenPois(c: GameCharacter): HiddenPOI[] {
+    if (WORLD_HUT_ONLY) return [];
     const seer = canSeeHiddenPlaces(c) ? HIDDEN_POIS : [];
     return [...seer, ...pathHiddenFor(c)];
 }

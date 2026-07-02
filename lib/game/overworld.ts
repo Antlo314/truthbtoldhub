@@ -6,6 +6,15 @@
 //  expandable (content-as-data: add POIs to grow the world).
 // ============================================================
 
+// ============================================================
+//  HUT-ONLY MODE (kill switch, reversible).
+//  When true, the overworld contains ONLY Truth's Hut — no
+//  destinations, NPCs, hidden places, pickups, or wandering
+//  shades. Flip back to false to restore the full world; the
+//  POI/pickup data below is left intact so nothing is lost.
+// ============================================================
+export const WORLD_HUT_ONLY = true;
+
 export const TILE = 16;
 // Tightened from 88 → 64: the old map was ~14% visible per axis on a phone, so
 // roaming meant ~9–12s of empty grass between POIs. 64 keeps room to roam while
@@ -92,7 +101,9 @@ export function buildOverworld(): Overworld {
     const cx = (W / 2) | 0;
     const cy = (H / 2) | 0;
 
-    const pois: POI[] = [
+    // Full-world POIs. In HUT-ONLY mode everything but the Hut is stripped
+    // (kept here, not deleted, so the world can be restored by flipping the flag).
+    const allPois: POI[] = [
         { id: 'hut', type: 'hut', x: cx, y: cy, name: "Truth's Hut", detail: 'The centerpiece — daily dispatches and scrolls.' },
         { id: 'dest_eden', type: 'portal', x: 8, y: 8, name: 'Eden — Before the Fall', detail: 'Step through to the open garden — the hour before shame, before exile.' },
         { id: 'npc_gardener', type: 'npc', x: 12, y: 11, name: 'The Gardener', detail: 'Keeper of the First Garden — missions and counsel for those who walk Eden.' },
@@ -106,6 +117,7 @@ export function buildOverworld(): Overworld {
         { id: 'npc_eli', type: 'npc', x: cx + 9, y: cy + 6, name: 'Eli', npcTile: { col: 0, row: 6 }, detail: 'A scribe of buried books.' },
         { id: 'npc_mara', type: 'npc', x: cx - 4, y: 13, name: 'Sister Mara', npcTile: { col: 1, row: 5 }, detail: 'She studies the relics of this world.' },
     ];
+    const pois: POI[] = WORLD_HUT_ONLY ? allPois.filter((p) => p.id === 'hut') : allPois;
 
     const inB = (c: number, r: number) => c >= 0 && r >= 0 && c < W && r < H;
 
@@ -240,6 +252,7 @@ let cachedPickups: Pickup[] | null = null;
 
 export function buildPickups(): Pickup[] {
     if (cachedPickups) return cachedPickups;
+    if (WORLD_HUT_ONLY) { cachedPickups = []; return cachedPickups; }
     const ow = buildOverworld();
     const rand = mulberry32(99001);
     const out: Pickup[] = [];
