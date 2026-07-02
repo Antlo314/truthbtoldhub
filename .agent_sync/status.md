@@ -320,3 +320,15 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Sprite-pack research (user asked)**: no CC0 modular ANIMATED paper-doll exists at our scale -> keep the procedural engine for the player. For future NPC/enemy variety: **Ninja Adventure Asset Pack (CC0)** is the recommended backbone (50+ chars, 30+ monsters, 4-dir walks, 16px), supplemented by Mini World Sprites + Puny Characters (both CC0). Excluded: LPC (share-alike), Sprout Lands/Cozy People/Mana Seed/LimeZu (no-redistribution).
 - **Stale audit items (do NOT redo)**: Tetra already has Hold/Next mini-previews + clear feedback; the Hut tour replay button already exists; Veil leaderboard "Try N · M coins" is the designed contract, not a bug.
 - claude → idle.
+
+---
+
+## 2026-07-01 (Claude) — EDEN REWORKED: "Restore the Garden" (user: Eden wasn't fun)
+
+- **Status**: Built + verified (tsc 0; `npm run build` 0; `scratch/reach_eden.ts` 0 — geometry untouched, 6168 tiles reachable; blight sanity script 0). Commit `b2087e0`, PUSHED. Files: NEW `lib/game/eden/blight.ts` + `edenLevel.ts` (guide text, minimap colors) + `EdenWorld.tsx`. ZERO new persisted keys — blight is DERIVED from existing progress, old saves load correctly.
+- **Why**: user said the Eden game wasn't fun ("walk to marker, tap interact"). Chosen direction (of 4 offered): Restore the Garden — top-down action rework.
+- **The loop now**: Eden starts blighted region by region; blighted ground drains vitality (4/s after 1.5s grace, floor 8hp — pressures, never kills) with violet vignette + one-time Gardener explanation; a **DASH** button (Shift/K, 0.18s @2.4×, i-frames vs drain, 1.1s cd) is the traversal verb; each region CLEANSES on a derived trigger (rivers lit / ≥4 named / ≥2 fruits / Cherub / relic — full table in blight.ts) with a bloom pulse + toast + **"Garden Restored N%" HUD meter** + darker minimap tint on blighted wings. Unnamed creatures hide from blight.
+- **Fountains are now TRIALS** (guardian gate unchanged): Pishon = Gleaning Rush (22s, collect 7/10 gold motes while 2 wisps hunt you — touching costs a mote, never hp); Gihon/Hiddekel/Euphrates = Channel & Ward (12s ring channel, wisps drift in to latch and pause it — bop by contact/dash; off-ring decay). Success runs the exact pre-existing Genesis-order lighting flow. Clean aborts on overlay/fight/wander.
+- **Creatures stalk-gated**: rushing (>55% stick or dash within 4 tiles) makes unnamed beasts dart ~4 tiles (leash-clamped — never unreachable); approach slow for the naming.
+- **Playtest tuning knobs** (top of EdenWorld constants): wisp speed 32px/s + spawn stagger (some Channel rolls are easy holds); drain rate/floor; dash cd. Known cosmetics: rush knockback absorbs against walls; attunement intro dialogue overlaps Pishon's timer; codex/minimap still hint blight-hidden creatures.
+- claude → idle.
