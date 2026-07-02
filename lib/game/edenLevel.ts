@@ -290,6 +290,9 @@ export function edenDestinationStub(combatId: string) {
 // ============================================================
 export const EDEN_MINIMAP_TERRAIN_COLORS: Record<number, string> = {
     0: '#3d6b35', 1: '#8b6914', 2: '#1e4d7a',
+    // +10 = the same terrain under the blight (uncleansed regions render
+    // darker on the minimap; EdenWorld shifts blighted tiles by +10).
+    10: '#20241f', 11: '#3a3325', 12: '#152238',
 };
 export function edenMinimapTerrain(): number[][] {
     return buildEdenOverworld().ground;
@@ -400,7 +403,7 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
         return step('lore_threshold', 'Read the threshold stone', 'Tap Read at the golden ◆ near spawn.',
             { gx: 48, gy: 62 },
             G('The golden ◆ on the threshold road is your first inscription. Tap Read when close.'),
-            G('Begin at the threshold stone, then roam — every road loops back here.'),
+            G('Beyond the Threshold a blight veils every wing — the shadow drinks slow walkers. Dash through it, and light the garden region by region.'),
             G('Walk to the glowing ◆ just north of where you woke.'));
     }
     // first lesson
@@ -428,11 +431,11 @@ export function edenGuideStep(level: EdenLevelState, ctx: EdenGuideContext): Ede
                 G('Follow the pulsing marker. Red springs restore vitality before the fight.'));
         }
         return step(`attune_${nextId}`, `Light the ${rv.name} fountain ${ord}`,
-            'Stand on the glowing fountain to attune it.',
+            'Stand at the fountain and begin the attunement.',
             { gx: rv.fountain.gx, gy: rv.fountain.gy },
-            G(`${rv.guardian.name} has fallen. Step onto the ${rv.name} fountain — it will catch light.`),
+            G(`${rv.guardian.name} has fallen. Stand at the ${rv.name} fountain and begin the attunement.`),
             G(`The lit fountains send a line toward the Tree. ${rv.name} is the ${ordinal(litCount + 1)} to light.`),
-            G('The glowing fountain marks your next river. Stand on it.'));
+            G('The glowing fountain marks your next river. Begin the attunement there.'));
     }
 
     return step('explore', 'Roam the garden', 'Name the creatures, tend the beds, read the ◆ stones.',

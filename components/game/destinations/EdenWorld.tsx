@@ -5,7 +5,7 @@ import type { GameCharacter } from '@/lib/store/useGameStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { avatarOffscreen } from '@/components/game/AvatarCanvas';
 import { wornAvatar } from '@/lib/game/avatar';
-import { ArrowLeft, Heart, Volume2, VolumeX, BookOpen } from 'lucide-react';
+import { ArrowLeft, Heart, Volume2, VolumeX, BookOpen, Wind } from 'lucide-react';
 import { sfx, isMuted, setMuted } from '@/lib/game/sfx';
 import { gameMusic } from '@/lib/game/music';
 import CombatScene from '@/components/game/CombatScene';
@@ -19,8 +19,8 @@ import WorldControlPad from '@/components/game/controls/WorldControlPad';
 import WorldDialogueBox from '@/components/game/WorldDialogueBox';
 import { useInputProfile, useIsDesktopLayout } from '@/components/game/controls/useInputProfile';
 import { useJoystick } from '@/components/game/controls/useJoystick';
-import { joyRadius, MOBILE_JOY_R } from '@/lib/game/controls';
-import { loadSettings } from '@/lib/game/settings';
+import { joyRadius, MOBILE_JOY_R, MOBILE_ACTION } from '@/lib/game/controls';
+import { loadSettings, prefersReducedMotion } from '@/lib/game/settings';
 import DestinationMinimap from '@/components/game/DestinationMinimap';
 import {
     exploredChunksFromDiscovered, initialRevealChunks, mapRevealKey, newRevealDiscoveries,
@@ -28,17 +28,19 @@ import {
 import {
     EDEN_MAP_W, EDEN_MAP_H, EDEN_TILE, edenBiomeAt, edenRegionAt,
     EDEN_SPAWN, EDEN_GARDENER, EDEN_TREE_OF_LIFE, EDEN_TREE_OF_KNOWLEDGE, EDEN_CHERUB,
-    EDEN_RIVERS_V2, EDEN_RIVER_ORDER, edenKey, EDEN_KEYS, edenDayState, EDEN_DAY_SECONDS,
-    type EdenDayPhase, type EdenRiverId,
+    EDEN_RIVERS_V2, EDEN_RIVER_ORDER, EDEN_REGIONS, edenRegionById, edenKey, EDEN_KEYS,
+    edenDayState, EDEN_DAY_SECONDS,
+    type EdenDayPhase, type EdenRiverId, type EdenRegionId,
 } from '@/lib/game/eden/atlas';
-import { buildEdenOverworld, edenNearestWalkable } from '@/lib/game/edenOverworld';
+import { buildEdenOverworld, edenNearestWalkable, isEdenWalkable } from '@/lib/game/edenOverworld';
+import { edenRegionCleansed, edenRestoredPct, EDEN_BLIGHT_TRIGGER_LABELS } from '@/lib/game/eden/blight';
 import {
     hydrateEdenState, isEdenSolid, updateEdenProgress, edenDestinationStub,
     edenZoneLabel, edenDiscoveriesFromState, edenWingId, edenWingGreeting, canRevealEdenSecret,
     edenGuideStep, EDEN_RESPAWN_LINE, edenMinimapTerrain, edenMinimapGates, edenMinimapPois,
     EDEN_MINIMAP_TERRAIN_COLORS, type EdenLevelState,
 } from '@/lib/game/edenLevel';
-import { EDEN_CREATURES, EDEN_CREATURE_COUNT, nameCreatureKey } from '@/lib/game/eden/bestiary';
+import { EDEN_CREATURES, EDEN_CREATURE_COUNT, nameCreatureKey, creatureById } from '@/lib/game/eden/bestiary';
 import { edenEchoId } from '@/lib/game/eden/combats';
 import { EDEN_BEDS, EDEN_SEEDS, seedById, harvestFruitKey, growthStage } from '@/lib/game/eden/cultivation';
 import {
@@ -147,6 +149,7 @@ type NearTarget =
     | { kind: 'tend'; id: string; label: string }
     | { kind: 'gardener'; id: string; label: string }
     | { kind: 'rematch'; id: string; label: string }
+    | { kind: 'attune'; id: string; label: string }
     | null;
 
 type Overlay =
@@ -156,6 +159,54 @@ type Overlay =
     | null;
 
 interface FruitBuff { hp: number; damage: number; regen: number; lifesteal: number; crit: number; fights: number; }
+
+// ------------------------------------------------------------
+//  THE BLIGHT + THE WIND-STEP (dash) + THE ATTUNEMENT TRIALS
+//  All session-side tuning lives here; cleansed state itself is
+//  derived (lib/game/eden/blight.ts) so saves need no new keys.
+// ------------------------------------------------------------
+const DASH_TIME = 0.18;         // seconds of dash movement
+const DASH_MULT = 2.4;          // speed multiplier while dashing
+const DASH_CD = 1.1;            // cooldown between dashes
+const DASH_IFRAME = DASH_TIME + 0.4; // blight i-frames: dash + 0.4s after
+const BLIGHT_GRACE = 1.5;       // seconds on blighted ground before it drinks
+const BLIGHT_DPS = 4;           // hp per second drained
+const BLIGHT_FLOOR = 8;         // the blight pressures — it never kills
+const RUSH_TIME = 22;           // Pishon: Gleaning Rush timer
+const RUSH_MOTES = 10;          // gold motes spawned
+const RUSH_NEED = 7;            // motes required
+const CHANNEL_NEED = 12;        // seconds of channel to bank
+const CHANNEL_RING = 32;        // channel ring radius (world px ≈ 2 tiles)
+const ATTUNE_ABORT_DIST = 12 * EDEN_TILE; // wander this far → clean abort
+
+interface AttuneMote { x: number; y: number; got: boolean }
+interface AttuneWisp { x: number; y: number; active: boolean; spawnAt: number }
+interface AttuneState {
+    river: EdenRiverId;
+    kind: 'rush' | 'channel';
+    t: number;          // elapsed seconds
+    timer: number;      // rush: seconds remaining
+    motes: AttuneMote[];
+    collected: number;
+    need: number;
+    hitCd: number;      // rush: grace between wisp hits
+    progress: number;   // channel: seconds banked
+    wisps: AttuneWisp[];
+    fx: number;         // fountain world px
+    fy: number;
+}
+
+/** A wisp rises at the edge of the river's own region and drifts for the ring. */
+function channelWispSpawn(riverId: EdenRiverId): { x: number; y: number } {
+    const reg = edenRegionById(riverId as EdenRegionId);
+    const [x0, y0, x1, y1] = reg.rect;
+    const side = Math.floor(Math.random() * 4);
+    const rx = x0 + Math.random() * (x1 - x0);
+    const ry = y0 + Math.random() * (y1 - y0);
+    const gx = side === 0 ? x0 + 1 : side === 1 ? x1 - 1 : rx;
+    const gy = side === 2 ? y0 + 1 : side === 3 ? y1 - 1 : ry;
+    return { x: (gx + 0.5) * EDEN_TILE, y: (gy + 0.5) * EDEN_TILE };
+}
 
 // The garden strengthens, but it does not break the trials: fruit buffs stack
 // additively only up to these ceilings, so farming the beds can't trivialise
@@ -202,6 +253,7 @@ export default function EdenWorld({
     const profile = useInputProfile();
     const isDesktop = useIsDesktopLayout();
     const joyR = joyRadius(profile, loadSettings().controlSize === 'large') || MOBILE_JOY_R;
+    const actionBtn = loadSettings().controlSize === 'large' ? 84 : MOBILE_ACTION;
     const joy = useJoystick(joyR);
     const joyRef = joy.joyRef;
     const keysRef = useRef<Set<string>>(new Set());
@@ -221,6 +273,16 @@ export default function EdenWorld({
     const dayBrightnessRef = useRef(1);
     const gardenerWorldRef = useRef({ x: (EDEN_GARDENER.gx + 0.5) * EDEN_TILE, y: (EDEN_GARDENER.gy + 0.5) * EDEN_TILE });
     const dawnBlessedRef = useRef(false);
+    // ---- blight / dash / attunement (session-side; cleansed state is derived) ----
+    const [dashCdUi, setDashCdUi] = useState(0);
+    const [bloomToast, setBloomToast] = useState<{ text: string; tone: 'bloom' | 'blight' } | null>(null);
+    const bloomToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const dashShownRef = useRef(0);
+    const dashReqRef = useRef(false);
+    const reduceRef = useRef(false);
+    const bloomsRef = useRef<{ region: EdenRegionId; start: number }[]>([]);
+    const prevCleansedRef = useRef<Record<string, boolean> | null>(null);
+    const blightWarnedRef = useRef(false);
 
     const levelRef = useRef(level);
     levelRef.current = level;
@@ -234,6 +296,24 @@ export default function EdenWorld({
     nearSerpentRef.current = nearSerpent;
 
     const edenTerrain = useMemo(() => edenMinimapTerrain(), []);
+    // blighted regions read darker on the minimap — shift their terrain ids by
+    // +10 (colors in EDEN_MINIMAP_TERRAIN_COLORS). Rebuilds only when a
+    // region's cleansed state actually changes, so it stays cheap.
+    const cleansedSig = EDEN_REGIONS.map((r) => (edenRegionCleansed(r.id, level, character) ? '1' : '0')).join('');
+    const minimapTerrain = useMemo(() => {
+        if (!cleansedSig.includes('0')) return edenTerrain;
+        const blighted = EDEN_REGIONS.filter((_, i) => cleansedSig[i] === '0');
+        const out = edenTerrain.map((row) => row.slice());
+        for (const reg of blighted) {
+            const [x0, y0, x1, y1] = reg.rect;
+            for (let r = y0; r <= y1; r++) {
+                for (let c = x0; c <= x1; c++) {
+                    if (out[r]?.[c] !== undefined && out[r][c] < 10) out[r][c] += 10;
+                }
+            }
+        }
+        return out;
+    }, [edenTerrain, cleansedSig]);
     const minimapPois = useMemo(() => edenMinimapPois(level, {
         secretVisible: canRevealEdenSecret(level, character), relicClaimed,
     }), [level, character, relicClaimed]);
@@ -289,6 +369,42 @@ export default function EdenWorld({
         sfx.pickup();
     }, []);
 
+    // reduced-motion — settings toggle OR the OS media query (same pattern as
+    // the arcade canvases); new blight/bloom flourishes read reduceRef only.
+    useEffect(() => {
+        reduceRef.current = prefersReducedMotion();
+        if (typeof window === 'undefined' || !window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const set = () => { reduceRef.current = prefersReducedMotion(); };
+        mq.addEventListener?.('change', set);
+        return () => mq.removeEventListener?.('change', set);
+    }, []);
+
+    // "Garden Restored" — derived, no persistence of its own.
+    const restoredPct = useMemo(() => edenRestoredPct(level, character), [level, character]);
+
+    // Bloom watcher — when a region's cleansed state flips true during play,
+    // fire the one-time celebration (radial pulse + cue + toast). The first
+    // pass only records the baseline so loaded saves never re-celebrate.
+    useEffect(() => {
+        const map: Record<string, boolean> = {};
+        for (const r of EDEN_REGIONS) map[r.id] = edenRegionCleansed(r.id, level, character);
+        const prev = prevCleansedRef.current;
+        prevCleansedRef.current = map;
+        if (!prev) return;
+        const flipped = EDEN_REGIONS.filter((r) => map[r.id] && !prev[r.id]);
+        if (!flipped.length) return;
+        const pct = edenRestoredPct(level, character);
+        if (!reduceRef.current) {
+            for (const r of flipped) bloomsRef.current.push({ region: r.id, start: performance.now() });
+        }
+        sfx.victory();
+        setBloomToast({ text: `${flipped.map((r) => r.name).join(' · ')} breathe${flipped.length > 1 ? '' : 's'} again — Garden Restored ${pct}%`, tone: 'bloom' });
+        if (bloomToastTimerRef.current) clearTimeout(bloomToastTimerRef.current);
+        bloomToastTimerRef.current = setTimeout(() => setBloomToast(null), 4200);
+    }, [level, character]);
+    useEffect(() => () => { if (bloomToastTimerRef.current) clearTimeout(bloomToastTimerRef.current); }, []);
+
     // 100% — every road of the garden walked. Fires once, grants the title + reward.
     useEffect(() => {
         if (completeFiredRef.current) return;
@@ -329,6 +445,12 @@ export default function EdenWorld({
         facing: 'down' as 'down' | 'up' | 'left' | 'right',
         t: 0,
         dayStart: 0,
+        // the wind-step (dash) — i-frames vs the blight, respects collision
+        dashT: 0, dashCd: 0, dashIT: 0, dashDx: 0, dashDy: 1,
+        // blight drain bookkeeping (grace resets when you leave blight)
+        blightGrace: 0, blightAcc: 0,
+        // the in-world attunement trial (null = none running)
+        attune: null as AttuneState | null,
         // roaming lesson shades (flavour for the southern trials)
         shades: [
             { x: 40 * EDEN_TILE, y: 56 * EDEN_TILE, vx: 14, vy: -10, fightId: 'fight_lesson_1' },
@@ -347,6 +469,8 @@ export default function EdenWorld({
             roam: c.roam * EDEN_TILE,
             glyph: c.glyph,
             phases: c.phases,
+            // wariness — unnamed creatures dart from anyone who rushes them
+            dartT: 0, dartDx: 0, dartDy: 0, dartCd: 0, startleT: 0,
         })),
     });
 
@@ -486,6 +610,75 @@ export default function EdenWorld({
         setFruitBuff((prev) => (prev && prev.fights > 1 ? { ...prev, fights: prev.fights - 1 } : null));
     }, [onGuardianCleared, onDiscover]);
 
+    // ---- river lighting — the EXACT flow the old walk-and-touch ran, now the
+    //      payoff of a won attunement. Genesis order + Cherub-road opening are
+    //      untouched; persistence is the same edenKey('river', id) as ever.
+    const lightNextRiver = useCallback(() => {
+        const lvl = levelRef.current;
+        const nextIdx = lvl.riversLit.length;
+        if (nextIdx >= EDEN_RIVER_ORDER.length) return;
+        const id = EDEN_RIVER_ORDER[nextIdx];
+        const rv = EDEN_RIVERS_V2[id];
+        const lit = nextIdx + 1;
+        setLevel((prev) => updateEdenProgress({ ...prev, riversLit: [...prev.riversLit, nextIdx] }));
+        onDiscover([edenKey('river', id)]);
+        sfx.strike();
+        if (lit >= EDEN_RIVER_ORDER.length) {
+            setBarrierActive(false);
+            onSolve();
+            markMinigameCleared('mg_eden_match');
+            setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge and the ordering is whole. The Cherub road north opens — and the rare cuttings, myrtle and spikenard, have awakened in the garden beds. Tend them before you ascend, if you would go strengthened.', color: '#34d399' });
+            sfx.victory();
+        } else {
+            setDialogue({ speaker: 'The Gardener', text: rv.litLine, color: rv.color });
+        }
+    }, [onDiscover, onSolve, markMinigameCleared]);
+    const lightNextRiverRef = useRef(lightNextRiver);
+    lightNextRiverRef.current = lightNextRiver;
+
+    // ---- begin an attunement trial at a ready fountain ----
+    const startAttunement = useCallback((riverId: EdenRiverId) => {
+        const rv = EDEN_RIVERS_V2[riverId];
+        const fx = (rv.fountain.gx + 0.5) * EDEN_TILE, fy = (rv.fountain.gy + 0.5) * EDEN_TILE;
+        const lvl = levelRef.current;
+        const rush = riverId === 'pishon';
+        const at: AttuneState = {
+            river: riverId, kind: rush ? 'rush' : 'channel',
+            t: 0, timer: RUSH_TIME, motes: [], collected: 0, need: RUSH_NEED, hitCd: 0,
+            progress: 0, wisps: [], fx, fy,
+        };
+        if (rush) {
+            // Gleaning Rush — gold motes scattered on walkable tiles near the fountain
+            let guard = 0;
+            while (at.motes.length < RUSH_MOTES && guard++ < 500) {
+                const ang = Math.random() * Math.PI * 2;
+                const rad = 2 + Math.random() * 5; // ~2..7 tiles out
+                const gx = Math.round(rv.fountain.gx + Math.cos(ang) * rad);
+                const gy = Math.round(rv.fountain.gy + Math.sin(ang) * rad);
+                if (!isEdenWalkable(gx, gy, lvl, true)) continue;
+                const wx = (gx + 0.5) * EDEN_TILE, wy = (gy + 0.5) * EDEN_TILE;
+                if (at.motes.some((m) => Math.hypot(m.x - wx, m.y - wy) < EDEN_TILE)) continue;
+                at.motes.push({ x: wx, y: wy, got: false });
+            }
+            at.need = Math.min(RUSH_NEED, Math.max(1, at.motes.length - 1)); // defensive if fewer spawned
+            for (let i = 0; i < 2; i++) {
+                const a = Math.random() * Math.PI * 2;
+                at.wisps.push({ x: fx + Math.cos(a) * 6 * EDEN_TILE, y: fy + Math.sin(a) * 6 * EDEN_TILE, active: true, spawnAt: 0 });
+            }
+            setDialogue({ speaker: 'The Gardener', text: `The gold of ${rv.land} scatters through the grass — glean ${at.need} motes before the water stills. Shadow wisps will hound you to shake them loose: dash past them.`, color: rv.color });
+        } else {
+            // Channel & Ward — hold the ring; bop the wisps that drift for it
+            const n = riverId === 'gihon' ? 2 : 3;
+            for (let i = 0; i < n; i++) {
+                const s = channelWispSpawn(riverId);
+                at.wisps.push({ x: s.x, y: s.y, active: false, spawnAt: 1.5 + i * 3.5 });
+            }
+            setDialogue({ speaker: 'The Gardener', text: `Stand within the ring and hold the channel until the ${rv.name} answers. Shadow wisps will drift for the ring — step out and scatter them by touch, then return. Leave the ring and the channel wanes.`, color: rv.color });
+        }
+        gameStateRef.current.attune = at;
+        sfx.cast();
+    }, []);
+
     const readLoreStone = useCallback((stoneId: string) => {
         const stone = level.loreStones.find((s) => s.id === stoneId);
         if (!stone || stone.read) return;
@@ -515,13 +708,14 @@ export default function EdenWorld({
             const g = guideStepRef.current;
             setDialogue({ speaker: 'The Gardener', text: `${g.objective}. ${g.tip}`, color: '#34d399' });
         }
+        else if (n.kind === 'attune') startAttunement(n.id as EdenRiverId);
         else if (n.kind === 'rematch') {
             // NG+ — re-challenge a fallen guardian's echo for a deeper blessing.
             rematchRef.current = n.id;
             setFightBonus(consumeFightBonusHp());
             setActiveFight(edenEchoId(n.id as EdenRiverId));
         }
-    }, [near, readLoreStone, consumeFightBonusHp]);
+    }, [near, readLoreStone, consumeFightBonusHp, startAttunement]);
 
     // music
     useEffect(() => {
@@ -554,6 +748,10 @@ export default function EdenWorld({
         let avatarKey = JSON.stringify(wornAvatar(charRef.current.avatar, charRef.current.equipped.clothing));
         const st = gameStateRef.current;
         if (!st.dayStart) st.dayStart = performance.now() - 0.18 * EDEN_DAY_SECONDS * 1000; // begin mid-morning
+        // any fight/overlay remount resets the transient verbs — no soft-locks
+        st.attune = null;
+        st.dashT = 0; st.dashIT = 0; st.dashCd = 0;
+        dashReqRef.current = false;
         let raf = 0;
         let last = performance.now();
         let running = true;
@@ -592,6 +790,8 @@ export default function EdenWorld({
             const barrier = barrierRef.current;
             const serpentPending = !!nearSerpentRef.current && !lvl.serpent[nearSerpentRef.current];
             const paused = !!overlayRef.current || serpentPending;
+            // a panel/serpent fork owns the moment — abort any running attunement cleanly
+            if (st.attune && paused) st.attune = null;
 
             // cool of the day
             const dayTime = ((now - st.dayStart) / 1000 / EDEN_DAY_SECONDS) % 1;
@@ -620,10 +820,42 @@ export default function EdenWorld({
                 const mag = Math.hypot(ix, iy);
                 if (mag > 1) { ix /= mag; iy /= mag; }
             }
-            const moving = Math.hypot(ix, iy) > 0.15;
+            const moveMag = Math.min(1, Math.hypot(ix, iy));
+            const moving = moveMag > 0.15;
             const spd = 84;
 
-            if (moving) {
+            // ---- the wind-step (dash) — 0.18s burst, i-frames vs the blight ----
+            st.dashT = Math.max(0, st.dashT - dt);
+            st.dashCd = Math.max(0, st.dashCd - dt);
+            st.dashIT = Math.max(0, st.dashIT - dt);
+            const wantDash = dashReqRef.current;
+            dashReqRef.current = false;
+            if (!paused && wantDash && st.dashCd <= 0) {
+                st.dashCd = DASH_CD; st.dashT = DASH_TIME; st.dashIT = DASH_IFRAME;
+                if (moving) { const m = Math.hypot(ix, iy) || 1; st.dashDx = ix / m; st.dashDy = iy / m; }
+                else {
+                    st.dashDx = st.facing === 'left' ? -1 : st.facing === 'right' ? 1 : 0;
+                    st.dashDy = st.facing === 'up' ? -1 : st.facing === 'down' ? 1 : 0;
+                }
+                sfx.dash();
+            }
+            const dOn = st.dashCd > 0 ? 1 : 0;
+            if (dOn !== dashShownRef.current) { dashShownRef.current = dOn; setDashCdUi(st.dashCd); }
+
+            if (!paused && st.dashT > 0) {
+                // dash movement — same per-axis collision as walking, just faster
+                st.walkT += dt;
+                if (st.dashDx || st.dashDy) st.facing = Math.abs(st.dashDx) > Math.abs(st.dashDy) ? (st.dashDx < 0 ? 'left' : 'right') : (st.dashDy < 0 ? 'up' : 'down');
+                const dsp = spd * DASH_MULT;
+                const nx = st.px + st.dashDx * dsp * dt;
+                const ny = st.py + st.dashDy * dsp * dt;
+                const fy = 5;
+                if (!solidAt(nx + (st.dashDx > 0 ? fy : st.dashDx < 0 ? -fy : 0), st.py + fy)) st.px = nx;
+                if (!solidAt(st.px, ny + (st.dashDy > 0 ? fy : st.dashDy < 0 ? -fy : 0) + fy)) st.py = ny;
+                if (!reduceRef.current && Math.random() < 0.6) {
+                    ambientRef.current.push({ x: st.px, y: st.py - 6, vx: -st.dashDx * 24, vy: -st.dashDy * 24, life: 0.3, color: '#a7f3d0', size: 1.6 });
+                }
+            } else if (moving) {
                 st.walkT += dt;
                 st.facing = Math.abs(ix) > Math.abs(iy) ? (ix < 0 ? 'left' : 'right') : (iy < 0 ? 'up' : 'down');
                 const nx = st.px + ix * spd * dt;
@@ -635,6 +867,35 @@ export default function EdenWorld({
 
             const pgx = Math.floor(st.px / EDEN_TILE);
             const pgy = Math.floor(st.py / EDEN_TILE);
+
+            // ---- the blight — cleansed state derived fresh every frame ----
+            const cleansedNow: Record<string, boolean> = {};
+            for (const reg of EDEN_REGIONS) cleansedNow[reg.id] = edenRegionCleansed(reg.id, lvl, charRef.current);
+            const playerReg = edenRegionAt(pgx, pgy);
+            const inBlight = !!playerReg && !cleansedNow[playerReg.id];
+            let draining = false;
+            if (!paused) {
+                if (inBlight && st.dashIT <= 0) {
+                    st.blightGrace += dt;
+                    if (st.blightGrace > BLIGHT_GRACE) {
+                        draining = true;
+                        st.blightAcc += BLIGHT_DPS * dt;
+                        const whole = Math.floor(st.blightAcc);
+                        if (whole >= 1) {
+                            st.blightAcc -= whole;
+                            // the blight pressures — it never takes the last of you
+                            setDungeonHp((hp) => (hp > BLIGHT_FLOOR ? Math.max(BLIGHT_FLOOR, hp - whole) : hp));
+                            if (!blightWarnedRef.current) {
+                                blightWarnedRef.current = true;
+                                setDialogue({ speaker: 'The Gardener', text: 'The blight drinks the slow — it will bleed you to the bone of your strength, though it cannot take the last of it. Dash through the shadowed wings (the wind-step, or Shift), and light the garden region by region to drive it back.', color: '#c4b5fd' });
+                            }
+                        }
+                    }
+                } else if (!inBlight) {
+                    st.blightGrace = 0; st.blightAcc = 0;
+                }
+            }
+
             const zl = edenZoneLabel(pgx, pgy);
             if (zl) setZoneLabel((p) => (p === zl ? p : zl));
             setDayLabel((p) => (p === ds.label ? p : ds.label));
@@ -648,6 +909,12 @@ export default function EdenWorld({
                     wingsSeenRef.current.add(discId);
                     onDiscover([discId]);
                     setDialogue({ speaker: 'The Gardener', text: edenWingGreeting(wingId), color: '#34d399' });
+                }
+                // entering a blighted wing — surface what lifts its shadow
+                if (!cleansedNow[wingId]) {
+                    setBloomToast({ text: `The blight holds ${playerReg?.name ?? 'this wing'} — ${EDEN_BLIGHT_TRIGGER_LABELS[wingId]}`, tone: 'blight' });
+                    if (bloomToastTimerRef.current) clearTimeout(bloomToastTimerRef.current);
+                    bloomToastTimerRef.current = setTimeout(() => setBloomToast(null), 3800);
                 }
             }
 
@@ -669,12 +936,42 @@ export default function EdenWorld({
                 }
 
                 // roaming creatures — named ones follow the one who named them
-                // (within a generous leash of home); unnamed grow curious and slow
-                // when you draw near, so they're easier, not harder, to approach.
+                // (within a generous leash of home); unnamed grow curious when
+                // approached SLOWLY, but dart away from anyone who rushes them.
+                // The unnamed also keep out of blighted wings entirely.
                 for (const cr of st.creatures) {
                     const named = lvl.named.includes(cr.id);
-                    const leash = named ? cr.roam + 6 * EDEN_TILE : cr.roam;
+                    const def = creatureById(cr.id);
+                    // the blight hides the unnamed — they wake as their wing cleanses
+                    if (!named && def && !cleansedNow[def.region]) continue;
+                    cr.startleT = Math.max(0, cr.startleT - dt);
+                    cr.dartCd = Math.max(0, cr.dartCd - dt);
                     const pdx = st.px - cr.x, pdy = st.py - cr.y, pd = Math.hypot(pdx, pdy) || 1;
+                    // mid-dart: sprint toward the dart point, respecting collision +
+                    // the home leash (so a startled beast can never be stranded).
+                    if (cr.dartT > 0) {
+                        cr.dartT -= dt;
+                        const nx = cr.x + cr.dartDx * 170 * dt;
+                        if (!solidAt(nx, cr.y) && Math.hypot(nx - cr.hx, cr.y - cr.hy) < cr.roam + EDEN_TILE) cr.x = nx; else cr.dartT = 0;
+                        const ny = cr.y + cr.dartDy * 170 * dt;
+                        if (!solidAt(cr.x, ny) && Math.hypot(cr.x - cr.hx, ny - cr.hy) < cr.roam + EDEN_TILE) cr.y = ny; else cr.dartT = 0;
+                        continue;
+                    }
+                    // wariness: rushing (fast joystick or a dash) inside ~4 tiles startles it
+                    if (!named && pd < 4 * EDEN_TILE && cr.dartCd <= 0 && (st.dashT > 0 || (moving && moveMag > 0.55))) {
+                        // dart ~4 tiles directly away, clamped inside the roam leash
+                        // around the home anchor — always still reachable by a slow walk.
+                        let tx = cr.x - (pdx / pd) * 4 * EDEN_TILE;
+                        let ty = cr.y - (pdy / pd) * 4 * EDEN_TILE;
+                        const ad = Math.hypot(tx - cr.hx, ty - cr.hy);
+                        if (ad > cr.roam) { tx = cr.hx + ((tx - cr.hx) / ad) * cr.roam * 0.85; ty = cr.hy + ((ty - cr.hy) / ad) * cr.roam * 0.85; }
+                        const ddx = tx - cr.x, ddy = ty - cr.y, dd = Math.hypot(ddx, ddy) || 1;
+                        cr.dartDx = ddx / dd; cr.dartDy = ddy / dd;
+                        cr.dartT = Math.min(0.55, dd / 170);
+                        cr.dartCd = 1.4; cr.startleT = 0.7;
+                        continue;
+                    }
+                    const leash = named ? cr.roam + 6 * EDEN_TILE : cr.roam;
                     if (named && pd < 120 && pd > 22) { cr.vx += (pdx / pd) * 60 * dt; cr.vy += (pdy / pd) * 60 * dt; }
                     else if (!named && pd < 40) { cr.vx *= 0.9; cr.vy *= 0.9; }
                     const sp = Math.hypot(cr.vx, cr.vy), cap = named ? 34 : 22;
@@ -738,27 +1035,77 @@ export default function EdenWorld({
                     }
                 }
 
-                // river attunement (guardian-gated, Genesis order)
-                const nextIdx = lvl.riversLit.length;
-                if (nextIdx < EDEN_RIVER_ORDER.length) {
-                    const id = EDEN_RIVER_ORDER[nextIdx];
-                    const rv = EDEN_RIVERS_V2[id];
-                    const guardianDone = lvl.fights.find((f) => f.river === id)?.cleared ?? false;
-                    const riverTouch = `river_${id}`;
-                    if (guardianDone && !touchedRef.current.has(riverTouch) && Math.hypot((rv.fountain.gx + 0.5) * EDEN_TILE - st.px, (rv.fountain.gy + 0.5) * EDEN_TILE - st.py) < 20) {
-                        touchedRef.current.add(riverTouch);
-                        const lit = nextIdx + 1;
-                        setLevel((prev) => updateEdenProgress({ ...prev, riversLit: [...prev.riversLit, nextIdx] }));
-                        onDiscover([edenKey('river', id)]);
-                        sfx.strike();
-                        if (lit >= EDEN_RIVER_ORDER.length) {
-                            setBarrierActive(false);
-                            onSolve();
-                            markMinigameCleared('mg_eden_match');
-                            setDialogue({ speaker: 'The Gardener', text: 'The four rivers converge and the ordering is whole. The Cherub road north opens — and the rare cuttings, myrtle and spikenard, have awakened in the garden beds. Tend them before you ascend, if you would go strengthened.', color: '#34d399' });
-                            sfx.victory();
-                        } else {
-                            setDialogue({ speaker: 'The Gardener', text: rv.litLine, color: rv.color });
+                // ---- the attunement trial (replaces walk-and-touch; the
+                //      guardian gate + Genesis order are enforced exactly as
+                //      before by the prompt below + lightNextRiver) ----
+                const at = st.attune;
+                if (at) {
+                    at.t += dt;
+                    at.hitCd = Math.max(0, at.hitCd - dt);
+                    const distF = Math.hypot(st.px - at.fx, st.py - at.fy);
+                    if (distF > ATTUNE_ABORT_DIST) {
+                        // wandered off — clean abort, never a soft-lock
+                        st.attune = null;
+                        setDialogue({ speaker: 'The Gardener', text: 'The attunement slips — the water stills. Return to the fountain and begin again; the river holds nothing against you.', color: '#93c5fd' });
+                    } else if (at.kind === 'rush') {
+                        // GLEANING RUSH (Pishon) — gather motes by touch before time
+                        at.timer -= dt;
+                        for (const m of at.motes) {
+                            if (!m.got && Math.hypot(m.x - st.px, m.y - st.py) < 12) { m.got = true; at.collected++; sfx.pickup(); }
+                        }
+                        for (const w of at.wisps) {
+                            const dx = st.px - w.x, dy = st.py - w.y, d = Math.hypot(dx, dy) || 1;
+                            w.x += (dx / d) * 27 * dt; w.y += (dy / d) * 27 * dt;
+                            if (d < 12 && at.hitCd <= 0) {
+                                at.hitCd = 0.9;
+                                if (st.dashIT <= 0) {
+                                    // a wisp shakes a mote loose + knocks you back — never hp
+                                    if (at.collected > 0) {
+                                        at.collected--;
+                                        let loosed: AttuneMote | null = null; let bd = Infinity;
+                                        for (const m of at.motes) if (m.got) { const md = Math.hypot(m.x - st.px, m.y - st.py); if (md < bd) { bd = md; loosed = m; } }
+                                        if (loosed) loosed.got = false;
+                                    }
+                                    const kx = st.px + (dx / d) * 14, ky = st.py + (dy / d) * 14;
+                                    if (!solidAt(kx, st.py + 5)) st.px = kx;
+                                    if (!solidAt(st.px, ky + 5)) st.py = ky;
+                                    sfx.hit();
+                                }
+                                const a2 = Math.random() * Math.PI * 2;
+                                w.x = at.fx + Math.cos(a2) * 6.5 * EDEN_TILE;
+                                w.y = at.fy + Math.sin(a2) * 6.5 * EDEN_TILE;
+                            }
+                        }
+                        if (at.collected >= at.need) {
+                            st.attune = null;
+                            lightNextRiverRef.current();
+                        } else if (at.timer <= 0) {
+                            st.attune = null;
+                            setDialogue({ speaker: 'The Gardener', text: 'The motes sink back into the grass — no matter. Breathe, and begin the gleaning again; the gold of Havilah is patient.', color: '#fbbf24' });
+                            sfx.hit();
+                        }
+                    } else {
+                        // CHANNEL & WARD — hold the ring; wisps drift for it
+                        let blocked = false;
+                        for (const w of at.wisps) {
+                            if (!w.active) { if (at.t >= w.spawnAt) w.active = true; else continue; }
+                            const dxF = at.fx - w.x, dyF = at.fy - w.y, dF = Math.hypot(dxF, dyF) || 1;
+                            if (dF > CHANNEL_RING + 4) { w.x += (dxF / dF) * 32 * dt; w.y += (dyF / dF) * 32 * dt; }
+                            else blocked = true; // latched at the ring — the channel pauses
+                            if (Math.hypot(w.x - st.px, w.y - st.py) < 13) {
+                                // bopped by contact (walking or dashing) — scatter it
+                                w.active = false; w.spawnAt = at.t + 4 + Math.random() * 2;
+                                const s2 = channelWispSpawn(at.river);
+                                w.x = s2.x; w.y = s2.y;
+                                sfx.strike();
+                            }
+                        }
+                        const inRing = distF < CHANNEL_RING;
+                        if (inRing && !blocked) at.progress = Math.min(CHANNEL_NEED, at.progress + dt);
+                        else if (!inRing) at.progress = Math.max(0, at.progress - dt * 0.35);
+                        if (at.progress >= CHANNEL_NEED) {
+                            st.attune = null;
+                            lightNextRiverRef.current();
                         }
                     }
                 }
@@ -799,6 +1146,20 @@ export default function EdenWorld({
                     const gd = Math.hypot(gp.x - st.px, gp.y - st.py);
                     if (gd < 24 && gd < bestD) { bestD = gd; target = { kind: 'gardener', id: 'gardener', label: 'Speak with the Gardener' }; }
                 }
+                // ready fountain — "Begin the attunement" (guardian felled, next in
+                // Genesis order, not yet lit, no trial already running)
+                if (!st.attune) {
+                    const nextIdx = lvl.riversLit.length;
+                    if (nextIdx < EDEN_RIVER_ORDER.length) {
+                        const rid = EDEN_RIVER_ORDER[nextIdx];
+                        const rv = EDEN_RIVERS_V2[rid];
+                        const gDone = lvl.fights.find((f) => f.river === rid)?.cleared ?? false;
+                        if (gDone) {
+                            const d = Math.hypot((rv.fountain.gx + 0.5) * EDEN_TILE - st.px, (rv.fountain.gy + 0.5) * EDEN_TILE - st.py);
+                            if (d < 26 && d < bestD) { bestD = d; target = { kind: 'attune', id: rid, label: 'Begin the attunement' }; }
+                        }
+                    }
+                }
                 for (const ls of lvl.loreStones) {
                     if (ls.read) continue;
                     const d = Math.hypot((ls.gx + 0.5) * EDEN_TILE - st.px, (ls.gy + 0.5) * EDEN_TILE - st.py);
@@ -807,6 +1168,7 @@ export default function EdenWorld({
                 for (const cr of st.creatures) {
                     if (lvl.named.includes(cr.id)) continue;
                     const def = EDEN_CREATURES.find((c) => c.id === cr.id);
+                    if (def && !cleansedNow[def.region]) continue; // hidden by the blight
                     if (def?.phases && !def.phases.includes(dayPhaseRef.current)) continue;
                     const d = Math.hypot(cr.x - st.px, cr.y - st.py);
                     if (d < 26 && d < bestD) { bestD = d; target = { kind: 'name', id: cr.id, label: `Name the ${def?.name ?? 'creature'}` }; }
@@ -940,6 +1302,13 @@ export default function EdenWorld({
                 ctx.fillStyle = lit ? rv.color : '#64748b'; ctx.globalAlpha = pulse;
                 ctx.fillRect(SX(fx) - 7 * Z, SY(fy) - 7 * Z, 14 * Z, 14 * Z);
                 ctx.globalAlpha = 1;
+                // ready fountain — guardian felled, next in order: it beckons
+                if (!lit && i === lvl.riversLit.length && (lvl.fights.find((f) => f.river === id)?.cleared ?? false)) {
+                    ctx.strokeStyle = rv.color; ctx.lineWidth = Z;
+                    ctx.globalAlpha = 0.45 + Math.sin(st.t / 260) * 0.25;
+                    ctx.beginPath(); ctx.arc(SX(fx), SY(fy), (10 + Math.sin(st.t / 320) * 2) * Z, 0, Math.PI * 2); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
                 if (lit) {
                     ctx.strokeStyle = rv.color; ctx.lineWidth = 2 * Z;
                     ctx.globalAlpha = 0.45 + Math.sin(st.t / 320) * 0.2;
@@ -1019,6 +1388,7 @@ export default function EdenWorld({
             for (const cr of st.creatures) {
                 const def = EDEN_CREATURES.find((c) => c.id === cr.id);
                 const named = lvl.named.includes(cr.id);
+                if (!named && def && !cleansedNow[def.region]) continue; // hidden by the blight
                 if (def?.phases && !def.phases.includes(dayPhaseRef.current)) continue;
                 const bob = Math.sin(st.t / 260 + cr.x) * 2 * Z;
                 if (!named) {
@@ -1029,6 +1399,13 @@ export default function EdenWorld({
                 ctx.font = `${11 * Z}px serif`;
                 ctx.fillText(cr.glyph, SX(cr.x), SY(cr.y) - 4 * Z + bob);
                 ctx.globalAlpha = 1;
+                // startle cue — it darted from a rushing approach
+                if (cr.startleT > 0) {
+                    ctx.fillStyle = `rgba(251,191,36,${Math.min(1, cr.startleT * 2)})`;
+                    ctx.font = `bold ${8 * Z}px monospace`;
+                    ctx.fillText('!', SX(cr.x), SY(cr.y) - 15 * Z + bob);
+                    ctx.font = `${11 * Z}px serif`;
+                }
             }
 
             // gardener NPC — walks the garden in the cool of the day
@@ -1059,6 +1436,96 @@ export default function EdenWorld({
             const wframe = moving ? dirFrames[wphase === 0 ? 1 : 2] : dirFrames[0];
             const pw = 16 * Z * 1.05, ph = 24 * Z * 1.05;
             ctx.drawImage(wframe, SX(st.px) - pw / 2, SY(st.py) - ph + 5 * Z, pw, ph);
+
+            // ---------- the blight — uncleansed wings drown in shadow ----------
+            const viewL = -ox / Z, viewT2 = -oy / Z, viewR2 = (vw - ox) / Z, viewB2 = (vh - oy) / Z; // world px
+            for (const reg of EDEN_REGIONS) {
+                if (cleansedNow[reg.id]) continue;
+                const [rx0, ry0, rx1, ry1] = reg.rect;
+                const wx0 = rx0 * EDEN_TILE, wy0 = ry0 * EDEN_TILE;
+                const wx1 = (rx1 + 1) * EDEN_TILE, wy1 = (ry1 + 1) * EDEN_TILE;
+                if (wx1 < viewL || wx0 > viewR2 || wy1 < viewT2 || wy0 > viewB2) continue; // cull to viewport
+                ctx.fillStyle = 'rgba(10,6,20,0.45)';
+                ctx.fillRect(SX(wx0), SY(wy0), (wx1 - wx0) * Z, (wy1 - wy0) * Z);
+                if (!reduceRef.current) {
+                    // slow-drifting shadow motes (static tint only under reduced motion)
+                    ctx.fillStyle = 'rgba(88,62,128,0.9)';
+                    for (let i = 0; i < 12; i++) {
+                        const bx = wx0 + th(i, reg.id.length, 9) * (wx1 - wx0);
+                        const by = wy0 + th(i, reg.id.length, 13) * (wy1 - wy0);
+                        const mx = bx + Math.sin(st.t / 2600 + i * 1.7) * 14;
+                        const my = by + Math.cos(st.t / 3300 + i * 2.1) * 10;
+                        if (mx < viewL || mx > viewR2 || my < viewT2 || my > viewB2) continue;
+                        ctx.globalAlpha = 0.14 + 0.09 * Math.sin(st.t / 900 + i);
+                        ctx.beginPath(); ctx.arc(SX(mx), SY(my), 2.4 * Z, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                }
+            }
+            // bloom pulses — a wing breathes again (skipped under reduced motion)
+            if (bloomsRef.current.length) {
+                bloomsRef.current = bloomsRef.current.filter((b) => {
+                    const k = (now - b.start) / 1500;
+                    if (k >= 1) return false;
+                    const reg = EDEN_REGIONS.find((r) => r.id === b.region);
+                    if (!reg) return false;
+                    const [rx0, ry0, rx1, ry1] = reg.rect;
+                    const bcx = ((rx0 + rx1 + 1) / 2) * EDEN_TILE, bcy = ((ry0 + ry1 + 1) / 2) * EDEN_TILE;
+                    const maxR = Math.max(rx1 - rx0, ry1 - ry0) * EDEN_TILE * 0.7;
+                    const rad = Math.max(4, k * maxR) * Z;
+                    const g = ctx.createRadialGradient(SX(bcx), SY(bcy), rad * 0.2, SX(bcx), SY(bcy), rad);
+                    g.addColorStop(0, `rgba(163,230,53,${0.28 * (1 - k)})`);
+                    g.addColorStop(1, 'rgba(163,230,53,0)');
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(SX(rx0 * EDEN_TILE), SY(ry0 * EDEN_TILE), (rx1 - rx0 + 1) * EDEN_TILE * Z, (ry1 - ry0 + 1) * EDEN_TILE * Z);
+                    ctx.clip();
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.arc(SX(bcx), SY(bcy), rad, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                    return true;
+                });
+            }
+
+            // ---------- the attunement trial ----------
+            if (st.attune) {
+                const at2 = st.attune;
+                const rvc = EDEN_RIVERS_V2[at2.river].color;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                if (at2.kind === 'rush') {
+                    for (const m of at2.motes) {
+                        if (m.got) continue;
+                        const p = 0.6 + Math.sin(st.t / 200 + m.x) * 0.3;
+                        ctx.fillStyle = `rgba(252,211,77,${p})`;
+                        ctx.beginPath(); ctx.arc(SX(m.x), SY(m.y + Math.sin(st.t / 300 + m.x) * 2), 3 * Z, 0, Math.PI * 2); ctx.fill();
+                        ctx.strokeStyle = 'rgba(252,211,77,0.3)'; ctx.lineWidth = Z * 0.6;
+                        ctx.beginPath(); ctx.arc(SX(m.x), SY(m.y), 5 * Z, 0, Math.PI * 2); ctx.stroke();
+                    }
+                    ctx.fillStyle = '#fcd34d'; ctx.font = `bold ${7 * Z}px monospace`;
+                    ctx.fillText(`${at2.collected}/${at2.need} · ${Math.max(0, Math.ceil(at2.timer))}s`, SX(at2.fx), SY(at2.fy) - 14 * Z);
+                } else {
+                    const ringR = CHANNEL_RING * Z;
+                    ctx.globalAlpha = 0.5; ctx.strokeStyle = rvc; ctx.lineWidth = Z;
+                    ctx.setLineDash([4 * Z, 4 * Z]); ctx.lineDashOffset = dashOff;
+                    ctx.beginPath(); ctx.arc(SX(at2.fx), SY(at2.fy), ringR, 0, Math.PI * 2); ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.globalAlpha = 0.9; ctx.lineWidth = 2 * Z;
+                    ctx.beginPath(); ctx.arc(SX(at2.fx), SY(at2.fy), ringR, -Math.PI / 2, -Math.PI / 2 + (at2.progress / CHANNEL_NEED) * Math.PI * 2); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = rvc; ctx.font = `bold ${7 * Z}px monospace`;
+                    ctx.fillText(`${Math.round((at2.progress / CHANNEL_NEED) * 100)}%`, SX(at2.fx), SY(at2.fy) - 14 * Z);
+                }
+                for (const w of at2.wisps) {
+                    if (at2.kind === 'channel' && !w.active) continue;
+                    const wb = Math.sin(st.t / 180 + w.x) * 1.5 * Z;
+                    ctx.globalAlpha = 0.42 + Math.sin(st.t / 160 + w.y) * 0.15;
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.beginPath(); ctx.arc(SX(w.x), SY(w.y) + wb, 6 * Z, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#7c3aed'; ctx.globalAlpha = 0.7;
+                    ctx.beginPath(); ctx.arc(SX(w.x), SY(w.y) + wb, 2.2 * Z, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            }
 
             // quest trail
             const wp = guideStepRef.current.waypoint;
@@ -1117,6 +1584,16 @@ export default function EdenWorld({
             if (ds.tint !== 'rgba(255, 255, 255, 0.00)') { ctx.fillStyle = ds.tint; ctx.fillRect(0, 0, vw, vh); }
             if (ds.brightness < 1) { ctx.fillStyle = `rgba(8,12,26,${(1 - ds.brightness) * 0.7})`; ctx.fillRect(0, 0, vw, vh); }
 
+            // ---------- blight-drain cue — a violet vignette while it drinks ----------
+            if (draining) {
+                const dp = reduceRef.current ? 0.14 : 0.10 + 0.07 * Math.sin(st.t / 260);
+                const vg = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.38, vw / 2, vh / 2, Math.max(vw, vh) * 0.62);
+                vg.addColorStop(0, 'rgba(124,58,237,0)');
+                vg.addColorStop(1, `rgba(124,58,237,${dp})`);
+                ctx.fillStyle = vg;
+                ctx.fillRect(0, 0, vw, vh);
+            }
+
             raf = requestAnimationFrame(loop);
         };
 
@@ -1124,6 +1601,7 @@ export default function EdenWorld({
             if (overlayRef.current) return; // a panel owns the keyboard
             keysRef.current.add(e.key.toLowerCase());
             if ((e.key === 'e' || e.key === 'Enter')) handleInteractRef.current();
+            if (e.key === 'Shift' || e.key.toLowerCase() === 'k') dashReqRef.current = true; // the wind-step
         };
         const ku = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
         const blur = () => keysRef.current.clear(); // never resume auto-walk on a missed keyup
@@ -1254,7 +1732,7 @@ export default function EdenWorld({
 
             {showMinimap && !activeFight && !overlay && (
                 <div className="absolute right-3 sm:right-4 z-10 pointer-events-none" style={{ top: 'calc(3.25rem + env(safe-area-inset-top))' }}>
-                    <DestinationMinimap label="Eden" mapW={EDEN_MAP_W} mapH={EDEN_MAP_H} terrain={edenTerrain} terrainColors={EDEN_MINIMAP_TERRAIN_COLORS} explored={exploredRef.current} exploredVersion={exploredVersion} playerX={playerPos.x} playerY={playerPos.y} tileSize={EDEN_TILE} pois={minimapPois} gates={minimapGates} questWaypoint={guideStep.waypoint ?? null} size={isDesktop ? 96 : 80} />
+                    <DestinationMinimap label="Eden" mapW={EDEN_MAP_W} mapH={EDEN_MAP_H} terrain={minimapTerrain} terrainColors={EDEN_MINIMAP_TERRAIN_COLORS} explored={exploredRef.current} exploredVersion={exploredVersion} playerX={playerPos.x} playerY={playerPos.y} tileSize={EDEN_TILE} pois={minimapPois} gates={minimapGates} questWaypoint={guideStep.waypoint ?? null} size={isDesktop ? 96 : 80} />
                 </div>
             )}
 
@@ -1269,12 +1747,32 @@ export default function EdenWorld({
                 </div>
                 <p className="text-emerald-300/95 leading-snug break-words text-pretty font-medium" style={{ fontSize: 'clamp(7px, 2vw, 8px)', letterSpacing: '0.04em' }}>{guideStep.objective}</p>
                 <p className="text-emerald-200/50 leading-snug mt-0.5" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>{level.riversLit.length}/4 rivers · {level.named.length}/{EDEN_CREATURES.length} named</p>
+                {/* Garden Restored — the blight recedes region by region */}
+                <div className="mt-1 flex items-center gap-1.5">
+                    <span className="text-lime-300/70 uppercase shrink-0" style={{ fontSize: 'clamp(6px, 1.6vw, 7px)', letterSpacing: '0.12em' }}>Restored</span>
+                    <div className="flex-1 min-w-0 h-1.5 rounded-full bg-black/50 border border-white/10 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${restoredPct}%`, background: 'linear-gradient(90deg,#34d399,#a3e635)' }} />
+                    </div>
+                    <span className="text-[7px] font-mono text-zinc-500 shrink-0 tabular-nums">{restoredPct}%</span>
+                </div>
                 {fruitBuff && (
                     <p className="text-lime-300/85 mt-1 leading-snug" style={{ fontSize: 'clamp(6px, 1.7vw, 7px)' }}>
                         🍃 Garden vigour · {fruitBuff.damage ? `+${fruitBuff.damage} strike ` : ''}{fruitBuff.hp ? `+${fruitBuff.hp} vit ` : ''}{fruitBuff.regen ? `+${fruitBuff.regen} renew ` : ''}{fruitBuff.lifesteal ? `+${Math.round(fruitBuff.lifesteal * 100)}% leech ` : ''}{fruitBuff.crit ? `+${Math.round(fruitBuff.crit * 100)}% edge ` : ''}· {fruitBuff.fights} fight{fruitBuff.fights > 1 ? 's' : ''}
                     </p>
                 )}
             </div>
+
+            {/* garden toast — a wing breathes again / the blight's trigger hint */}
+            {bloomToast && (
+                <div className="absolute inset-x-0 z-20 flex justify-center px-6 pointer-events-none" style={{ top: 'calc(9.25rem + env(safe-area-inset-top))' }}>
+                    <p
+                        className={`eden-animate-in rounded-full bg-black/70 border px-3 py-1.5 text-center leading-snug backdrop-blur-sm ${bloomToast.tone === 'bloom' ? 'border-lime-400/30 text-lime-200' : 'border-violet-400/30 text-violet-200'}`}
+                        style={{ fontSize: 'clamp(8px, 2.2vw, 10px)', letterSpacing: '0.06em', boxShadow: bloomToast.tone === 'bloom' ? '0 0 20px rgba(163,230,53,0.25)' : '0 0 20px rgba(139,92,246,0.2)' }}
+                    >
+                        {bloomToast.text}
+                    </p>
+                </div>
+            )}
 
             {dialogue && (
                 <WorldDialogueBox speaker={dialogue.speaker} text={dialogue.text} color={dialogue.color} onClose={() => setDialogue(null)} controlsHidden={!isDesktop} />
@@ -1314,6 +1812,33 @@ export default function EdenWorld({
             {overlay?.kind === 'codex' && <EdenCodex character={character} level={level} onClose={() => setOverlay(null)} accent="#34d399" onWarp={warpTo} />}
             {overlay?.kind === 'naming' && openCreature && <NamingPanel creature={openCreature} onName={nameCreature} onClose={() => setOverlay(null)} accent="#34d399" />}
             {overlay?.kind === 'tend' && openBed && <TendPanel bed={openBed} runtime={openBedRt} onPlant={(seedId) => plantSeed(openBed.id, seedId)} onHarvest={(seed) => harvestBed(openBed.id, seed)} onClose={() => setOverlay(null)} accent="#34d399" rareUnlocked={level.bossGateOpen} />}
+
+            {/* Dash — the wind-step. Sits above the interact button's slot so it
+                never overlaps existing controls; ≥48px touch target. */}
+            {!activeFight && !overlay && !nearSerpent && profile !== 'keyboard' && (
+                <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); dashReqRef.current = true; }}
+                    aria-label="Dash"
+                    className="absolute z-10 rounded-full font-black uppercase flex flex-col items-center justify-center text-center pointer-events-auto active:scale-95 transition-all"
+                    style={{
+                        width: Math.max(48, Math.round(actionBtn * 0.72)),
+                        height: Math.max(48, Math.round(actionBtn * 0.72)),
+                        right: '1rem',
+                        bottom: `calc(1.25rem + env(safe-area-inset-bottom) + ${actionBtn + 14}px)`,
+                        background: dashCdUi > 0 ? 'linear-gradient(135deg,#334155 0%,#1e293b 100%)' : 'linear-gradient(135deg,#a7f3d0 0%,#059669 100%)',
+                        boxShadow: dashCdUi > 0 ? 'none' : '0 0 18px rgba(52,211,153,0.4)',
+                        color: dashCdUi > 0 ? '#94a3b8' : '#052e1b',
+                        opacity: dashCdUi > 0 ? 0.55 : 1,
+                        letterSpacing: '0.14em',
+                        fontSize: 8,
+                        touchAction: 'none',
+                    }}
+                >
+                    <Wind className="w-4 h-4 mb-0.5" />
+                    Dash
+                </button>
+            )}
 
             {/* controls */}
             {!activeFight && !dialogue && !overlay && (
