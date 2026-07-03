@@ -1,0 +1,23 @@
+{
+  "weapons": [
+    { "id": "wood_staff", "name": "Wooden Staff", "kind": "staff", "damage": 12, "reach": 30, "flavor": "A branch from a tree that has touched the Source. It strikes the spirit, not the flesh.", "forge": "Cut a living branch, strip it bare, and speak your true name into the wood.", "iron": 0, "copper": 0, "cosmic": 0 },
+    { "id": "ironwood_stave", "name": "Ironwood Stave", "kind": "staff", "damage": 17, "reach": 31, "flavor": "The same branch, hardened by your grip and your first victory.", "forge": "Forge using Giza Iron Ore to harden your staff.", "iron": 3, "copper": 0, "cosmic": 0 },
+    { "id": "bronze_cudgel", "name": "Bronze Cudgel", "kind": "blade", "damage": 22, "reach": 29, "flavor": "Heavier, surer - it bites deeper into the dark.", "forge": "Forge using St. Louis Copper Sheets to cast a bronze edge.", "iron": 0, "copper": 2, "cosmic": 0 },
+    { "id": "iron_blade", "name": "Iron Blade", "kind": "blade", "damage": 28, "reach": 29, "flavor": "A true edge now. It cuts what binds a soul, never what breathes.", "forge": "Tempered at the anvil using both Giza Iron and St. Louis Copper.", "iron": 4, "copper": 2, "cosmic": 0 },
+    { "id": "sword_light", "name": "Sword of Light", "kind": "sword", "damage": 36, "reach": 32, "flavor": "A blade of pure conviction. The dark cannot abide its edge.", "forge": "Ignite the ultimate steel at the anvil using Cosmic Shards from the Emerald Halls.", "iron": 0, "copper": 0, "cosmic": 5 }
+  ],
+  "consumables": [
+    { "id": "vigor_draught", "name": "Vigor Draught", "desc": "Herbs steeped in hut-spring water. Steadies the body before the road.", "hp": 12, "damage": 0, "iron": 1, "copper": 0, "cosmic": 0, "accent": "#34d399", "minClears": 0 },
+    { "id": "fair_tonic", "name": "Fairgrounds Tonic", "desc": "A pale distillate - memory of the ivory city in a swallow.", "hp": 16, "damage": 0, "iron": 0, "copper": 2, "cosmic": 0, "accent": "#fbbf24", "minClears": 0 },
+    { "id": "ward_balm", "name": "Ward Balm", "desc": "Giza iron dust in copper oil. Truth rubs it on wandering souls before hard gates.", "hp": 22, "damage": 0, "iron": 2, "copper": 1, "cosmic": 0, "accent": "#22d3ee", "minClears": 0 },
+    { "id": "strike_unguent", "name": "Strike Unguent", "desc": "Edge-oil for the weapon hand. The next fight bites deeper.", "hp": 0, "damage": 5, "iron": 2, "copper": 1, "cosmic": 0, "accent": "#f97316", "minClears": 0 },
+    { "id": "cosmic_ember", "name": "Cosmic Ember", "desc": "A dissolved shard from the Emerald road - fire and renewal in one sip.", "hp": 10, "damage": 4, "iron": 1, "copper": 0, "cosmic": 1, "accent": "#a855f7", "minClears": 2 }
+  ],
+  "destinations": [
+    { "id": "eden", "name": "Eden - Before the Fall", "guide": "The Gardener", "accent": "#22c55e", "quote": "The garden remembers every hand that tended it." },
+    { "id": "fair", "name": "St. Louis, 1904", "guide": "Mabel Hart", "accent": "#fbbf24", "quote": "The ivory city shines brightest for those who look twice." },
+    { "id": "giza", "name": "Giza - The Engine of Stone", "guide": "Khaemwaset", "accent": "#f97316", "quote": "Stone holds what parchment forgets." },
+    { "id": "kolbrin", "name": "The Kolbrin Vault", "guide": "Elder Scribe", "accent": "#22d3ee", "quote": "What was buried was not destroyed." },
+    { "id": "emerald", "name": "The Emerald Halls", "guide": "Hermes Trismegistus", "accent": "#7c5cff", "quote": "As above, so below - as within, so without." }
+  ]
+}

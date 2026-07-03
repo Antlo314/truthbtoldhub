@@ -1,5 +1,21 @@
 # AI Sync Status & Changelog
 
+## 2026-07-02 (Claude) — THE JOURNEY GOES 3D (Unity + Blender)
+- **Agent**: Claude (branch `claude/unity-3d-hut`)
+- **Status**: First playable scaffold complete
+- **Direction change (from the Architect)**: The game is being rebuilt in **3D with Unity + Blender**. The Hut is the epicenter and priority #1 — all its functions preserved and enhanced. The world (5 destinations) will be rebuilt around it afterward. The 2D web game remains untouched and live; `WORLD_HUT_ONLY` kill switch still applies there.
+- **New project**: `journey3d/` — Unity 6000.5.2f1 project (own `.gitignore`; `Library/` etc. not committed)
+  - `AssetPipeline/build_assets.py` — Blender 5.1 headless script that procedurally models and exports ALL 3D assets (14 FBX): hut shell, fireplace, Truth (hooded sage), player avatar, arcade cabinet, forge, ledger lectern, seeing glass, archive shelf, soul mirror, offering altar, wayfinder table, sanctum door, rug. Re-run with `blender --background --python build_assets.py` to regenerate.
+  - `Assets/Scripts/` — full C# game: third-person controller + orbit camera, station interaction system (E to interact), runtime-built UGUI for all **ten stations** (Ledger, Seeing Glass, Archive, Your Soul, Forge, Offering, Arcade, Wayfinder, Ask Truth, Sanctum)
+  - **Arcade**: Tetra, Serpent, Veil rebuilt in C#, honoring the exact web score contract (`game/score/lines/level`, Veil level = attempts) and posting to the same `arcade_scores` table + season key (`YYYY-MM`)
+  - **Ask Truth**: all 21 lore threads ported to `StreamingAssets/truth_lore.json` with requires/minDepth/**trust-gate** logic + deflections (full port of `truthLore.ts`)
+  - **Forge**: full weapon ladder + 5 tonics ported; local save (`soul_record.json` in persistentDataPath); one-time starter pouch (+3 iron +2 copper) so the forge is usable before destinations return
+  - **Supabase**: live REST reads for bulletins (Ledger), dispatch media (Seeing Glass/Archive), leaderboards; score submit fails soft if RLS wants an authed soul. Web-bridge buttons deep-link to truthbtoldhub.com (`/world?hut=…`, `/archive`, `/library`, `/cinema`)
+- **How to open**: Unity Hub → open `journey3d/` → scene `Assets/Scenes/Hut.unity` (or menu `Journey/Build Hut Scene` to regenerate the scene)
+- **Handoff / Next Steps**: Supabase auth in Unity (real user_id score submits + cloud save sync), Blender-rigged walk animation, hut exterior + first 3D destination (Eden), WebGL build for the Hub, monetization surfaces (Offering station carries the 400 Series pitch already).
+
+---
+
 ## 2026-06-16 (Grok)
 - **Agent**: Grok
 - **Status**: Completed

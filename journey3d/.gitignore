@@ -1,0 +1,21 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+MemoryCaptures/
+Recordings/
+
+# IDE
+.vs/
+.idea/
+*.csproj
+*.sln
+*.user
+
+# OS
+*.blend1
+Thumbs.db
