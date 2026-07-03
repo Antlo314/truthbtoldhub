@@ -111,24 +111,24 @@ namespace Journey3D
                 case Surf.Wood:
                 {
                     float n = Fbm(u, v, 4, 4);
-                    float rings = 0.5f + 0.5f * Mathf.Sin((v * 11f + n * 4f) * Mathf.PI * 2f);
-                    float lum = 0.66f + 0.2f * n + 0.14f * rings;
-                    if (Mathf.Repeat(v * 4f, 1f) < 0.05f) lum *= 0.55f;      // plank seams
+                    float rings = 0.5f + 0.5f * Mathf.Sin((v * 11f + n * 5f) * Mathf.PI * 2f);
+                    float lum = 0.58f + 0.26f * n + 0.22f * rings;           // stronger grain
+                    if (Mathf.Repeat(v * 4f, 1f) < 0.05f) lum *= 0.5f;       // plank seams
                     return lum;
                 }
                 case Surf.Stone:
                 {
                     float n = Fbm(u, v, 5, 4);
                     float crack = Fbm(u, v, 11, 3);
-                    float lum = 0.66f + 0.3f * n;
-                    if (crack > 0.72f) lum *= 0.6f;
+                    float lum = 0.56f + 0.42f * n;                           // stronger mottle
+                    if (crack > 0.7f) lum *= 0.52f;
                     return lum;
                 }
                 case Surf.Grass:
                 {
                     float n = Fbm(u, v, 6, 4);
                     float blade = Fbm(u, v, 26, 2);
-                    return 0.58f + 0.34f * n + 0.12f * blade;
+                    return 0.5f + 0.42f * n + 0.16f * blade;                 // richer variation
                 }
                 case Surf.Thatch:
                 {

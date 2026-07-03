@@ -32,15 +32,18 @@ export default function World3DPage() {
     const [error, setError] = useState<string | null>(null);
     const [isTouch, setIsTouch] = useState(false);
 
-    // size the render buffer to the element's real pixels (capped DPR for perf)
+    // size the render buffer to the element's real pixels (capped DPR for perf);
+    // if an ancestor ever collapses the stage, fall back to the viewport
     const fitCanvas = () => {
         const c = canvasRef.current;
         const stage = stageRef.current;
         if (!c || !stage) return;
         const r = stage.getBoundingClientRect();
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        c.width = Math.max(1, Math.round(r.width * dpr));
-        c.height = Math.max(1, Math.round(r.height * dpr));
+        const w = r.width > 50 ? r.width : window.innerWidth;
+        const h = r.height > 50 ? r.height : window.innerHeight - 40;
+        c.width = Math.max(1, Math.round(w * dpr));
+        c.height = Math.max(1, Math.round(h * dpr));
     };
 
     useEffect(() => {
@@ -114,7 +117,10 @@ export default function World3DPage() {
     };
 
     return (
-        <div className="fixed inset-0 bg-[#06080e] flex flex-col">
+        // NOTE: not position:fixed - an ancestor in the site layout creates a
+        // containing block that collapses fixed elements to 0px height (the
+        // "black screen"). Explicit dynamic-viewport height is bulletproof.
+        <div className="w-full h-[100dvh] bg-[#06080e] flex flex-col overflow-hidden">
             {/* top bar — hidden in fullscreen for max play area */}
             <div className="flex items-center justify-between px-3 py-1.5 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-zinc-500 border-b border-white/5 shrink-0">
                 <Link href="/" className="hover:text-aether-gold transition-colors whitespace-nowrap">← Hub</Link>

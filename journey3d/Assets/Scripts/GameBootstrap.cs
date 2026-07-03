@@ -148,16 +148,32 @@ namespace Journey3D
             Spawn("hut_shell", Vector3.zero, 0, collide: false);   // physics is code-built below
             BuildRoomPhysics();
 
-            // Kenney furniture accents to warm the interior (first-pass placement)
-            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -1.5f), 0, 5.2f, collide: false, flat: true);
-            SpawnKenney("fur_bookcaseOpen", new Vector3(6.2f, 0, 3.4f), -90f, 2.3f);
+            // ---- a lived-in hut: sleeping corner, hearth-side dining, reading
+            //      nook, entry bench (Kenney furniture, sized to the room) ----
+
+            // center rug between the door and Truth
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -1.2f), 0, 4.6f, collide: false, flat: true);
+
+            // sleeping corner (left wall, between archive and back wall)
+            SpawnKenney("fur_bedSingle", new Vector3(-5.4f, 0, 4.4f), 90f, 1.05f);
+            SpawnKenney("fur_sideTable", new Vector3(-4.0f, 0, 5.6f), 0, 0.6f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(-4.0f, 0.62f, 5.6f), 0, 0.5f, collide: false);
+
+            // hearth-side dining: table with stools near the fire
+            SpawnKenney("fur_table", new Vector3(4.4f, 0, 1.9f), 0, 0.9f);
+            SpawnKenney("fur_books", new Vector3(4.4f, 0.92f, 1.9f), 25f, 0.32f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(3.5f, 0, 1.9f), 0, 0.8f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(5.3f, 0, 1.9f), 0, 0.8f, collide: false);
+
+            // reading nook next to the archive shelf
+            SpawnKenney("fur_bookcaseOpen", new Vector3(-6.3f, 0, -0.4f), 90f, 2.2f);
+            SpawnKenney("fur_chairRounded", new Vector3(-5.2f, 0, -1.4f), 120f, 1.0f, collide: false);
+
+            // entry: bench + coat rack beside the door, greenery at the corners
+            SpawnKenney("fur_bench", new Vector3(-2.4f, 0, -6.2f), 0, 0.85f);
+            SpawnKenney("fur_coatRack", new Vector3(-4.6f, 0, -6.2f), 0, 1.9f, collide: false);
             SpawnKenney("fur_pottedPlant", new Vector3(6.2f, 0, 6.1f), 0, 1.5f, collide: false);
-            SpawnKenney("fur_pottedPlant", new Vector3(-6.2f, 0, 6.1f), 200f, 1.35f, collide: false);
-            SpawnKenney("fur_coatRack", new Vector3(2.0f, 0, 6.1f), 0, 2.0f, collide: false);
-            SpawnKenney("fur_table", new Vector3(-4.2f, 0, -0.6f), 0, 0.9f);
-            SpawnKenney("fur_books", new Vector3(-4.2f, 0.92f, -0.6f), 25f, 0.32f, collide: false);
-            SpawnKenney("fur_stoolBar", new Vector3(-5.1f, 0, -0.6f), 0, 0.85f, collide: false);
-            SpawnKenney("fur_stoolBar", new Vector3(-3.3f, 0, -0.6f), 0, 0.85f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(-6.2f, 0, 6.2f), 200f, 1.35f, collide: false);
             var fire = Spawn("fireplace", new Vector3(6.05f, 0, 0), -90f);
             var flame = new GameObject("firelight");
             flame.transform.SetParent(fire.transform, false);
@@ -267,7 +283,7 @@ namespace Journey3D
             var arcade = Spawn("arcade_cabinet", new Vector3(2.6f, 0, -6.1f), 0f);
             AddStation(arcade, StationId.Arcade, "The Arcade", "#7c5cff");
 
-            var table = Spawn("wayfinder_table", new Vector3(3.6f, 0, -4.7f), 0f);
+            var table = Spawn("wayfinder_table", new Vector3(5.35f, 0, -4.3f), 0f);
             AddStation(table, StationId.Wayfinder, "The Wayfinder", "#22c55e");
         }
 

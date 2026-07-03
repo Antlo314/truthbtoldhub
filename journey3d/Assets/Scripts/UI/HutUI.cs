@@ -91,9 +91,12 @@ namespace Journey3D
         // =====================================================
         //  Panel frame
         // =====================================================
+        private Image _dimImage;
+
         private void BuildPanelFrame()
         {
             _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", new Color(0, 0, 0, 0.72f));
+            _dimImage = _panelRoot.GetComponent<Image>();
             UIKit.Fill(_panelRoot);
 
             // responsive: fill the screen with margins so phones get a usable
@@ -158,6 +161,7 @@ namespace Journey3D
             _arcadeGameHost = null;
             _panelRoot.gameObject.SetActive(false);
             if (cameraRig != null) cameraRig.portraitMode = false;
+            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.72f);
             SetFrameWide();
             LockInput(false);
         }
@@ -334,8 +338,10 @@ namespace Journey3D
         {
             _creatorLock = firstRun && !SaveState.Character.created;
             _creatorTab = 0;
-            // dock the card right + slow portrait orbit so you SEE your soul change
+            // dock the card right + slow portrait orbit so you SEE your soul change;
+            // barely dim the world so the live avatar preview stays visible
             SetFrameSide();
+            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.12f);
             if (cameraRig != null) cameraRig.portraitMode = true;
             RenderCreator();
         }
