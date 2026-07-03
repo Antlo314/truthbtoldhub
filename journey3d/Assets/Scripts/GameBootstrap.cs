@@ -33,6 +33,12 @@ namespace Journey3D
             var cam = BuildCamera(player);
             BuildSystems(player, cam);
             BuildLights();
+
+            // startup self-check, visible in the browser console
+            bool grounded = Physics.Raycast(new Vector3(0, 2f, -2.2f), Vector3.down, out var hit, 10f);
+            Debug.Log(grounded
+                ? $"J3D physics ok: ground '{hit.collider.name}' at y={hit.point.y:F2}"
+                : "J3D physics FAULT: no ground under spawn!");
         }
 
         // ---------- helpers ----------
@@ -47,16 +53,46 @@ namespace Journey3D
             var go = Instantiate(prefab, pos, Quaternion.Euler(0, yaw, 0));
             go.name = model;
             if (scale != 1f) go.transform.localScale = Vector3.one * scale;
-            if (collide)
-            {
-                foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
-                {
-                    var mc = mf.gameObject.AddComponent<MeshCollider>();
-                    mc.sharedMesh = mf.sharedMesh;
-                    mc.convex = model != "hut_shell";   // room stays concave so we walk inside it
-                }
-            }
+            // Runtime MeshCollider cooking proved unreliable in WebGL builds
+            // (players fell through the floor), so props get a primitive
+            // bounds box instead and the room/ground use code-built boxes.
+            if (collide) AddBoundsCollider(go);
             return go;
+        }
+
+        private static void AddBoundsCollider(GameObject go)
+        {
+            var rends = go.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return;
+            var b = rends[0].bounds;
+            foreach (var r in rends) b.Encapsulate(r.bounds);
+            var col = new GameObject("bounds_col");
+            col.transform.position = b.center;
+            col.transform.SetParent(go.transform, true);
+            col.AddComponent<BoxCollider>().size = b.size;
+        }
+
+        private static void PhysicsBox(Transform parent, Vector3 center, Vector3 size)
+        {
+            var go = new GameObject("phys");
+            go.transform.SetParent(parent, false);
+            go.transform.position = center;
+            go.AddComponent<BoxCollider>().size = size;
+        }
+
+        /// Deterministic room + ground physics (primitive boxes only).
+        /// The doorway gap sits on the -Z wall at x in [-0.85, 0.85].
+        private void BuildRoomPhysics()
+        {
+            var root = new GameObject("RoomPhysics").transform;
+            PhysicsBox(root, new Vector3(0, -0.5f, 0), new Vector3(60, 1, 60));          // ground, top at y=0
+            PhysicsBox(root, new Vector3(7f, 2.1f, 0), new Vector3(0.35f, 4.2f, 14.6f)); // +X wall
+            PhysicsBox(root, new Vector3(-7f, 2.1f, 0), new Vector3(0.35f, 4.2f, 14.6f));// -X wall
+            PhysicsBox(root, new Vector3(0, 2.1f, 7f), new Vector3(14.6f, 4.2f, 0.35f)); // +Z wall (sanctum)
+            // -Z wall split around the doorway
+            PhysicsBox(root, new Vector3(-3.925f, 2.1f, -7f), new Vector3(6.15f, 4.2f, 0.35f));
+            PhysicsBox(root, new Vector3(3.925f, 2.1f, -7f), new Vector3(6.15f, 4.2f, 0.35f));
+            PhysicsBox(root, new Vector3(0, 3.4f, -7f), new Vector3(1.8f, 1.6f, 0.35f)); // lintel above the door
         }
 
         private void BuildSun()
@@ -72,7 +108,8 @@ namespace Journey3D
 
         private void BuildRoom()
         {
-            Spawn("hut_shell", Vector3.zero, 0);
+            Spawn("hut_shell", Vector3.zero, 0, collide: false);   // physics is code-built below
+            BuildRoomPhysics();
             Spawn("hut_rug", new Vector3(0, 0.02f, 0), 0, collide: false);
             var fire = Spawn("fireplace", new Vector3(6.05f, 0, 0), -90f);
             var flame = new GameObject("firelight");
@@ -87,7 +124,7 @@ namespace Journey3D
 
         private void BuildExterior()
         {
-            Spawn("terrain_ground", new Vector3(0, 0, 0), 0);          // top at y=0
+            Spawn("terrain_ground", new Vector3(0, 0, 0), 0, collide: false);   // ground box in BuildRoomPhysics
             Spawn("terrain_path", new Vector3(0, 0, 0), 0, collide: false);
             Spawn("hut_exterior", Vector3.zero, 0, collide: false);    // roof + chimney, overhead
             Spawn("sky_dome", Vector3.zero, 0, collide: false);        // huge emissive dome
@@ -165,7 +202,8 @@ namespace Journey3D
             var offering = Spawn("offering_altar", new Vector3(-3.8f, 0, -5.5f), 20f);
             AddStation(offering, StationId.Offering, "The Offering", "#fbbf24");
 
-            var arcade = Spawn("arcade_cabinet", new Vector3(0.6f, 0, -6.15f), 0f);
+            // kept clear of the doorway gap at x in [-0.85, 0.85] on the -Z wall
+            var arcade = Spawn("arcade_cabinet", new Vector3(2.6f, 0, -6.1f), 0f);
             AddStation(arcade, StationId.Arcade, "The Arcade", "#7c5cff");
 
             var table = Spawn("wayfinder_table", new Vector3(3.6f, 0, -4.7f), 0f);

@@ -504,9 +504,9 @@ def build_hut_roof():
     parts.append(box('roof_l', (slope_len, 16.0, 0.3), (-run / 2, 0, midz), roof, rot=(0, ang, 0)))
     # right slab (slopes down toward +X)
     parts.append(box('roof_r', (slope_len, 16.0, 0.3), (run / 2, 0, midz), roof, rot=(0, -ang, 0)))
-    # gable end fills (approximated with a thin tall box)
-    parts.append(box('gable_a', (0.3, 15.6, rise), (0, 7.9, eave_z + rise / 2), M_WOOD_LIGHT()))
-    parts.append(box('gable_b', (0.3, 15.6, rise), (0, -7.9, eave_z + rise / 2), M_WOOD_LIGHT()))
+    # gable end fills (thin panels across the X width at each ridge end)
+    parts.append(box('gable_a', (15.0, 0.3, rise), (0, 7.85, eave_z + rise / 2), M_WOOD_LIGHT()))
+    parts.append(box('gable_b', (15.0, 0.3, rise), (0, -7.85, eave_z + rise / 2), M_WOOD_LIGHT()))
     # ridge beam
     parts.append(box('ridge', (0.35, 16.0, 0.35), (0, 0, ridge_z), M_WOOD_DARK()))
     # chimney cap above the fireplace side (+X, matches interior chimney)

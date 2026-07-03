@@ -23,6 +23,15 @@ namespace Journey3D
 
         private void Update()
         {
+            // absolute safety net: if physics ever lets the soul slip below
+            // the world, place them back at the hearth instead of the void
+            if (transform.position.y < -3f)
+            {
+                _cc.enabled = false;
+                transform.position = new Vector3(0, 0.1f, -2.2f);
+                _cc.enabled = true;
+            }
+
             if (inputLocked)
             {
                 SettleAvatar();
