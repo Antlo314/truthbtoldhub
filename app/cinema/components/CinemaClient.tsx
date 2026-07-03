@@ -188,7 +188,7 @@ export default function CinemaClient() {
 
                                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
                                     <Link
-                                        href="/world2d?hut=patron"
+                                        href="/support"
                                         onClick={() => playClick()}
                                         className="flex-1 flex items-center justify-center gap-3 py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-[1.02] transition-transform active:scale-95"
                                     >

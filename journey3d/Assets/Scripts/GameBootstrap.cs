@@ -2,24 +2,32 @@ using UnityEngine;
 
 namespace Journey3D
 {
-    /// Assembles Truth's Hut at runtime from the Blender-built models in
-    /// Resources/Models. The scene file only carries this one component.
+    /// Assembles Truth's Hut (and its small exterior yard) at runtime from the
+    /// Blender-built models in Resources/Models. The scene file only carries
+    /// this one component.
     public class GameBootstrap : MonoBehaviour
     {
+        public bool ExteriorEnabled = true;   // kill switch for the yard (reversible)
+
         private Transform _playerRoot;
+        private PlayerAppearance _appearance;
 
         private void Awake()
         {
-            Application.targetFrameRate = 120;
+            Application.targetFrameRate = 60;
+
+            // ---- lighting (fixes the previously near-black WebGL room) ----
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.34f, 0.27f, 0.2f);
+            RenderSettings.ambientLight = new Color(0.52f, 0.47f, 0.42f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.02f, 0.03f, 0.05f);
+            RenderSettings.fogColor = new Color(0.11f, 0.13f, 0.17f);
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.fogDensity = 0.012f;
+            RenderSettings.fogDensity = 0.0035f;
 
             SaveState.Load();
+            BuildSun();
             BuildRoom();
+            if (ExteriorEnabled) BuildExterior();
             BuildStations();
             var player = BuildPlayer();
             var cam = BuildCamera(player);
@@ -28,7 +36,7 @@ namespace Journey3D
         }
 
         // ---------- helpers ----------
-        private GameObject Spawn(string model, Vector3 pos, float yaw, bool collide = true)
+        private GameObject Spawn(string model, Vector3 pos, float yaw, bool collide = true, float scale = 1f)
         {
             var prefab = Resources.Load<GameObject>("Models/" + model);
             if (prefab == null)
@@ -38,6 +46,7 @@ namespace Journey3D
             }
             var go = Instantiate(prefab, pos, Quaternion.Euler(0, yaw, 0));
             go.name = model;
+            if (scale != 1f) go.transform.localScale = Vector3.one * scale;
             if (collide)
             {
                 foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
@@ -48,6 +57,17 @@ namespace Journey3D
                 }
             }
             return go;
+        }
+
+        private void BuildSun()
+        {
+            var sun = new GameObject("Sun");
+            var sl = sun.AddComponent<Light>();
+            sl.type = LightType.Directional;
+            sl.color = new Color(1f, 0.95f, 0.84f);
+            sl.intensity = 1.15f;
+            sl.shadows = LightShadows.None;   // keep WebGL/mobile cheap
+            sun.transform.rotation = Quaternion.Euler(52f, 28f, 0);
         }
 
         private void BuildRoom()
@@ -65,6 +85,51 @@ namespace Journey3D
             flame.AddComponent<FlickerLight>().baseIntensity = 2.6f;
         }
 
+        private void BuildExterior()
+        {
+            Spawn("terrain_ground", new Vector3(0, 0, 0), 0);          // top at y=0
+            Spawn("terrain_path", new Vector3(0, 0, 0), 0, collide: false);
+            Spawn("hut_exterior", Vector3.zero, 0, collide: false);    // roof + chimney, overhead
+            Spawn("sky_dome", Vector3.zero, 0, collide: false);        // huge emissive dome
+
+            // scatter trees + rocks around the ~20m ring (hand-placed, ≤20 total)
+            float[] ang = { 8, 40, 70, 105, 138, 168, 200, 232, 262, 292, 322, 350 };
+            for (int i = 0; i < ang.Length; i++)
+            {
+                float r = 18f + (i % 3) * 1.6f;
+                float rad = ang[i] * Mathf.Deg2Rad;
+                var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
+                bool pine = i % 2 == 0;
+                Spawn(pine ? "tree_pine" : "tree_oak", p, ang[i], scale: 0.9f + (i % 4) * 0.12f);
+            }
+            float[] rockAng = { 24, 88, 150, 214, 300 };
+            for (int i = 0; i < rockAng.Length; i++)
+            {
+                float rad = rockAng[i] * Mathf.Deg2Rad;
+                var p = new Vector3(Mathf.Cos(rad) * 21f, 0, Mathf.Sin(rad) * 21f);
+                Spawn(i % 2 == 0 ? "rock_large" : "rock_small", p, rockAng[i] * 1.7f);
+            }
+
+            BuildBoundaryRing(22.5f);
+        }
+
+        private void BuildBoundaryRing(float radius)
+        {
+            // invisible wall so the player can circle the hut but never reach a void
+            var ring = new GameObject("Boundary");
+            const int segs = 36;
+            for (int i = 0; i < segs; i++)
+            {
+                float a = (i / (float)segs) * Mathf.PI * 2f;
+                var seg = new GameObject("seg");
+                seg.transform.SetParent(ring.transform, false);
+                seg.transform.position = new Vector3(Mathf.Cos(a) * radius, 2f, Mathf.Sin(a) * radius);
+                seg.transform.rotation = Quaternion.Euler(0, -a * Mathf.Rad2Deg, 0);
+                var bc = seg.AddComponent<BoxCollider>();
+                bc.size = new Vector3(radius * 2f * Mathf.PI / segs + 0.5f, 4f, 0.5f);
+            }
+        }
+
         private void AddStation(GameObject go, StationId id, string label, string hex)
         {
             var s = go.AddComponent<Station>();
@@ -75,7 +140,6 @@ namespace Journey3D
 
         private void BuildStations()
         {
-            // model fronts face +Z after Blender export; yaw turns them into the room
             var ledger = Spawn("ledger_lectern", new Vector3(-4.2f, 0, 5.7f), 165f);
             AddStation(ledger, StationId.Ledger, "The Ledger", "#fbbf24");
 
@@ -111,6 +175,7 @@ namespace Journey3D
         private PlayerController BuildPlayer()
         {
             var root = new GameObject("Player");
+            root.tag = "Player";
             root.transform.position = new Vector3(0, 0.05f, -2.2f);
             var cc = root.AddComponent<CharacterController>();
             cc.height = 1.8f;
@@ -124,6 +189,8 @@ namespace Journey3D
                 var a = Instantiate(avatarPrefab, root.transform);
                 a.name = "avatar";
                 avatar = a.transform;
+                _appearance = root.AddComponent<PlayerAppearance>();
+                _appearance.Bind(a);
             }
 
             var pc = root.AddComponent<PlayerController>();
@@ -138,7 +205,7 @@ namespace Journey3D
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.02f, 0.03f, 0.055f);
+            cam.backgroundColor = new Color(0.55f, 0.68f, 0.83f);   // sky fallback
             cam.fieldOfView = 55f;
             camGo.AddComponent<AudioListener>();
             var rig = camGo.AddComponent<CameraRig>();
@@ -154,23 +221,29 @@ namespace Journey3D
             var ui = sys.AddComponent<HutUI>();
             ui.player = player;
             ui.cameraRig = rig;
+            ui.appearance = _appearance;
             var interact = sys.AddComponent<InteractionSystem>();
             interact.player = player.transform;
             interact.ui = ui;
+
+            var touch = sys.AddComponent<TouchControls>();
+            touch.ui = ui;
+
+            var audioMgr = sys.AddComponent<AudioManager>();
+            audioMgr.player = player.transform;
+            // first-run soul creation is triggered inside HutUI.Start (after its canvas exists)
         }
 
         private void BuildLights()
         {
-            // warm hearth-room key light
             var key = new GameObject("KeyLight");
             key.transform.position = new Vector3(0, 3.6f, 0);
             var kl = key.AddComponent<Light>();
             kl.type = LightType.Point;
             kl.color = new Color(1f, 0.86f, 0.62f);
             kl.range = 16f;
-            kl.intensity = 1.7f;
+            kl.intensity = 1.5f;
 
-            // cool fill from the sanctum door
             var fill = new GameObject("SanctumGlow");
             fill.transform.position = new Vector3(0, 2.2f, 6.2f);
             var fl = fill.AddComponent<Light>();

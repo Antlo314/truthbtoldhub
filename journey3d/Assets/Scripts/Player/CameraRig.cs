@@ -28,6 +28,12 @@ namespace Journey3D
                     _yaw += Input.GetAxis("Mouse X") * orbitSpeed;
                     _pitch = Mathf.Clamp(_pitch - Input.GetAxis("Mouse Y") * orbitSpeed, 4f, 65f);
                 }
+                var touchLook = InputHub.ConsumeLookDelta();
+                if (touchLook != Vector2.zero)
+                {
+                    _yaw += touchLook.x * orbitSpeed * 0.05f;
+                    _pitch = Mathf.Clamp(_pitch - touchLook.y * orbitSpeed * 0.05f, 4f, 65f);
+                }
                 distance = Mathf.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * 3f, minDistance, maxDistance);
             }
 

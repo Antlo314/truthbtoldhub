@@ -29,8 +29,8 @@ namespace Journey3D
                 return;
             }
 
-            float h = Input.GetAxisRaw("Horizontal");
-            float v = Input.GetAxisRaw("Vertical");
+            float h = Mathf.Clamp(Input.GetAxisRaw("Horizontal") + InputHub.MoveTouch.x, -1f, 1f);
+            float v = Mathf.Clamp(Input.GetAxisRaw("Vertical") + InputHub.MoveTouch.y, -1f, 1f);
             var cam = Camera.main;
             Vector3 fwd = cam != null ? cam.transform.forward : Vector3.forward;
             Vector3 right = cam != null ? cam.transform.right : Vector3.right;

@@ -45,6 +45,7 @@ export default function World3DPage() {
                         companyName: 'Truth B Told',
                         productName: "The Journey - Truth's Hut",
                         productVersion: '1.0',
+                        webglContextAttributes: { preserveDrawingBuffer: true },
                     },
                     (p) => setProgress(p),
                 )
@@ -70,7 +71,7 @@ export default function World3DPage() {
             <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-zinc-500 border-b border-white/5">
                 <Link href="/" className="hover:text-aether-gold transition-colors">← Truth B Told Hub</Link>
                 <span className="text-aether-gold/80 font-black">The Journey · Truth&apos;s Hut</span>
-                <Link href="/world2d" className="hover:text-white transition-colors">Classic 2D world</Link>
+                <Link href="/support" className="hover:text-white transition-colors">Fuel the Vision</Link>
             </div>
 
             {/* game */}
@@ -100,9 +101,12 @@ export default function World3DPage() {
                 {error && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
                         <div className="text-red-400 text-sm">{error}</div>
-                        <Link href="/world2d" className="text-aether-gold text-xs uppercase tracking-[0.3em] underline">
-                            Enter the classic 2D world instead
-                        </Link>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="text-aether-gold text-xs uppercase tracking-[0.3em] underline"
+                        >
+                            Reload the Hut
+                        </button>
                     </div>
                 )}
             </div>

@@ -135,8 +135,8 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
 
             {showEnterWorld && (
                 <div className="px-5 py-4 border-t border-white/10 shrink-0">
-                    <Link href="/world2d" className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                        Enter the Cavern â†’
+                    <Link href="/world" className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                        Enter the Cavern →
                     </Link>
                 </div>
             )}

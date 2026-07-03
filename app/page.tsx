@@ -21,7 +21,7 @@ function TitleCardInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [authOpen, setAuthOpen] = useState(false);
-    const [pendingHref, setPendingHref] = useState('/awakening');
+    const [pendingHref, setPendingHref] = useState('/world');
     const [founders, setFounders] = useState<number | null>(null);
     const [continueHref, setContinueHref] = useState<string | null>(null);
 
@@ -41,9 +41,9 @@ function TitleCardInner() {
             const parsed = JSON.parse(raw);
             const st = parsed?.state;
             if (!st?.initiated) return;
-            if (st.character?.path) setContinueHref('/world');
-            else if (st.character?.name?.trim()) setContinueHref('/awakening/path');
-            else setContinueHref('/awakening/create');
+            // The 3D hut handles soul creation on first entry, so every
+            // initiated soul continues straight into the world.
+            setContinueHref('/world');
         } catch { /* ignore */ }
     }, []);
 
@@ -189,7 +189,7 @@ function TitleCardInner() {
                         </button>
                     ) : (
                         <button
-                            onClick={() => enter('/awakening')}
+                            onClick={() => enter('/world')}
                             className="cta-pulse px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.03] active:scale-95"
                             style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 40px rgba(251,191,36,0.25)' }}
                         >

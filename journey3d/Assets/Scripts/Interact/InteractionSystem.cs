@@ -40,7 +40,8 @@ namespace Journey3D
 
             ui.SetPrompt(Nearest);
 
-            if (Nearest != null && Input.GetKeyDown(KeyCode.E))
+            bool interact = Input.GetKeyDown(KeyCode.E) || InputHub.ConsumeInteract();
+            if (Nearest != null && interact)
                 ui.OpenStation(Nearest);
         }
     }

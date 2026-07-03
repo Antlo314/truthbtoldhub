@@ -37,8 +37,8 @@ export async function POST(req: Request) {
             payment_method_types: ['card'],
             line_items: [{ price_data: priceData, quantity: 1 }],
             mode: isSubscription ? 'subscription' : 'payment',
-            success_url: `${siteUrl}/world2d?hut=patron&thanks=${tier.id}`,
-            cancel_url: `${siteUrl}/world2d?hut=patron&cancelled=1`,
+            success_url: `${siteUrl}/thanks?tier=${tier.id}`,
+            cancel_url: `${siteUrl}/support?cancelled=1`,
             customer_email: email || undefined,
             metadata: {
                 tierId: tier.id,

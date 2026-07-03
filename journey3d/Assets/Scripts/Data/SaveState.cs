@@ -19,6 +19,23 @@ namespace Journey3D
     {
         public string name = "Wandering Soul";
         public string path = "";                    // seer | sentinel | scribe | mystic
+        public bool created;                        // false until the soul finishes creation
+
+        // ---- appearance (mirrors web AvatarConfig; index-based) ----
+        public string build = "masc";
+        public int skin = 6;
+        public string hairStyle = "short";
+        public int hairColor = 0;
+        public string face = "calm";
+        public int top = 5;                         // CLOTH_COLORS index (teal-ish default)
+        public int bottom = 12;                     // CLOTH_COLORS index (dark)
+        public int boots = 0;
+        public string outfit = "tunic";
+        public string extra = "none";
+        public int eyes = 0;
+        public int beardColor = -1;                 // -1 = unset -> resolves to hairColor
+        public string garment = "plain";            // wearable overlay id; preserved on cloud upsert
+
         public int vitality = 100;
         public int maxVitality = 100;
         public int iron;
