@@ -9,6 +9,32 @@ namespace Journey3D.EditorTools
     ///   Unity -batchmode -executeMethod Journey3D.EditorTools.GeomProbe.Probe -quit
     public static class GeomProbe
     {
+        public static void ProbeKenney()
+        {
+            foreach (var name in new[]
+            {
+                "nat_tree_default", "nat_tree_pineTallA", "nat_tree_oak", "nat_rock_largeA",
+                "nat_stone_tallC", "nat_plant_bushLarge", "nat_flower_redA", "nat_mushroom_redGroup",
+                "fur_table", "fur_chairRounded", "fur_bookcaseOpen", "fur_rugRound", "fur_pottedPlant",
+            })
+            {
+                var prefab = Resources.Load<GameObject>("Models/kenney/" + name);
+                if (prefab == null) { Debug.Log($"KPROBE {name}: MISSING"); continue; }
+                var rends = prefab.GetComponentsInChildren<MeshRenderer>();
+                var b = new Bounds();
+                bool first = true;
+                string col = "?";
+                foreach (var r in rends)
+                {
+                    if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+                    if (r.sharedMaterial != null && col == "?")
+                        col = r.sharedMaterial.HasProperty("_Color") ? r.sharedMaterial.color.ToString() : "no _Color";
+                }
+                Debug.Log($"KPROBE {name}: size={b.size} center={b.center} mats={rends.Length} firstColor={col}");
+            }
+            Debug.Log("KPROBE done");
+        }
+
         public static void Probe()
         {
             foreach (var name in new[]

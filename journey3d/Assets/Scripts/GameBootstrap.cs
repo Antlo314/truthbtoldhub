@@ -81,6 +81,34 @@ namespace Journey3D
             col.AddComponent<BoxCollider>().size = b.size;
         }
 
+        /// Spawns a Kenney CC0 model normalized to a real-world size and seated
+        /// on the ground, regardless of the kit's native scale/pivot. Keeps the
+        /// kit's own flat colors (no WorldSkin).
+        private GameObject SpawnKenney(string name, Vector3 pos, float yaw, float targetSize, bool collide = true, bool flat = false)
+        {
+            var prefab = Resources.Load<GameObject>("Models/kenney/" + name);
+            if (prefab == null) { Debug.LogError("Missing kenney: " + name); return null; }
+            var wrapper = new GameObject(name);
+            wrapper.transform.SetPositionAndRotation(pos, Quaternion.Euler(0, yaw, 0));
+            var inst = Instantiate(prefab, wrapper.transform);
+            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localRotation = Quaternion.identity;
+
+            var rends = inst.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                var b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float dim = flat ? Mathf.Max(b.size.x, b.size.z) : b.size.y;
+                inst.transform.localScale = Vector3.one * (targetSize / Mathf.Max(0.01f, dim));
+                b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                inst.transform.position += wrapper.transform.position - new Vector3(b.center.x, b.min.y, b.center.z);
+            }
+            if (collide) AddBoundsCollider(wrapper);
+            return wrapper;
+        }
+
         private static void PhysicsBox(Transform parent, Vector3 center, Vector3 size)
         {
             var go = new GameObject("phys");
@@ -119,7 +147,17 @@ namespace Journey3D
         {
             Spawn("hut_shell", Vector3.zero, 0, collide: false);   // physics is code-built below
             BuildRoomPhysics();
-            Spawn("hut_rug", new Vector3(0, 0.02f, 0), 0, collide: false);
+
+            // Kenney furniture accents to warm the interior (first-pass placement)
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -1.5f), 0, 5.2f, collide: false, flat: true);
+            SpawnKenney("fur_bookcaseOpen", new Vector3(6.2f, 0, 3.4f), -90f, 2.3f);
+            SpawnKenney("fur_pottedPlant", new Vector3(6.2f, 0, 6.1f), 0, 1.5f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(-6.2f, 0, 6.1f), 200f, 1.35f, collide: false);
+            SpawnKenney("fur_coatRack", new Vector3(2.0f, 0, 6.1f), 0, 2.0f, collide: false);
+            SpawnKenney("fur_table", new Vector3(-4.2f, 0, -0.6f), 0, 0.9f);
+            SpawnKenney("fur_books", new Vector3(-4.2f, 0.92f, -0.6f), 25f, 0.32f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(-5.1f, 0, -0.6f), 0, 0.85f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(-3.3f, 0, -0.6f), 0, 0.85f, collide: false);
             var fire = Spawn("fireplace", new Vector3(6.05f, 0, 0), -90f);
             var flame = new GameObject("firelight");
             flame.transform.SetParent(fire.transform, false);
@@ -138,22 +176,36 @@ namespace Journey3D
             Spawn("hut_exterior", Vector3.zero, 0, collide: false);    // roof + chimney, overhead
             Spawn("sky_dome", Vector3.zero, 0, collide: false);        // huge emissive dome
 
-            // scatter trees + rocks around the ~20m ring (hand-placed, ≤20 total)
-            float[] ang = { 8, 40, 70, 105, 138, 168, 200, 232, 262, 292, 322, 350 };
+            // real stylized trees (Kenney CC0) ringing the yard
+            string[] trees = { "nat_tree_default", "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak",
+                               "nat_tree_fat", "nat_tree_thin", "nat_tree_pineRoundC", "nat_tree_small" };
+            float[] ang = { 8, 32, 58, 84, 110, 138, 166, 194, 222, 250, 278, 306, 334 };
             for (int i = 0; i < ang.Length; i++)
             {
-                float r = 18f + (i % 3) * 1.6f;
+                float r = 18.5f + (i % 3) * 1.4f;
                 float rad = ang[i] * Mathf.Deg2Rad;
                 var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
-                bool pine = i % 2 == 0;
-                Spawn(pine ? "tree_pine" : "tree_oak", p, ang[i], scale: 0.9f + (i % 4) * 0.12f);
+                SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.2f + (i % 4) * 0.6f);
             }
-            float[] rockAng = { 24, 88, 150, 214, 300 };
-            for (int i = 0; i < rockAng.Length; i++)
+            // rocks + standing stones
+            string[] rocks = { "nat_rock_largeA", "nat_stone_tallC", "nat_rock_largeC", "nat_stone_largeB", "nat_rock_tallA" };
+            float[] rang = { 20, 70, 120, 175, 205, 250, 300, 340 };
+            for (int i = 0; i < rang.Length; i++)
             {
-                float rad = rockAng[i] * Mathf.Deg2Rad;
-                var p = new Vector3(Mathf.Cos(rad) * 21f, 0, Mathf.Sin(rad) * 21f);
-                Spawn(i % 2 == 0 ? "rock_large" : "rock_small", p, rockAng[i] * 1.7f);
+                float rad = rang[i] * Mathf.Deg2Rad;
+                var p = new Vector3(Mathf.Cos(rad) * 21.5f, 0, Mathf.Sin(rad) * 21.5f);
+                SpawnKenney(rocks[i % rocks.Length], p, rang[i] * 1.7f, 1.2f + (i % 3) * 0.5f);
+            }
+            // bushes, flowers, mushrooms, logs across the mid-yard (non-blocking)
+            string[] flora = { "nat_plant_bushLarge", "nat_flower_redA", "nat_plant_bushDetailed", "nat_flower_yellowB",
+                               "nat_mushroom_redGroup", "nat_flower_purpleC", "nat_log_stack", "nat_grass_leafsLarge" };
+            float[] fang = { 15, 45, 80, 120, 150, 190, 225, 265, 300, 335 };
+            for (int i = 0; i < fang.Length; i++)
+            {
+                float rad = fang[i] * Mathf.Deg2Rad;
+                float r = 10.5f + (i % 4) * 2.1f;
+                var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
+                SpawnKenney(flora[i % flora.Length], p, fang[i] * 3f, 0.7f + (i % 3) * 0.4f, collide: false);
             }
 
             BuildBoundaryRing(22.5f);
