@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { tierById } from '@/lib/donationTiers';
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         const priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData = {
             currency: 'usd',
             product_data: {
-                name: `${tier.title} â€” Truth Be Told`,
+                name: `${tier.title} — Truth Be Told`,
                 description: tier.description,
             },
             unit_amount: unitAmount,

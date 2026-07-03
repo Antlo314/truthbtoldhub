@@ -530,7 +530,7 @@ namespace Journey3D
 
             Header(list, $"Your satchel:  Iron {c.iron}  ·  Copper {c.copper}  ·  Cosmic {c.cosmic}");
 
-            BodyText(list, "â€” THE WEAPON LADDER â€”", 30, s.accent);
+            BodyText(list, "— THE WEAPON LADDER —", 30, s.accent);
             foreach (var w in GameData.Data.weapons)
             {
                 bool owned = c.ownedWeapons.Contains(w.id);
@@ -566,7 +566,7 @@ namespace Journey3D
                 }
             }
 
-            BodyText(list, "â€” TONICS FOR THE ROAD â€”  (drink before a fight; max 5 of each)", 34, s.accent);
+            BodyText(list, "— TONICS FOR THE ROAD —  (drink before a fight; max 5 of each)", 34, s.accent);
             foreach (var t in GameData.Data.consumables)
             {
                 if (c.cleared.Count < t.minClears) continue;   // sealed recipes stay hidden, like the web hut
@@ -788,7 +788,7 @@ namespace Journey3D
             BodyText(list, q.answer, 260, UIKit.Body);
             if (!string.IsNullOrEmpty(q.accountTitle))
             {
-                BodyText(list, "â€” CODEX PAGE UNLOCKED â€”", 34, UIKit.Amber);
+                BodyText(list, "— CODEX PAGE UNLOCKED —", 34, UIKit.Amber);
                 BodyText(list, q.accountTitle, 30, UIKit.Amber);
                 BodyText(list, q.accountBody, 120, UIKit.Faint);
             }

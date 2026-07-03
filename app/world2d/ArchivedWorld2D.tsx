@@ -61,7 +61,7 @@ import {
 } from '@/lib/game/truthVoice';
 
 const WorldCanvas = dynamic(() => import('@/components/game/WorldCanvas'), { ssr: false });
-// Gated overlays â€” only mount behind state, so split them out of the first-load
+// Gated overlays — only mount behind state, so split them out of the first-load
 // bundle (keeps the overworld's first paint light on mobile). CutscenePlayer
 // stays static above: it renders on first paint for the world intro.
 const DestinationScene = dynamic(() => import('@/components/game/DestinationScene'), { ssr: false });
@@ -129,7 +129,7 @@ export default function WorldPage() {
     const [mounted, setMounted] = useState(false);
     const isDesktop = useIsDesktopLayout();
     const [dialogue, setDialogue] = useState<{ speaker: string; text: string; color?: string } | null>(null);
-    // ambient Truth lines (proximity/wander/bulletin) â€” non-blocking bubble that
+    // ambient Truth lines (proximity/wander/bulletin) — non-blocking bubble that
     // never freezes the world or hides the joystick, unlike the modal `dialogue`
     const [ambient, setAmbient] = useState<{ text: string; color?: string } | null>(null);
     const [hutOpen, setHutOpen] = useState(false);
@@ -195,11 +195,11 @@ export default function WorldPage() {
         setMounted(true);
         setSettings(loadSettings());
         setWorldIntroDone(sessionStorage.getItem('tbth-cutscene-world') === '1');
-        // load the cloud soul first, THEN grant the founder seal â€” so the
+        // load the cloud soul first, THEN grant the founder seal — so the
         // founder skill-point bump can't be overwritten by a late cloud adopt.
         loadFromCloud().then(() => loadFounder()).then((tier) => {
             if (tier) {
-                setToast(`âœ¦ ${tier.name} â€” founding seal claimed Â· +${tier.bonusSkillPoints} skill ${tier.bonusSkillPoints === 1 ? 'point' : 'points'}`);
+                setToast(`✦ ${tier.name} — founding seal claimed · +${tier.bonusSkillPoints} skill ${tier.bonusSkillPoints === 1 ? 'point' : 'points'}`);
                 if (toastTimer.current) clearTimeout(toastTimer.current);
                 toastTimer.current = setTimeout(() => setToast(null), 5000);
             }
@@ -229,7 +229,7 @@ export default function WorldPage() {
         if (hutParam === 'patron' || hutParam === 'truth') {
             setHutOpen(true);
             setHutInitial(hutParam === 'patron' ? 'offering' : 'truth');
-            window.history.replaceState({}, '', '/world2d');
+            window.history.replaceState({}, '', '/world');
         }
         const t = setTimeout(() => setHint(false), 5000);
         return () => {
@@ -288,7 +288,7 @@ export default function WorldPage() {
     }, [hutOpen, bulletins]);
 
     // tutorials armed from inside a paused overlay (relic claim, forge) would be
-    // hidden by the !worldPaused render gate and pop out of context later â€” so
+    // hidden by the !worldPaused render gate and pop out of context later — so
     // they queue here and surface only once the world is actually running again.
     const queueTutorial = useCallback((id: TutorialId, delayMs = 0) => {
         if (tutorialsSeen().includes(id)) return;
@@ -301,7 +301,7 @@ export default function WorldPage() {
     const dismissTutorial = useCallback((id: TutorialId) => {
         markTutorialSeen(id);
         setTutorial(null);
-        // the interact lesson follows roaming naturally â€” give the soul a little
+        // the interact lesson follows roaming naturally — give the soul a little
         // walking time first, then surface it next time the world is running.
         if (id === 'roam') queueTutorial('interact', 12_000);
     }, [queueTutorial]);
@@ -364,11 +364,11 @@ export default function WorldPage() {
         const key = `tbth-event-seen-${eventDay}`;
         if (sessionStorage.getItem(key)) return;
         sessionStorage.setItem(key, '1');
-        showToast(`âœ¦ Today's rhythm Â· ${worldEvent.shortLabel}`);
+        showToast(`✦ Today's rhythm · ${worldEvent.shortLabel}`);
     }, [worldIntroDone, eventDay, worldEvent.shortLabel, showToast]);
 
     // the top banner column (world rhythm + objective) is an on-entry cue, not a
-    // permanent fixture â€” fade it out after a few seconds so it doesn't sit there.
+    // permanent fixture — fade it out after a few seconds so it doesn't sit there.
     useEffect(() => {
         if (!worldIntroDone) return;
         setTopBannersUp(true);
@@ -376,7 +376,7 @@ export default function WorldPage() {
         return () => clearTimeout(t);
     }, [worldIntroDone]);
 
-    // the Hut is the safe haven â€” resting there restores vitality to full.
+    // the Hut is the safe haven — resting there restores vitality to full.
     useEffect(() => {
         if (hutOpen) restVitality();
     }, [hutOpen, restVitality]);
@@ -389,7 +389,7 @@ export default function WorldPage() {
         saveToCloud();
         if (opts?.silent) return;
         fresh.forEach((m, i) => {
-            setTimeout(() => showToast(`${m.toast} Â· Codex Journal`), i * 2800);
+            setTimeout(() => showToast(`${m.toast} · Codex Journal`), i * 2800);
         });
     }, [markDiscovered, saveToCloud, showToast]);
 
@@ -411,9 +411,9 @@ export default function WorldPage() {
             const needsFight = !!dest.combat && !ch.cleared.includes(dest.poiId);
             // Eden opens straight into its walkable garden (the Cherub is fought
             // in-world, and each guardian/Cherub fight is individually weapon-gated
-            // there) â€” so an unarmed soul may still enter to name, tend, and roam.
+            // there) — so an unarmed soul may still enter to name, tend, and roam.
             if (needsFight && !ch.equipped.weapon && dest.poiId !== 'dest_eden') {
-                setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truthâ€™s Hut and forge your first weapon.', color: dest.accent });
+                setDialogue({ speaker: dest.guide.name, text: 'You cannot face what guards this place unarmed. Return to Truth’s Hut and forge your first weapon.', color: dest.accent });
             } else if (needsFight && dest.poiId !== 'dest_eden') {
                 setCombatIntroDest(dest);
             } else {
@@ -439,7 +439,7 @@ export default function WorldPage() {
                         }));
                     }
                     saveToCloud();
-                    showToast(`âœ¦ ${hidden.name} revealed Â· +${hidden.rewardSkillPoints} skill point`);
+                    showToast(`✦ ${hidden.name} revealed · +${hidden.rewardSkillPoints} skill point`);
                     setTimeout(() => unlockRoamMilestones(), 100);
                 }
                 setDialogue({ speaker: hidden.name, text: hidden.lore, color: '#22d3ee' });
@@ -460,20 +460,20 @@ export default function WorldPage() {
                 if (echo) setTimeout(() => setDialogue({ speaker: 'Truth', text: echo, color: '#f97316' }), 3200);
             }
         } else if (poi.type === 'cave') {
-            setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend â€” return when your path has deepened.' });
+            setDialogue({ speaker: poi.name, text: 'The cave is sealed with old wards. You are not yet ready to descend — return when your path has deepened.' });
         } else if (poi.type === 'portal') {
             setDialogue({ speaker: 'Portal to the Past', text: 'The veil between ages shimmers, but holds. Its hour has not yet come.', color: '#a855f7' });
         }
     }, [markDiscovered, saveToCloud, showToast, unlockRoamMilestones]);
 
-    // a shade catches you in the open â€” if you're armed, it's a real skirmish;
+    // a shade catches you in the open — if you're armed, it's a real skirmish;
     // unarmed, it's only a cold warning to go forge a weapon.
     const onEncounter = useCallback(() => {
         setHint(false);
         hapticTap('medium');
         const ch = useGameStore.getState().character;
         if (!ch.equipped.weapon) {
-            // non-blocking nudge â€” never freeze roaming just to say "go forge".
+            // non-blocking nudge — never freeze roaming just to say "go forge".
             // Don't comment on every brush; let some pass in silence (organic).
             if (Math.random() < 0.7) showAmbient(truthCombatLine(ch, 'unarmedShade'), '#f97316');
             return;
@@ -486,7 +486,7 @@ export default function WorldPage() {
         saveToCloud();
     }, [markDiscovered, saveToCloud, showToast, showAmbient, worldEvent]);
 
-    // walked over an essence mote in the world â€” bank the material for the forge.
+    // walked over an essence mote in the world — bank the material for the forge.
     // (collection is tracked in the daily-harvest set in WorldCanvas, not in the
     // permanent `discovered` set, so the world refills each day.)
     const onPickup = useCallback((pk: Pickup) => {
@@ -496,14 +496,14 @@ export default function WorldPage() {
         const qty = scalePickupQty(pk.qty, worldEvent);
         if (pk.kind === 'health') {
             healHp(qty);
-            const bonus = qty > pk.qty ? ' Â· bountiful day' : '';
-            showToast(`âœ¦ +${qty} vitality restored${bonus}`);
+            const bonus = qty > pk.qty ? ' · bountiful day' : '';
+            showToast(`✦ +${qty} vitality restored${bonus}`);
             return;
         }
         addMaterial(pk.kind, qty);
         const label = pk.kind === 'iron' ? 'Iron Ore' : pk.kind === 'copper' ? 'Copper' : 'Cosmic Essence';
-        const bonus = qty > pk.qty ? ' Â· bountiful day' : '';
-        showToast(`âœ¦ +${qty} ${label}${bonus}`);
+        const bonus = qty > pk.qty ? ' · bountiful day' : '';
+        showToast(`✦ +${qty} ${label}${bonus}`);
         setTimeout(() => unlockRoamMilestones(), 50);
     }, [addMaterial, healHp, markDiscovered, saveToCloud, showToast, worldEvent, unlockRoamMilestones]);
 
@@ -531,15 +531,15 @@ export default function WorldPage() {
             addMaterial('iron', q);
             loot = `+${q} Iron Ore`;
         }
-        if (mult > 1) loot += ' Â· bountiful day';
+        if (mult > 1) loot += ' · bountiful day';
         showToast(
             firstStand
-                ? `âœ¦ You stood against the shade Â· ${loot}`
+                ? `✦ You stood against the shade · ${loot}`
                 : roll < 0.12
-                    ? 'âœ¦ A mote of Cosmic Essence drifts free'
+                    ? '✦ A mote of Cosmic Essence drifts free'
                     : roll < 0.5
-                        ? 'âœ¦ The shades scatter â€” +1 Copper'
-                        : 'âœ¦ The shades scatter â€” +2 Iron Ore',
+                        ? '✦ The shades scatter — +1 Copper'
+                        : '✦ The shades scatter — +2 Iron Ore',
         );
         setTimeout(() => {
             setDialogue({
@@ -557,7 +557,7 @@ export default function WorldPage() {
         setEncounter(null);
         restVitality();
         setHutOpen(true); // wake at the Hut, fully restored
-        showToast('âœ¦ The shades take you â€” you wake in Truth\'s Hut, vitality restored.');
+        showToast('✦ The shades take you — you wake in Truth\'s Hut, vitality restored.');
     }, [consumeFightBonusHp, restVitality, showToast]);
 
     const handleClaim = useCallback(async (relicId: string) => {
@@ -565,15 +565,15 @@ export default function WorldPage() {
         gameMusic.playSting('relic_claim', Math.random() < 0.4 ? 'alt' : 'main');
         claimRelic(relicId);
         const r = RELIC_BY_ID[relicId];
-        let msg = `âœ¦ ${r?.name || 'Relic'} claimed Â· equipped`;
+        let msg = `✦ ${r?.name || 'Relic'} claimed · equipped`;
         const afterTier = resonanceTier(useGameStore.getState().character.inventory);
-        if (afterTier > beforeTier) msg += ` Â· ${resonanceLabel(afterTier)}`;
+        if (afterTier > beforeTier) msg += ` · ${resonanceLabel(afterTier)}`;
         // the destination's garment is found alongside its relic
         const cloth = activeDest?.clothing;
         if (cloth && !useGameStore.getState().character.wardrobe.includes(cloth)) {
             findClothing(cloth);
             const garment = CLOTHING_BY_ID[cloth];
-            if (garment) msg += ` Â· ${garment.name} found`;
+            if (garment) msg += ` · ${garment.name} found`;
         }
         await saveToCloud();
         hapticTap('heavy');
@@ -592,10 +592,10 @@ export default function WorldPage() {
         setForgeOpen(false);
         hapticTap('medium');
         if (!tutorialsSeen().includes('forge')) setTutorial('forge');
-        // now that a weapon is in hand, the combat lesson is finally relevant â€”
+        // now that a weapon is in hand, the combat lesson is finally relevant —
         // it surfaces after the forge note (and any Truth line) clears.
         queueTutorial('combat', 3000);
-        showToast(`âœ¦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged â€” you are armed`);
+        showToast(`✦ ${WEAPON_BY_ID[id]?.name || 'Weapon'} forged — you are armed`);
         setTimeout(() => {
             setDialogue({
                 speaker: 'Truth',
@@ -640,13 +640,13 @@ export default function WorldPage() {
         setCombatDest(null);
         restVitality();
         setHutOpen(true); // wake at the Hut, fully restored
-        showToast('âœ¦ You fall â€” and wake in Truth\'s Hut, your vitality restored.');
+        showToast('✦ You fall — and wake in Truth\'s Hut, your vitality restored.');
     }, [consumeFightBonusHp, restVitality, showToast]);
 
     const handleSolve = useCallback((puzzleId: string) => {
         markSolved(puzzleId);
         saveToCloud();
-        showToast('âœ¦ The seal breaks â€” the relic is yours to claim');
+        showToast('✦ The seal breaks — the relic is yours to claim');
     }, [markSolved, saveToCloud, showToast]);
 
     const handleClaimQuest = useCallback((q: Quest) => {
@@ -655,7 +655,7 @@ export default function WorldPage() {
         saveToCloud();
         hapticTap('medium');
         const scrollName = q.grantsScroll ? SCROLL_BY_ID[q.grantsScroll]?.name : null;
-        showToast(`âœ¦ Mission complete Â· ${q.reward.text}${scrollName ? ` Â· ${scrollName}` : ''}`);
+        showToast(`✦ Mission complete · ${q.reward.text}${scrollName ? ` · ${scrollName}` : ''}`);
     }, [claimQuest, grantScroll, saveToCloud, showToast]);
 
     if (!mounted) return <div className="w-full bg-void" style={{ height: '100dvh' }} />;
@@ -667,7 +667,7 @@ export default function WorldPage() {
     const pathMods = pathCombatMods(character.path, character.skills);
     const combatBlessing = combatRelicBonuses(character.inventory, character.equipped.relic);
 
-    // every combat stacks relics + path + founder seal + worn garment â€” computed
+    // every combat stacks relics + path + founder seal + worn garment — computed
     // once here and shared by both real-destination fights and wild skirmishes.
     const cSkill = skillBonuses(character.skills);
     const cFounder = founderBonuses(founderNumber);
@@ -695,7 +695,7 @@ export default function WorldPage() {
     const roamingShades = WORLD_HUT_ONLY ? 0 : effectiveShadeCount(baseShades, worldEvent);
     const nextMilestone = nextRoamMilestoneHint(character);
     const questWaypoint = activeQuestWaypoint(character);
-    // persistent "go here next" â€” quests are off, so fall back to a focus
+    // persistent "go here next" — quests are off, so fall back to a focus
     // waypoint (forge at the Hut, then the next destination) so roaming always
     // has a direction instead of the 5s intro hint being the only cue.
     const objectiveWaypoint = QUESTS_ENABLED ? questWaypoint : focusWaypoint(character);
@@ -708,7 +708,7 @@ export default function WorldPage() {
     pausedRef.current = worldPaused;
     tutorialShownRef.current = !!tutorial;
 
-    // secondary HUD actions â€” inline on desktop, tucked into a menu on mobile so
+    // secondary HUD actions — inline on desktop, tucked into a menu on mobile so
     // the player's name + path always have room to breathe.
     const hudActions: { id: string; Icon: typeof BookOpen; label: string; onClick: () => void; badge?: number; color?: string }[] = [
         ...(QUESTS_ENABLED ? [{ id: 'missions', Icon: ScrollText, label: 'Missions', onClick: () => setQuestLogOpen(true) }] : []),
@@ -748,7 +748,7 @@ export default function WorldPage() {
             <div className="absolute top-0 inset-x-0 h-28 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)' }} />
             <div className="absolute bottom-0 inset-x-0 h-44 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.45), transparent)' }} />
 
-            {/* HUD â€” compact on mobile, full-width desktop bar with larger targets */}
+            {/* HUD — compact on mobile, full-width desktop bar with larger targets */}
             <div className="absolute top-0 inset-x-0 mx-auto w-full max-w-[540px] lg:max-w-none flex items-center justify-between gap-2 px-4 lg:px-8 pointer-events-none" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))', paddingBottom: '0.75rem' }}>
                 <div className="flex items-center gap-1.5 lg:gap-2">
                     {/* mobile: a single collapsible menu (Return + all actions) */}
@@ -799,7 +799,7 @@ export default function WorldPage() {
                         <FounderBadge founderNumber={founderNumber} size={18} />
                         <span className="font-ritual text-sm lg:text-base text-white truncate">{character.name || 'Soul'}</span>
                         {path && (
-                            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>Â· {path.name}</span>
+                            <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-widest shrink-0" style={{ color: path.color }}>· {path.name}</span>
                         )}
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -848,7 +848,7 @@ export default function WorldPage() {
                     />
                     {objectiveWaypoint && !hasAllRelics(character.inventory) && (
                         <div className="px-3 py-1 rounded-full bg-black/50 border border-aether-gold/25 backdrop-blur-sm">
-                            <span className="text-[9px] font-black uppercase tracking-[0.22em] text-aether-gold/90">â—† {objectiveWaypoint.title}</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.22em] text-aether-gold/90">◆ {objectiveWaypoint.title}</span>
                         </div>
                     )}
                 </div>
@@ -856,10 +856,10 @@ export default function WorldPage() {
 
             {hint && (
                 <div className="absolute left-1/2 top-[60%] -translate-x-1/2 z-[8] pointer-events-none text-center">
-                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam Â· start at Truth&apos;s Hut</p>
+                    <p className="px-4 py-1.5 rounded-full bg-black/35 border border-white/10 backdrop-blur-sm text-[10px] uppercase tracking-[0.3em] text-white/60 animate-pulse whitespace-nowrap">drag to roam · start at Truth&apos;s Hut</p>
                     {nextMilestone && (
                         <p className="mt-2 text-[9px] uppercase tracking-[0.2em] text-zinc-500/90 max-w-[16rem] mx-auto leading-snug">
-                            Next road Â· {nextMilestone.title}
+                            Next road · {nextMilestone.title}
                         </p>
                     )}
                 </div>
@@ -876,7 +876,7 @@ export default function WorldPage() {
                 </div>
             )}
 
-            {/* ambient Truth â€” non-blocking bubble above the controls; the world
+            {/* ambient Truth — non-blocking bubble above the controls; the world
                 keeps running and the joystick stays under your thumb */}
             {ambient && worldIntroDone && !worldPaused && !tutorial && (
                 <div
@@ -890,7 +890,7 @@ export default function WorldPage() {
                 </div>
             )}
 
-            {/* the way to the Source â€” opens once every relic has been gathered */}
+            {/* the way to the Source — opens once every relic has been gathered */}
             {hasAllRelics(character.inventory) && !character.sourceReturned && (
                 <button
                     onClick={() => setSourceOpen(true)}
@@ -898,14 +898,14 @@ export default function WorldPage() {
                     style={{ top: 'calc(10.5rem + env(safe-area-inset-top))', background: 'linear-gradient(135deg, rgba(252,211,77,0.96) 0%, rgba(180,83,9,0.96) 100%)', boxShadow: '0 0 44px rgba(251,191,36,0.6)' }}
                 >
                     <span className="block text-[8px] font-black uppercase tracking-[0.35em] text-black/70">The five relics burn as one</span>
-                    <span className="block text-[12px] font-black uppercase tracking-[0.25em] text-black mt-0.5">Return to the Source â†’</span>
+                    <span className="block text-[12px] font-black uppercase tracking-[0.25em] text-black mt-0.5">Return to the Source →</span>
                 </button>
             )}
 
             {/* the journey, once completed, dwells in the soul */}
             {character.sourceReturned && (
                 <div className="absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4 py-1.5 rounded-full bg-black/50 border border-aether-gold/30" style={{ top: 'calc(10.5rem + env(safe-area-inset-top))' }}>
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-aether-gold">âœ¦ The Source dwells in you</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-aether-gold">✦ The Source dwells in you</span>
                 </div>
             )}
 
@@ -919,7 +919,7 @@ export default function WorldPage() {
                 />
             )}
 
-            {/* Truth's Hut â€” live daily dispatch */}
+            {/* Truth's Hut — live daily dispatch */}
             {hutOpen && (
                 <HutInterior
                     character={character}
@@ -942,7 +942,7 @@ export default function WorldPage() {
                         style={{ background: 'linear-gradient(165deg,#5a3d22 0%,#3f2a16 55%,#2b1d0f 100%)', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,0.35), inset 0 0 0 4px rgba(214,160,90,0.22), 0 22px 55px rgba(0,0,0,0.65)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* leather flap, buckle & stitching â€” this is a satchel */}
+                        {/* leather flap, buckle & stitching — this is a satchel */}
                         <div className="pointer-events-none absolute inset-x-0 top-0 h-9 rounded-t-[1.75rem]" style={{ background: 'linear-gradient(180deg,#6b4a28,#4a3119)', boxShadow: 'inset 0 1px 0 rgba(255,220,160,0.22), 0 3px 7px rgba(0,0,0,0.4)' }} />
                         <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-sm" style={{ top: '1.55rem', width: '2.2rem', height: '0.95rem', background: 'linear-gradient(180deg,#f3cf8a,#b9852f)', border: '1px solid rgba(80,50,15,0.7)', boxShadow: '0 1px 2px rgba(0,0,0,0.4)' }} />
                         <div className="pointer-events-none absolute inset-[6px] rounded-[1.5rem] border border-dashed border-amber-200/20" />
@@ -997,14 +997,14 @@ export default function WorldPage() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm text-white">{def.name}</p>
-                                                        <p className="text-[9px] text-zinc-500">Ã—{qty} Â· {formatConsumableEffect(def.effect)}</p>
+                                                        <p className="text-[9px] text-zinc-500">×{qty} · {formatConsumableEffect(def.effect)}</p>
                                                     </div>
                                                     <button
                                                         type="button"
                                                         onClick={() => {
                                                             if (useConsumable(id)) {
                                                                 saveToCloud();
-                                                                showToast(`âœ¦ ${def.name} taken Â· ${formatConsumableEffect(def.effect)} for next fight`);
+                                                                showToast(`✦ ${def.name} taken · ${formatConsumableEffect(def.effect)} for next fight`);
                                                             }
                                                         }}
                                                         className="shrink-0 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-black"
@@ -1019,15 +1019,15 @@ export default function WorldPage() {
                                     {(character.fightBonusHp > 0 || (character.fightBonusDamage ?? 0) > 0) && (
                                         <p className="text-[9px] text-emerald-400/80 mt-2 leading-relaxed">
                                             Active for next fight
-                                            {character.fightBonusHp > 0 ? ` Â· +${character.fightBonusHp} vitality` : ''}
-                                            {(character.fightBonusDamage ?? 0) > 0 ? ` Â· +${character.fightBonusDamage} might` : ''}
+                                            {character.fightBonusHp > 0 ? ` · +${character.fightBonusHp} vitality` : ''}
+                                            {(character.fightBonusDamage ?? 0) > 0 ? ` · +${character.fightBonusDamage} might` : ''}
                                         </p>
                                     )}
                                 </div>
                             );
                         })()}
 
-                        {/* the goal â€” gather all five relics to open the way to the Source */}
+                        {/* the goal — gather all five relics to open the way to the Source */}
                         {(() => {
                             // Near-term goal tracks relics from the ages that are OPEN; the
                             // full 5-relic Source gate still needs every age (some sealed).
@@ -1046,12 +1046,12 @@ export default function WorldPage() {
                                     ? 'You hold every relic of the open ages. More will unveil on the road ahead.'
                                     : moreComing
                                         ? 'Gather the relics of the ages now open. More will unveil as you walk.'
-                                        : 'Gather all five relics â€” one from each destination â€” to open the way back to the Source.';
+                                        : 'Gather all five relics — one from each destination — to open the way back to the Source.';
                             return (
                                 <div className="mb-5 rounded-2xl border p-4" style={{ borderColor: done ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.1)', background: done ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.02)' }}>
                                     <div className="flex items-center justify-between mb-2">
                                         <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/80">Path to the Source</p>
-                                        <p className="text-[10px] font-black tracking-widest text-aether-gold">{got} / {openTotal}{moreComing ? ` Â· ${grandTotal} in all` : ''}</p>
+                                        <p className="text-[10px] font-black tracking-widest text-aether-gold">{got} / {openTotal}{moreComing ? ` · ${grandTotal} in all` : ''}</p>
                                     </div>
                                     <div className="h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
                                         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#fcd34d,#b45309)' }} />
@@ -1062,7 +1062,7 @@ export default function WorldPage() {
                         })()}
                         <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                             <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/80 mb-1">Relic resonance</p>
-                            <p className="text-[11px] text-zinc-400 leading-relaxed">{resonanceLabel(resTier)} Â· {resTier}/5 relics humming</p>
+                            <p className="text-[11px] text-zinc-400 leading-relaxed">{resonanceLabel(resTier)} · {resTier}/5 relics humming</p>
                         </div>
                         {(() => {
                             const rb = combatBlessing;
@@ -1081,7 +1081,7 @@ export default function WorldPage() {
                             ].filter(Boolean);
                             return parts.length ? (
                                 <div className="mb-5">
-                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing Â· equipped relic + echo + path</p>
+                                    <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-500 mb-2">Combat blessing · equipped relic + echo + path</p>
                                     <div className="flex flex-wrap gap-2">
                                         {parts.map((p) => (
                                             <span key={p} className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-aether-gold/10 border border-aether-gold/30 text-aether-gold">{p}</span>
@@ -1107,12 +1107,12 @@ export default function WorldPage() {
                                                 <h4 className="text-sm font-bold text-white">{r.name}</h4>
                                                 <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{r.from}</p>
                                                 <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{r.desc}</p>
-                                                {r.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">âš” {r.power.label}{equipped ? '' : ' (20% echo)'}</p>}
+                                                {r.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {r.power.label}{equipped ? '' : ' (20% echo)'}</p>}
                                             </div>
                                             {equipped ? (
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-aether-gold shrink-0 self-center">Equipped</span>
                                             ) : (
-                                                <button onClick={() => { equipRelic(id); saveToCloud(); showToast(`âœ¦ ${r.name} equipped`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                <button onClick={() => { equipRelic(id); saveToCloud(); showToast(`✦ ${r.name} equipped`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                                     Equip
                                                 </button>
                                             )}
@@ -1122,7 +1122,7 @@ export default function WorldPage() {
                             </div>
                         )}
 
-                        {/* scrolls â€” puzzle insight */}
+                        {/* scrolls — puzzle insight */}
                         {character.scrolls.length > 0 && (
                             <div className="mt-6 pt-5 border-t border-white/10">
                                 <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Scrolls</p>
@@ -1143,7 +1143,7 @@ export default function WorldPage() {
                                                 {equipped ? (
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-purple-400 shrink-0 self-center">Readied</span>
                                                 ) : (
-                                                    <button onClick={() => { equipScroll(id); saveToCloud(); showToast(`âœ¦ ${sc.name} readied`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#c084fc 0%,#6b21a8 100%)' }}>
+                                                    <button onClick={() => { equipScroll(id); saveToCloud(); showToast(`✦ ${sc.name} readied`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#c084fc 0%,#6b21a8 100%)' }}>
                                                         Ready
                                                     </button>
                                                 )}
@@ -1154,7 +1154,7 @@ export default function WorldPage() {
                             </div>
                         )}
 
-                        {/* wardrobe â€” garments you've found (start in the plain garment) */}
+                        {/* wardrobe — garments you've found (start in the plain garment) */}
                         <div className="mt-6 pt-5 border-t border-white/10">
                             <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-3">Wardrobe</p>
                             <div className="space-y-3">
@@ -1171,12 +1171,12 @@ export default function WorldPage() {
                                                 <h4 className="text-sm font-bold text-white">{g.name}</h4>
                                                 <p className="text-[9px] font-mono uppercase tracking-widest text-aether-gold/60">{g.from}</p>
                                                 <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{g.desc}</p>
-                                                {g.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">âš” {g.power.label}</p>}
+                                                {g.power && <p className="text-[10px] font-black uppercase tracking-widest mt-1.5 text-aether-gold">⚔ {g.power.label}</p>}
                                             </div>
                                             {worn ? (
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-aether-gold shrink-0 self-center">Worn</span>
                                             ) : (
-                                                <button onClick={() => { equipClothing(id); saveToCloud(); showToast(`âœ¦ ${g.name} donned`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
+                                                <button onClick={() => { equipClothing(id); saveToCloud(); showToast(`✦ ${g.name} donned`); }} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black shrink-0 self-center" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
                                                     Wear
                                                 </button>
                                             )}
@@ -1201,7 +1201,7 @@ export default function WorldPage() {
                     onGuardianCleared={(poiId) => {
                         markCleared(poiId);
                         saveToCloud();
-                        showToast('âœ¦ The guardian falls â€” the inner garden opens.');
+                        showToast('✦ The guardian falls — the inner garden opens.');
                     }}
                     onDiscover={(ids) => {
                         const ch = useGameStore.getState().character;
@@ -1232,24 +1232,24 @@ export default function WorldPage() {
                                             {q.missionStep != null && q.missionTotal != null && (
                                                 <span className="text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-aether-gold/30 text-aether-gold/90 shrink-0">
                                                     Mission {q.missionStep} / {q.missionTotal}
-                                                    {q.missionPhase === 'boss' ? ' Â· Boss' : q.missionPhase === 'relic' ? ' Â· Relic' : ''}
+                                                    {q.missionPhase === 'boss' ? ' · Boss' : q.missionPhase === 'relic' ? ' · Relic' : ''}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="font-ritual italic text-white/85 text-sm leading-relaxed mb-4">â€œ{claimed || met ? q.completeText : q.intro}â€</p>
+                                        <p className="font-ritual italic text-white/85 text-sm leading-relaxed mb-4">“{claimed || met ? q.completeText : q.intro}”</p>
                                         <div className="text-[11px] mb-3">
                                             {claimed ? (
                                                 <span className="text-aether-gold flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Completed</span>
                                             ) : (
-                                                <span className="text-zinc-400"><span className="uppercase tracking-widest text-[9px] text-zinc-500">Objective Â· </span>{q.objectiveText} <span style={{ color: met ? '#34d399' : '#fbbf24' }}>({objectiveProgress(q, character)})</span></span>
+                                                <span className="text-zinc-400"><span className="uppercase tracking-widest text-[9px] text-zinc-500">Objective · </span>{q.objectiveText} <span style={{ color: met ? '#34d399' : '#fbbf24' }}>({objectiveProgress(q, character)})</span></span>
                                             )}
                                         </div>
                                         {!claimed && (met ? (
                                             <button onClick={() => handleClaimQuest(q)} className="px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                                                Claim Â· {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
+                                                Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
                                             </button>
                                         ) : (
-                                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">Reward Â· {q.reward.skillPoints} skill point{q.reward.skillPoints === 1 ? '' : 's'}</p>
+                                            <p className="text-[10px] uppercase tracking-widest text-zinc-600">Reward · {q.reward.skillPoints} skill point{q.reward.skillPoints === 1 ? '' : 's'}</p>
                                         ))}
                                     </div>
                                 );
@@ -1280,19 +1280,19 @@ export default function WorldPage() {
                                                 <h3 className="text-sm font-bold text-white break-words">{q.title}</h3>
                                                 {q.missionStep != null && q.missionTotal != null && (
                                                     <p className="text-[8px] uppercase tracking-[0.18em] text-zinc-500 mt-0.5">
-                                                        {q.giverName} Â· Mission {q.missionStep}/{q.missionTotal}
+                                                        {q.giverName} · Mission {q.missionStep}/{q.missionTotal}
                                                     </p>
                                                 )}
                                             </div>
                                             <span className="text-[9px] font-black uppercase tracking-widest shrink-0" style={{ color }}>{status}</span>
                                         </div>
-                                        <p className="text-[10px] text-zinc-500 mt-0.5">{q.giverName} Â· {q.objectiveText} ({objectiveProgress(q, character)})</p>
+                                        <p className="text-[10px] text-zinc-500 mt-0.5">{q.giverName} · {q.objectiveText} ({objectiveProgress(q, character)})</p>
                                         {!claimed && q.intro && (
-                                            <p className="text-[11px] text-white/70 italic leading-snug mt-1.5">â€œ{q.intro}â€</p>
+                                            <p className="text-[11px] text-white/70 italic leading-snug mt-1.5">“{q.intro}”</p>
                                         )}
                                         {met && !claimed && (
                                             <button onClick={() => handleClaimQuest(q)} className="mt-2 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                                                Claim Â· {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
+                                                Claim · {q.reward.skillPoints} skill pt{q.reward.skillPoints === 1 ? '' : 's'}
                                             </button>
                                         )}
                                     </div>
@@ -1306,7 +1306,7 @@ export default function WorldPage() {
             {/* first-weapon forge */}
             {forgeOpen && <WeaponForge onForge={handleForge} onClose={() => setForgeOpen(false)} />}
 
-            {/* combat encounter â€” relics + your path's attunements + founder blessing stack */}
+            {/* combat encounter — relics + your path's attunements + founder blessing stack */}
             {combatDest && combatDest.combat && (
                 <CombatScene
                     destination={combatDest}
@@ -1321,7 +1321,7 @@ export default function WorldPage() {
                 />
             )}
 
-            {/* wandering-shade skirmish â€” a shade caught you out in the open */}
+            {/* wandering-shade skirmish — a shade caught you out in the open */}
             {encounter && encounter.combat && (
                 <CombatScene
                     destination={encounter}
@@ -1336,7 +1336,7 @@ export default function WorldPage() {
                 />
             )}
 
-            {/* the endgame â€” the Return to the Source */}
+            {/* the endgame — the Return to the Source */}
             {sourceOpen && (
                 <SourceScene
                     character={character}
@@ -1375,7 +1375,7 @@ export default function WorldPage() {
                 <SourceEpilogue
                     character={character}
                     founderNumber={founderNumber}
-                    onClose={() => { setEpilogueOpen(false); showToast('âœ¦ You have returned to the Source'); }}
+                    onClose={() => { setEpilogueOpen(false); showToast('✦ You have returned to the Source'); }}
                 />
             )}
         </div>

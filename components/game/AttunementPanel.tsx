@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { Check, Crown, Lock, Sparkles, Zap, Globe, BookOpen, X } from 'lucide-react';
@@ -28,7 +28,7 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
         return (
             <div className="p-6 text-center">
                 <p className="text-sm text-zinc-400">No path embraced yet.</p>
-                <Link href="/awakening/path" className="inline-block mt-4 text-[10px] font-black uppercase tracking-widest text-aether-gold">Choose your path â†’</Link>
+                <Link href="/awakening/path" className="inline-block mt-4 text-[10px] font-black uppercase tracking-widest text-aether-gold">Choose your path →</Link>
             </div>
         );
     }
@@ -106,11 +106,11 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
                                             </div>
                                             <p className="text-[11px] text-zinc-400 mt-1 leading-relaxed">{node.desc}</p>
                                             {node.combat && (
-                                                <p className="text-[9px] font-black uppercase tracking-widest mt-1.5" style={{ color: active.color }}>âš” {node.combat.label}</p>
+                                                <p className="text-[9px] font-black uppercase tracking-widest mt-1.5" style={{ color: active.color }}>⚔ {node.combat.label}</p>
                                             )}
                                             {ability && (
                                                 <div className="mt-2 flex flex-wrap gap-2 text-[8px] uppercase tracking-widest">
-                                                    {ability.scope === 'combat' && <span className="px-2 py-0.5 rounded-full border border-red-400/30 text-red-300/90">Combat Â· {ability.cooldownSec}s cd</span>}
+                                                    {ability.scope === 'combat' && <span className="px-2 py-0.5 rounded-full border border-red-400/30 text-red-300/90">Combat · {ability.cooldownSec}s cd</span>}
                                                     {ability.scope === 'world' && <span className="px-2 py-0.5 rounded-full border border-emerald-400/30 text-emerald-300/90 flex items-center gap-1"><Globe className="w-2.5 h-2.5" /> World</span>}
                                                     {ability.scope === 'puzzle' && <span className="px-2 py-0.5 rounded-full border border-purple-400/30 text-purple-300/90 flex items-center gap-1"><BookOpen className="w-2.5 h-2.5" /> Riddles</span>}
                                                 </div>
@@ -118,7 +118,7 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
                                         </div>
                                         <div className="shrink-0 self-center">
                                             {isLearned ? (
-                                                <span className="text-[10px] font-black" style={{ color: active.color }}>âœ¦</span>
+                                                <span className="text-[10px] font-black" style={{ color: active.color }}>✦</span>
                                             ) : learnable ? (
                                                 <button onClick={() => onLearn(node.id)} className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg text-black" style={{ background: active.color }}>Learn</button>
                                             ) : (
