@@ -443,14 +443,26 @@ namespace Journey3D
             cc.radius = 0.35f;
             cc.center = new Vector3(0, 0.95f, 0);
 
-            // the soul itself: a real Quaternius character picked and tinted
-            // from the saved build/outfit, animated with the shared clip set
-            _appearance = root.AddComponent<PlayerAppearance>();
-            _appearance.Apply();
-            root.AddComponent<WalkAnimator>().Bind(_appearance, cc);
+            // the soul: the procedural avatar (reliable, upright, walks, and
+            // recolors live in the creator). The Quaternius rig is kept for
+            // Truth; the modular player rig contorts on the shared anims, so the
+            // player uses this proven avatar until that rig is fixed.
+            var avatarPrefab = Resources.Load<GameObject>("Models/player_avatar");
+            Transform avatar = null;
+            if (avatarPrefab != null)
+            {
+                var a = Instantiate(avatarPrefab, root.transform);
+                a.name = "avatar";
+                avatar = a.transform;
+                _appearance = root.AddComponent<PlayerAppearance>();
+                _appearance.Bind(a);
+                WorldSkin.Skin(a, instanced: true);
+                _appearance.Apply();
+                root.AddComponent<WalkAnimator>().Bind(a.transform, cc);
+            }
 
             var pc = root.AddComponent<PlayerController>();
-            pc.avatar = null;   // gait comes from real animation clips now
+            pc.avatar = avatar;
             _playerRoot = root.transform;
             return pc;
         }

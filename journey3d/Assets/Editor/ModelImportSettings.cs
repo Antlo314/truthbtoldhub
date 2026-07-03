@@ -11,7 +11,7 @@ namespace Journey3D.EditorTools
     public class ModelImportSettings : AssetPostprocessor
     {
         // bump to force re-import when this processor's behavior changes
-        public override uint GetVersion() => 2;
+        public override uint GetVersion() => 3;
 
         private void OnPreprocessModel()
         {
@@ -28,28 +28,29 @@ namespace Journey3D.EditorTools
             }
         }
 
-        /// The Blender action bake writes object-level transform keys onto the
-        /// armature node itself. Played back on a differently-imported mesh
-        /// prefab, those scale/position keys stomp Unity's unit-conversion on
-        /// that node and blow the character up. Bone curves live BELOW the
-        /// armature path and are untouched.
+        /// The Blender action bake writes object-level SCALE and POSITION keys
+        /// (from unit-conversion) onto the armature and bones. Played on the
+        /// imported mesh they scale the character ~46x and translate it ~90
+        /// units away, so it renders off-screen (invisible). A stationary
+        /// walk/idle cycle only needs bone ROTATIONS - forward motion comes from
+        /// the CharacterController - so strip EVERY scale and position curve
+        /// (any node path) and keep rotations only.
         private void OnPostprocessAnimation(GameObject root, AnimationClip clip)
         {
             if (!assetPath.Contains("Models/quaternius/anims_")) return;
             int removed = 0;
             foreach (var binding in AnimationUtility.GetCurveBindings(clip))
             {
-                bool armatureNode = binding.path == "CharacterArmature";
-                bool transformKey = binding.propertyName.StartsWith("m_LocalScale") ||
-                                    binding.propertyName.StartsWith("m_LocalPosition");
-                if (armatureNode && transformKey)
+                bool killScale = binding.propertyName.StartsWith("m_LocalScale");
+                bool killPos = binding.propertyName.StartsWith("m_LocalPosition");
+                if (killScale || killPos)
                 {
                     AnimationUtility.SetEditorCurve(clip, binding, null);
                     removed++;
                 }
             }
             if (removed > 0)
-                Debug.Log($"J3D import: stripped {removed} armature-object curves from {clip.name}");
+                Debug.Log($"J3D import: stripped {removed} scale/position curves from {clip.name} (rotations kept)");
         }
     }
 }

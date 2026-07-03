@@ -27,6 +27,13 @@ namespace Journey3D
             inst.transform.localRotation = Quaternion.identity;
             Normalize(wrapper.transform, inst.transform, height);
 
+            // Skinned-mesh renderer bounds are unreliable for these imported rigs
+            // (they balloon - see Normalize's note), so Unity frustum-culls the
+            // character to INVISIBILITY. Force per-frame bounds recompute so the
+            // character always draws where it actually is.
+            foreach (var smr in inst.GetComponentsInChildren<SkinnedMeshRenderer>())
+                smr.updateWhenOffscreen = true;
+
             var rig = wrapper.AddComponent<CharacterRig>();
             rig.Bind(inst, donor);
 
