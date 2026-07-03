@@ -16,10 +16,10 @@ namespace Journey3D
         {
             Application.targetFrameRate = 60;
 
-            // grounding shadows add real depth; kept cheap for WebGL/mobile
-            QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowResolution = ShadowResolution.Medium;
-            QualitySettings.shadowDistance = 38f;
+            // NOTE: real-time shadows are OFF - Unity WebGL strips shadow shader
+            // variants, which rendered the in-world scene black. Do not re-enable
+            // without shipping the shadow variants in a shader-variant collection.
+            QualitySettings.shadows = ShadowQuality.Disable;
             QualitySettings.pixelLightCount = 4;
 
             // ---- lighting (fixes the previously near-black WebGL room) ----
@@ -110,9 +110,8 @@ namespace Journey3D
             var sl = sun.AddComponent<Light>();
             sl.type = LightType.Directional;
             sl.color = new Color(1f, 0.95f, 0.84f);
-            sl.intensity = 1.15f;
-            sl.shadows = LightShadows.Soft;
-            sl.shadowStrength = 0.55f;        // soft grounding, not harsh
+            sl.intensity = 1.2f;
+            sl.shadows = LightShadows.None;   // WebGL variant-stripping -> black
             sun.transform.rotation = Quaternion.Euler(52f, 28f, 0);
         }
 
