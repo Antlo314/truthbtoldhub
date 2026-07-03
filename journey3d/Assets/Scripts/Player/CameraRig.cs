@@ -13,6 +13,7 @@ namespace Journey3D
         public float orbitSpeed = 3.2f;
         public float followLerp = 10f;
         public bool inputLocked;
+        public bool portraitMode;    // creator: slow auto-orbit close on the avatar
 
         private float _yaw = 0f;     // start behind the player, facing Truth and the back wall
         private float _pitch = 13f;  // lower angle - see the room, not the floor
@@ -20,6 +21,19 @@ namespace Journey3D
         private void LateUpdate()
         {
             if (target == null) return;
+
+            if (portraitMode)
+            {
+                // slow catwalk orbit, framed on the body; offset left so the
+                // avatar sits beside the creator card, not under it
+                _yaw += 14f * Time.deltaTime;
+                var pRot = Quaternion.Euler(6f, _yaw + 180f, 0);   // face the front
+                var pFocus = target.position + Vector3.up * 1.0f + transform.right * -0.55f;
+                var pWanted = pFocus - pRot * Vector3.forward * 3.1f + Vector3.up * 0.35f;
+                transform.position = Vector3.Lerp(transform.position, pWanted, 6f * Time.deltaTime);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(pFocus - transform.position), 6f * Time.deltaTime);
+                return;
+            }
 
             if (!inputLocked)
             {

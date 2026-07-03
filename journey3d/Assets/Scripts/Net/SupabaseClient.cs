@@ -32,19 +32,26 @@ namespace Journey3D
             return req;
         }
 
-        // JsonUtility cannot parse a top-level array; wrap it.
+        // JsonUtility cannot parse a top-level array AND cannot handle generic
+        // wrapper classes (it silently returns empty) - so one concrete wrapper
+        // per row type, dispatched by type.
+        [Serializable] private class BulletinList { public List<BulletinRow> items; }
+        [Serializable] private class MediaList { public List<MediaRow> items; }
+        [Serializable] private class ScoreList { public List<LeaderboardRow> items; }
+
         private static List<T> ParseArray<T>(string json)
         {
             try
             {
-                var wrapped = JsonUtility.FromJson<Wrapper<T>>("{\"items\":" + json + "}");
-                return wrapped?.items ?? new List<T>();
+                string wrapped = "{\"items\":" + json + "}";
+                object result = null;
+                if (typeof(T) == typeof(BulletinRow)) result = JsonUtility.FromJson<BulletinList>(wrapped)?.items;
+                else if (typeof(T) == typeof(MediaRow)) result = JsonUtility.FromJson<MediaList>(wrapped)?.items;
+                else if (typeof(T) == typeof(LeaderboardRow)) result = JsonUtility.FromJson<ScoreList>(wrapped)?.items;
+                return result as List<T> ?? new List<T>();
             }
             catch { return new List<T>(); }
         }
-
-        [Serializable]
-        private class Wrapper<T> { public List<T> items; }
 
         // ---------- The Ledger: bulletins ----------
         public void FetchBulletins(int limit, Action<List<BulletinRow>> done)

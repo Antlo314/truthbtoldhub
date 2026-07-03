@@ -17,15 +17,7 @@ namespace Journey3D
 
         private void Start()
         {
-            // warm room drone (2D, quiet, looping)
-            var droneGo = new GameObject("Drone");
-            droneGo.transform.SetParent(transform, false);
-            var drone = droneGo.AddComponent<AudioSource>();
-            drone.clip = MakeDrone(4);
-            drone.loop = true;
-            drone.volume = 0.16f;
-            drone.spatialBlend = 0f;
-            drone.Play();
+            // (the original soundtrack plays from the hosting page - no drone)
 
             // fireplace crackle (positional)
             var fireGo = new GameObject("FireCrackle");
@@ -75,24 +67,6 @@ namespace Journey3D
         }
 
         // ---- procedural clips ----
-        private AudioClip MakeDrone(int seconds)
-        {
-            int n = SR * seconds;
-            var data = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)SR;
-                float swell = 0.8f + 0.2f * Mathf.Sin(2f * Mathf.PI * 0.08f * t);
-                float s = Mathf.Sin(2f * Mathf.PI * 55f * t)
-                        + 0.5f * Mathf.Sin(2f * Mathf.PI * 82.4f * t)
-                        + 0.28f * Mathf.Sin(2f * Mathf.PI * 110f * t);
-                data[i] = 0.16f * s * swell;
-            }
-            var clip = AudioClip.Create("drone", n, 1, SR, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
-
         private AudioClip MakeFire(int seconds)
         {
             int n = SR * seconds;

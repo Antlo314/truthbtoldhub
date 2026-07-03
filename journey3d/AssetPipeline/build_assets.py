@@ -242,30 +242,50 @@ def build_fireplace():
 # =============================================================
 
 def build_truth():
+    # A MAN, not a tree: human proportions, visible face and beard inside an
+    # open hood, robe with sleeves, and a staff with a glowing amber crown.
     parts = []
     robe = mat('truth_robe', hex_c('b3480f'), rough=0.9)
     robe_dark = mat('truth_robe_dark', hex_c('7c300a'), rough=0.95)
-    face_void = mat('truth_face', DARKVOID)
-    eye = mat('truth_eye', AMBER, emit=AMBER, emit_strength=10.0)
-    # robe body
-    parts.append(cone('robe', 0.55, 0.28, 1.5, (0, 0, 0.75), robe, verts=20))
-    # shoulders / chest
-    parts.append(sphere('chest', 0.34, (0, 0, 1.5), robe, scale=(1, 0.9, 0.8)))
-    # hood
-    parts.append(sphere('hood', 0.3, (0, 0, 1.86), robe_dark, scale=(1, 1.05, 1.15)))
-    parts.append(cone('hood_tip', 0.18, 0.01, 0.35, (0, -0.08, 2.15), robe_dark, rot=(-0.5, 0, 0)))
-    # face void + eyes (faces -Y forward)
-    parts.append(sphere('face', 0.21, (0, -0.14, 1.84), face_void, scale=(0.9, 0.6, 1.0)))
-    parts.append(sphere('eye_l', 0.035, (-0.08, -0.26, 1.88), eye))
-    parts.append(sphere('eye_r', 0.035, (0.08, -0.26, 1.88), eye))
-    # arms folded low
-    parts.append(cyl('arm_l', 0.09, 0.62, (-0.3, -0.12, 1.18), robe, rot=(0.5, 0.9, 0)))
-    parts.append(cyl('arm_r', 0.09, 0.62, (0.3, -0.12, 1.18), robe, rot=(0.5, -0.9, 0)))
-    parts.append(sphere('hand_l', 0.075, (-0.1, -0.3, 1.05), face_void))
-    parts.append(sphere('hand_r', 0.075, (0.1, -0.3, 1.05), face_void))
-    # gold belt + trim
-    parts.append(torus('belt', 0.42, 0.035, (0, 0, 1.05), M_GOLD(), rot=(0, 0, 0), scale=(1, 1, 1.6)))
-    parts.append(torus('hem', 0.55, 0.03, (0, 0, 0.06), M_GOLD()))
+    skin = mat('truth_skin', hex_c('7a4a22'), rough=0.8)
+    beard_m = mat('truth_beard', hex_c('c9c3b8'), rough=0.95)
+    eye = mat('truth_eye', hex_c('2a2030'), rough=0.4)
+    staff_wood = mat('staff_wood', hex_c('3d2817'), rough=0.9)
+    staff_glow = mat('staff_glow', AMBER, emit=AMBER, emit_strength=6.0)
+
+    # legs hinted under the robe skirt
+    parts.append(cone('robe_skirt', 0.42, 0.3, 1.05, (0, 0, 0.525), robe, verts=16))
+    # torso
+    parts.append(cyl('chest', 0.3, 0.65, (0, 0, 1.35), robe, verts=14))
+    parts.append(sphere('shoulders', 0.31, (0, 0, 1.66), robe, scale=(1.15, 0.85, 0.55)))
+    # neck + HEAD (real skin, faces -Y)
+    parts.append(cyl('neck', 0.08, 0.12, (0, 0, 1.75), skin, verts=8))
+    parts.append(sphere('head', 0.165, (0, 0, 1.9), skin))
+    # eyes
+    parts.append(sphere('eye_l', 0.022, (-0.06, -0.15, 1.93), eye))
+    parts.append(sphere('eye_r', 0.022, (0.06, -0.15, 1.93), eye))
+    # brow + nose
+    parts.append(box('brow', (0.16, 0.04, 0.025), (0, -0.145, 1.965), skin))
+    parts.append(box('nose', (0.045, 0.05, 0.09), (0, -0.165, 1.885), skin))
+    # grey beard - the elder's mark
+    parts.append(sphere('beard', 0.13, (0, -0.1, 1.79), beard_m, scale=(1.0, 0.7, 1.15)))
+    parts.append(cone('beard_tip', 0.08, 0.01, 0.22, (0, -0.12, 1.66), beard_m, rot=(0.25, 0, 0)))
+    # open hood framing the head (behind + above, face visible)
+    parts.append(sphere('hood_back', 0.21, (0, 0.07, 1.93), robe_dark, scale=(1.1, 0.9, 1.15)))
+    parts.append(torus('hood_rim', 0.19, 0.045, (0, -0.05, 1.95), robe_dark, rot=(math.pi / 2 - 0.35, 0, 0)))
+    parts.append(cone('hood_peak', 0.12, 0.01, 0.3, (0, 0.1, 2.2), robe_dark, rot=(0.35, 0, 0)))
+    # arms: left relaxed, right raised holding the staff
+    parts.append(cyl('arm_l', 0.075, 0.6, (-0.33, 0, 1.32), robe, rot=(0, 0.15, 0)))
+    parts.append(sphere('hand_l', 0.06, (-0.38, 0, 1.0), skin))
+    parts.append(cyl('arm_r', 0.075, 0.55, (0.33, -0.1, 1.4), robe, rot=(-0.35, -0.25, 0)))
+    parts.append(sphere('hand_r', 0.06, (0.42, -0.22, 1.18), skin))
+    # the staff - planted beside him, amber crown glowing
+    parts.append(cyl('staff', 0.035, 2.05, (0.46, -0.24, 1.025), staff_wood, verts=8))
+    parts.append(sphere('staff_orb', 0.07, (0.46, -0.24, 2.12), staff_glow))
+    parts.append(torus('staff_collar', 0.055, 0.015, (0.46, -0.24, 2.02), M_GOLD()))
+    # gold belt + hem trim
+    parts.append(torus('belt', 0.31, 0.03, (0, 0, 1.08), M_GOLD(), scale=(1, 1, 1.4)))
+    parts.append(torus('hem', 0.42, 0.025, (0, 0, 0.05), M_GOLD()))
     export_asset('truth_sage', parts)
 
 

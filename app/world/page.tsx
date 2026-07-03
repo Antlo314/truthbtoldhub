@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { gameMusic } from '@/lib/game/music';
 
 // =====================================================================
 //  THE JOURNEY 3D — Truth's Hut (Unity WebGL)
-//  The 3D hut replaced the 2D overworld here on 2026-07-02.
-//  The classic 2D build still lives at /world2d (deep-links use it too).
-//  Build artifacts are served from /public/hut3d/Build (see journey3d/).
+//  Mobile-first host: the canvas fills the viewport at native pixel
+//  density, phones get a fullscreen+landscape button, and the game's
+//  original soundtrack (public/audio/game) plays here on the page.
 // =====================================================================
 
 declare global {
@@ -16,7 +17,7 @@ declare global {
             canvas: HTMLCanvasElement,
             config: Record<string, unknown>,
             onProgress?: (p: number) => void,
-        ) => Promise<{ Quit: () => Promise<void> }>;
+        ) => Promise<{ Quit: () => Promise<void>; SetFullscreen: (f: number) => void }>;
     }
 }
 
@@ -24,17 +25,45 @@ const BUILD_BASE = '/hut3d/Build';
 
 export default function World3DPage() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
     const instanceRef = useRef<{ Quit: () => Promise<void> } | null>(null);
     const [progress, setProgress] = useState(0);
     const [ready, setReady] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isTouch, setIsTouch] = useState(false);
+
+    // size the render buffer to the element's real pixels (capped DPR for perf)
+    const fitCanvas = () => {
+        const c = canvasRef.current;
+        const stage = stageRef.current;
+        if (!c || !stage) return;
+        const r = stage.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        c.width = Math.max(1, Math.round(r.width * dpr));
+        c.height = Math.max(1, Math.round(r.height * dpr));
+    };
 
     useEffect(() => {
+        setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+        fitCanvas();
+        window.addEventListener('resize', fitCanvas);
+        window.addEventListener('orientationchange', fitCanvas);
+
+        // the original soundtrack, started on the first gesture (autoplay policy)
+        const startMusic = () => {
+            gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
+            window.removeEventListener('pointerdown', startMusic);
+            window.removeEventListener('keydown', startMusic);
+        };
+        window.addEventListener('pointerdown', startMusic);
+        window.addEventListener('keydown', startMusic);
+
         let cancelled = false;
         const script = document.createElement('script');
         script.src = `${BUILD_BASE}/webgl.loader.js`;
         script.onload = () => {
             if (cancelled || !canvasRef.current || !window.createUnityInstance) return;
+            fitCanvas();
             window
                 .createUnityInstance(
                     canvasRef.current,
@@ -44,7 +73,8 @@ export default function World3DPage() {
                         codeUrl: `${BUILD_BASE}/webgl.wasm.unityweb`,
                         companyName: 'Truth B Told',
                         productName: "The Journey - Truth's Hut",
-                        productVersion: '1.0',
+                        productVersion: '1.1',
+                        matchWebGLToCanvasSize: false,   // we size the buffer ourselves
                         webglContextAttributes: { preserveDrawingBuffer: true },
                     },
                     (p) => setProgress(p),
@@ -60,41 +90,69 @@ export default function World3DPage() {
         document.body.appendChild(script);
         return () => {
             cancelled = true;
+            gameMusic.stopBgm(600);
+            window.removeEventListener('resize', fitCanvas);
+            window.removeEventListener('orientationchange', fitCanvas);
+            window.removeEventListener('pointerdown', startMusic);
+            window.removeEventListener('keydown', startMusic);
             instanceRef.current?.Quit().catch(() => undefined);
             script.remove();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const goFullscreen = async () => {
+        const stage = stageRef.current;
+        if (!stage) return;
+        try {
+            if (!document.fullscreenElement) await stage.requestFullscreen();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const so: any = screen.orientation;
+            if (so?.lock) await so.lock('landscape').catch(() => undefined);
+        } catch { /* not supported everywhere */ }
+        setTimeout(fitCanvas, 350);
+    };
 
     return (
         <div className="fixed inset-0 bg-[#06080e] flex flex-col">
-            {/* top bar */}
-            <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-zinc-500 border-b border-white/5">
-                <Link href="/" className="hover:text-aether-gold transition-colors">← Truth B Told Hub</Link>
-                <span className="text-aether-gold/80 font-black">The Journey · Truth&apos;s Hut</span>
-                <Link href="/support" className="hover:text-white transition-colors">Fuel the Vision</Link>
+            {/* top bar — hidden in fullscreen for max play area */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-zinc-500 border-b border-white/5 shrink-0">
+                <Link href="/" className="hover:text-aether-gold transition-colors whitespace-nowrap">← Hub</Link>
+                <span className="text-aether-gold/80 font-black truncate px-2">The Journey · Truth&apos;s Hut</span>
+                <Link href="/support" className="hover:text-white transition-colors whitespace-nowrap">Fuel the Vision</Link>
             </div>
 
-            {/* game */}
-            <div className="relative flex-1">
+            {/* game stage */}
+            <div ref={stageRef} className="relative flex-1 min-h-0 bg-[#06080e]">
                 <canvas
                     ref={canvasRef}
                     id="unity-canvas"
-                    className="w-full h-full block"
+                    className="absolute inset-0 w-full h-full block"
                     style={{ background: '#06080e' }}
                 />
+                {ready && isTouch && !error && (
+                    <button
+                        onClick={goFullscreen}
+                        className="absolute top-2 right-2 z-10 px-3 py-2 rounded-lg bg-black/60 border border-aether-gold/40 text-aether-gold text-[10px] font-black uppercase tracking-[0.2em] active:scale-95"
+                    >
+                        ⛶ Fullscreen
+                    </button>
+                )}
                 {!ready && !error && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none">
-                        <div className="text-aether-gold text-xs uppercase tracking-[0.4em] animate-pulse">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none px-6">
+                        <div className="text-aether-gold text-xs uppercase tracking-[0.4em] animate-pulse text-center">
                             Kindling the hearth…
                         </div>
-                        <div className="w-64 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                        <div className="w-56 sm:w-64 h-1.5 rounded-full bg-white/10 overflow-hidden">
                             <div
                                 className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-200"
                                 style={{ width: `${Math.round(progress * 100)}%` }}
                             />
                         </div>
-                        <div className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">
-                            WASD move · right-drag look · E interact
+                        <div className="text-zinc-600 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-center">
+                            {typeof window !== 'undefined' && 'ontouchstart' in window
+                                ? 'left thumb: walk · right thumb: look · E button: interact'
+                                : 'WASD move · right-drag look · E interact'}
                         </div>
                     </div>
                 )}

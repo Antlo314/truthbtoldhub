@@ -16,6 +16,7 @@ namespace Journey3D
         private Text _prompt;
         private Text _soulLine;
         private RectTransform _panelRoot;   // dim + frame, active while a station is open
+        private RectTransform _panelFrame;  // the card itself (wide or side layout)
         private RectTransform _panelBody;   // content area rebuilt per station
         private Text _panelTitle;
         private Image _panelTitleBar;
@@ -95,11 +96,11 @@ namespace Journey3D
             _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", new Color(0, 0, 0, 0.72f));
             UIKit.Fill(_panelRoot);
 
+            // responsive: fill the screen with margins so phones get a usable
+            // panel instead of a fixed 980px card
             var frame = UIKit.Panel(_panelRoot, "frame", UIKit.PanelBg);
-            frame.anchorMin = new Vector2(0.5f, 0.5f);
-            frame.anchorMax = new Vector2(0.5f, 0.5f);
-            frame.pivot = new Vector2(0.5f, 0.5f);
-            frame.sizeDelta = new Vector2(980, 660);
+            _panelFrame = frame;
+            SetFrameWide();
             var outline = frame.gameObject.AddComponent<Outline>();
             outline.effectColor = UIKit.Gold;
             outline.effectDistance = new Vector2(2, -2);
@@ -131,12 +132,33 @@ namespace Journey3D
             _panelRoot.gameObject.SetActive(false);
         }
 
+        private void SetFrameWide()
+        {
+            _panelFrame.anchorMin = new Vector2(0.02f, 0.03f);
+            _panelFrame.anchorMax = new Vector2(0.98f, 0.97f);
+            _panelFrame.pivot = new Vector2(0.5f, 0.5f);
+            _panelFrame.offsetMin = Vector2.zero;
+            _panelFrame.offsetMax = Vector2.zero;
+        }
+
+        private void SetFrameSide()
+        {
+            // creator layout: card docks right so the avatar stays on screen
+            _panelFrame.anchorMin = new Vector2(0.46f, 0.03f);
+            _panelFrame.anchorMax = new Vector2(0.99f, 0.97f);
+            _panelFrame.pivot = new Vector2(0.5f, 0.5f);
+            _panelFrame.offsetMin = Vector2.zero;
+            _panelFrame.offsetMax = Vector2.zero;
+        }
+
         public void ClosePanel()
         {
             if (_creatorLock) return;   // first-run soul creation must be completed
             if (_arcadeGameHost != null) Destroy(_arcadeGameHost);
             _arcadeGameHost = null;
             _panelRoot.gameObject.SetActive(false);
+            if (cameraRig != null) cameraRig.portraitMode = false;
+            SetFrameWide();
             LockInput(false);
         }
 
@@ -312,6 +334,9 @@ namespace Journey3D
         {
             _creatorLock = firstRun && !SaveState.Character.created;
             _creatorTab = 0;
+            // dock the card right + slow portrait orbit so you SEE your soul change
+            SetFrameSide();
+            if (cameraRig != null) cameraRig.portraitMode = true;
             RenderCreator();
         }
 
