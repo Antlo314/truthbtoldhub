@@ -1,26 +1,26 @@
 using System;
-using System.IO;
 using UnityEngine;
 
 namespace Journey3D
 {
-    /// Loads static design data from StreamingAssets once per run.
+    /// Loads static design data from Resources/Data once per run.
+    /// (TextAssets work on every platform, including WebGL.)
     public static class GameData
     {
         private static AppConfig _config;
         private static GameDataFile _data;
         private static TruthLoreFile _lore;
 
-        public static AppConfig Config => _config ??= Load<AppConfig>("config.json");
-        public static GameDataFile Data => _data ??= Load<GameDataFile>("game_data.json");
-        public static TruthLoreFile Lore => _lore ??= Load<TruthLoreFile>("truth_lore.json");
+        public static AppConfig Config => _config ??= Load<AppConfig>("config");
+        public static GameDataFile Data => _data ??= Load<GameDataFile>("game_data");
+        public static TruthLoreFile Lore => _lore ??= Load<TruthLoreFile>("truth_lore");
 
         private static T Load<T>(string file) where T : new()
         {
             try
             {
-                var path = Path.Combine(Application.streamingAssetsPath, file);
-                return JsonUtility.FromJson<T>(File.ReadAllText(path));
+                var ta = Resources.Load<TextAsset>("Data/" + file);
+                return JsonUtility.FromJson<T>(ta.text);
             }
             catch (Exception e)
             {

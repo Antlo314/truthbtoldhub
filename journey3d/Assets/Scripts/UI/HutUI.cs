@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +10,7 @@ namespace Journey3D
     {
         public PlayerController player;
         public CameraRig cameraRig;
+        public PlayerAppearance appearance;
 
         private Canvas _canvas;
         private Text _prompt;
@@ -18,7 +19,10 @@ namespace Journey3D
         private RectTransform _panelBody;   // content area rebuilt per station
         private Text _panelTitle;
         private Image _panelTitleBar;
+        private Button _closeBtn;
         private GameObject _arcadeGameHost; // live mini-game overlay
+        private bool _creatorLock;          // first-run: cannot close until the soul is made
+        private int _creatorTab;
 
         public bool PanelOpen => _panelRoot != null && _panelRoot.gameObject.activeSelf;
 
@@ -27,6 +31,9 @@ namespace Journey3D
             _canvas = UIKit.CreateCanvas("HutCanvas");
             BuildHud();
             BuildPanelFrame();
+            // first-run: a new soul must be created before the hut is playable
+            if (!SaveState.Character.created)
+                OpenCreator(true);
         }
 
         private void Update()
@@ -106,7 +113,8 @@ namespace Journey3D
             _panelTitle = UIKit.Label(titleBar, "", 30, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.Fill(_panelTitle.rectTransform, 18);
 
-            var close = UIKit.TextButton(titleBar, "X", UIKit.Gold, ClosePanel, 24);
+            _closeBtn = UIKit.TextButton(titleBar, "X", UIKit.Gold, ClosePanel, 24);
+            var close = _closeBtn;
             var crt = close.GetComponent<RectTransform>();
             crt.anchorMin = new Vector2(1, 0.5f);
             crt.anchorMax = new Vector2(1, 0.5f);
@@ -125,6 +133,7 @@ namespace Journey3D
 
         public void ClosePanel()
         {
+            if (_creatorLock) return;   // first-run soul creation must be completed
             if (_arcadeGameHost != null) Destroy(_arcadeGameHost);
             _arcadeGameHost = null;
             _panelRoot.gameObject.SetActive(false);
@@ -230,7 +239,7 @@ namespace Journey3D
                     var bodyTxt = UIKit.Label(row, Truncate(r.body, 220), 17, UIKit.Body);
                     bodyTxt.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
                 }
-                RowButton(list, "Leave a testimony on the Hub", s.accent, () => OpenWeb("/world?hut=ledger"));
+                RowButton(list, "Join the conversation in the Sanctum", s.accent, () => OpenWeb("/archive"));
             });
         }
 
@@ -255,7 +264,7 @@ namespace Journey3D
                     var t = UIKit.Label(row, $"{(r.kind == "video" ? "[Vision]" : "[Still]")}  {r.title}", 18, UIKit.Body, TextAnchor.MiddleLeft);
                     UIKit.Fill(t.rectTransform, 10);
                 }
-                RowButton(list, "Open the Seeing Glass on the Hub", s.accent, () => OpenWeb("/world?hut=visions"));
+                RowButton(list, "Watch the transmissions", s.accent, () => OpenWeb("/cinema"));
             });
         }
 
@@ -290,27 +299,216 @@ namespace Journey3D
         // =====================================================
         private void OpenSoul(Station s)
         {
-            var body = FreshBody("Your Soul", s.accent);
-            var list = UIKit.ScrollList(body);
+            // The Soul Mirror opens the 3D character creator.
+            OpenCreator(false);
+        }
+
+        // =====================================================
+        //  CHARACTER CREATOR (Soul Mirror + first-run)
+        // =====================================================
+        private static readonly string[] CreatorTabs = { "Body", "Hair", "Face", "Garb", "Path" };
+
+        public void OpenCreator(bool firstRun)
+        {
+            _creatorLock = firstRun && !SaveState.Character.created;
+            _creatorTab = 0;
+            RenderCreator();
+        }
+
+        private void RenderCreator()
+        {
+            var accent = UIKit.Amber;
             var c = SaveState.Character;
+            var body = FreshBody(_creatorLock ? "Shape Your Soul  ·  Welcome, wanderer" : "Your Soul", accent);
+            if (_closeBtn != null) _closeBtn.gameObject.SetActive(!_creatorLock);
 
-            Header(list, "The record the mirror keeps of you.");
-            BodyText(list, "Name", 26, UIKit.Faint);
-            var input = UIKit.Input(list, "Speak your name...", c.name);
-            input.gameObject.AddComponent<LayoutElement>().preferredHeight = 48;
-            input.onEndEdit.AddListener(v =>
+            // tab bar
+            var tabBar = UIKit.Panel(body, "tabs", Color.clear);
+            tabBar.anchorMin = new Vector2(0, 1); tabBar.anchorMax = new Vector2(1, 1); tabBar.pivot = new Vector2(0.5f, 1);
+            tabBar.sizeDelta = new Vector2(0, 42);
+            var hl = tabBar.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true; hl.childForceExpandHeight = true;
+            for (int i = 0; i < CreatorTabs.Length; i++)
             {
-                if (!string.IsNullOrWhiteSpace(v)) { c.name = v.Trim(); SaveState.Save(); }
-            });
+                int idx = i;
+                UIKit.TextButton(tabBar, CreatorTabs[i], i == _creatorTab ? accent : UIKit.Faint, () => { _creatorTab = idx; RenderCreator(); }, 17);
+            }
 
-            BodyText(list, $"Standing with Truth:  {TruthLore.TrustLabel()}  (trust {TruthLore.Trust()})", 34, s.accent);
-            BodyText(list, $"Vitality  {c.vitality}/{c.maxVitality}    ·    Soul Power  {c.soulPower}", 30);
-            BodyText(list, $"Materials    Iron {c.iron}  ·  Copper {c.copper}  ·  Cosmic {c.cosmic}", 30);
-            var w = GameData.Weapon(c.equippedWeapon);
-            BodyText(list, $"Bearing:  {(w != null ? w.name : c.equippedWeapon)}", 30, UIKit.Amber);
-            BodyText(list, $"Threads opened with Truth:  {TruthLore.Depth()} / {GameData.Lore.questions.Count}", 30);
-            BodyText(list, $"Guardians felled: {c.cleared.Count}   ·   Relics: {c.inventory.Count}   ·   Riddles: {c.solved.Count}", 30);
-            RowButton(list, "Shape your appearance on the Hub", s.accent, () => OpenWeb("/awakening/create"));
+            // scroll content between tab bar and bottom bar
+            var host = UIKit.Panel(body, "host", Color.clear);
+            host.anchorMin = Vector2.zero; host.anchorMax = Vector2.one; host.offsetMin = new Vector2(0, 52); host.offsetMax = new Vector2(0, -50);
+            var list = UIKit.ScrollList(host);
+            UIKit.Fill((RectTransform)list.parent);
+
+            PreviewChips(list);
+            switch (_creatorTab)
+            {
+                case 0: TabBody(list, c); break;
+                case 1: TabHair(list, c); break;
+                case 2: TabFace(list, c); break;
+                case 3: TabGarb(list, c); break;
+                default: TabPath(list, c); break;
+            }
+
+            // bottom bar
+            var bottom = UIKit.Panel(body, "bottom", Color.clear);
+            bottom.anchorMin = new Vector2(0, 0); bottom.anchorMax = new Vector2(1, 0); bottom.pivot = new Vector2(0.5f, 0);
+            bottom.sizeDelta = new Vector2(0, 44);
+            var bh = bottom.gameObject.AddComponent<HorizontalLayoutGroup>();
+            bh.spacing = 10; bh.childControlWidth = true; bh.childForceExpandWidth = true; bh.childControlHeight = true; bh.childForceExpandHeight = true;
+            UIKit.TextButton(bottom, "Randomize", UIKit.Faint, () => { RandomizeAppearance(); appearance?.Apply(); RenderCreator(); }, 18);
+            UIKit.TextButton(bottom, _creatorLock ? "Enter the Hut" : "Save", accent, SaveCreator, 20);
+        }
+
+        private void PreviewChips(Transform list)
+        {
+            var c = SaveState.Character;
+            var row = UIKit.Row(list, 58, new Color(1, 1, 1, 0.05f));
+            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 8; h.padding = new RectOffset(12, 12, 8, 8);
+            h.childControlWidth = true; h.childForceExpandWidth = true; h.childControlHeight = true; h.childForceExpandHeight = true;
+            Chip(row, "Skin", AvatarPalette.Skin(c.skin));
+            Chip(row, "Hair", AvatarPalette.Hair(c.hairColor));
+            Chip(row, "Top", AvatarPalette.Cloth(c.top));
+            Chip(row, "Legs", AvatarPalette.Cloth(c.bottom));
+            Chip(row, "Boots", AvatarPalette.Boot(c.boots));
+            Chip(row, "Eyes", AvatarPalette.Eye(c.eyes));
+        }
+
+        private void Chip(Transform parent, string label, Color col)
+        {
+            var chip = UIKit.Panel(parent, "chip", col);
+            var t = UIKit.Label(chip, label, 13, new Color(0, 0, 0, 0.75f), TextAnchor.LowerCenter, FontStyle.Bold);
+            UIKit.Fill(t.rectTransform, 3);
+        }
+
+        private void TabBody(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Build", AvatarPalette.BUILDS, c.build, v => { c.build = v; if (!System.Array.Exists(AvatarPalette.OutfitsFor(v), o => o == c.outfit)) c.outfit = AvatarPalette.OutfitsFor(v)[0]; });
+            SwatchGrid(list, "Skin tone", AvatarPalette.SKIN_TONES, c.skin, i => c.skin = i);
+            SwatchGrid(list, "Eyes", AvatarPalette.EYE_COLORS, c.eyes, i => c.eyes = i);
+        }
+
+        private void TabHair(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Hair style", AvatarPalette.HAIR_STYLES, c.hairStyle, v => c.hairStyle = v);
+            SwatchGrid(list, "Hair color", AvatarPalette.HAIR_COLORS, c.hairColor, i => c.hairColor = i);
+        }
+
+        private void TabFace(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Face", AvatarPalette.FACES, c.face, v => c.face = v);
+            OptionGrid(list, "Adornment", AvatarPalette.EXTRAS, c.extra, v => c.extra = v);
+        }
+
+        private void TabGarb(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Outfit", AvatarPalette.OutfitsFor(c.build), c.outfit, v => c.outfit = v);
+            SwatchGrid(list, "Top color", AvatarPalette.CLOTH_COLORS, c.top, i => c.top = i);
+            SwatchGrid(list, "Legs color", AvatarPalette.CLOTH_COLORS, c.bottom, i => c.bottom = i);
+            SwatchGrid(list, "Boots", AvatarPalette.BOOT_COLORS, c.boots, i => c.boots = i);
+        }
+
+        private void TabPath(Transform list, CharacterState c)
+        {
+            BodyText(list, "Name your soul", 28, UIKit.Faint);
+            var input = UIKit.Input(list, "Speak your name...", c.name);
+            input.gameObject.AddComponent<LayoutElement>().preferredHeight = 50;
+            input.onValueChanged.AddListener(v => { if (!string.IsNullOrWhiteSpace(v)) c.name = v.Trim(); });
+
+            BodyText(list, "Choose your path to the Source", 28, UIKit.Faint);
+            for (int i = 0; i < AvatarPalette.PATHS.Length; i++)
+            {
+                string id = AvatarPalette.PATHS[i];
+                string nm = AvatarPalette.PATH_NAMES[i];
+                bool sel = c.path == id;
+                RowButton(list, (sel ? "★ " : "") + nm + PathBlurb(id), sel ? UIKit.Amber : UIKit.Body, () => { c.path = id; RenderCreator(); }, 54);
+            }
+        }
+
+        private static string PathBlurb(string id)
+        {
+            switch (id)
+            {
+                case "seer": return "  ·  vision & range";
+                case "sentinel": return "  ·  defense & poise";
+                case "scribe": return "  ·  crit & lifesteal";
+                default: return "  ·  regen & spirit";
+            }
+        }
+
+        // ---- creator widgets ----
+        private void OptionGrid(Transform list, string label, string[] choices, string current, System.Action<string> set)
+        {
+            BodyText(list, label, 30, UIKit.Faint);
+            const int cols = 4;
+            int rows = Mathf.CeilToInt(choices.Length / (float)cols);
+            var row = UIKit.Row(list, rows * 46 + 14, Color.clear);
+            var grid = row.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(205, 40); grid.spacing = new Vector2(8, 6);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount; grid.constraintCount = cols;
+            foreach (var ch in choices)
+            {
+                string v = ch;
+                var col = v == current ? UIKit.Amber : UIKit.Faint;
+                UIKit.TextButton(row, v, col, () => { set(v); appearance?.Apply(); RenderCreator(); }, 16);
+            }
+        }
+
+        private void SwatchGrid(Transform list, string label, string[] hexes, int current, System.Action<int> set)
+        {
+            BodyText(list, label, 30, UIKit.Faint);
+            const int cols = 16;
+            int rows = Mathf.CeilToInt(hexes.Length / (float)cols);
+            var row = UIKit.Row(list, rows * 50 + 12, Color.clear);
+            var grid = row.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(44, 44); grid.spacing = new Vector2(6, 6);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount; grid.constraintCount = cols;
+            for (int i = 0; i < hexes.Length; i++)
+            {
+                int idx = i;
+                var go = new GameObject("sw");
+                var rt = UIKit.Rect(go, row);
+                go.AddComponent<Image>().color = UIKit.Hex(hexes[i]);
+                var btn = go.AddComponent<Button>();
+                btn.onClick.AddListener(() => { set(idx); appearance?.Apply(); RenderCreator(); });
+                if (i == current)
+                {
+                    var o = go.AddComponent<Outline>();
+                    o.effectColor = UIKit.Amber;
+                    o.effectDistance = new Vector2(3, -3);
+                }
+            }
+        }
+
+        private void RandomizeAppearance()
+        {
+            var c = SaveState.Character;
+            c.build = AvatarPalette.BUILDS[Random.Range(0, AvatarPalette.BUILDS.Length)];
+            c.skin = Random.Range(0, AvatarPalette.SKIN_TONES.Length);
+            c.hairStyle = AvatarPalette.HAIR_STYLES[Random.Range(0, AvatarPalette.HAIR_STYLES.Length)];
+            c.hairColor = Random.Range(0, AvatarPalette.HAIR_COLORS.Length);
+            c.face = AvatarPalette.FACES[Random.Range(0, AvatarPalette.FACES.Length)];
+            var outfits = AvatarPalette.OutfitsFor(c.build);
+            c.outfit = outfits[Random.Range(0, outfits.Length)];
+            c.top = Random.Range(0, AvatarPalette.CLOTH_COLORS.Length);
+            c.bottom = Random.Range(0, AvatarPalette.CLOTH_COLORS.Length);
+            c.boots = Random.Range(0, AvatarPalette.BOOT_COLORS.Length);
+            c.eyes = Random.Range(0, AvatarPalette.EYE_COLORS.Length);
+            c.extra = AvatarPalette.EXTRAS[Random.Range(0, AvatarPalette.EXTRAS.Length)];
+        }
+
+        private void SaveCreator()
+        {
+            var c = SaveState.Character;
+            if (string.IsNullOrWhiteSpace(c.name) || c.name == "Wandering Soul") c.name = "Wandering Soul";
+            if (string.IsNullOrEmpty(c.path)) c.path = "seer";
+            c.created = true;
+            SaveState.Save();
+            appearance?.Apply();
+            _creatorLock = false;
+            if (_closeBtn != null) _closeBtn.gameObject.SetActive(true);
+            ClosePanel();
         }
 
         // =====================================================
@@ -332,7 +530,7 @@ namespace Journey3D
 
             Header(list, $"Your satchel:  Iron {c.iron}  ·  Copper {c.copper}  ·  Cosmic {c.cosmic}");
 
-            BodyText(list, "— THE WEAPON LADDER —", 30, s.accent);
+            BodyText(list, "â€” THE WEAPON LADDER â€”", 30, s.accent);
             foreach (var w in GameData.Data.weapons)
             {
                 bool owned = c.ownedWeapons.Contains(w.id);
@@ -368,7 +566,7 @@ namespace Journey3D
                 }
             }
 
-            BodyText(list, "— TONICS FOR THE ROAD —  (drink before a fight; max 5 of each)", 34, s.accent);
+            BodyText(list, "â€” TONICS FOR THE ROAD â€”  (drink before a fight; max 5 of each)", 34, s.accent);
             foreach (var t in GameData.Data.consumables)
             {
                 if (c.cleared.Count < t.minClears) continue;   // sealed recipes stay hidden, like the web hut
@@ -415,7 +613,7 @@ namespace Journey3D
                 "are built in the open, by one man refusing to quit the last run.\n\n" +
                 "Patronage keeps the forge lit: it funds the recovery of buried knowledge, the craft of the 400 Series, " +
                 "and the ground this chamber stands on. Every offering, one-time or monthly, is fuel.", 220);
-            RowButton(list, "Make an offering on the Hub", s.accent, () => OpenWeb("/world?hut=offering"), 58);
+            RowButton(list, "Make an offering", s.accent, () => OpenWeb("/support"), 58);
             RowButton(list, "Learn about the 400 Series", UIKit.Hex("#a855f7"), () => OpenWeb("/cinema"), 58);
             BodyText(list, "\"When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone.\" - Truth", 90, UIKit.Faint);
         }
@@ -553,7 +751,7 @@ namespace Journey3D
                 q.gameObject.AddComponent<LayoutElement>().preferredHeight = 44;
             }
             BodyText(list, "The community ledger and world rhythms live on the Hub while the 3D roads are laid.", 44, UIKit.Faint);
-            RowButton(list, "View the community ledger on the Hub", s.accent, () => OpenWeb("/world?hut=map"));
+            RowButton(list, "View the community leaderboard", s.accent, () => OpenWeb("/hierarchy"));
         }
 
         // =====================================================
@@ -590,7 +788,7 @@ namespace Journey3D
             BodyText(list, q.answer, 260, UIKit.Body);
             if (!string.IsNullOrEmpty(q.accountTitle))
             {
-                BodyText(list, "— CODEX PAGE UNLOCKED —", 34, UIKit.Amber);
+                BodyText(list, "â€” CODEX PAGE UNLOCKED â€”", 34, UIKit.Amber);
                 BodyText(list, q.accountTitle, 30, UIKit.Amber);
                 BodyText(list, q.accountBody, 120, UIKit.Faint);
             }

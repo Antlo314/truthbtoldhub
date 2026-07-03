@@ -150,7 +150,14 @@ def build_hut_shell():
     for i in range(-6, 7, 2):
         parts.append(box('plank', (0.06, W, 0.26), (i, 0, -0.11), M_WOOD_DARK()))
     # walls: back(+Y), front(-Y), left(-X), right(+X)
-    parts.append(box('wall_back', (W, T, H), (0, W / 2, H / 2), M_WOOD_LIGHT()))
+    # back wall (+Y) carries a walkable DOORWAY: gap X in [-0.75, 0.75], up to z=2.6
+    parts.append(box('wall_back_l', (6.25, T, H), (-3.875, W / 2, H / 2), M_WOOD_LIGHT()))
+    parts.append(box('wall_back_r', (6.25, T, H), (3.875, W / 2, H / 2), M_WOOD_LIGHT()))
+    parts.append(box('wall_back_lintel', (1.5, T, 1.6), (0, W / 2, 3.4), M_WOOD_LIGHT()))
+    # door frame posts (gold trim, cosmetic)
+    parts.append(box('door_post_l', (0.12, T + 0.05, 2.6), (-0.81, W / 2, 1.3), M_WOOD_DARK()))
+    parts.append(box('door_post_r', (0.12, T + 0.05, 2.6), (0.81, W / 2, 1.3), M_WOOD_DARK()))
+    parts.append(box('door_head', (1.74, T + 0.05, 0.14), (0, W / 2, 2.62), M_WOOD_DARK()))
     parts.append(box('wall_front', (W, T, H), (0, -W / 2, H / 2), M_WOOD_LIGHT()))
     parts.append(box('wall_left', (T, W, H), (-W / 2, 0, H / 2), M_WOOD_LIGHT()))
     parts.append(box('wall_right', (T, W, H), (W / 2, 0, H / 2), M_WOOD_LIGHT()))
@@ -158,9 +165,11 @@ def build_hut_shell():
     parts.append(box('ceiling', (W + 1, W + 1, 0.2), (0, 0, H + 0.1), M_WOOD_DARK()))
     for i in range(-2, 3):
         parts.append(box('beam', (0.35, W, 0.35), (i * 3.0, 0, H - 0.18), M_WOOD_DARK()))
-    # wainscot trim
-    for (sx, sy, lx, ly) in ((W, 0.1, 0, W / 2 - T / 2 - 0.05), (W, 0.1, 0, -(W / 2 - T / 2 - 0.05))):
-        parts.append(box('trim', (sx, sy, 0.15), (lx, ly, 1.1), M_WOOD_DARK()))
+    # wainscot trim (+Y side split around the doorway so it doesn't bar the exit)
+    yb = W / 2 - T / 2 - 0.05
+    parts.append(box('trim', (6.25, 0.1, 0.15), (-3.875, yb, 1.1), M_WOOD_DARK()))
+    parts.append(box('trim', (6.25, 0.1, 0.15), (3.875, yb, 1.1), M_WOOD_DARK()))
+    parts.append(box('trim', (W, 0.1, 0.15), (0, -yb, 1.1), M_WOOD_DARK()))
     for (sx, sy, lx, ly) in ((0.1, W, W / 2 - T / 2 - 0.05, 0), (0.1, W, -(W / 2 - T / 2 - 0.05), 0)):
         parts.append(box('trim', (sx, sy, 0.15), (lx, ly, 1.1), M_WOOD_DARK()))
     # windows (emissive amber) on left / right walls
@@ -238,24 +247,31 @@ def build_truth():
 
 def build_player():
     parts = []
-    tunic = mat('player_tunic', hex_c('0f766e'), rough=0.85)
-    skin = mat('player_skin', hex_c('8d5a3b'), rough=0.8)
-    pants = mat('player_pants', hex_c('26221c'), rough=0.9)
-    hair = mat('player_hair', hex_c('141210'), rough=0.95)
+    # Named, distinct materials per body part so Unity can recolor them at
+    # runtime (AvatarPalette in C# maps CharacterState indices -> these).
+    # Defaults reproduce the original teal wanderer for a no-appearance soul.
+    mat_top = mat('av_top', hex_c('0f766e'), rough=0.85)      # tunic / outfit
+    mat_skin = mat('av_skin', hex_c('8d5a3b'), rough=0.8)
+    mat_bottom = mat('av_bottom', hex_c('26221c'), rough=0.9)  # pants
+    mat_hair = mat('av_hair', hex_c('141210'), rough=0.95)
+    mat_boots = mat('av_boots', hex_c('4a3324'), rough=0.85)
     # legs
-    parts.append(cyl('leg_l', 0.09, 0.7, (-0.13, 0, 0.35), pants))
-    parts.append(cyl('leg_r', 0.09, 0.7, (0.13, 0, 0.35), pants))
+    parts.append(cyl('leg_l', 0.09, 0.62, (-0.13, 0, 0.4), mat_bottom))
+    parts.append(cyl('leg_r', 0.09, 0.62, (0.13, 0, 0.4), mat_bottom))
+    # boots
+    parts.append(box('boot_l', (0.16, 0.24, 0.14), (-0.13, -0.03, 0.07), mat_boots))
+    parts.append(box('boot_r', (0.16, 0.24, 0.14), (0.13, -0.03, 0.07), mat_boots))
     # torso
-    parts.append(box('torso', (0.46, 0.28, 0.62), (0, 0, 1.0), tunic))
+    parts.append(box('torso', (0.46, 0.28, 0.62), (0, 0, 1.0), mat_top))
     parts.append(torus('belt', 0.27, 0.03, (0, 0, 0.74), M_GOLD(), scale=(1, 0.7, 1.4)))
     # arms
-    parts.append(cyl('arm_l', 0.07, 0.58, (-0.31, 0, 1.02), tunic, rot=(0, 0.12, 0)))
-    parts.append(cyl('arm_r', 0.07, 0.58, (0.31, 0, 1.02), tunic, rot=(0, -0.12, 0)))
-    parts.append(sphere('hand_l', 0.07, (-0.35, 0, 0.7), skin))
-    parts.append(sphere('hand_r', 0.07, (0.35, 0, 0.7), skin))
+    parts.append(cyl('arm_l', 0.07, 0.58, (-0.31, 0, 1.02), mat_top, rot=(0, 0.12, 0)))
+    parts.append(cyl('arm_r', 0.07, 0.58, (0.31, 0, 1.02), mat_top, rot=(0, -0.12, 0)))
+    parts.append(sphere('hand_l', 0.07, (-0.35, 0, 0.7), mat_skin))
+    parts.append(sphere('hand_r', 0.07, (0.35, 0, 0.7), mat_skin))
     # head (faces -Y)
-    parts.append(sphere('head', 0.2, (0, 0, 1.52), skin))
-    parts.append(sphere('hair', 0.21, (0, 0.03, 1.58), hair, scale=(1, 1, 0.8)))
+    parts.append(sphere('head', 0.2, (0, 0, 1.52), mat_skin))
+    parts.append(sphere('hair', 0.21, (0, 0.03, 1.58), mat_hair, scale=(1, 1, 0.8)))
     export_asset('player_avatar', parts)
 
 
@@ -440,6 +456,104 @@ def build_rug():
     export_asset('hut_rug', parts)
 
 
+# =============================================================
+#  EXTERIOR — a small bounded yard around the hut
+#  (Blender Z-up: ground top at z=0 to match the interior floor.)
+# =============================================================
+
+TERRAIN_GRASS = hex_c('2d5016')
+TERRAIN_PATH = hex_c('8b7355')
+ROOF_THATCH = hex_c('6b4423')
+TREE_BARK = hex_c('3d2817')
+TREE_LEAVES = hex_c('1f4620')
+ROCK_GREY = hex_c('5a5a5a')
+SKY_COLOR = hex_c('bcd7ee')
+
+
+def build_terrain():
+    parts = []
+    grass = mat('terrain_grass', TERRAIN_GRASS, rough=1.0)
+    # broad flat ground, top face at z=0 (seamless with the interior floor)
+    parts.append(box('ground', (48, 48, 0.5), (0, 0, -0.25), grass))
+    export_asset('terrain_ground', parts)
+
+
+def build_path():
+    parts = []
+    stone = mat('path_stone', TERRAIN_PATH, rough=1.0)
+    # stepping path leading OUT the +Y doorway, just above the grass
+    for i, y in enumerate(range(8, 20, 2)):
+        parts.append(box('paver', (1.4, 1.6, 0.06), (0, y, 0.02), stone))
+    export_asset('terrain_path', parts)
+
+
+def build_hut_roof():
+    # Pitched gable roof that sits on top of the 14x14 walls (wall top z=4.2).
+    # Ridge runs along Y; two slabs slope down toward +/-X. Plus a chimney cap.
+    parts = []
+    roof = mat('roof_thatch', ROOF_THATCH, rough=0.95)
+    ridge_z = 6.4
+    eave_z = 4.1
+    half = 7.6                      # eave overhang beyond the 7.0 wall
+    run = half                      # horizontal run per slope
+    rise = ridge_z - eave_z
+    slope_len = math.sqrt(run * run + rise * rise)
+    ang = math.atan2(rise, run)     # tilt about Y
+    midz = (ridge_z + eave_z) / 2
+    # left slab (slopes down toward -X)
+    parts.append(box('roof_l', (slope_len, 16.0, 0.3), (-run / 2, 0, midz), roof, rot=(0, ang, 0)))
+    # right slab (slopes down toward +X)
+    parts.append(box('roof_r', (slope_len, 16.0, 0.3), (run / 2, 0, midz), roof, rot=(0, -ang, 0)))
+    # gable end fills (approximated with a thin tall box)
+    parts.append(box('gable_a', (0.3, 15.6, rise), (0, 7.9, eave_z + rise / 2), M_WOOD_LIGHT()))
+    parts.append(box('gable_b', (0.3, 15.6, rise), (0, -7.9, eave_z + rise / 2), M_WOOD_LIGHT()))
+    # ridge beam
+    parts.append(box('ridge', (0.35, 16.0, 0.35), (0, 0, ridge_z), M_WOOD_DARK()))
+    # chimney cap above the fireplace side (+X, matches interior chimney)
+    parts.append(box('chimney_cap', (1.1, 1.4, 1.6), (6.45, 0, 5.6), M_STONE_DARK()))
+    export_asset('hut_exterior', parts)
+
+
+def build_tree(name, leaves_hex, tall=True):
+    parts = []
+    bark = mat('tree_bark', TREE_BARK, rough=1.0)
+    leaves = mat(name + '_leaves', leaves_hex, rough=1.0)
+    h = 2.6 if tall else 1.9
+    parts.append(cyl('trunk', 0.16, h, (0, 0, h / 2), bark, verts=8))
+    if tall:  # pine: stacked cones
+        parts.append(cone('c1', 1.0, 0.02, 1.5, (0, 0, h + 0.2), leaves, verts=10))
+        parts.append(cone('c2', 0.8, 0.02, 1.3, (0, 0, h + 0.9), leaves, verts=10))
+        parts.append(cone('c3', 0.55, 0.02, 1.0, (0, 0, h + 1.6), leaves, verts=10))
+    else:     # oak: round canopy
+        parts.append(sphere('canopy', 1.15, (0, 0, h + 0.7), leaves, segs=10, rings=7))
+    export_asset(name, parts)
+
+
+def build_rock(name, r):
+    parts = []
+    rock = mat('rock_grey', ROCK_GREY, rough=1.0)
+    parts.append(sphere('r0', r, (0, 0, r * 0.55), rock, scale=(1.3, 1.0, 0.7), segs=8, rings=6))
+    parts.append(sphere('r1', r * 0.6, (r * 0.5, r * 0.2, r * 0.5), rock, scale=(1, 1, 0.8), segs=8, rings=6))
+    export_asset(name, parts)
+
+
+def build_sky_dome():
+    # Large inward-facing dome, emissive so it self-lights regardless of scene lights.
+    parts = []
+    sky = mat('sky', SKY_COLOR, rough=1.0, emit=SKY_COLOR, emit_strength=1.0)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=60, location=(0, 0, 0))
+    o = bpy.context.active_object
+    o.name = 'sky'
+    o.data.materials.append(sky)
+    # flip normals so it renders from the inside
+    import bmesh
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.flip_normals()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    export_asset('sky_dome', [o])
+
+
 if __name__ == '__main__' or True:
     clear_scene()
     build_hut_shell()
@@ -456,4 +570,13 @@ if __name__ == '__main__' or True:
     build_wayfinder()
     build_sanctum_door()
     build_rug()
+    # exterior yard
+    build_terrain()
+    build_path()
+    build_hut_roof()
+    build_tree('tree_pine', TREE_LEAVES, tall=True)
+    build_tree('tree_oak', hex_c('2f5a1e'), tall=False)
+    build_rock('rock_small', 0.5)
+    build_rock('rock_large', 0.9)
+    build_sky_dome()
     print("ALL ASSETS EXPORTED ->", OUT_DIR)

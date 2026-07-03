@@ -19,6 +19,23 @@ namespace Journey3D
     {
         public string name = "Wandering Soul";
         public string path = "";                    // seer | sentinel | scribe | mystic
+        public bool created;                        // false until the soul finishes creation
+
+        // ---- appearance (mirrors web AvatarConfig; index-based) ----
+        public string build = "masc";
+        public int skin = 6;
+        public string hairStyle = "short";
+        public int hairColor = 0;
+        public string face = "calm";
+        public int top = 5;                         // CLOTH_COLORS index (teal-ish default)
+        public int bottom = 12;                     // CLOTH_COLORS index (dark)
+        public int boots = 0;
+        public string outfit = "tunic";
+        public string extra = "none";
+        public int eyes = 0;
+        public int beardColor = -1;                 // -1 = unset -> resolves to hairColor
+        public string garment = "plain";            // wearable overlay id; preserved on cloud upsert
+
         public int vitality = 100;
         public int maxVitality = 100;
         public int iron;
@@ -39,8 +56,8 @@ namespace Journey3D
     public static class SaveState
     {
         public const int MaxConsumableStack = 5;
+        private const string PrefsKey = "soul_record";
         private static CharacterState _char;
-        private static string PathFile => System.IO.Path.Combine(Application.persistentDataPath, "soul_record.json");
 
         public static CharacterState Character
         {
@@ -55,9 +72,10 @@ namespace Journey3D
         {
             try
             {
-                _char = File.Exists(PathFile)
-                    ? JsonUtility.FromJson<CharacterState>(File.ReadAllText(PathFile))
-                    : new CharacterState();
+                var json = PlayerPrefs.GetString(PrefsKey, "");
+                _char = string.IsNullOrEmpty(json)
+                    ? new CharacterState()
+                    : JsonUtility.FromJson<CharacterState>(json);
             }
             catch { _char = new CharacterState(); }
             _char ??= new CharacterState();
@@ -65,7 +83,11 @@ namespace Journey3D
 
         public static void Save()
         {
-            try { File.WriteAllText(PathFile, JsonUtility.ToJson(_char, true)); }
+            try
+            {
+                PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(_char));
+                PlayerPrefs.Save();
+            }
             catch (Exception e) { Debug.LogError("SaveState: " + e.Message); }
         }
 
