@@ -16,6 +16,12 @@ namespace Journey3D
         {
             Application.targetFrameRate = 60;
 
+            // grounding shadows add real depth; kept cheap for WebGL/mobile
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowResolution = ShadowResolution.Medium;
+            QualitySettings.shadowDistance = 38f;
+            QualitySettings.pixelLightCount = 4;
+
             // ---- lighting (fixes the previously near-black WebGL room) ----
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.52f, 0.47f, 0.42f);
@@ -59,6 +65,7 @@ namespace Journey3D
             // (players fell through the floor), so props get a primitive
             // bounds box instead and the room/ground use code-built boxes.
             if (collide) AddBoundsCollider(go);
+            WorldSkin.Skin(go);   // grained/mottled surface textures over flat color
             return go;
         }
 
@@ -104,7 +111,8 @@ namespace Journey3D
             sl.type = LightType.Directional;
             sl.color = new Color(1f, 0.95f, 0.84f);
             sl.intensity = 1.15f;
-            sl.shadows = LightShadows.None;   // keep WebGL/mobile cheap
+            sl.shadows = LightShadows.Soft;
+            sl.shadowStrength = 0.55f;        // soft grounding, not harsh
             sun.transform.rotation = Quaternion.Euler(52f, 28f, 0);
         }
 
@@ -232,6 +240,8 @@ namespace Journey3D
                 avatar = a.transform;
                 _appearance = root.AddComponent<PlayerAppearance>();
                 _appearance.Bind(a);
+                WorldSkin.Skin(a, instanced: true);   // cloth weave on tunic/legs
+                _appearance.Apply();
                 root.AddComponent<WalkAnimator>().Bind(a.transform, cc);
             }
 

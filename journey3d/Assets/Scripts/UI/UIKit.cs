@@ -17,6 +17,42 @@ namespace Journey3D
         private static Font _font;
         public static Font Font => _font != null ? _font : (_font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
 
+        private static Sprite _round;
+        /// A soft rounded-rect 9-slice sprite so panels/buttons aren't hard boxes.
+        public static Sprite RoundedSprite()
+        {
+            if (_round != null) return _round;
+            const int s = 48, r = 14;
+            var tex = new Texture2D(s, s, TextureFormat.ARGB32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[s * s];
+            for (int y = 0; y < s; y++)
+                for (int x = 0; x < s; x++)
+                {
+                    float dx = Mathf.Min(x, s - 1 - x), dy = Mathf.Min(y, s - 1 - y);
+                    float a = 1f;
+                    if (dx < r && dy < r)
+                    {
+                        float d = Mathf.Sqrt((r - dx) * (r - dx) + (r - dy) * (r - dy));
+                        a = Mathf.Clamp01(r - d + 0.5f);
+                    }
+                    px[y * s + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            _round = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect, new Vector4(r, r, r, r));
+            return _round;
+        }
+
+        private static Image RoundedImage(GameObject go, Color color)
+        {
+            var img = go.AddComponent<Image>();
+            img.color = color;
+            img.sprite = RoundedSprite();
+            img.type = Image.Type.Sliced;
+            return img;
+        }
+
         public static Color Hex(string hex)
         {
             return ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
@@ -54,7 +90,7 @@ namespace Journey3D
         {
             var go = new GameObject(name);
             var rt = Rect(go, parent);
-            go.AddComponent<Image>().color = color;
+            RoundedImage(go, color);
             return rt;
         }
 
@@ -87,9 +123,9 @@ namespace Journey3D
         {
             var go = new GameObject("btn_" + label);
             var rt = Rect(go, parent);
-            var img = go.AddComponent<Image>();
-            img.color = new Color(accent.r, accent.g, accent.b, 0.16f);
+            var img = RoundedImage(go, new Color(accent.r, accent.g, accent.b, 0.22f));
             var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
             var colors = btn.colors;
             colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
             colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
