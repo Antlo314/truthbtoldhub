@@ -20,6 +20,7 @@ namespace Journey3D
         public string name = "Wandering Soul";
         public string path = "";                    // seer | sentinel | scribe | mystic
         public bool created;                        // false until the soul finishes creation
+        public int creatorVersion;                  // bump CURRENT_CREATOR_VERSION to force everyone back through creation once
 
         // ---- appearance (mirrors web AvatarConfig; index-based) ----
         public string build = "masc";

@@ -27,13 +27,24 @@ namespace Journey3D
 
         public bool PanelOpen => _panelRoot != null && _panelRoot.gameObject.activeSelf;
 
+        // bump to send EVERY soul (even ones created before) through the new
+        // creation scene once; it saves and won't ask again unless bumped again
+        public const int CURRENT_CREATOR_VERSION = 1;
+
+        private static bool NeedsCreation()
+        {
+            var c = SaveState.Character;
+            return !c.created || c.creatorVersion < CURRENT_CREATOR_VERSION;
+        }
+
         private void Start()
         {
             _canvas = UIKit.CreateCanvas("HutCanvas");
             BuildHud();
             BuildPanelFrame();
-            // first-run: a new soul must be created before the hut is playable
-            if (!SaveState.Character.created)
+            // first-run (and after a creator version bump): everyone builds a
+            // soul once before the hut is playable
+            if (NeedsCreation())
                 OpenCreator(true);
         }
 
@@ -187,6 +198,13 @@ namespace Journey3D
         // =====================================================
         public void OpenStation(Station s)
         {
+            // stations always use the full-width panel with a full dim and no
+            // portrait camera - reset in case the creator left the side layout
+            // (a lingering side/dim state would make the panel look empty/hidden)
+            SetFrameWide();
+            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.72f);
+            if (cameraRig != null) cameraRig.portraitMode = false;
+
             switch (s.id)
             {
                 case StationId.Ledger: OpenLedger(s); break;
@@ -335,7 +353,7 @@ namespace Journey3D
 
         public void OpenCreator(bool firstRun)
         {
-            _creatorLock = firstRun && !SaveState.Character.created;
+            _creatorLock = firstRun && NeedsCreation();
             _creatorTab = 0;
             // dock the card right + slow portrait orbit so you SEE your soul change;
             // barely dim the world so the live avatar preview stays visible
@@ -526,6 +544,7 @@ namespace Journey3D
             if (string.IsNullOrWhiteSpace(c.name) || c.name == "Wandering Soul") c.name = "Wandering Soul";
             if (string.IsNullOrEmpty(c.path)) c.path = "seer";
             c.created = true;
+            c.creatorVersion = CURRENT_CREATOR_VERSION;
             SaveState.Save();
             appearance?.Apply();
             _creatorLock = false;

@@ -24,14 +24,15 @@ namespace Journey3D
 
             if (portraitMode)
             {
-                // slow catwalk orbit, framed on the body; offset left so the
-                // avatar sits beside the creator card, not under it
-                _yaw += 14f * Time.deltaTime;
-                var pRot = Quaternion.Euler(6f, _yaw + 180f, 0);   // face the front
-                var pFocus = target.position + Vector3.up * 1.0f + transform.right * -0.55f;
-                var pWanted = pFocus - pRot * Vector3.forward * 3.1f + Vector3.up * 0.35f;
+                // slow orbit framed on the whole body; the creator card sits on
+                // the right, so bias the look point so the avatar reads screen-left
+                _yaw += 16f * Time.deltaTime;
+                var pRot = Quaternion.Euler(9f, _yaw + 180f, 0);
+                var center = target.position + Vector3.up * 0.95f;
+                var pWanted = center - pRot * Vector3.forward * 2.7f + Vector3.up * 0.15f;
                 transform.position = Vector3.Lerp(transform.position, pWanted, 6f * Time.deltaTime);
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(pFocus - transform.position), 6f * Time.deltaTime);
+                var lookAt = center + transform.right * 0.75f;   // push avatar to screen-left
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookAt - transform.position), 6f * Time.deltaTime);
                 return;
             }
 

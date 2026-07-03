@@ -97,15 +97,21 @@ namespace Journey3D
     /// "Walk") so gameplay code can just say Play("Walk").
     public class CharacterRig : MonoBehaviour
     {
+        // The shared Legacy clips don't retarget cleanly onto these meshes (they
+        // contort them flat), so animation is OFF - characters hold their upright
+        // bind pose. Flip to true once the char/anim rigs are matched.
+        public static bool PlayAnimations = false;
+
         private Animation _anim;
         private string _current = "";
 
         public void Bind(GameObject inst, string donor)
         {
-            // Legacy-rig imports already carry an Animation component
             _anim = inst.GetComponent<Animation>();
             if (_anim == null) _anim = inst.AddComponent<Animation>();
             _anim.playAutomatically = false;
+            if (!PlayAnimations) return;   // hold bind pose (upright)
+
             var clips = Resources.LoadAll<AnimationClip>("Models/quaternius/" + donor);
             foreach (var clip in clips)
             {
@@ -120,7 +126,6 @@ namespace Journey3D
             }
             if (clips.Length == 0) Debug.LogError("No clips in donor " + donor);
             Play(IdleName(), 0f);
-            Invoke(nameof(LogLiveBounds), 1.5f);   // post-first-skinning sanity check
         }
 
         private void LogLiveBounds()

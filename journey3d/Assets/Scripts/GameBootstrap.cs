@@ -203,7 +203,8 @@ namespace Journey3D
             Spawn("terrain_path", new Vector3(0, 0, 0), 0, collide: false);
             Spawn("terrain_path", new Vector3(0, 0, -10.4f), 0, collide: false);   // pavers on to the trailhead
             Spawn("hut_exterior", Vector3.zero, 0, collide: false);    // roof + chimney, overhead
-            Spawn("sky_dome", Vector3.zero, 0, collide: false);        // huge emissive dome
+            // (no sky_dome mesh - it rendered as a white void; the camera clears
+            //  to a solid sky-blue instead, see BuildCamera)
 
             // scattered trees inside the clearing so the yard reads as a glade
             string[] trees = { "nat_tree_default", "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak",
@@ -443,26 +444,15 @@ namespace Journey3D
             cc.radius = 0.35f;
             cc.center = new Vector3(0, 0.95f, 0);
 
-            // the soul: the procedural avatar (reliable, upright, walks, and
-            // recolors live in the creator). The Quaternius rig is kept for
-            // Truth; the modular player rig contorts on the shared anims, so the
-            // player uses this proven avatar until that rig is fixed.
-            var avatarPrefab = Resources.Load<GameObject>("Models/player_avatar");
-            Transform avatar = null;
-            if (avatarPrefab != null)
-            {
-                var a = Instantiate(avatarPrefab, root.transform);
-                a.name = "avatar";
-                avatar = a.transform;
-                _appearance = root.AddComponent<PlayerAppearance>();
-                _appearance.Bind(a);
-                WorldSkin.Skin(a, instanced: true);
-                _appearance.Apply();
-                root.AddComponent<WalkAnimator>().Bind(a.transform, cc);
-            }
+            // the soul: a Quaternius character picked + tinted from the saved
+            // build/outfit, held upright in bind pose (animation off until the
+            // shared rig retargets cleanly - see CharacterRig.PlayAnimations)
+            _appearance = root.AddComponent<PlayerAppearance>();
+            _appearance.Apply();
+            root.AddComponent<WalkAnimator>().Bind(_appearance, cc);
 
             var pc = root.AddComponent<PlayerController>();
-            pc.avatar = avatar;
+            pc.avatar = null;
             _playerRoot = root.transform;
             return pc;
         }
@@ -473,7 +463,7 @@ namespace Journey3D
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.55f, 0.68f, 0.83f);   // sky fallback
+            cam.backgroundColor = new Color(0.52f, 0.73f, 0.92f);   // the sky (no dome mesh)
             cam.fieldOfView = 60f;
             // tighten the far plane (default 1000 with a 60m sky wastes depth
             // precision -> z-fighting under WebGL's 16-bit depth buffer)
