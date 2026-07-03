@@ -1,5 +1,18 @@
 # AI Sync Status & Changelog
 
+## 2026-07-03 (Claude) — 3D HUT GOES LIVE ON WEB + FABLE BUILD PROMPT
+- **Agent**: Claude (branch `claude/hut3d-golive`, pushed, **NOT merged to main**)
+- **Status**: Go-live infrastructure done; feature build delegated to Fable via a written prompt
+- **What shipped on the branch**:
+  - Unity 3D hut now builds to **WebGL** and is hosted at Next.js route **`/world`** (`app/world/page.tsx` loads `public/hut3d/Build` via `createUnityInstance`). The classic **2D game moved to `/world2d`** — all in-app deep links (stripe donate, support, cinema, attunement HUD, hut stations) repointed.
+  - **Supabase auth bridge**: `journey3d/Assets/Plugins/WebGL/WebBridge.jslib` + `Assets/Scripts/Net/WebAuth.cs` read the signed-in `sb-*-auth-token` from the hosting page's localStorage; score submits now carry the real user token + `user_id`. **Backend/users/progress untouched** (`game_state`, `profiles`, `arcade_scores` unchanged).
+  - WebGL plumbing: `BuildScript.BuildWebGL`, custom `PROJECT:Journey` template, `ModelImportSettings` (readable meshes → runtime colliders), StreamingAssets JSON → `Resources/Data` (WebGL-safe), PlayerPrefs save (`soul_record`), middleware allowlist for `.wasm/.unityweb`.
+  - **KNOWN BUG**: the hut renders dark in WebGL (Built-in pipeline, dim ambient + near-black fog). `main` still serves the working 2D game at `/world`; do NOT flip `/world` to the dark 3D build.
+- **Fable handoff** — `journey3d/FABLE_BUILD_PROMPT.md` (on the branch): an exhaustive, verified, execution-ready prompt for **Claude Fable 5** to build (A) an in-hut **3D character creator** persisting to the existing `game_state.character.avatar` (web `AvatarConfig` shape, index-based, palette from `lib/game/avatar.ts`), (B) **hut exterior + a small terrain ring** (~22m, ≤20 scatter instances, behind an `ExteriorEnabled` flag), and (C) **fix the dark-render bug + flip `/world` live**. Written by an Opus multi-agent research workflow to save Fable credits.
+- **Handoff / Next Steps**: Run the Fable prompt (or hand it to Fable). After C0 is fixed and verified through a served WebGL build at `/world`, merge `claude/hut3d-golive` → `main` to go live. Character appearance created in 3D should round-trip to the 2D avatar on `/world2d` via `game_state`.
+
+---
+
 ## 2026-07-02 (Claude) — THE JOURNEY GOES 3D (Unity + Blender)
 - **Agent**: Claude (branch `claude/unity-3d-hut`)
 - **Status**: First playable scaffold complete
