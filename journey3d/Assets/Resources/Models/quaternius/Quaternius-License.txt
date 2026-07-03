@@ -1,0 +1,16 @@
+Character models and animations in this folder are from Quaternius:
+
+  Ultimate Modular Men Pack  (Feb 2022)   — char_masc_*, char_truth, anims_masc
+  Ultimate Modular Women Pack (April 2022) — char_fem_*, anims_fem
+
+https://quaternius.com
+
+License: CC0 1.0 Universal (Public Domain Dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Free for personal and commercial use, no attribution required.
+(Attribution given anyway — thank you, Quaternius.)
+
+Files were processed with Blender for this project: character meshes had
+their duplicated animation takes stripped, and the shared animation sets
+were exported once per rig as anims_masc.fbx / anims_fem.fbx.

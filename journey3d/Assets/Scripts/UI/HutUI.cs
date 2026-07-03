@@ -237,7 +237,6 @@ namespace Journey3D
         {
             var body = FreshBody("The Ledger  ·  The Daily Word", s.accent);
             var list = UIKit.ScrollList(body);
-            UIKit.Fill(list.parent.GetComponent<RectTransform>());
             Header(list, "Words from Truth, carried in from the wider Hub.");
             var loading = UIKit.Label(list, "Unrolling the scrolls...", 19, UIKit.Faint, TextAnchor.MiddleCenter, FontStyle.Italic);
             loading.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
@@ -332,7 +331,7 @@ namespace Journey3D
         // =====================================================
         //  CHARACTER CREATOR (Soul Mirror + first-run)
         // =====================================================
-        private static readonly string[] CreatorTabs = { "Body", "Hair", "Face", "Garb", "Path" };
+        private static readonly string[] CreatorTabs = { "Body", "Hair", "Garb", "Path" };
 
         public void OpenCreator(bool firstRun)
         {
@@ -369,15 +368,13 @@ namespace Journey3D
             var host = UIKit.Panel(body, "host", Color.clear);
             host.anchorMin = Vector2.zero; host.anchorMax = Vector2.one; host.offsetMin = new Vector2(0, 52); host.offsetMax = new Vector2(0, -50);
             var list = UIKit.ScrollList(host);
-            UIKit.Fill((RectTransform)list.parent);
 
             PreviewChips(list);
             switch (_creatorTab)
             {
                 case 0: TabBody(list, c); break;
                 case 1: TabHair(list, c); break;
-                case 2: TabFace(list, c); break;
-                case 3: TabGarb(list, c); break;
+                case 2: TabGarb(list, c); break;
                 default: TabPath(list, c); break;
             }
 
@@ -415,26 +412,20 @@ namespace Journey3D
 
         private void TabBody(Transform list, CharacterState c)
         {
-            OptionGrid(list, "Build", AvatarPalette.BUILDS, c.build, v => { c.build = v; if (!System.Array.Exists(AvatarPalette.OutfitsFor(v), o => o == c.outfit)) c.outfit = AvatarPalette.OutfitsFor(v)[0]; });
+            OptionGrid(list, "Frame", AvatarPalette.BUILDS, c.build, v => { c.build = v; if (!System.Array.Exists(AvatarPalette.OutfitsFor(v), o => o == c.outfit)) c.outfit = AvatarPalette.OutfitsFor(v)[0]; });
             SwatchGrid(list, "Skin tone", AvatarPalette.SKIN_TONES, c.skin, i => c.skin = i);
             SwatchGrid(list, "Eyes", AvatarPalette.EYE_COLORS, c.eyes, i => c.eyes = i);
         }
 
         private void TabHair(Transform list, CharacterState c)
         {
-            OptionGrid(list, "Hair style", AvatarPalette.HAIR_STYLES, c.hairStyle, v => c.hairStyle = v);
             SwatchGrid(list, "Hair color", AvatarPalette.HAIR_COLORS, c.hairColor, i => c.hairColor = i);
-        }
-
-        private void TabFace(Transform list, CharacterState c)
-        {
-            OptionGrid(list, "Face", AvatarPalette.FACES, c.face, v => c.face = v);
-            OptionGrid(list, "Adornment", AvatarPalette.EXTRAS, c.extra, v => c.extra = v);
+            BodyText(list, "Hair style and face are woven at the 2D shrine on the Hub - here your soul wears the garb's own cut.", 50, UIKit.Faint);
         }
 
         private void TabGarb(Transform list, CharacterState c)
         {
-            OptionGrid(list, "Outfit", AvatarPalette.OutfitsFor(c.build), c.outfit, v => c.outfit = v);
+            OptionGrid(list, "Garb  (changes your whole figure)", AvatarPalette.OutfitsFor(c.build), c.outfit, v => c.outfit = v);
             SwatchGrid(list, "Top color", AvatarPalette.CLOTH_COLORS, c.top, i => c.top = i);
             SwatchGrid(list, "Legs color", AvatarPalette.CLOTH_COLORS, c.bottom, i => c.bottom = i);
             SwatchGrid(list, "Boots", AvatarPalette.BOOT_COLORS, c.boots, i => c.boots = i);

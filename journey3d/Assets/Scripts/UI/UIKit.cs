@@ -145,6 +145,7 @@ namespace Journey3D
         public static RectTransform ScrollList(Transform parent)
         {
             var viewport = Panel(parent, "viewport", new Color(0, 0, 0, 0.25f));
+            Fill(viewport);   // anchor to the parent - otherwise it stays a 100x100 default box
             viewport.gameObject.AddComponent<RectMask2D>();
             var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;

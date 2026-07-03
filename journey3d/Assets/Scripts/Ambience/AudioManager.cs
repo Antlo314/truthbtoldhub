@@ -2,12 +2,12 @@ using UnityEngine;
 
 namespace Journey3D
 {
-    /// Procedural ambience — no external audio files. Generates a warm drone,
-    /// a fireplace crackle (positional), and footstep ticks while walking.
+    /// Footstep ticks while walking. The soundtrack plays from the host page;
+    /// the fireplace is visual-only now — its old procedural crackle was a
+    /// constant filtered-noise bed that read as static, so it was removed.
     public class AudioManager : MonoBehaviour
     {
         public Transform player;
-        public Vector3 firePos = new Vector3(6.05f, 1.1f, 0f);
 
         private CharacterController _cc;
         private AudioSource _footSrc;
@@ -17,22 +17,6 @@ namespace Journey3D
 
         private void Start()
         {
-            // (the original soundtrack plays from the hosting page - no drone)
-
-            // fireplace crackle (positional)
-            var fireGo = new GameObject("FireCrackle");
-            fireGo.transform.position = firePos;
-            fireGo.transform.SetParent(transform, false);
-            var fire = fireGo.AddComponent<AudioSource>();
-            fire.clip = MakeFire(3);
-            fire.loop = true;
-            fire.volume = 0.35f;
-            fire.spatialBlend = 1f;
-            fire.minDistance = 1.5f;
-            fire.maxDistance = 12f;
-            fire.rolloffMode = AudioRolloffMode.Linear;
-            fire.Play();
-
             // footsteps
             _footClip = MakeStep();
             var footGo = new GameObject("Footsteps");
@@ -67,27 +51,6 @@ namespace Journey3D
         }
 
         // ---- procedural clips ----
-        private AudioClip MakeFire(int seconds)
-        {
-            int n = SR * seconds;
-            var data = new float[n];
-            float bed = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                // low filtered noise bed + random crackle pops
-                bed = bed * 0.96f + (Random.value * 2f - 1f) * 0.04f;
-                float pop = 0f;
-                if (Random.value < 0.0016f) pop = (Random.value * 2f - 1f) * Random.Range(0.3f, 0.9f);
-                data[i] = Mathf.Clamp(bed + pop, -1f, 1f);
-            }
-            // decay the pops with a short tail
-            for (int i = 1; i < n; i++)
-                data[i] = Mathf.Lerp(data[i], data[i - 1], 0.25f);
-            var clip = AudioClip.Create("fire", n, 1, SR, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
-
         private AudioClip MakeStep()
         {
             int n = SR / 8;   // ~0.12s

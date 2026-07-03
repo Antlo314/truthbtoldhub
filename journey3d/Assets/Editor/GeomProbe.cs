@@ -9,6 +9,44 @@ namespace Journey3D.EditorTools
     ///   Unity -batchmode -executeMethod Journey3D.EditorTools.GeomProbe.Probe -quit
     public static class GeomProbe
     {
+        /// Verifies the Quaternius character imports: mesh bounds, root
+        /// hierarchy (bone-path roots must match the anim donors), material
+        /// names for the tint map, and the Legacy clip lists.
+        public static void ProbeChars()
+        {
+            foreach (var name in new[]
+            {
+                "char_masc_tunic", "char_masc_vest", "char_masc_robe", "char_masc_cloak",
+                "char_masc_wanderer", "char_masc_vestment",
+                "char_fem_dress", "char_fem_gown", "char_fem_robe", "char_fem_tunic",
+                "char_fem_wanderer", "char_fem_vestment", "char_truth",
+            })
+            {
+                var prefab = Resources.Load<GameObject>("Models/quaternius/" + name);
+                if (prefab == null) { Debug.Log($"CPROBE {name}: MISSING"); continue; }
+                var rends = prefab.GetComponentsInChildren<Renderer>();
+                Bounds b = new Bounds(); bool first = true;
+                var mats = new System.Collections.Generic.List<string>();
+                foreach (var r in rends)
+                {
+                    if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+                    foreach (var m in r.sharedMaterials) if (m != null) mats.Add(m.name);
+                }
+                var kids = new System.Collections.Generic.List<string>();
+                foreach (Transform t in prefab.transform) kids.Add(t.name);
+                Debug.Log($"CPROBE {name}: size={b.size} center={b.center} skinned={prefab.GetComponentsInChildren<SkinnedMeshRenderer>().Length} " +
+                          $"roots=[{string.Join(",", kids)}] mats=[{string.Join(",", mats)}]");
+            }
+            foreach (var donor in new[] { "anims_masc", "anims_fem" })
+            {
+                var clips = Resources.LoadAll<AnimationClip>("Models/quaternius/" + donor);
+                var names = new System.Collections.Generic.List<string>();
+                foreach (var c in clips) names.Add($"{c.name}({c.length:F1}s legacy={c.legacy})");
+                Debug.Log($"CPROBE donor {donor}: {clips.Length} clips [{string.Join(", ", names)}]");
+            }
+            Debug.Log("CPROBE done");
+        }
+
         public static void ProbeKenney()
         {
             foreach (var name in new[]

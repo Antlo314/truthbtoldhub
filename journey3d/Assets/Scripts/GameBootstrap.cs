@@ -103,7 +103,9 @@ namespace Journey3D
                 inst.transform.localScale = Vector3.one * (targetSize / Mathf.Max(0.01f, dim));
                 b = rends[0].bounds;
                 for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
-                inst.transform.position += wrapper.transform.position - new Vector3(b.center.x, b.min.y, b.center.z);
+                // seat base at the wrapper origin, lifted 8mm so a model's base
+                // is never exactly coplanar with the floor (avoids z-fighting)
+                inst.transform.position += wrapper.transform.position - new Vector3(b.center.x, b.min.y - 0.008f, b.center.z);
             }
             if (collide) AddBoundsCollider(wrapper);
             return wrapper;
@@ -174,7 +176,7 @@ namespace Journey3D
             SpawnKenney("fur_coatRack", new Vector3(-4.6f, 0, -6.2f), 0, 1.9f, collide: false);
             SpawnKenney("fur_pottedPlant", new Vector3(6.2f, 0, 6.1f), 0, 1.5f, collide: false);
             SpawnKenney("fur_pottedPlant", new Vector3(-6.2f, 0, 6.2f), 200f, 1.35f, collide: false);
-            var fire = Spawn("fireplace", new Vector3(6.05f, 0, 0), -90f);
+            var fire = Spawn("fireplace", new Vector3(6.05f, 0.02f, 0), -90f);   // lift hearth off the floor (was coplanar -> z-fight)
             var flame = new GameObject("firelight");
             flame.transform.SetParent(fire.transform, false);
             flame.transform.localPosition = new Vector3(0, 1.1f, -0.4f);
@@ -185,20 +187,31 @@ namespace Journey3D
             flame.AddComponent<FlickerLight>().baseIntensity = 2.6f;
         }
 
+        // the clearing: everything the player can reach stays inside this radius
+        private const float BOUNDARY_R = 22.5f;
+        // the one path out runs due -Z (out the hut door); the forest parts here
+        private const float TRAIL_DEG = 270f;
+        private const float TRAIL_HALF_DEG = 8f;
+
         private void BuildExterior()
         {
-            Spawn("terrain_ground", new Vector3(0, 0, 0), 0, collide: false);   // ground box in BuildRoomPhysics
+            // 120x120 visible grass so no edge is ever in sight (physics ground
+            // stays the code-built box; the player never leaves the forest ring)
+            // 2cm below the hut's wood floor - they were coplanar at y=0 and
+            // z-fought (grass bleeding through the interior floor)
+            Spawn("terrain_ground", new Vector3(0, -0.06f, 0), 0, collide: false, scale: 2.5f);   // 6cm below the wood floor -> no z-fight inside
             Spawn("terrain_path", new Vector3(0, 0, 0), 0, collide: false);
+            Spawn("terrain_path", new Vector3(0, 0, -10.4f), 0, collide: false);   // pavers on to the trailhead
             Spawn("hut_exterior", Vector3.zero, 0, collide: false);    // roof + chimney, overhead
             Spawn("sky_dome", Vector3.zero, 0, collide: false);        // huge emissive dome
 
-            // real stylized trees (Kenney CC0) ringing the yard
+            // scattered trees inside the clearing so the yard reads as a glade
             string[] trees = { "nat_tree_default", "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak",
                                "nat_tree_fat", "nat_tree_thin", "nat_tree_pineRoundC", "nat_tree_small" };
-            float[] ang = { 8, 32, 58, 84, 110, 138, 166, 194, 222, 250, 278, 306, 334 };
+            float[] ang = { 8, 32, 58, 84, 110, 138, 166, 194, 222, 306, 334 };   // gap left around the trail
             for (int i = 0; i < ang.Length; i++)
             {
-                float r = 18.5f + (i % 3) * 1.4f;
+                float r = 17.5f + (i % 3) * 1.4f;
                 float rad = ang[i] * Mathf.Deg2Rad;
                 var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
                 SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.2f + (i % 4) * 0.6f);
@@ -208,8 +221,9 @@ namespace Journey3D
             float[] rang = { 20, 70, 120, 175, 205, 250, 300, 340 };
             for (int i = 0; i < rang.Length; i++)
             {
+                if (InTrail(rang[i])) continue;
                 float rad = rang[i] * Mathf.Deg2Rad;
-                var p = new Vector3(Mathf.Cos(rad) * 21.5f, 0, Mathf.Sin(rad) * 21.5f);
+                var p = new Vector3(Mathf.Cos(rad) * 20.5f, 0, Mathf.Sin(rad) * 20.5f);
                 SpawnKenney(rocks[i % rocks.Length], p, rang[i] * 1.7f, 1.2f + (i % 3) * 0.5f);
             }
             // bushes, flowers, mushrooms, logs across the mid-yard (non-blocking)
@@ -224,24 +238,152 @@ namespace Journey3D
                 SpawnKenney(flora[i % flora.Length], p, fang[i] * 3f, 0.7f + (i % 3) * 0.4f, collide: false);
             }
 
-            BuildBoundaryRing(22.5f);
+            BuildForestWall();
+            BuildBoundary();
+            BuildTrailhead();
         }
 
-        private void BuildBoundaryRing(float radius)
+        private static bool InTrail(float deg, float halfWidth = TRAIL_HALF_DEG + 4f)
         {
-            // invisible wall so the player can circle the hut but never reach a void
+            return Mathf.Abs(Mathf.DeltaAngle(deg, TRAIL_DEG)) < halfWidth;
+        }
+
+        /// A dense double ring of big trees just past the boundary, with
+        /// understory bushes plugging the trunk gaps - a living border wall.
+        /// The only opening is the trail corridor at TRAIL_DEG.
+        private void BuildForestWall()
+        {
+            string[] big = { "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_default", "nat_tree_oak",
+                             "nat_tree_fat", "nat_tree_pineRoundC" };
+            var rng = new System.Random(7);
+            var root = new GameObject("ForestWall").transform;
+
+            // inner ring: heavyweight trees shoulder to shoulder (~5 deg apart)
+            for (float deg = 0; deg < 360f; deg += 5f)
+            {
+                if (InTrail(deg)) continue;
+                float jitter = (float)rng.NextDouble() * 2.2f;
+                float r = 24f + jitter;
+                float rad = deg * Mathf.Deg2Rad;
+                var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
+                var t = SpawnKenney(big[rng.Next(big.Length)], p, (float)rng.NextDouble() * 360f,
+                    5.2f + (float)rng.NextDouble() * 2.6f, collide: false);
+                if (t != null) t.transform.SetParent(root, true);
+            }
+            // outer ring: staggered, taller, sells depth beyond the wall
+            for (float deg = 2.5f; deg < 360f; deg += 7f)
+            {
+                if (InTrail(deg)) continue;
+                float r = 28.5f + (float)rng.NextDouble() * 3f;
+                float rad = deg * Mathf.Deg2Rad;
+                var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
+                var t = SpawnKenney(big[rng.Next(big.Length)], p, (float)rng.NextDouble() * 360f,
+                    6.5f + (float)rng.NextDouble() * 3f, collide: false);
+                if (t != null) t.transform.SetParent(root, true);
+            }
+            // understory: bushes at trunk height so there is no seeing through
+            string[] brush = { "nat_plant_bushLarge", "nat_plant_bushDetailed" };
+            for (float deg = 1.5f; deg < 360f; deg += 4f)
+            {
+                if (InTrail(deg)) continue;
+                float rad = deg * Mathf.Deg2Rad;
+                float r = 23.2f + (float)rng.NextDouble() * 1.2f;
+                var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
+                var b = SpawnKenney(brush[rng.Next(brush.Length)], p, (float)rng.NextDouble() * 360f,
+                    1.6f + (float)rng.NextDouble() * 1.2f, collide: false);
+                if (b != null) b.transform.SetParent(root, true);
+            }
+        }
+
+        /// Invisible wall around the clearing. Segments face outward
+        /// (tangent walls, overlapping) so there are no gaps to slip through.
+        private void BuildBoundary()
+        {
             var ring = new GameObject("Boundary");
-            const int segs = 36;
+            const int segs = 48;
             for (int i = 0; i < segs; i++)
             {
-                float a = (i / (float)segs) * Mathf.PI * 2f;
+                float deg = (i / (float)segs) * 360f;
+                // only the corridor MOUTH stays open (its own walls seal the rest);
+                // a wider skip here would leave slip-gaps beside the corridor
+                if (InTrail(deg, 7f)) continue;
+                float rad = deg * Mathf.Deg2Rad;
+                var dirOut = new Vector3(Mathf.Cos(rad), 0, Mathf.Sin(rad));
                 var seg = new GameObject("seg");
                 seg.transform.SetParent(ring.transform, false);
-                seg.transform.position = new Vector3(Mathf.Cos(a) * radius, 2f, Mathf.Sin(a) * radius);
-                seg.transform.rotation = Quaternion.Euler(0, -a * Mathf.Rad2Deg, 0);
+                seg.transform.position = dirOut * BOUNDARY_R + Vector3.up * 2.5f;
+                seg.transform.rotation = Quaternion.LookRotation(dirOut);   // local Z = radial
                 var bc = seg.AddComponent<BoxCollider>();
-                bc.size = new Vector3(radius * 2f * Mathf.PI / segs + 0.5f, 4f, 0.5f);
+                // chord length + generous overlap; thick so fast souls can't tunnel
+                bc.size = new Vector3(BOUNDARY_R * 2f * Mathf.PI / segs + 1.2f, 5f, 0.8f);
             }
+        }
+
+        /// The start of the adventure: a walled path south through the forest,
+        /// sealed at its end by fallen timber between two standing stones.
+        private void BuildTrailhead()
+        {
+            var root = new GameObject("Trailhead").transform;
+
+            // corridor walls from the clearing edge to the seal
+            AddWall(root, new Vector3(-2.6f, 2.5f, -25.5f), new Vector3(0.8f, 5f, 9f));
+            AddWall(root, new Vector3(2.6f, 2.5f, -25.5f), new Vector3(0.8f, 5f, 9f));
+            AddWall(root, new Vector3(0, 2.5f, -29.6f), new Vector3(6f, 5f, 0.8f));   // seal
+
+            // trees hugging the corridor so the path reads as a forest lane
+            var rng = new System.Random(23);
+            string[] big = { "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak", "nat_tree_default" };
+            for (int i = 0; i < 8; i++)
+            {
+                float z = -23.5f - i * 2.3f;
+                float x = (i % 2 == 0 ? 1f : -1f) * (3.6f + (float)rng.NextDouble() * 1.6f);
+                SpawnKenney(big[rng.Next(big.Length)], new Vector3(x, 0, z),
+                    (float)rng.NextDouble() * 360f, 5f + (float)rng.NextDouble() * 2.5f, collide: false);
+            }
+            // the path fading into the deep woods beyond the seal
+            for (int i = 0; i < 4; i++)
+            {
+                float z = -32f - i * 3.4f;
+                SpawnKenney(big[rng.Next(big.Length)], new Vector3(((i % 2 == 0) ? -1.2f : 1.4f) * (1.5f + i * 0.4f), 0, z),
+                    (float)rng.NextDouble() * 360f, 6f + (float)rng.NextDouble() * 3f, collide: false);
+            }
+
+            // the seal itself: stones + fallen timber + a promise
+            SpawnKenney("nat_stone_tallC", new Vector3(-2.2f, 0, -27.6f), 12f, 3.1f);
+            SpawnKenney("nat_stone_tallC", new Vector3(2.2f, 0, -27.8f), 200f, 2.8f);
+            SpawnKenney("nat_log_stack", new Vector3(0, 0, -28.4f), 90f, 3.4f, flat: true);
+            SpawnKenney("nat_mushroom_redGroup", new Vector3(-1.4f, 0, -27.9f), 40f, 0.5f, collide: false);
+
+            var sign = new GameObject("trail_sign");
+            sign.transform.SetParent(root, false);
+            sign.transform.position = new Vector3(0, 2.6f, -28.2f);
+            sign.transform.rotation = Quaternion.Euler(0, 180f, 0);   // face the approaching soul (TextMesh reads from behind its forward)
+            var tm = sign.AddComponent<TextMesh>();
+            tm.text = "The road beyond is still being laid.\nThe forest will open when it is time.";
+            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tm.fontSize = 44;
+            tm.characterSize = 0.032f;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+            tm.color = UIKit.Amber;
+            sign.GetComponent<MeshRenderer>().material = tm.font.material;
+
+            var glow = new GameObject("seal_glow");
+            glow.transform.SetParent(root, false);
+            glow.transform.position = new Vector3(0, 1.4f, -27.6f);
+            var gl = glow.AddComponent<Light>();
+            gl.type = LightType.Point;
+            gl.color = new Color(1f, 0.75f, 0.35f);
+            gl.range = 7f;
+            glow.AddComponent<FlickerLight>().baseIntensity = 1.6f;
+        }
+
+        private static void AddWall(Transform parent, Vector3 center, Vector3 size)
+        {
+            var w = new GameObject("wall");
+            w.transform.SetParent(parent, false);
+            w.transform.position = center;
+            w.AddComponent<BoxCollider>().size = size;
         }
 
         private void AddStation(GameObject go, StationId id, string label, string hex)
@@ -263,7 +405,10 @@ namespace Journey3D
             var door = Spawn("sanctum_door", new Vector3(0, 0, 6.78f), 180f);
             AddStation(door, StationId.Sanctum, "The Sanctum", "#7c5cff");
 
-            var truth = Spawn("truth_sage", new Vector3(0, 0, 3.2f), 180f);
+            // Truth is the King of the Quaternius kit: white beard, gold crown,
+            // regal robes - a sage worth crossing a forest for
+            var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
+                new Vector3(0, 0, 3.2f), 180f, 1.86f, collide: true);
             AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
             truth.GetComponent<Station>().interactRadius = 2.8f;
 
@@ -283,7 +428,8 @@ namespace Journey3D
             var arcade = Spawn("arcade_cabinet", new Vector3(2.6f, 0, -6.1f), 0f);
             AddStation(arcade, StationId.Arcade, "The Arcade", "#7c5cff");
 
-            var table = Spawn("wayfinder_table", new Vector3(5.35f, 0, -4.3f), 0f);
+            // corner between the arcade and the forge, clear of both
+            var table = Spawn("wayfinder_table", new Vector3(5.8f, 0, -5.8f), -45f);
             AddStation(table, StationId.Wayfinder, "The Wayfinder", "#22c55e");
         }
 
@@ -297,23 +443,14 @@ namespace Journey3D
             cc.radius = 0.35f;
             cc.center = new Vector3(0, 0.95f, 0);
 
-            var avatarPrefab = Resources.Load<GameObject>("Models/player_avatar");
-            Transform avatar = null;
-            if (avatarPrefab != null)
-            {
-                var a = Instantiate(avatarPrefab, root.transform);
-                a.name = "avatar";
-                a.transform.localPosition = Vector3.zero;
-                avatar = a.transform;
-                _appearance = root.AddComponent<PlayerAppearance>();
-                _appearance.Bind(a);
-                WorldSkin.Skin(a, instanced: true);   // cloth weave on tunic/legs
-                _appearance.Apply();
-                root.AddComponent<WalkAnimator>().Bind(a.transform, cc);
-            }
+            // the soul itself: a real Quaternius character picked and tinted
+            // from the saved build/outfit, animated with the shared clip set
+            _appearance = root.AddComponent<PlayerAppearance>();
+            _appearance.Apply();
+            root.AddComponent<WalkAnimator>().Bind(_appearance, cc);
 
             var pc = root.AddComponent<PlayerController>();
-            pc.avatar = null;   // gait handled by WalkAnimator, not the old bob
+            pc.avatar = null;   // gait comes from real animation clips now
             _playerRoot = root.transform;
             return pc;
         }
@@ -326,6 +463,10 @@ namespace Journey3D
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.55f, 0.68f, 0.83f);   // sky fallback
             cam.fieldOfView = 60f;
+            // tighten the far plane (default 1000 with a 60m sky wastes depth
+            // precision -> z-fighting under WebGL's 16-bit depth buffer)
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 150f;
             camGo.AddComponent<AudioListener>();
             var rig = camGo.AddComponent<CameraRig>();
             rig.target = player.transform;

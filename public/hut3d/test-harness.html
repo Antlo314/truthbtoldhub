@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- Local verification harness for the Unity build (bypasses the /world auth
+     gate so agents can smoke-test the WebGL bundle). Not linked anywhere. -->
+<html>
+<head><meta charset="utf-8"><title>hut3d harness</title>
+<style>html,body{margin:0;background:#06080e;height:100%}canvas{width:100vw;height:100vh;display:block}</style>
+</head>
+<body>
+<canvas id="unity-canvas" width="1280" height="800"></canvas>
+<script src="/hut3d/Build/webgl.loader.js"></script>
+<script>
+createUnityInstance(document.querySelector("#unity-canvas"), {
+    dataUrl: "/hut3d/Build/webgl.data.unityweb",
+    frameworkUrl: "/hut3d/Build/webgl.framework.js.unityweb",
+    codeUrl: "/hut3d/Build/webgl.wasm.unityweb",
+    companyName: "Truth B Told",
+    productName: "The Journey - Truth's Hut",
+    productVersion: "1.1",
+    matchWebGLToCanvasSize: false,
+    webglContextAttributes: { preserveDrawingBuffer: true },
+}).then(() => console.log("HARNESS: unity ready")).catch(e => console.error("HARNESS:", e));
+</script>
+</body>
+</html>
