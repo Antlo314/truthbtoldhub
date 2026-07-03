@@ -6,16 +6,16 @@ namespace Journey3D
     public class CameraRig : MonoBehaviour
     {
         public Transform target;
-        public float distance = 4.4f;
-        public float minDistance = 2f;
-        public float maxDistance = 7f;
-        public float height = 2.6f;
+        public float distance = 3.9f;
+        public float minDistance = 1.8f;
+        public float maxDistance = 8f;
+        public float height = 2.2f;
         public float orbitSpeed = 3.2f;
-        public float followLerp = 8f;
+        public float followLerp = 10f;
         public bool inputLocked;
 
         private float _yaw = 0f;     // start behind the player, facing Truth and the back wall
-        private float _pitch = 18f;
+        private float _pitch = 13f;  // lower angle - see the room, not the floor
 
         private void LateUpdate()
         {

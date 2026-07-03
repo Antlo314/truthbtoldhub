@@ -50,7 +50,9 @@ namespace Journey3D
                 Debug.LogError("Missing model: " + model);
                 return new GameObject(model + "_missing");
             }
-            var go = Instantiate(prefab, pos, Quaternion.Euler(0, yaw, 0));
+            // compose with the prefab's own rotation so any FBX axis-correction
+            // the importer put on the root is preserved (identity when baked)
+            var go = Instantiate(prefab, pos, Quaternion.Euler(0, yaw, 0) * prefab.transform.rotation);
             go.name = model;
             if (scale != 1f) go.transform.localScale = Vector3.one * scale;
             // Runtime MeshCollider cooking proved unreliable in WebGL builds
@@ -226,13 +228,15 @@ namespace Journey3D
             {
                 var a = Instantiate(avatarPrefab, root.transform);
                 a.name = "avatar";
+                a.transform.localPosition = Vector3.zero;
                 avatar = a.transform;
                 _appearance = root.AddComponent<PlayerAppearance>();
                 _appearance.Bind(a);
+                root.AddComponent<WalkAnimator>().Bind(a.transform, cc);
             }
 
             var pc = root.AddComponent<PlayerController>();
-            pc.avatar = avatar;
+            pc.avatar = null;   // gait handled by WalkAnimator, not the old bob
             _playerRoot = root.transform;
             return pc;
         }
@@ -244,7 +248,7 @@ namespace Journey3D
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.55f, 0.68f, 0.83f);   // sky fallback
-            cam.fieldOfView = 55f;
+            cam.fieldOfView = 60f;
             camGo.AddComponent<AudioListener>();
             var rig = camGo.AddComponent<CameraRig>();
             rig.target = player.transform;

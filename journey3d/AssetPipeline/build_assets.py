@@ -111,29 +111,38 @@ def torus(name, r_major, r_minor, loc, material, rot=(0, 0, 0), scale=(1, 1, 1))
     return _apply(o, material, name)
 
 
-def export_asset(name, objects):
-    """Join objects into one mesh named `name`, export FBX, then delete."""
+def export_asset(name, objects, join=True):
+    """Export objects as one FBX. bake_space_transform bakes the Blender->Unity
+    axis conversion into the vertex data so Unity gets clean Y-up meshes with
+    identity rotations (runtime rotation overrides are then always safe).
+    join=False keeps named parts as children (needed for the animated player)."""
     bpy.ops.object.select_all(action='DESELECT')
     for o in objects:
         o.select_set(True)
     bpy.context.view_layer.objects.active = objects[0]
-    if len(objects) > 1:
+    if join and len(objects) > 1:
         bpy.ops.object.join()
-    root = bpy.context.view_layer.objects.active
-    root.name = name
-    root.location = root.location  # keep authored origin at world origin
-    bpy.ops.object.select_all(action='DESELECT')
-    root.select_set(True)
+        root = bpy.context.view_layer.objects.active
+        root.name = name
+        bpy.ops.object.select_all(action='DESELECT')
+        root.select_set(True)
+        selected = [root]
+    else:
+        selected = objects
     path = os.path.join(OUT_DIR, name + ".fbx")
     bpy.ops.export_scene.fbx(
         filepath=path,
         use_selection=True,
         object_types={'MESH'},
         apply_scale_options='FBX_SCALE_ALL',
+        bake_space_transform=True,
         add_leaf_bones=False,
         bake_anim=False,
         path_mode='COPY',
     )
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in selected:
+        o.select_set(True)
     bpy.ops.object.delete(use_global=False)
     print("EXPORTED", path)
 
@@ -149,18 +158,37 @@ def build_hut_shell():
     # plank lines (thin raised strips)
     for i in range(-6, 7, 2):
         parts.append(box('plank', (0.06, W, 0.26), (i, 0, -0.11), M_WOOD_DARK()))
-    # walls: back(+Y), front(-Y), left(-X), right(+X)
-    # back wall (+Y) carries a walkable DOORWAY: gap X in [-0.75, 0.75], up to z=2.6
-    parts.append(box('wall_back_l', (6.25, T, H), (-3.875, W / 2, H / 2), M_WOOD_LIGHT()))
-    parts.append(box('wall_back_r', (6.25, T, H), (3.875, W / 2, H / 2), M_WOOD_LIGHT()))
-    parts.append(box('wall_back_lintel', (1.5, T, 1.6), (0, W / 2, 3.4), M_WOOD_LIGHT()))
-    # door frame posts (gold trim, cosmetic)
-    parts.append(box('door_post_l', (0.12, T + 0.05, 2.6), (-0.81, W / 2, 1.3), M_WOOD_DARK()))
-    parts.append(box('door_post_r', (0.12, T + 0.05, 2.6), (0.81, W / 2, 1.3), M_WOOD_DARK()))
-    parts.append(box('door_head', (1.74, T + 0.05, 0.14), (0, W / 2, 2.62), M_WOOD_DARK()))
-    parts.append(box('wall_front', (W, T, H), (0, -W / 2, H / 2), M_WOOD_LIGHT()))
-    parts.append(box('wall_left', (T, W, H), (-W / 2, 0, H / 2), M_WOOD_LIGHT()))
-    parts.append(box('wall_right', (T, W, H), (W / 2, 0, H / 2), M_WOOD_LIGHT()))
+    # LOG-CABIN WALLS - stacked horizontal logs so it reads as a real hut.
+    # Doorway on the +Y wall: gap x in [-0.85, 0.85] below z=2.6.
+    LOG_R = 0.27
+    rows = 8
+    for i in range(rows):
+        z = LOG_R + i * (H - LOG_R * 2) / (rows - 1)
+        m = M_WOOD_LIGHT() if i % 2 == 0 else M_WOOD_MID()
+        # +Y wall (door wall): split logs around the gap on lower rows
+        if z < 2.6:
+            parts.append(cyl('logD_l', LOG_R, 6.1, (-3.95, W / 2, z), m, rot=(0, math.pi / 2, 0), verts=10))
+            parts.append(cyl('logD_r', LOG_R, 6.1, (3.95, W / 2, z), m, rot=(0, math.pi / 2, 0), verts=10))
+        else:
+            parts.append(cyl('logD', LOG_R, W, (0, W / 2, z), m, rot=(0, math.pi / 2, 0), verts=10))
+        # -Y wall: full logs
+        parts.append(cyl('logF', LOG_R, W, (0, -W / 2, z), m, rot=(0, math.pi / 2, 0), verts=10))
+        # +/-X walls: logs run along Y, slightly long so ends cross at corners
+        parts.append(cyl('logL', LOG_R, W + 0.9, (-W / 2, 0, z), m, rot=(math.pi / 2, 0, 0), verts=10))
+        parts.append(cyl('logR', LOG_R, W + 0.9, (W / 2, 0, z), m, rot=(math.pi / 2, 0, 0), verts=10))
+    # door frame posts + lintel beam
+    parts.append(box('door_post_l', (0.18, 0.7, 2.7), (-0.95, W / 2, 1.35), M_WOOD_DARK()))
+    parts.append(box('door_post_r', (0.18, 0.7, 2.7), (0.95, W / 2, 1.35), M_WOOD_DARK()))
+    parts.append(box('door_head', (2.1, 0.7, 0.22), (0, W / 2, 2.72), M_WOOD_DARK()))
+    # porch: two posts + a small sloped awning over the door (outside, +Y)
+    parts.append(cyl('porch_post_l', 0.11, 2.5, (-1.35, W / 2 + 1.6, 1.25), M_WOOD_DARK(), verts=8))
+    parts.append(cyl('porch_post_r', 0.11, 2.5, (1.35, W / 2 + 1.6, 1.25), M_WOOD_DARK(), verts=8))
+    parts.append(box('porch_roof', (3.4, 2.3, 0.14), (0, W / 2 + 1.0, 2.75), mat('roof_thatch2', hex_c('6b4423'), rough=0.95), rot=(0.32, 0, 0)))
+    # welcome lanterns flanking the path
+    lamp = mat('lantern_glow', AMBER, emit=AMBER, emit_strength=4.0)
+    for lx in (-2.6, 2.6):
+        parts.append(cyl('lamp_post', 0.07, 1.5, (lx, W / 2 + 2.6, 0.75), M_WOOD_DARK(), verts=8))
+        parts.append(box('lamp_head', (0.24, 0.24, 0.3), (lx, W / 2 + 2.6, 1.62), lamp))
     # ceiling + beams
     parts.append(box('ceiling', (W + 1, W + 1, 0.2), (0, 0, H + 0.1), M_WOOD_DARK()))
     for i in range(-2, 3):
@@ -272,7 +300,8 @@ def build_player():
     # head (faces -Y)
     parts.append(sphere('head', 0.2, (0, 0, 1.52), mat_skin))
     parts.append(sphere('hair', 0.21, (0, 0.03, 1.58), mat_hair, scale=(1, 1, 0.8)))
-    export_asset('player_avatar', parts)
+    # keep parts separate so Unity can swing legs/arms for a real walk cycle
+    export_asset('player_avatar', parts, join=False)
 
 
 # =============================================================
