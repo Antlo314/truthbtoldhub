@@ -39,8 +39,8 @@ namespace Journey3D
     public static class SaveState
     {
         public const int MaxConsumableStack = 5;
+        private const string PrefsKey = "soul_record";
         private static CharacterState _char;
-        private static string PathFile => System.IO.Path.Combine(Application.persistentDataPath, "soul_record.json");
 
         public static CharacterState Character
         {
@@ -55,9 +55,10 @@ namespace Journey3D
         {
             try
             {
-                _char = File.Exists(PathFile)
-                    ? JsonUtility.FromJson<CharacterState>(File.ReadAllText(PathFile))
-                    : new CharacterState();
+                var json = PlayerPrefs.GetString(PrefsKey, "");
+                _char = string.IsNullOrEmpty(json)
+                    ? new CharacterState()
+                    : JsonUtility.FromJson<CharacterState>(json);
             }
             catch { _char = new CharacterState(); }
             _char ??= new CharacterState();
@@ -65,7 +66,11 @@ namespace Journey3D
 
         public static void Save()
         {
-            try { File.WriteAllText(PathFile, JsonUtility.ToJson(_char, true)); }
+            try
+            {
+                PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(_char));
+                PlayerPrefs.Save();
+            }
             catch (Exception e) { Debug.LogError("SaveState: " + e.Message); }
         }
 

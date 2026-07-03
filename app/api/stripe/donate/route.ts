@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { tierById } from '@/lib/donationTiers';
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         const priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData = {
             currency: 'usd',
             product_data: {
-                name: `${tier.title} — Truth Be Told`,
+                name: `${tier.title} â€” Truth Be Told`,
                 description: tier.description,
             },
             unit_amount: unitAmount,
@@ -37,8 +37,8 @@ export async function POST(req: Request) {
             payment_method_types: ['card'],
             line_items: [{ price_data: priceData, quantity: 1 }],
             mode: isSubscription ? 'subscription' : 'payment',
-            success_url: `${siteUrl}/world?hut=patron&thanks=${tier.id}`,
-            cancel_url: `${siteUrl}/world?hut=patron&cancelled=1`,
+            success_url: `${siteUrl}/world2d?hut=patron&thanks=${tier.id}`,
+            cancel_url: `${siteUrl}/world2d?hut=patron&cancelled=1`,
             customer_email: email || undefined,
             metadata: {
                 tierId: tier.id,

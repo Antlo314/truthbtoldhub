@@ -12,7 +12,7 @@ namespace Journey3D
         {
             Application.targetFrameRate = 120;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.16f, 0.12f, 0.09f);
+            RenderSettings.ambientLight = new Color(0.34f, 0.27f, 0.2f);
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(0.02f, 0.03f, 0.05f);
             RenderSettings.fogMode = FogMode.Exponential;
@@ -143,7 +143,7 @@ namespace Journey3D
             camGo.AddComponent<AudioListener>();
             var rig = camGo.AddComponent<CameraRig>();
             rig.target = player.transform;
-            camGo.transform.position = player.transform.position + new Vector3(0, 3, -5);
+            camGo.transform.position = player.transform.position + new Vector3(0, 2.4f, -3f);
             return rig;
         }
 
@@ -167,8 +167,8 @@ namespace Journey3D
             var kl = key.AddComponent<Light>();
             kl.type = LightType.Point;
             kl.color = new Color(1f, 0.86f, 0.62f);
-            kl.range = 14f;
-            kl.intensity = 1.15f;
+            kl.range = 16f;
+            kl.intensity = 1.7f;
 
             // cool fill from the sanctum door
             var fill = new GameObject("SanctumGlow");

@@ -6,9 +6,9 @@ namespace Journey3D
     public class CameraRig : MonoBehaviour
     {
         public Transform target;
-        public float distance = 5.5f;
-        public float minDistance = 2.5f;
-        public float maxDistance = 9f;
+        public float distance = 4.4f;
+        public float minDistance = 2f;
+        public float maxDistance = 7f;
         public float height = 2.6f;
         public float orbitSpeed = 3.2f;
         public float followLerp = 8f;
@@ -34,6 +34,13 @@ namespace Journey3D
             var rot = Quaternion.Euler(_pitch, _yaw, 0);
             var focus = target.position + Vector3.up * 1.2f;
             var wanted = focus - rot * Vector3.forward * distance + Vector3.up * (height - 1.2f);
+
+            // never let walls swallow the camera - clamp to the first thing hit
+            var dir = wanted - focus;
+            float dist = dir.magnitude;
+            if (dist > 0.01f && Physics.SphereCast(focus, 0.3f, dir / dist, out var hit, dist))
+                wanted = focus + dir / dist * Mathf.Max(0.5f, hit.distance - 0.15f);
+
             transform.position = Vector3.Lerp(transform.position, wanted, followLerp * Time.deltaTime);
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(focus - transform.position), followLerp * Time.deltaTime);
         }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -79,7 +79,7 @@ export default function CinemaClient() {
                             </div>
                             <h2 className="font-ritual text-5xl md:text-8xl font-black text-white gold-shimmer uppercase leading-none">THE 400 SERIES</h2>
                             <p className="text-[10px] md:text-xs text-white/50 uppercase tracking-[0.3em] max-w-xl mx-auto leading-relaxed">
-                                The 400 Series is on pause until we are fiscally solid. Support the Truth B Told vision — <span className="text-aether-gold">@truufbtold</span> &apos;Ant Cee&apos;.
+                                The 400 Series is on pause until we are fiscally solid. Support the Truth B Told vision â€” <span className="text-aether-gold">@truufbtold</span> &apos;Ant Cee&apos;.
                             </p>
                         </div>
                         
@@ -93,7 +93,7 @@ export default function CinemaClient() {
                                     <div className="h-full bg-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.5)]" style={{ width: `${fundingProgressPercent()}%` }} />
                                 </div>
                                 <p className="text-[7px] font-mono text-orange-400/70 uppercase tracking-widest text-center">
-                                    ${formatFunding(PRODUCTION_RESUME_AT)} — production resume + massive rollout
+                                    ${formatFunding(PRODUCTION_RESUME_AT)} â€” production resume + massive rollout
                                 </p>
                             </div>
                             <button
@@ -178,7 +178,7 @@ export default function CinemaClient() {
                                     <h2 className="font-ritual text-4xl md:text-6xl font-black uppercase text-white leading-none">Support the Truth B Told Vision</h2>
                                     <p className="text-sm text-white/60">
                                         <span className="text-aether-gold font-black">@truufbtold</span>
-                                        <span className="text-white/30 mx-2">·</span>
+                                        <span className="text-white/30 mx-2">Â·</span>
                                         <span className="text-white italic">&apos;Ant Cee&apos;</span>
                                     </p>
                                     <p className="text-[10px] text-white/40 uppercase tracking-[0.25em] leading-relaxed max-w-md mx-auto">
@@ -188,7 +188,7 @@ export default function CinemaClient() {
 
                                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
                                     <Link
-                                        href="/world?hut=patron"
+                                        href="/world2d?hut=patron"
                                         onClick={() => playClick()}
                                         className="flex-1 flex items-center justify-center gap-3 py-5 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-[0_0_50px_rgba(255,255,255,0.2)] hover:scale-[1.02] transition-transform active:scale-95"
                                     >

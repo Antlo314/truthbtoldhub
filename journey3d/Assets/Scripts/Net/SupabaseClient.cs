@@ -20,12 +20,15 @@ namespace Journey3D
             DontDestroyOnLoad(gameObject);
         }
 
+        private static string BearerToken =>
+            WebAuth.SignedIn ? WebAuth.AccessToken : GameData.Config.supabaseAnonKey;
+
         private UnityWebRequest Get(string pathAndQuery)
         {
             var cfg = GameData.Config;
             var req = UnityWebRequest.Get($"{cfg.supabaseUrl}/rest/v1/{pathAndQuery}");
             req.SetRequestHeader("apikey", cfg.supabaseAnonKey);
-            req.SetRequestHeader("Authorization", "Bearer " + cfg.supabaseAnonKey);
+            req.SetRequestHeader("Authorization", "Bearer " + BearerToken);
             return req;
         }
 
@@ -107,38 +110,33 @@ namespace Journey3D
         private IEnumerator SubmitScoreCo(ScoreResult result, string playerName, Action<bool, string> done)
         {
             var cfg = GameData.Config;
-            var body = JsonUtility.ToJson(new ScoreInsert
-            {
-                player_name = string.IsNullOrEmpty(playerName) ? "Wandering Soul" : playerName,
-                game = result.game,
-                score = result.score,
-                lines = result.lines,
-                level = result.level,
-                season = GameData.CurrentSeason(),
-            });
+            var name = string.IsNullOrEmpty(playerName) ? "Wandering Soul" : playerName;
+            // built by hand so user_id is only present for a signed-in soul
+            var body = "{\"player_name\":" + JsonString(name)
+                     + ",\"game\":\"" + result.game + "\""
+                     + ",\"score\":" + result.score
+                     + ",\"lines\":" + result.lines
+                     + ",\"level\":" + result.level
+                     + ",\"season\":\"" + GameData.CurrentSeason() + "\""
+                     + (WebAuth.SignedIn ? ",\"user_id\":\"" + WebAuth.UserId + "\"" : "")
+                     + "}";
             using var req = new UnityWebRequest($"{cfg.supabaseUrl}/rest/v1/arcade_scores", "POST");
             req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("apikey", cfg.supabaseAnonKey);
-            req.SetRequestHeader("Authorization", "Bearer " + cfg.supabaseAnonKey);
+            req.SetRequestHeader("Authorization", "Bearer " + BearerToken);
             req.SetRequestHeader("Prefer", "return=minimal");
             yield return req.SendWebRequest();
             if (req.result == UnityWebRequest.Result.Success)
                 done(true, "Run etched into the season board.");
             else
-                done(false, "The board keeper requires a signed-in soul - sign in on truthbtoldhub.com to etch runs. (Score kept locally.)");
+                done(false, WebAuth.SignedIn
+                    ? "The board keeper could not etch the run. It is kept locally."
+                    : "Sign in on truthbtoldhub.com to etch runs onto the season board. (Score kept locally.)");
         }
 
-        [Serializable]
-        private class ScoreInsert
-        {
-            public string player_name;
-            public string game;
-            public int score;
-            public int lines;
-            public int level;
-            public string season;
-        }
+        private static string JsonString(string s) =>
+            "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
     }
 }
