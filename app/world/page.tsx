@@ -62,35 +62,53 @@ export default function World3DPage() {
         window.addEventListener('keydown', startMusic);
 
         let cancelled = false;
-        const script = document.createElement('script');
-        script.src = `${BUILD_BASE}/webgl.loader.js`;
-        script.onload = () => {
-            if (cancelled || !canvasRef.current || !window.createUnityInstance) return;
-            fitCanvas();
-            window
-                .createUnityInstance(
-                    canvasRef.current,
-                    {
-                        dataUrl: `${BUILD_BASE}/webgl.data.unityweb`,
-                        frameworkUrl: `${BUILD_BASE}/webgl.framework.js.unityweb`,
-                        codeUrl: `${BUILD_BASE}/webgl.wasm.unityweb`,
-                        companyName: 'Truth B Told',
-                        productName: "The Journey - Truth's Hut",
-                        productVersion: '1.1',
-                        matchWebGLToCanvasSize: false,   // we size the buffer ourselves
-                        webglContextAttributes: { preserveDrawingBuffer: true },
-                    },
-                    (p) => setProgress(p),
-                )
-                .then((instance) => {
-                    if (cancelled) { instance.Quit(); return; }
-                    instanceRef.current = instance;
-                    setReady(true);
-                })
-                .catch((e: Error) => setError(e.message));
+        let script: HTMLScriptElement | null = null;
+
+        const boot = async () => {
+            // CACHE-BUST: the build files have stable names, so browsers/CDN would
+            // serve the OLD build forever. version.txt changes every deploy; we
+            // read it fresh and tag every build URL with it so a new build always
+            // loads (but is still cached within a single deploy).
+            let v = String(Date.now());
+            try {
+                const txt = await fetch(`/hut3d/version.txt?t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.text());
+                if (txt && txt.trim()) v = txt.trim();
+            } catch { /* fall back to a timestamp (always fresh) */ }
+            if (cancelled) return;
+            const q = `?v=${encodeURIComponent(v)}`;
+
+            script = document.createElement('script');
+            script.src = `${BUILD_BASE}/webgl.loader.js${q}`;
+            script.onload = () => {
+                if (cancelled || !canvasRef.current || !window.createUnityInstance) return;
+                fitCanvas();
+                window
+                    .createUnityInstance(
+                        canvasRef.current,
+                        {
+                            dataUrl: `${BUILD_BASE}/webgl.data.unityweb${q}`,
+                            frameworkUrl: `${BUILD_BASE}/webgl.framework.js.unityweb${q}`,
+                            codeUrl: `${BUILD_BASE}/webgl.wasm.unityweb${q}`,
+                            companyName: 'Truth B Told',
+                            productName: "The Journey - Truth's Hut",
+                            productVersion: '1.1',
+                            matchWebGLToCanvasSize: false,   // we size the buffer ourselves
+                            webglContextAttributes: { preserveDrawingBuffer: true },
+                        },
+                        (p) => setProgress(p),
+                    )
+                    .then((instance) => {
+                        if (cancelled) { instance.Quit(); return; }
+                        instanceRef.current = instance;
+                        setReady(true);
+                    })
+                    .catch((e: Error) => setError(e.message));
+            };
+            script.onerror = () => setError('The hut could not be summoned. Refresh to try again.');
+            document.body.appendChild(script);
         };
-        script.onerror = () => setError('The hut could not be summoned. Refresh to try again.');
-        document.body.appendChild(script);
+        boot();
+
         return () => {
             cancelled = true;
             gameMusic.stopBgm(600);
@@ -99,7 +117,7 @@ export default function World3DPage() {
             window.removeEventListener('pointerdown', startMusic);
             window.removeEventListener('keydown', startMusic);
             instanceRef.current?.Quit().catch(() => undefined);
-            script.remove();
+            script?.remove();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
