@@ -5,21 +5,16 @@ using UnityEngine;
 
 namespace Journey3D.EditorTools
 {
-    /// Keep model meshes CPU-readable so runtime MeshColliders work in
-    /// WebGL builds (which otherwise strip mesh data after upload to GPU).
-    /// Quaternius characters import as Legacy animation: the char_* files are
-    /// mesh+rig only, the anims_* donor files carry the shared clip sets that
-    /// CharacterRig plays across every character of the same rig.
-    ///
-    /// CRITICAL: Blender re-export nested the armature path three times
-    /// (CharacterArmature|CharacterArmature|CharacterArmature|Bone). Played
-    /// as-is those curves hit nothing (or the wrong transform) and contort the
-    /// mesh. We collapse paths to a single CharacterArmature/… prefix, strip
-    /// object-level scale/position (root motion), and keep bone rotations.
+    /// Quaternius import rules:
+    /// - Strip ALL scale curves (Blender unit bake blew characters up ~46x).
+    /// - Strip position ONLY on armature/root (root motion / unit offset).
+    /// - KEEP foot & limb positions — Foot.L/R live under Root, not under
+    ///   LowerLeg. Without their position keys the feet stay in bind pose while
+    ///   the legs walk → skinned mesh stretches between ankle and shin.
     public class ModelImportSettings : AssetPostprocessor
     {
-        // bump to force re-import when this processor's behavior changes
-        public override uint GetVersion() => 5;
+        // bump to force re-import
+        public override uint GetVersion() => 7;
 
         private void OnPreprocessModel()
         {
@@ -33,7 +28,6 @@ namespace Journey3D.EditorTools
                 importer.importAnimation = assetPath.Contains("anims_");
                 importer.importCameras = false;
                 importer.importLights = false;
-                // keep full hierarchy so CharacterArmature path matches clips
                 importer.optimizeGameObjects = false;
                 importer.preserveHierarchy = true;
             }
@@ -43,27 +37,40 @@ namespace Journey3D.EditorTools
         {
             if (!assetPath.Contains("Models/quaternius/anims_")) return;
 
-            int removed = 0;
-            int repathed = 0;
+            int removedScale = 0, removedPos = 0, keptPos = 0, repathed = 0;
             var bindings = AnimationUtility.GetCurveBindings(clip);
-            // Collect first so we can rewrite without mutating while iterating
             var work = new List<(EditorCurveBinding oldB, EditorCurveBinding newB, AnimationCurve curve)>();
 
             foreach (var binding in bindings)
             {
-                bool killScale = binding.propertyName.StartsWith("m_LocalScale");
-                bool killPos = binding.propertyName.StartsWith("m_LocalPosition");
-                if (killScale || killPos)
+                string path = binding.path ?? "";
+                string prop = binding.propertyName ?? "";
+
+                if (prop.StartsWith("m_LocalScale"))
                 {
                     AnimationUtility.SetEditorCurve(clip, binding, null);
-                    removed++;
+                    removedScale++;
                     continue;
                 }
 
-                string path = binding.path ?? "";
+                if (prop.StartsWith("m_LocalPosition"))
+                {
+                    // Keep positional animation on feet, legs, hips, spine, arms —
+                    // only strip root/armature object motion (the unit-conversion bake).
+                    if (IsRootMotionPath(path))
+                    {
+                        AnimationUtility.SetEditorCurve(clip, binding, null);
+                        removedPos++;
+                    }
+                    else
+                    {
+                        keptPos++;
+                    }
+                    continue;
+                }
+
                 string fixedPath = NormalizeBonePath(path);
                 if (fixedPath == path) continue;
-
                 var curve = AnimationUtility.GetEditorCurve(clip, binding);
                 if (curve == null) continue;
                 var newB = binding;
@@ -78,23 +85,32 @@ namespace Journey3D.EditorTools
                 repathed++;
             }
 
-            if (removed > 0 || repathed > 0)
-                Debug.Log($"J3D import [{clip.name}]: stripped {removed} scale/pos curves, repathed {repathed} bone paths");
+            if (removedScale + removedPos + repathed + keptPos > 0)
+                Debug.Log($"J3D import [{clip.name}]: scale-kill={removedScale} root-pos-kill={removedPos} limb-pos-kept={keptPos} repathed={repathed}");
         }
 
-        /// Collapse Blender's nested armature prefixes and normalize separators.
-        /// Examples:
-        ///   "CharacterArmature/CharacterArmature/CharacterArmature/Hips" -> "CharacterArmature/Hips"
-        ///   "CharacterArmature|Hips|Spine" (if any) -> "CharacterArmature/Hips/Spine"
+        /// Root / armature only — not Foot, UpperLeg, Hips, etc.
+        private static bool IsRootMotionPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return true; // curves on the animated root itself
+            path = path.Replace('|', '/').Trim('/');
+            // Exact root nodes only
+            if (path == "CharacterArmature") return true;
+            if (path == "CharacterArmature/Root") return true;
+            if (path == "Root") return true;
+            if (path == "Armature") return true;
+            // Nested duplicate armature paths from bad exports
+            if (Regex.IsMatch(path, @"^(CharacterArmature/)+Root$")) return true;
+            if (Regex.IsMatch(path, @"^(CharacterArmature/)+$")) return true;
+            return false;
+        }
+
         private static string NormalizeBonePath(string path)
         {
             if (string.IsNullOrEmpty(path)) return path;
-            // Unity uses '/', but some tools leak '|'
             path = path.Replace('|', '/');
-            // Collapse repeated CharacterArmature segments
             while (path.Contains("CharacterArmature/CharacterArmature"))
                 path = path.Replace("CharacterArmature/CharacterArmature", "CharacterArmature");
-            // Leading junk like "//CharacterArmature"
             path = Regex.Replace(path, @"^/+", "");
             return path;
         }

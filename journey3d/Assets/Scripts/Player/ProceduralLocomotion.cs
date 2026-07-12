@@ -200,8 +200,11 @@ namespace Journey3D
             Apply(_upR, _bUpR, _axUpR, rightSwing);
             Apply(_loR, _bLoR, _axLoR, rightKnee);
 
-            if (_footL) Apply(_footL, _bFootL, _axUpL, -leftSwing * 0.35f - leftKnee * 0.15f);
-            if (_footR) Apply(_footR, _bFootR, _axUpR, -rightSwing * 0.35f - rightKnee * 0.15f);
+            // Feet hang under Root (not LowerLeg) on Quaternius — only a light
+            // plant rotation; never scale/stretch. Position is left to bind pose
+            // (clips own foot position when Active is false).
+            if (_footL) Apply(_footL, _bFootL, _axUpL, -leftSwing * 0.2f - leftKnee * 0.1f);
+            if (_footR) Apply(_footR, _bFootR, _axUpR, -rightSwing * 0.2f - rightKnee * 0.1f);
 
             // Arms counter-swing on same flex axis
             Apply(_armUL, _bAUL, _axAUL, -leftSwing * (armA / Mathf.Max(8f, legA)));

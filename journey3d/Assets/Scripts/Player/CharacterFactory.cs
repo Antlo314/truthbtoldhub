@@ -36,6 +36,10 @@ namespace Journey3D
             proc.Bind(inst.transform);
             proc.Active = !clipsOk; // clips win when bound
 
+            // Feet under Root must stay glued to shin ends (stops stretched feet)
+            var feet = wrapper.AddComponent<FootAttachFix>();
+            feet.Bind(inst.transform);
+
             if (collide)
             {
                 var col = new GameObject("bounds_col");
