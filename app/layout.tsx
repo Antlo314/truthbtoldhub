@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
 import './globals.css';
+import SanctumShell from '@/components/sanctum/SanctumShell';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -8,12 +9,12 @@ const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfa
 export const metadata: Metadata = {
     title: {
         template: '%s | Truth B Told Hub',
-        default: 'Truth B Told Hub | The Sovereign Ledger',
+        default: 'Truth B Told Hub | Return to the Source',
     },
-    description: 'Enter the Truth B Told Hub. An elegant repository of prophetic breakdowns, geopolitical radar tracking, and celestial truth. Unlearn everything.',
+    description: 'An aetheric awakening RPG. Walk with Truth, choose your path, and return to the Source inside the Truth B Told Hub.',
     openGraph: {
-        title: 'Truth B Told Hub | The Sovereign Ledger',
-        description: 'Watch the uncut, unedited prophetic breakdowns and track live geopolitical radar events in an ethereal space.',
+        title: 'Truth B Told Hub | Return to the Source',
+        description: 'Awaken. Walk with Truth. Cross the threshold into an aetheric RPG of prophecy, presence, and return.',
         url: 'https://truthbtoldhub.com',
         siteName: 'Truth B Told Hub',
         images: [
@@ -29,8 +30,8 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Truth B Told Hub | Aetheric Sanctuary',
-        description: 'Explore deep biblical prophecy and end-times geopolitical radar in a premium celestial environment.',
+        title: 'Truth B Told Hub | Return to the Source',
+        description: 'An aetheric awakening experience — prophetic cinema, living community, and the journey home.',
         creator: '@truufbtold',
         images: ['https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg'],
     },
@@ -51,7 +52,7 @@ export default function RootLayout({
         <html lang="en">
             <body className={`${inter.variable} ${playfair.variable} font-sans bg-void text-white min-h-screen antialiased`}>
                 <div className="grain-overlay" />
-                {children}
+                <SanctumShell>{children}</SanctumShell>
             </body>
         </html>
     );

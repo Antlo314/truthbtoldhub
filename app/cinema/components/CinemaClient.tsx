@@ -41,23 +41,24 @@ export default function CinemaClient() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
             </div>
 
-            <header className="sticky top-0 z-[100] glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center backdrop-blur-3xl">
+            <header className="sticky top-0 z-[100] border-b border-white/5 px-6 py-4 flex justify-between items-center bg-black/70 backdrop-blur-xl">
                 <button 
                     onClick={() => { playClick(); router.push('/'); }} 
                     onMouseEnter={playHover}
-                    className="p-3 bg-white/5 rounded-full border border-white/10 hover:text-aether-gold transition-colors group"
+                    className="p-3 bg-white/5 rounded-full border border-white/10 hover:text-aether-gold hover:border-aether-gold/30 transition-colors group"
                 >
                     <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 </button>
                 <div className="flex flex-col items-center">
-                    <span className="font-ritual text-xl font-bold tracking-[0.4em] text-white gold-shimmer uppercase leading-none">THE CINEMA</span>
-                    <span className="text-[7px] font-mono text-orange-400 uppercase tracking-[0.3em] mt-1">Series On Pause</span>
+                    <span className="text-[8px] uppercase tracking-[0.4em] text-aether-gold/60 mb-1">Memory</span>
+                    <span className="font-ritual text-xl font-bold tracking-[0.4em] text-white gold-shimmer uppercase leading-none">The Cinema</span>
+                    <span className="text-[7px] text-orange-400/90 uppercase tracking-[0.3em] mt-1">Series On Pause</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 min-w-[48px] justify-end">
                     {profile?.is_supporter && (
                         <div className="px-4 py-1.5 rounded-full border border-aether-gold/30 bg-aether-gold/5 flex items-center gap-2">
                             <ShieldCheck className="w-3 h-3 text-aether-gold" />
-                            <span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">Legacy Access</span>
+                            <span className="text-[8px] font-black text-aether-gold uppercase tracking-widest">Legacy</span>
                         </div>
                     )}
                 </div>
@@ -124,8 +125,9 @@ export default function CinemaClient() {
                         ].map((v, i) => (
                             <motion.div 
                                 key={i}
-                                whileHover={{ y: -10 }}
-                                className="liquid-glass rounded-[2rem] p-6 border-white/10 group cursor-pointer"
+                                whileHover={{ y: -8 }}
+                                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                className="rounded-[2rem] p-6 border border-white/10 bg-white/[0.03] backdrop-blur-md group cursor-pointer hover:border-aether-gold/25 hover:bg-white/[0.05] transition-colors"
                                 onClick={() => { playClick(); window.open(`https://youtu.be/${v.id}`, '_blank'); }}
                             >
                                 <div className="aspect-video rounded-2xl overflow-hidden mb-6 relative">

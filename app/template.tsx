@@ -1,26 +1,22 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { DURATION, EASE } from '@/lib/design/motion';
 
+/**
+ * Threshold page transition — soft rise into place.
+ * No filter/blur (blur re-anchors position:fixed modals to this wrapper).
+ */
 export default function Template({ children }: { children: React.ReactNode }) {
-    // OMEGA-Tier physical page transitions — a dimensional jump on every route.
-    // IMPORTANT: framer leaves `filter: blur(0px)` as a persistent inline style,
-    // and a non-`none` filter establishes a containing block that re-anchors any
-    // position:fixed descendant (AuthModal, restart dialogs) to this wrapper
-    // instead of the viewport. Once the entrance settles we animate the filter to
-    // `none` so full-screen modals center correctly.
-    const [settled, setSettled] = useState(false);
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)', y: 20 }}
-            animate={{ opacity: 1, scale: 1, filter: settled ? 'none' : 'blur(0px)', y: 0 }}
+            initial={{ opacity: 0, y: 14, scale: 0.988 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{
-                duration: 0.8,
-                ease: [0.22, 1, 0.36, 1]
+                duration: DURATION.threshold,
+                ease: EASE.breath,
             }}
-            onAnimationComplete={() => setSettled(true)}
-            className="flex-1 w-full"
+            className="flex-1 w-full min-h-0"
         >
             {children}
         </motion.div>

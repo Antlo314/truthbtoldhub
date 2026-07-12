@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/store/useGameStore';
 import CinematicVideo from '@/components/game/CinematicVideo';
-import TruthSprite from '@/components/game/TruthSprite';
 import { CINEMA } from '@/lib/game/cutscenes';
 import { usePageMusic } from '@/lib/game/usePageMusic';
 import { gameMusic } from '@/lib/game/music';
+import DialogueBox from '@/components/sanctum/DialogueBox';
+import SacredButton from '@/components/sanctum/SacredButton';
+import { DURATION, EASE } from '@/lib/design/motion';
 
 interface Line {
     t: string;
@@ -23,53 +25,10 @@ const LINES: Line[] = [
     { t: 'Before we take the first step… what shall I call you?', name: true },
 ];
 
-function Typewriter({
-    text,
-    speed = 16,
-    reveal,
-    onDone,
-}: {
-    text: string;
-    speed?: number;
-    reveal: boolean;
-    onDone: () => void;
-}) {
-    const [n, setN] = useState(0);
-    const onDoneRef = useRef(onDone);
-    onDoneRef.current = onDone;
-    const fired = useRef(false);
-
-    useEffect(() => {
-        fired.current = false;
-        setN(0);
-    }, [text]);
-
-    useEffect(() => {
-        if (reveal) {
-            setN(text.length);
-            return;
-        }
-        if (n >= text.length) return;
-        const id = setTimeout(() => setN((v) => v + 1), speed);
-        return () => clearTimeout(id);
-    }, [n, text, reveal, speed]);
-
-    const done = n >= text.length;
-    useEffect(() => {
-        if (done && !fired.current) {
-            fired.current = true;
-            onDoneRef.current();
-        }
-    }, [done]);
-
-    return (
-        <span>
-            {text.slice(0, n)}
-            {!done && <span className="awaken-caret">▌</span>}
-        </span>
-    );
-}
-
+/**
+ * Chapter I — The Stirring
+ * Void → Truth → Naming → threshold into forging.
+ */
 export default function AwakeningPage() {
     const router = useRouter();
     const setName = useGameStore((s) => s.setName);
@@ -77,6 +36,7 @@ export default function AwakeningPage() {
     const saveToCloud = useGameStore((s) => s.saveToCloud);
 
     const [mounted, setMounted] = useState(false);
+    const [phase, setPhase] = useState<'void' | 'dialogue'>('void');
     const [lineIndex, setLineIndex] = useState(0);
     const [typingDone, setTypingDone] = useState(false);
     const [reveal, setReveal] = useState(false);
@@ -86,7 +46,18 @@ export default function AwakeningPage() {
 
     usePageMusic('awakening_truth');
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => {
+        setMounted(true);
+        // Brief void hold — breath before Truth speaks
+        const id = setTimeout(() => setPhase('dialogue'), 1400);
+        return () => clearTimeout(id);
+    }, []);
+
+    // Duck BGM under each spoken line
+    useEffect(() => {
+        if (phase !== 'dialogue') return;
+        gameMusic.duckForDialogue(3200, 0.32);
+    }, [lineIndex, phase, named]);
 
     const current = LINES[lineIndex];
 
@@ -126,6 +97,7 @@ export default function AwakeningPage() {
         setNamed(true);
         setTypingDone(false);
         setReveal(false);
+        gameMusic.duckForDialogue(4000, 0.28);
     };
 
     const stepIntoLight = () => {
@@ -136,95 +108,113 @@ export default function AwakeningPage() {
     };
 
     const skip = () => {
+        setPhase('dialogue');
         setLineIndex(LINES.length - 1);
         setReveal(true);
+        setTypingDone(true);
     };
 
     if (!mounted) return <div className="bg-black" style={{ height: '100dvh' }} />;
 
+    const dialogueText = named
+        ? `${finalName}. Yes — that name will mean something before the end.`
+        : current.t;
+
     return (
-        <main className="relative bg-black text-white overflow-hidden flex flex-col select-none" style={{ height: '100dvh' }}>
+        <main
+            className="relative bg-black text-white overflow-hidden flex flex-col select-none"
+            style={{ height: '100dvh' }}
+        >
             <CinematicVideo src={CINEMA.awakening} overlay="heavy" showMuteControl />
 
-            {!named && (
+            {/* Void phase — pure black breath */}
+            <AnimatePresence>
+                {phase === 'void' && (
+                    <motion.div
+                        key="void"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: DURATION.ritual, ease: EASE.breath }}
+                        className="absolute inset-0 z-40 bg-black flex items-center justify-center pointer-events-none"
+                    >
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: [0, 0.5, 0.35] }}
+                            transition={{ duration: 1.2, ease: EASE.breath }}
+                            className="text-[10px] uppercase tracking-[0.55em] text-white/30"
+                        >
+                            Breathe
+                        </motion.p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {!named && phase === 'dialogue' && (
                 <button
+                    type="button"
                     onClick={skip}
                     className="absolute top-5 right-6 z-30 text-[10px] uppercase tracking-[0.3em] text-white/30 hover:text-aether-gold transition-colors"
+                    style={{ paddingTop: 'env(safe-area-inset-top)' }}
                 >
                     skip ▸
                 </button>
             )}
 
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
-                className="relative z-30 flex flex-1 min-h-0 flex-col justify-end px-4 pb-7"
+            <div
+                className="relative z-30 flex flex-1 min-h-0 flex-col justify-end px-4"
+                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
             >
-                <div
-                    onClick={advance}
-                    className="w-full max-w-2xl mx-auto glass-panel rounded-2xl p-6 md:p-8 cursor-pointer border border-[rgba(251,191,36,0.12)] bg-black/40 backdrop-blur-md"
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: phase === 'dialogue' ? 1 : 0 }}
+                    transition={{ duration: DURATION.threshold, ease: EASE.breath }}
                 >
-                            <div className="flex items-start gap-3 sm:gap-4">
-                                <div className="relative shrink-0 truth-float" style={{ width: 48, height: 72 }}>
-                                    <div className="absolute left-1/2 top-1/2 rounded-full pointer-events-none" style={{ width: 56, height: 56, transform: 'translate(-50%,-45%)', background: 'radial-gradient(circle, rgba(251,191,36,0.25) 0%, transparent 68%)' }} />
-                                    <TruthSprite scale={3} style={{ position: 'relative', margin: '0 auto', display: 'block' }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.35em] text-aether-gold">Truth</span>
-                                        <div className="flex-1 h-px bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-transparent" />
-                                    </div>
-                                    <p className="font-ritual text-lg md:text-2xl leading-relaxed text-white/90 min-h-[3.5em]">
-                                        {!named ? (
-                                            <Typewriter key={lineIndex} text={current.t} reveal={reveal} onDone={() => setTypingDone(true)} />
-                                        ) : (
-                                            <Typewriter
-                                                key="post"
-                                                text={`${finalName}. Yes — that name will mean something before the end.`}
-                                                reveal={reveal}
-                                                onDone={() => setTypingDone(true)}
-                                            />
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-
+                    {phase === 'dialogue' && (
+                        <DialogueBox
+                            typewriter={{
+                                text: dialogueText,
+                                reveal,
+                                onDone: () => setTypingDone(true),
+                            }}
+                            onClick={advance}
+                            hint={
+                                !named && !current?.name && typingDone && lineIndex < LINES.length - 1
+                                    ? '▸ click or press space'
+                                    : undefined
+                            }
+                        >
                             {!named && current?.name && typingDone && (
-                                <form onSubmit={submitName} className="mt-5 flex flex-col sm:flex-row gap-3" onClick={(e) => e.stopPropagation()}>
+                                <form
+                                    onSubmit={submitName}
+                                    className="mt-5 flex flex-col sm:flex-row gap-3"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     <input
                                         autoFocus
                                         value={nameInput}
                                         onChange={(e) => setNameInput(e.target.value)}
                                         maxLength={24}
                                         placeholder="speak your name"
-                                        className="flex-1 bg-black/50 border border-[rgba(251,191,36,0.25)] rounded-lg px-4 py-3 text-base text-white tracking-wide focus:outline-none focus:border-aether-gold transition-colors font-ritual"
+                                        className="sacred-input flex-1"
+                                        aria-label="Your name"
                                     />
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.25em] text-black"
-                                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                                    >
+                                    <SacredButton type="submit" size="md">
                                         Name Yourself
-                                    </button>
+                                    </SacredButton>
                                 </form>
                             )}
 
-                            {!named && !current?.name && typingDone && lineIndex < LINES.length - 1 && (
-                                <div className="mt-4 text-[10px] uppercase tracking-[0.3em] text-white/30 animate-pulse">▸ click to continue</div>
-                            )}
-
                             {named && typingDone && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); stepIntoLight(); }}
-                                    className="mt-6 w-full sm:w-auto px-8 py-3 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform hover:scale-[1.02]"
-                                    style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                                >
-                                    Step into the light →
-                                </button>
+                                <div className="mt-6" onClick={(e) => e.stopPropagation()}>
+                                    <SacredButton pulse size="md" onClick={stepIntoLight}>
+                                        Step into the light →
+                                    </SacredButton>
+                                </div>
                             )}
-                </div>
-            </motion.div>
+                        </DialogueBox>
+                    )}
+                </motion.div>
+            </div>
         </main>
     );
 }

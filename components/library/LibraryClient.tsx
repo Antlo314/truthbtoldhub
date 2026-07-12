@@ -244,7 +244,6 @@ export default function LibraryClient() {
 
     return (
         <div className="relative min-h-[100dvh] bg-black text-white overflow-x-hidden">
-            <div className="grain-overlay pointer-events-none" />
             <div
                 className="pointer-events-none fixed inset-0"
                 style={{ background: 'radial-gradient(120% 70% at 50% -10%, rgba(251,191,36,0.10), transparent 60%)' }}
@@ -253,27 +252,27 @@ export default function LibraryClient() {
             <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6 pb-24"
                 style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
 
-                {/* Header */}
-                <header className="flex items-center gap-3 py-4">
+                <header className="flex items-center gap-3 py-4 mb-1">
                     <button
                         onClick={() => {
                             if (typeof window !== 'undefined' && window.history.length > 1) router.back();
                             else router.push('/');
                         }}
-                        className="p-2.5 rounded-full bg-black/45 border border-white/10 text-zinc-200 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                        className="p-2.5 rounded-full bg-black/45 border border-white/10 text-zinc-200 hover:text-aether-gold hover:border-aether-gold/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aether-gold/60"
                         aria-label="Go back"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="grid place-items-center w-10 h-10 rounded-xl border border-[#fbbf24]/30 bg-[#fbbf24]/10 shrink-0">
-                            <BookOpen className="w-5 h-5 text-[#fbbf24]" />
+                        <div className="grid place-items-center w-10 h-10 rounded-xl border border-aether-gold/30 bg-aether-gold/10 shrink-0">
+                            <BookOpen className="w-5 h-5 text-aether-gold" />
                         </div>
                         <div className="min-w-0">
+                            <p className="text-[9px] uppercase tracking-[0.4em] text-aether-gold/65 mb-1">Memory</p>
                             <h1 className="font-ritual text-2xl sm:text-3xl font-black uppercase tracking-tight gold-shimmer leading-none">
                                 The Library
                             </h1>
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-400 mt-1">
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 mt-1.5">
                                 Scrolls & documents · study and carry forward
                             </p>
                         </div>
@@ -437,7 +436,7 @@ export default function LibraryClient() {
                             return (
                                 <article
                                     key={doc.id}
-                                    className="group relative flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.04] hover:border-[#fbbf24]/25 transition-colors"
+                                    className="group relative flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.05] hover:border-aether-gold/30 transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
                                 >
                                     <div className="flex items-start gap-3 mb-3">
                                         <div className="grid place-items-center w-11 h-11 rounded-xl border border-[#fbbf24]/25 bg-[#fbbf24]/10 shrink-0">

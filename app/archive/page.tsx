@@ -1,8 +1,8 @@
 import ArchiveClient from '@/components/archive/ArchiveClient';
 
 export const metadata = {
-    title: 'The Sanctum | Truth B Told Hub',
-    description: 'Gather with fellow souls — halls of live conversation, whispers, and the Architects who guide them.',
+    title: 'The Hall | Truth B Told Hub',
+    description: 'Gather with fellow souls — chambers of live conversation, whispers, and the Architects who guide them.',
 };
 
 export default function ArchivePage() {

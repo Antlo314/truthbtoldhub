@@ -446,14 +446,15 @@ export default function Archive() {
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <div className="hidden md:flex flex-col">
-                        <h1 className="font-ritual text-xl tracking-[0.2em] text-white uppercase gold-shimmer">The Sovereign Ledger</h1>
+                        <span className="text-[8px] uppercase tracking-[0.4em] text-aether-gold/60 mb-0.5">Memory</span>
+                        <h1 className="font-ritual text-xl tracking-[0.2em] text-white uppercase gold-shimmer">The Codex</h1>
                         <div className="flex items-center gap-2 mt-1">
                             <div className="flex items-center h-2 gap-[1.5px]">
                                 {[...Array(12)].map((_, i) => (
                                     <div key={i} className="waveform-bar" style={{ animationDelay: `${i * 0.08}s`, width: '2px' }} />
                                 ))}
                             </div>
-                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest ml-1">Frequency: 432Hz | Matrix-Sync: OK</span>
+                            <span className="text-[7px] font-mono text-zinc-500 uppercase tracking-widest ml-1">Whispers of the aligned · 432Hz</span>
                         </div>
                     </div>
                 </div>

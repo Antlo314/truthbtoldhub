@@ -286,15 +286,15 @@ export default function ChatArea() {
             <div className="flex-1 bg-void flex flex-col min-w-0 relative">
                 <header className="h-12 border-b border-white/5 flex items-center px-4 shrink-0 z-10 md:hidden bg-black/40 backdrop-blur-xl">
                     <button onClick={() => setIsMobileMenuOpen(true)} className="mr-3 text-zinc-500 hover:text-white"><Menu className="w-6 h-6" /></button>
-                    <span className="font-ritual text-white text-[13px] tracking-widest uppercase">The Sanctum</span>
+                    <span className="font-ritual text-white text-[13px] tracking-widest uppercase">The Hall</span>
                 </header>
                 <div className="flex-1 flex flex-col items-center justify-center relative">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(251,191,36,0.05)_0%,transparent_70%)] pointer-events-none" />
                     <div className="w-20 h-20 rounded-2xl bg-aether-surface border border-aether-gold/30 flex items-center justify-center mb-6 relative">
                         <Hash className="w-10 h-10 text-aether-gold/40 relative z-10" />
                     </div>
-                    <h3 className="font-ritual text-2xl tracking-[0.3em] text-white/40 mb-4 uppercase">Choose a Hall</h3>
-                    <p className="text-[10px] text-zinc-600 font-mono tracking-widest uppercase">Select a hall from the left to join the conversation.</p>
+                    <h3 className="font-ritual text-2xl tracking-[0.3em] text-white/40 mb-4 uppercase">Choose a Chamber</h3>
+                    <p className="text-[10px] text-zinc-600 tracking-[0.2em] uppercase">Select a chamber from the left to join the conversation.</p>
                 </div>
             </div>
         );
@@ -359,7 +359,7 @@ export default function ChatArea() {
                             <Hash className="w-8 h-8" />
                         </div>
                         <h1 className="font-ritual text-2xl md:text-3xl font-bold text-white mb-2 uppercase tracking-widest">#{activeChannel?.name}</h1>
-                        <p className="text-[11px] text-zinc-500 font-mono tracking-widest">{activeChannel?.topic || 'The beginning of this hall.'}</p>
+                        <p className="text-[11px] text-zinc-500 tracking-widest">{activeChannel?.topic || 'The beginning of this chamber.'}</p>
                     </div>
                     <div className="w-full h-px bg-white/5 my-6" />
 

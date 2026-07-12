@@ -31,7 +31,6 @@ export default function DonationSection({
 
     return (
         <section className={className}>
-            {/* Vision — patronage builds far more than the film series */}
             <p className={`font-ritual text-white leading-tight ${hut ? 'text-base mb-1.5' : 'text-xl mb-2'}`}>
                 It&apos;s bigger than the 400 Series.
             </p>
@@ -59,15 +58,15 @@ export default function DonationSection({
             </ul>
 
             <p className={`text-white/55 leading-relaxed ${hut ? 'text-[11px] mb-4' : 'text-sm mb-6 max-w-lg'}`}>
-                Give any amount — Stripe or Cash App — then DM{' '}
+                Give any amount — Stripe or Cash App — then whisper{' '}
                 <span className="text-aether-gold font-bold">@truufbtold</span> with your hub name so we can
                 match your gift to your soul.
             </p>
 
             {showFundingBar && (
-                <div className={`rounded-2xl border border-white/10 bg-white/[0.03] ${hut ? 'mb-4 p-3' : 'mb-6 p-5'}`}>
+                <div className={`rounded-2xl border border-aether-gold/15 bg-aether-gold/[0.04] ${hut ? 'mb-4 p-3' : 'mb-6 p-5'}`}>
                     <div className="flex items-center justify-between gap-4 mb-2">
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">Infrastructure fund</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">The forge fund</p>
                         <p className="font-mono text-xs font-black text-aether-gold">{fundingProgressLabel()}</p>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -76,6 +75,7 @@ export default function DonationSection({
                             style={{
                                 width: `${Math.min(100, progress)}%`,
                                 background: 'linear-gradient(90deg,#fcd34d,#b45309)',
+                                boxShadow: '0 0 12px rgba(251,191,36,0.35)',
                             }}
                         />
                     </div>
@@ -90,25 +90,29 @@ export default function DonationSection({
                     href={STRIPE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-95"
+                    className="flex w-full items-center justify-center gap-2 rounded-full py-4 text-[10px] font-black uppercase tracking-[0.22em] text-black transition-transform hover:scale-[1.02] active:scale-95"
+                    style={{
+                        background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)',
+                        boxShadow: '0 0 28px rgba(251,191,36,0.22)',
+                    }}
                 >
-                    Give via Stripe
+                    Lay a stone · Stripe
                     <ArrowRight className="h-3.5 w-3.5" />
                 </a>
                 <a
                     href={CASH_APP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full flex-col items-center justify-center gap-0.5 rounded-xl bg-[#00D632] py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-95"
+                    className="flex w-full flex-col items-center justify-center gap-0.5 rounded-full border border-white/15 bg-white/[0.06] py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-white/10 hover:border-white/25 active:scale-95"
                 >
                     <span>Send via Cash App</span>
-                    <span className="text-[11px] tracking-normal font-black">{CASH_TAG}</span>
+                    <span className="text-[11px] tracking-normal font-black text-[#00D632]">{CASH_TAG}</span>
                 </a>
             </div>
 
             <p className="mt-4 text-center text-[9px] text-white/40 leading-relaxed">
                 On Stripe, type support code <span className="font-black text-white">&quot;{STRIPE_SUPPORT_CODE}&quot;</span> if prompted.
-                Tiered in-game rewards are coming — for now every gift helps keep the lights on.
+                Tiered in-game rewards are coming — for now every gift keeps the lights on.
             </p>
 
             <details className="mt-5 group">

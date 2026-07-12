@@ -32,15 +32,16 @@ interface BgmMeta {
     fadeOutMs: number;
 }
 
+/* Quiet continuous — BGM sits under dialogue, never competes with Truth */
 const BGM_META: Record<BgmId, BgmMeta> = {
-    title_landing: { main: `${BGM}/title_landing.mp3`, alt: `${BGM}/title_landing_alt.mp3`, volume: 0.42, fadeInMs: 2800, fadeOutMs: 1800 },
-    awakening_truth: { main: `${BGM}/awakening_truth.mp3`, alt: `${BGM}/awakening_truth_alt.mp3`, volume: 0.38, fadeInMs: 2400, fadeOutMs: 1600 },
-    forging_self: { main: `${BGM}/forging_self.mp3`, volume: 0.4, fadeInMs: 2000, fadeOutMs: 1500 },
-    paths_crossroads: { main: `${BGM}/paths_crossroads.mp3`, volume: 0.4, fadeInMs: 2200, fadeOutMs: 1600 },
-    world_cavern: { main: `${BGM}/world_cavern.mp3`, alt: `${BGM}/world_cavern_alt.mp3`, volume: 0.45, fadeInMs: 2600, fadeOutMs: 1800 },
-    eden_garden: { main: `${BGM}/eden_garden.mp3`, alt: `${BGM}/eden_garden_alt.mp3`, volume: 0.44, fadeInMs: 2200, fadeOutMs: 1600 },
-    combat_skirmish: { main: `${BGM}/combat_skirmish.mp3`, alt: `${BGM}/combat_skirmish_alt.mp3`, volume: 0.5, fadeInMs: 600, fadeOutMs: 900 },
-    combat_eden_cherub: { main: `${BGM}/combat_eden_cherub.mp3`, volume: 0.52, fadeInMs: 800, fadeOutMs: 1200 },
+    title_landing: { main: `${BGM}/title_landing.mp3`, alt: `${BGM}/title_landing_alt.mp3`, volume: 0.32, fadeInMs: 3200, fadeOutMs: 2200 },
+    awakening_truth: { main: `${BGM}/awakening_truth.mp3`, alt: `${BGM}/awakening_truth_alt.mp3`, volume: 0.26, fadeInMs: 2800, fadeOutMs: 2000 },
+    forging_self: { main: `${BGM}/forging_self.mp3`, volume: 0.3, fadeInMs: 2400, fadeOutMs: 1800 },
+    paths_crossroads: { main: `${BGM}/paths_crossroads.mp3`, volume: 0.3, fadeInMs: 2600, fadeOutMs: 2000 },
+    world_cavern: { main: `${BGM}/world_cavern.mp3`, alt: `${BGM}/world_cavern_alt.mp3`, volume: 0.36, fadeInMs: 3000, fadeOutMs: 2200 },
+    eden_garden: { main: `${BGM}/eden_garden.mp3`, alt: `${BGM}/eden_garden_alt.mp3`, volume: 0.34, fadeInMs: 2600, fadeOutMs: 2000 },
+    combat_skirmish: { main: `${BGM}/combat_skirmish.mp3`, alt: `${BGM}/combat_skirmish_alt.mp3`, volume: 0.46, fadeInMs: 600, fadeOutMs: 900 },
+    combat_eden_cherub: { main: `${BGM}/combat_eden_cherub.mp3`, volume: 0.48, fadeInMs: 800, fadeOutMs: 1200 },
 };
 
 const CUE_SRC: Record<CueId, { main: string; alt?: string; volume: number }> = {
@@ -172,6 +173,11 @@ class GameMusicController {
         this.duckTimer = setTimeout(() => {
             if (this.current === h && h.playing()) h.fade(h.volume(), base, 600);
         }, durationMs);
+    }
+
+    /** Public duck for dialogue / typewriter — keeps BGM under the voice */
+    duckForDialogue(durationMs = 2800, level = 0.35) {
+        this.duckBgm(durationMs, level);
     }
 
     playCue(id: CueId, variant: Variant = 'main') {

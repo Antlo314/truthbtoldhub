@@ -18,6 +18,9 @@ import RestartJourneyButton from '@/components/game/RestartJourneyButton';
 import { usePageMusic } from '@/lib/game/usePageMusic';
 import { SceneGuide } from '@/components/game/SceneGuide';
 import { truthAwakeningLine } from '@/lib/game/truthVoice';
+import SacredButton from '@/components/sanctum/SacredButton';
+import ChapterMark from '@/components/sanctum/ChapterMark';
+import VeilPanel from '@/components/sanctum/VeilPanel';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -90,21 +93,17 @@ export default function CreatePage() {
         <main className="relative min-h-[100dvh] bg-black text-white overflow-x-hidden overflow-y-auto"
             style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
             <CinematicVideo src={CINEMA.forging} overlay="heavy" showMuteControl />
-            <div className="grain-overlay pointer-events-none" />
             <div className="pointer-events-none fixed inset-0" style={{ background: 'radial-gradient(120% 55% at 50% -5%, rgba(251,191,36,0.10), transparent 60%)' }} />
 
             <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6"
                 style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
 
-                {/* ── Header ── */}
-                <header className="text-center mb-5">
-                    <p className="text-[9px] sm:text-[10px] tracking-[0.45em] uppercase text-[#fbbf24]/70">Chapter II</p>
-                    <h1 className="font-ritual text-2xl sm:text-4xl font-black uppercase tracking-tight gold-shimmer mt-1 leading-tight">
-                        The Forging of Self
-                    </h1>
-                    <p className="text-[11px] sm:text-xs text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
-                        Shape the vessel you will carry into the world — name it, form it, and let your aura declare it.
-                    </p>
+                <header className="mb-5">
+                    <ChapterMark
+                        chapter="Chapter II"
+                        title="The Forging of Self"
+                        subtitle="Shape the vessel you will carry into the world — name it, form it, and let your aura declare it."
+                    />
                 </header>
 
                 {/* ── Truth speaks ── */}
@@ -235,7 +234,8 @@ export default function CreatePage() {
                     </aside>
 
                     {/* RIGHT — customization */}
-                    <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+                    <VeilPanel density="soft" accent="rgba(255,255,255,0.1)" className="p-4 sm:p-5 rounded-3xl">
+                    <section>
                         <div role="tablist" aria-label="Customization" className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 mb-4">
                             {TABS.map((t) => {
                                 const active = tab === t;
@@ -352,6 +352,7 @@ export default function CreatePage() {
                             )}
                         </div>
                     </section>
+                    </VeilPanel>
                 </div>
             </div>
 
@@ -364,15 +365,10 @@ export default function CreatePage() {
                     <RestartJourneyButton label="Start over" variant="link" />
                     <div className="flex-1" />
                     {!named && <span className="text-[10px] text-zinc-500 hidden sm:block">Name your soul to continue</span>}
-                    <button
-                        onClick={confirm}
-                        disabled={saving || !named}
-                        className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black transition-transform active:scale-[0.98] disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
-                    >
+                    <SacredButton onClick={confirm} disabled={saving || !named} size="md" pulse={!saving && named}>
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         {saving ? 'Forging…' : 'Begin your journey →'}
-                    </button>
+                    </SacredButton>
                 </div>
             </footer>
         </main>

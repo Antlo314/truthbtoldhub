@@ -193,9 +193,12 @@ export default function ArchiveClient() {
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center bg-void">
-                <div className="flex flex-col items-center">
-                    <Hexagon className="w-12 h-12 text-aether-gold animate-spin-slow mb-6" />
-                    <p className="text-zinc-500 font-mono text-[10px] tracking-[0.3em] uppercase">Synchronizing with The Sanctum…</p>
+                <div className="flex flex-col items-center px-6 text-center">
+                    <Hexagon className="w-12 h-12 text-aether-gold animate-spin-slow mb-6 drop-shadow-[0_0_20px_rgba(251,191,36,0.35)]" />
+                    <p className="text-[10px] uppercase tracking-[0.45em] text-aether-gold/60 mb-2">The Hall</p>
+                    <p className="text-zinc-500 text-[11px] tracking-[0.25em] uppercase">
+                        Opening the chambers…
+                    </p>
                 </div>
             </div>
         );

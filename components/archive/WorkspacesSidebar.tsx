@@ -43,9 +43,9 @@ export default function WorkspacesSidebar() {
             <button
                 id="archive-home-btn"
                 onClick={() => { setActiveWorkspaceId(null); setActiveChannelId(null); }}
-                title="Whispers (Direct Messages)"
-                className={`w-12 h-12 rounded-[24px] hover:rounded-[16px] transition-all duration-300 flex items-center justify-center relative group
-                ${activeWorkspaceId === null ? 'bg-aether-gold text-black rounded-[16px] shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-zinc-800 text-zinc-400 hover:bg-aether-gold hover:text-black'}`}
+                title="Whispers — private chambers"
+                className={`w-12 h-12 rounded-[24px] hover:rounded-[16px] transition-all duration-300 flex items-center justify-center relative group border
+                ${activeWorkspaceId === null ? 'bg-aether-gold text-black rounded-[16px] border-aether-gold shadow-[0_0_15px_rgba(251,191,36,0.4)]' : 'bg-zinc-800/80 border-white/5 text-zinc-400 hover:bg-aether-gold hover:text-black hover:border-aether-gold'}`}
             >
                 <MessageSquare className="w-6 h-6" />
                 {totalDmUnread > 0 && (
