@@ -73,16 +73,16 @@ namespace Journey3D
             prt.anchoredPosition = new Vector2(0, 70);
             prt.sizeDelta = new Vector2(900, 44);
 
-            var topBar = UIKit.Panel(hud, "topbar", new Color(0, 0, 0, 0.45f));
+            var topBar = UIKit.Panel(hud, "topbar", new Color(0.04f, 0.03f, 0.02f, 0.62f));
             topBar.anchorMin = new Vector2(0, 1);
             topBar.anchorMax = new Vector2(0, 1);
             topBar.pivot = new Vector2(0, 1);
-            topBar.anchoredPosition = new Vector2(18, -14);
-            topBar.sizeDelta = new Vector2(660, 40);
-            _soulLine = UIKit.Label(topBar, "", 18, UIKit.Body, TextAnchor.MiddleLeft);
-            UIKit.Fill(_soulLine.rectTransform, 10);
+            topBar.anchoredPosition = new Vector2(16, -12);
+            topBar.sizeDelta = new Vector2(680, 44);
+            _soulLine = UIKit.Label(topBar, "", 17, UIKit.Amber, TextAnchor.MiddleLeft);
+            UIKit.Fill(_soulLine.rectTransform, 12);
 
-            var help = UIKit.Label(hud, "WASD move  ·  Right-drag orbit  ·  E interact  ·  Esc close", 15, UIKit.Faint, TextAnchor.MiddleRight);
+            var help = UIKit.Label(hud, "WASD walk  ·  Right-drag look  ·  E interact  ·  Esc close", 14, UIKit.Faint, TextAnchor.MiddleRight);
             var hrt = help.rectTransform;
             hrt.anchorMin = new Vector2(1, 0);
             hrt.anchorMax = new Vector2(1, 0);

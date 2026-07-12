@@ -20,7 +20,7 @@ namespace Journey3D
             // variants, which rendered the in-world scene black. Do not re-enable
             // without shipping the shadow variants in a shader-variant collection.
             QualitySettings.shadows = ShadowQuality.Disable;
-            QualitySettings.pixelLightCount = 4;
+            QualitySettings.pixelLightCount = 8; // multi-source sanctuary lighting
 
             // ---- lighting (fixes the previously near-black WebGL room) ----
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
@@ -52,45 +52,61 @@ namespace Journey3D
                 : "J3D physics FAULT: no ground under spawn!");
         }
 
-        /// Warm gold rim + fill so the chamber reads as a living sanctuary.
+        /// Multi-source sacred lighting — hearth, Truth, doorway, library, forge.
         private void BuildSacredAtmosphere()
         {
-            // Soft fill from the sanctum end (+Z) — cool indigo counter to the fire
-            var fill = new GameObject("SanctumFill");
-            var fl = fill.AddComponent<Light>();
-            fl.type = LightType.Point;
-            fl.color = new Color(0.45f, 0.55f, 0.95f);
-            fl.intensity = 0.85f;
-            fl.range = 14f;
-            fill.transform.position = new Vector3(0, 2.4f, 4.5f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.42f, 0.36f, 0.32f);
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = new Color(0.07f, 0.08f, 0.12f);
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogDensity = 0.0032f;
 
-            // Gold shaft above Truth
-            var halo = new GameObject("TruthHalo");
-            var hl = halo.AddComponent<Light>();
-            hl.type = LightType.Point;
-            hl.color = new Color(1f, 0.82f, 0.4f);
-            hl.intensity = 1.4f;
-            hl.range = 5.5f;
-            halo.transform.position = new Vector3(0, 2.8f, 3.2f);
-            halo.AddComponent<FlickerLight>().baseIntensity = 1.35f;
-            halo.GetComponent<FlickerLight>().flickerAmount = 0.25f;
-            halo.GetComponent<FlickerLight>().speed = 3.5f;
+            // Cool sanctum fill (+Z)
+            AddPoint("SanctumFill", new Vector3(0, 2.6f, 5.2f), new Color(0.4f, 0.48f, 0.95f), 1.1f, 15f);
 
-            // Doorway daylight spill
+            // Truth crown light
+            var truthLight = AddPoint("TruthHalo", new Vector3(0, 3.0f, 2.9f), new Color(1f, 0.84f, 0.42f), 1.7f, 6.5f);
+            var fl = truthLight.gameObject.AddComponent<FlickerLight>();
+            fl.baseIntensity = 1.55f; fl.flickerAmount = 0.22f; fl.speed = 3.2f;
+
+            // Doorway daylight (spot)
             var door = new GameObject("DoorSpill");
             var dl = door.AddComponent<Light>();
             dl.type = LightType.Spot;
-            dl.color = new Color(0.75f, 0.88f, 1f);
-            dl.intensity = 1.6f;
-            dl.range = 12f;
-            dl.spotAngle = 55f;
-            door.transform.position = new Vector3(0, 1.8f, -6.5f);
-            door.transform.rotation = Quaternion.Euler(12f, 0f, 0f);
+            dl.color = new Color(0.72f, 0.86f, 1f);
+            dl.intensity = 2.1f;
+            dl.range = 14f;
+            dl.spotAngle = 48f;
+            door.transform.position = new Vector3(0, 2.1f, -6.8f);
+            door.transform.rotation = Quaternion.Euler(18f, 0f, 0f);
 
-            // Slightly warmer ambient so wood/gold read
-            RenderSettings.ambientLight = new Color(0.58f, 0.50f, 0.42f);
-            RenderSettings.fogColor = new Color(0.09f, 0.10f, 0.14f);
-            RenderSettings.fogDensity = 0.0028f;
+            // Library / archive warm lamp wash (-X)
+            AddPoint("LibraryWash", new Vector3(-5.2f, 2.0f, 0.5f), new Color(1f, 0.78f, 0.45f), 0.9f, 7f);
+
+            // Forge ember (+X / -Z)
+            var forge = AddPoint("ForgeGlow", new Vector3(5.0f, 1.4f, -3.2f), new Color(1f, 0.4f, 0.12f), 1.3f, 6f);
+            var ff = forge.gameObject.AddComponent<FlickerLight>();
+            ff.baseIntensity = 1.2f; ff.flickerAmount = 0.55f; ff.speed = 11f;
+
+            // Entry vestibule gold
+            AddPoint("EntryGlow", new Vector3(0, 2.0f, -4.5f), new Color(1f, 0.88f, 0.55f), 0.7f, 8f);
+
+            // Central aisle uplights (subtle)
+            AddPoint("AisleN", new Vector3(0, 0.35f, 0.5f), new Color(1f, 0.75f, 0.35f), 0.45f, 4f);
+            AddPoint("AisleS", new Vector3(0, 0.35f, -3.5f), new Color(1f, 0.75f, 0.35f), 0.4f, 4f);
+        }
+
+        private static Light AddPoint(string name, Vector3 pos, Color c, float intensity, float range)
+        {
+            var go = new GameObject(name);
+            go.transform.position = pos;
+            var l = go.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = c;
+            l.intensity = intensity;
+            l.range = range;
+            return l;
         }
 
         // ---------- helpers ----------
@@ -193,44 +209,67 @@ namespace Journey3D
 
         private void BuildRoom()
         {
-            Spawn("hut_shell", Vector3.zero, 0, collide: false);   // physics is code-built below
+            Spawn("hut_shell", Vector3.zero, 0, collide: false);
             BuildRoomPhysics();
 
-            // ---- a lived-in hut: sleeping corner, hearth-side dining, reading
-            //      nook, entry bench (Kenney furniture, sized to the room) ----
+            // ============================================================
+            //  REDESIGN: The Sanctuary Chamber
+            //  Central aisle door → Truth. West = Memory (archive/soul).
+            //  East = Hearth & work. South entry = offering / arcade.
+            //  Furniture: Kenney CC0. Props: Blender hut set. Functions unchanged.
+            // ============================================================
 
-            // center rug between the door and Truth
-            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -1.2f), 0, 4.6f, collide: false, flat: true);
+            // Dual rugs — processional aisle + Truth circle
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -2.0f), 0, 3.8f, collide: false, flat: true);
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.025f, 2.4f), 15f, 3.2f, collide: false, flat: true);
 
-            // sleeping corner (left wall, between archive and back wall)
-            SpawnKenney("fur_bedSingle", new Vector3(-5.4f, 0, 4.4f), 90f, 1.05f);
-            SpawnKenney("fur_sideTable", new Vector3(-4.0f, 0, 5.6f), 0, 0.6f, collide: false);
-            SpawnKenney("fur_lampRoundTable", new Vector3(-4.0f, 0.62f, 5.6f), 0, 0.5f, collide: false);
+            // ---- WEST: Memory wall (archive / reading / rest) ----
+            SpawnKenney("fur_bookcaseOpen", new Vector3(-6.15f, 0, 2.2f), 90f, 2.35f);
+            SpawnKenney("fur_bookcaseOpen", new Vector3(-6.15f, 0, -0.8f), 90f, 2.2f);
+            SpawnKenney("fur_books", new Vector3(-5.55f, 1.15f, 2.2f), 10f, 0.35f, collide: false);
+            SpawnKenney("fur_books", new Vector3(-5.5f, 0.95f, -0.6f), -15f, 0.3f, collide: false);
+            SpawnKenney("fur_chairRounded", new Vector3(-4.6f, 0, 0.6f), 100f, 1.05f, collide: false);
+            SpawnKenney("fur_sideTable", new Vector3(-4.9f, 0, -0.5f), 0, 0.55f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(-4.9f, 0.58f, -0.5f), 0, 0.48f, collide: false);
+            SpawnKenney("fur_bedSingle", new Vector3(-5.35f, 0, 4.55f), 90f, 1.0f);
+            SpawnKenney("fur_sideTable", new Vector3(-4.05f, 0, 5.55f), 0, 0.55f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(-4.05f, 0.58f, 5.55f), 0, 0.45f, collide: false);
 
-            // hearth-side dining: table with stools near the fire
-            SpawnKenney("fur_table", new Vector3(4.4f, 0, 1.9f), 0, 0.9f);
-            SpawnKenney("fur_books", new Vector3(4.4f, 0.92f, 1.9f), 25f, 0.32f, collide: false);
-            SpawnKenney("fur_stoolBar", new Vector3(3.5f, 0, 1.9f), 0, 0.8f, collide: false);
-            SpawnKenney("fur_stoolBar", new Vector3(5.3f, 0, 1.9f), 0, 0.8f, collide: false);
-
-            // reading nook next to the archive shelf
-            SpawnKenney("fur_bookcaseOpen", new Vector3(-6.3f, 0, -0.4f), 90f, 2.2f);
-            SpawnKenney("fur_chairRounded", new Vector3(-5.2f, 0, -1.4f), 120f, 1.0f, collide: false);
-
-            // entry: bench + coat rack beside the door, greenery at the corners
-            SpawnKenney("fur_bench", new Vector3(-2.4f, 0, -6.2f), 0, 0.85f);
-            SpawnKenney("fur_coatRack", new Vector3(-4.6f, 0, -6.2f), 0, 1.9f, collide: false);
-            SpawnKenney("fur_pottedPlant", new Vector3(6.2f, 0, 6.1f), 0, 1.5f, collide: false);
-            SpawnKenney("fur_pottedPlant", new Vector3(-6.2f, 0, 6.2f), 200f, 1.35f, collide: false);
-            var fire = Spawn("fireplace", new Vector3(6.05f, 0.02f, 0), -90f);   // lift hearth off the floor (was coplanar -> z-fight)
+            // ---- EAST: Hearth hall (fire, dining, warmth) ----
+            var fire = Spawn("fireplace", new Vector3(6.05f, 0.02f, 0.8f), -90f);
             var flame = new GameObject("firelight");
             flame.transform.SetParent(fire.transform, false);
-            flame.transform.localPosition = new Vector3(0, 1.1f, -0.4f);
-            var l = flame.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(1f, 0.55f, 0.2f);
-            l.range = 9f;
-            flame.AddComponent<FlickerLight>().baseIntensity = 2.6f;
+            flame.transform.localPosition = new Vector3(0, 1.15f, -0.35f);
+            var fl = flame.AddComponent<Light>();
+            fl.type = LightType.Point;
+            fl.color = new Color(1f, 0.5f, 0.18f);
+            fl.range = 10f;
+            flame.AddComponent<FlickerLight>().baseIntensity = 2.9f;
+
+            SpawnKenney("fur_table", new Vector3(4.15f, 0, 1.5f), 8f, 0.95f);
+            SpawnKenney("fur_books", new Vector3(4.15f, 0.95f, 1.5f), 30f, 0.3f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(3.25f, 0, 1.5f), 0, 0.78f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(5.05f, 0, 1.35f), 20f, 0.78f, collide: false);
+            SpawnKenney("fur_stoolBar", new Vector3(4.15f, 0, 2.45f), 180f, 0.78f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(6.05f, 0, 5.5f), 40f, 1.45f, collide: false);
+
+            // ---- SOUTH ENTRY: vestibule (threshold) ----
+            SpawnKenney("fur_bench", new Vector3(-2.55f, 0, -6.15f), 0, 0.9f);
+            SpawnKenney("fur_bench", new Vector3(2.55f, 0, -6.15f), 0, 0.9f);
+            SpawnKenney("fur_coatRack", new Vector3(-4.7f, 0, -6.15f), 0, 1.95f, collide: false);
+            SpawnKenney("fur_coatRack", new Vector3(4.7f, 0, -6.15f), 180f, 1.85f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(-6.05f, 0, -5.4f), 120f, 1.35f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(6.05f, 0, -5.4f), -40f, 1.4f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(-3.3f, 0.02f, -4.6f), 0, 0.55f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(3.3f, 0.02f, -4.6f), 0, 0.55f, collide: false);
+
+            // Corner greenery at sanctum wall
+            SpawnKenney("fur_pottedPlant", new Vector3(-6.1f, 0, 6.15f), 200f, 1.4f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(6.1f, 0, 6.15f), -20f, 1.5f, collide: false);
+
+            // Ceremonial floor wash along aisle (subtle gold)
+            PropUtils.SoftQuad("aisle_wash", new Vector3(0, 0.028f, -0.5f),
+                new Vector3(2.4f, 9.5f, 1f), new Color(1f, 0.78f, 0.35f, 0.07f));
         }
 
         // the clearing: everything the player can reach stays inside this radius
@@ -252,16 +291,23 @@ namespace Journey3D
             // (no sky_dome mesh - it rendered as a white void; the camera clears
             //  to a solid sky-blue instead, see BuildCamera)
 
-            // scattered trees inside the clearing so the yard reads as a glade
+            // Entry lanterns flanking the path out of the hut (Kenney lamps as path markers)
+            SpawnKenney("fur_lampRoundTable", new Vector3(-1.6f, 0, -8.2f), 0, 0.7f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(1.6f, 0, -8.2f), 0, 0.7f, collide: false);
+            AddPoint("PathLanternL", new Vector3(-1.6f, 1.1f, -8.2f), new Color(1f, 0.8f, 0.4f), 0.85f, 5f);
+            AddPoint("PathLanternR", new Vector3(1.6f, 1.1f, -8.2f), new Color(1f, 0.8f, 0.4f), 0.85f, 5f);
+
+            // Glade trees (clear trail corridor south)
             string[] trees = { "nat_tree_default", "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak",
                                "nat_tree_fat", "nat_tree_thin", "nat_tree_pineRoundC", "nat_tree_small" };
-            float[] ang = { 8, 32, 58, 84, 110, 138, 166, 194, 222, 306, 334 };   // gap left around the trail
+            float[] ang = { 8, 28, 48, 72, 95, 118, 145, 170, 200, 230, 255, 310, 335 };
             for (int i = 0; i < ang.Length; i++)
             {
-                float r = 17.5f + (i % 3) * 1.4f;
+                if (InTrail(ang[i], 14f)) continue;
+                float r = 15.5f + (i % 4) * 1.35f;
                 float rad = ang[i] * Mathf.Deg2Rad;
                 var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
-                SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.2f + (i % 4) * 0.6f);
+                SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.0f + (i % 5) * 0.55f);
             }
             // rocks + standing stones
             string[] rocks = { "nat_rock_largeA", "nat_stone_tallC", "nat_rock_largeC", "nat_stone_largeB", "nat_rock_tallA" };
@@ -443,45 +489,49 @@ namespace Journey3D
 
         private void BuildStations()
         {
-            var ledger = Spawn("ledger_lectern", new Vector3(-4.2f, 0, 5.7f), 165f);
-            AddStation(ledger, StationId.Ledger, "The Ledger", "#fbbf24");
+            // Same StationIds + labels — layout redesigned as a ceremonial plan.
 
-            var glass = Spawn("seeing_glass", new Vector3(3.9f, 0, 5.7f), -165f);
-            AddStation(glass, StationId.SeeingGlass, "The Seeing Glass", "#22d3ee");
+            // NORTH: Truth on the processional axis (facing the door)
+            var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
+                new Vector3(0, 0, 2.85f), 180f, 1.88f, collide: true);
+            AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
+            truth.GetComponent<Station>().interactRadius = 3.0f;
+            if (truth.GetComponent<CharacterRig>() != null)
+                truth.AddComponent<NpcAmbient>();
+
+            // Truth dais ring (visual only)
+            PropUtils.GoldRing(truth.transform, 1.05f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.9f), 0.055f);
+
+            // Far north wall: Ledger (left) · Sanctum door (center) · Seeing Glass (right)
+            var ledger = Spawn("ledger_lectern", new Vector3(-3.6f, 0, 5.85f), 160f);
+            AddStation(ledger, StationId.Ledger, "The Ledger", "#fbbf24");
 
             var door = Spawn("sanctum_door", new Vector3(0, 0, 6.78f), 180f);
             AddStation(door, StationId.Sanctum, "The Sanctum", "#7c5cff");
 
-            // Truth is the King of the Quaternius kit: white beard, gold crown,
-            // regal robes - a sage worth crossing a forest for
-            var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
-                new Vector3(0, 0, 3.2f), 180f, 1.86f, collide: true);
-            AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
-            truth.GetComponent<Station>().interactRadius = 2.8f;
-            // ambient presence — idle is on the rig; Wave when the player draws near
-            // (player transform bound after BuildPlayer in Awake)
-            if (truth.GetComponent<CharacterRig>() != null)
-                truth.AddComponent<NpcAmbient>();
+            var glass = Spawn("seeing_glass", new Vector3(3.6f, 0, 5.85f), -160f);
+            AddStation(glass, StationId.SeeingGlass, "The Seeing Glass", "#22d3ee");
 
-            var archive = Spawn("archive_shelf", new Vector3(-6.25f, 0, 1.6f), 90f);
+            // WEST wall: Archive + Soul (memory corridor)
+            var archive = Spawn("archive_shelf", new Vector3(-6.2f, 0, 3.4f), 90f);
             AddStation(archive, StationId.Archive, "The Archive", "#fcd34d");
 
-            var mirror = Spawn("soul_mirror", new Vector3(-6.3f, 0, -2.4f), 90f);
+            var mirror = Spawn("soul_mirror", new Vector3(-6.15f, 0, -2.6f), 90f);
             AddStation(mirror, StationId.Soul, "Your Soul", "#94a3b8");
 
-            var forge = Spawn("forge_station", new Vector3(5.1f, 0, -3.6f), -110f);
+            // EAST / SE workshop: Forge + Wayfinder
+            var forge = Spawn("forge_station", new Vector3(5.25f, 0, -2.9f), -100f);
             AddStation(forge, StationId.Forge, "The Forge", "#f97316");
 
-            var offering = Spawn("offering_altar", new Vector3(-3.8f, 0, -5.5f), 20f);
+            var table = Spawn("wayfinder_table", new Vector3(5.55f, 0, -5.55f), -40f);
+            AddStation(table, StationId.Wayfinder, "The Wayfinder", "#22c55e");
+
+            // SOUTH entry: Offering (west of door) · Arcade (east of door) — clear of gap
+            var offering = Spawn("offering_altar", new Vector3(-3.5f, 0, -5.35f), 15f);
             AddStation(offering, StationId.Offering, "The Offering", "#fbbf24");
 
-            // kept clear of the doorway gap at x in [-0.85, 0.85] on the -Z wall
-            var arcade = Spawn("arcade_cabinet", new Vector3(2.6f, 0, -6.1f), 0f);
+            var arcade = Spawn("arcade_cabinet", new Vector3(3.15f, 0, -5.85f), 0f);
             AddStation(arcade, StationId.Arcade, "The Arcade", "#7c5cff");
-
-            // corner between the arcade and the forge, clear of both
-            var table = Spawn("wayfinder_table", new Vector3(5.8f, 0, -5.8f), -45f);
-            AddStation(table, StationId.Wayfinder, "The Wayfinder", "#22c55e");
         }
 
         private PlayerController BuildPlayer()
@@ -513,8 +563,9 @@ namespace Journey3D
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             // dusk-indigo sky — matches aetheric brand, not toy blue
-            cam.backgroundColor = new Color(0.22f, 0.28f, 0.42f);
-            cam.fieldOfView = 58f;
+            // Deep indigo dusk — aetheric brand sky
+            cam.backgroundColor = new Color(0.14f, 0.16f, 0.28f);
+            cam.fieldOfView = 56f;
             cam.allowHDR = false;
             // tighten the far plane (default 1000 with a 60m sky wastes depth
             // precision -> z-fighting under WebGL's 16-bit depth buffer)
