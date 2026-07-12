@@ -7,6 +7,7 @@ import { gameMusic } from '@/lib/game/music';
 import { DURATION, EASE } from '@/lib/design/motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 import JourneyBrief from '@/components/sanctum/JourneyBrief';
+import { BRAND } from '@/lib/brand/assets';
 
 // =====================================================================
 //  THE JOURNEY 3D — Truth's Hut
@@ -217,16 +218,14 @@ export default function World3DPage() {
                                         'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(28,18,8,0.94) 0%, rgba(5,6,12,0.98) 72%, #05060c 100%)',
                                 }}
                             >
-                                {/* cinematic film still backdrop if present */}
-                                <div
-                                    className="absolute inset-0 opacity-20 pointer-events-none"
-                                    style={{
-                                        backgroundImage: 'url(/page-images/image-(8).png)',
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        filter: 'saturate(0.7) brightness(0.5)',
-                                    }}
-                                />
+                                <video
+                                    autoPlay muted loop playsInline
+                                    poster={BRAND.hut}
+                                    className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
+                                    style={{ filter: 'saturate(0.75) brightness(0.4)' }}
+                                >
+                                    <source src={BRAND.video.hut} type="video/mp4" />
+                                </video>
                                 <div
                                     aria-hidden
                                     className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full pointer-events-none title-breath"

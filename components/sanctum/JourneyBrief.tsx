@@ -8,10 +8,10 @@ import { DURATION, EASE } from '@/lib/design/motion';
 const KEY = 'tbth-journey-brief-v1';
 
 const STEPS = [
-    { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak.' },
-    { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder, and more.' },
-    { title: 'Cross the Hub', body: 'The Sanctum door and Wayfinder open the Hall, Library, Cinema, and Offering on the wider Hub.' },
-    { title: 'Return often', body: 'Your soul, iron, and trust with Truth persist. The hut is home — the roads beyond are still being laid.' },
+    { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },
+    { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder. Each opens a real system.' },
+    { title: 'Cross the Hub', body: 'The Hall door and Wayfinder open community, Cinema, Library, Codex, and Offering — one constellation.' },
+    { title: 'Return often', body: 'Your soul, iron, and trust with Truth persist across devices. The hut is home. The roads beyond are being laid.' },
 ];
 
 /**
@@ -57,8 +57,17 @@ export default function JourneyBrief({ ready }: { ready: boolean }) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 12 }}
                         transition={{ duration: DURATION.settle, ease: EASE.breath }}
-                        className="w-full max-w-md rounded-3xl border border-aether-gold/25 bg-black/85 backdrop-blur-xl p-6 sm:p-7 shadow-[0_24px_80px_rgba(0,0,0,0.7)]"
+                        className="w-full max-w-md rounded-3xl border border-aether-gold/25 bg-black/90 backdrop-blur-xl p-6 sm:p-7 shadow-[0_24px_80px_rgba(0,0,0,0.7)] overflow-hidden relative"
                     >
+                        <div
+                            className="absolute inset-0 opacity-[0.15] pointer-events-none"
+                            style={{
+                                backgroundImage: 'url(/brand/bg-hut-sanctuary.jpg)',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                            }}
+                        />
+                        <div className="relative">
                         <p className="text-[9px] uppercase tracking-[0.45em] text-aether-gold/70 mb-2">
                             First steps · {step + 1} / {STEPS.length}
                         </p>
@@ -82,6 +91,7 @@ export default function JourneyBrief({ ready }: { ready: boolean }) {
                             <SacredButton size="md" pulse onClick={next}>
                                 {step >= STEPS.length - 1 ? 'Enter the hut' : 'Continue'}
                             </SacredButton>
+                        </div>
                         </div>
                     </motion.div>
                 </motion.div>

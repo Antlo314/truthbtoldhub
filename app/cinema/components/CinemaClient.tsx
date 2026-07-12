@@ -36,7 +36,7 @@ export default function CinemaClient() {
     return (
         <div className="relative min-h-screen bg-black text-white font-sans overflow-x-hidden selection:bg-aether-gold/30">
             <div className="fixed inset-0 z-0">
-                <img src="/page-images/image-(8).png" alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+                <img src="/brand/bg-portal.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#1a1105_0%,#000_100%)]"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
             </div>

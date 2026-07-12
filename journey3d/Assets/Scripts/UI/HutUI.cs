@@ -135,20 +135,20 @@ namespace Journey3D
 
         private void BuildPanelFrame()
         {
-            _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", new Color(0, 0, 0, 0.72f));
+            _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", new Color(0, 0, 0, 0.78f));
             _dimImage = _panelRoot.GetComponent<Image>();
             UIKit.Fill(_panelRoot);
 
             // responsive: fill the screen with margins so phones get a usable
             // panel instead of a fixed 980px card
-            var frame = UIKit.Panel(_panelRoot, "frame", UIKit.PanelBg);
+            var frame = UIKit.Panel(_panelRoot, "frame", new Color(0.06f, 0.05f, 0.04f, 0.97f));
             _panelFrame = frame;
             SetFrameWide();
             var outline = frame.gameObject.AddComponent<Outline>();
-            outline.effectColor = UIKit.Gold;
+            outline.effectColor = new Color(0.98f, 0.75f, 0.22f, 0.85f);
             outline.effectDistance = new Vector2(2, -2);
 
-            var titleBar = UIKit.Panel(frame, "titlebar", new Color(0.12f, 0.08f, 0.03f, 1f));
+            var titleBar = UIKit.Panel(frame, "titlebar", new Color(0.14f, 0.1f, 0.04f, 1f));
             titleBar.anchorMin = new Vector2(0, 1);
             titleBar.anchorMax = new Vector2(1, 1);
             titleBar.pivot = new Vector2(0.5f, 1);

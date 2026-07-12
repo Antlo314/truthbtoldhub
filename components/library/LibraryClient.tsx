@@ -245,8 +245,17 @@ export default function LibraryClient() {
     return (
         <div className="relative min-h-[100dvh] bg-black text-white overflow-x-hidden">
             <div
+                className="pointer-events-none fixed inset-0 opacity-20"
+                style={{
+                    backgroundImage: 'url(/brand/bg-hall.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'saturate(0.65) brightness(0.4)',
+                }}
+            />
+            <div
                 className="pointer-events-none fixed inset-0"
-                style={{ background: 'radial-gradient(120% 70% at 50% -10%, rgba(251,191,36,0.10), transparent 60%)' }}
+                style={{ background: 'radial-gradient(120% 70% at 50% -10%, rgba(251,191,36,0.12), transparent 60%), linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.88) 100%)' }}
             />
 
             <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6 pb-24"

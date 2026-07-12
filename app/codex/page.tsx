@@ -412,11 +412,20 @@ export default function Archive() {
             {/* Visual Infrastructure */}
             <div className="fixed inset-0 z-0">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.05)_0%,transparent_100%)] pointer-events-none" />
-                <div className="absolute inset-0 bg-black opacity-20 pointer-events-none" />
+                <div
+                    className="absolute inset-0 opacity-15 pointer-events-none"
+                    style={{
+                        backgroundImage: 'url(/brand/bg-awakening-void.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'saturate(0.8) brightness(0.45)',
+                    }}
+                />
+                <div className="absolute inset-0 bg-black opacity-25 pointer-events-none" />
                 <video
                     ref={bgRef}
                     autoPlay loop muted playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-[0.08] mix-blend-screen pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-cover opacity-[0.1] mix-blend-screen pointer-events-none"
                     poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png"
                 >
                     <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />

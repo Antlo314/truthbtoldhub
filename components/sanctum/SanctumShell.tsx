@@ -133,15 +133,23 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
                                     transition={{ duration: DURATION.settle, ease: EASE.breath }}
                                     className="fixed z-[56] left-4 right-4 sm:left-auto sm:right-6 sm:w-[min(100%,380px)] bottom-[calc(4.5rem+env(safe-area-inset-bottom))]"
                                 >
-                                    <div className="rounded-3xl border border-aether-gold/20 bg-black/80 backdrop-blur-xl p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
-                                        <div className="flex items-center gap-2 mb-4">
+                                    <div className="rounded-3xl border border-aether-gold/20 bg-black/85 backdrop-blur-xl p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)] overflow-hidden relative ambient-glow">
+                                        <div
+                                            className="absolute inset-0 opacity-[0.12] pointer-events-none"
+                                            style={{
+                                                backgroundImage: 'url(/brand/bg-portal.jpg)',
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                            }}
+                                        />
+                                        <div className="relative flex items-center gap-2 mb-4">
                                             <Sparkles className="w-3.5 h-3.5 text-aether-gold/80" />
                                             <span className="text-[9px] font-black uppercase tracking-[0.4em] text-aether-gold/70">
                                                 Constellation
                                             </span>
-                                            <div className="flex-1 h-px bg-gradient-to-r from-aether-gold/30 to-transparent" />
+                                            <div className="flex-1 h-px gold-edge" />
                                         </div>
-                                        <ul className="grid grid-cols-2 gap-2">
+                                        <ul className="relative grid grid-cols-2 gap-2">
                                             {CONSTELLATION.map((item) => {
                                                 const Icon = item.icon;
                                                 const active =
@@ -154,8 +162,8 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
                                                             className={cn(
                                                                 'flex flex-col gap-0.5 rounded-2xl border px-3 py-3 transition-all duration-300',
                                                                 active
-                                                                    ? 'border-aether-gold/45 bg-aether-gold/10 text-aether-gold'
-                                                                    : 'border-white/8 bg-white/[0.03] text-white/70 hover:border-white/20 hover:bg-white/[0.06] hover:text-white',
+                                                                    ? 'border-aether-gold/45 bg-aether-gold/15 text-aether-gold shadow-[0_0_20px_rgba(251,191,36,0.12)]'
+                                                                    : 'border-white/8 bg-black/40 text-white/70 hover:border-white/20 hover:bg-white/[0.06] hover:text-white',
                                                             )}
                                                         >
                                                             <span className="flex items-center gap-2">

@@ -429,6 +429,50 @@ h1, h2, h3, .font-ritual {
     .cta-pulse, .title-breath { animation: none; }
 }
 
+/* ─── Full-scale presence enhancements ─────────────────────────────── */
+@keyframes veilPulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.7; }
+}
+.veil-pulse { animation: veilPulse 4.5s ease-in-out infinite; }
+
+@keyframes goldDrift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+.gold-edge {
+    background: linear-gradient(90deg, transparent, rgba(251,191,36,0.5), transparent);
+    background-size: 200% 100%;
+    animation: goldDrift 8s linear infinite;
+    height: 1px;
+}
+
+@keyframes floatSlow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+.float-slow { animation: floatSlow 6s ease-in-out infinite; }
+
+@keyframes ambientGlow {
+    0%, 100% { box-shadow: 0 0 40px rgba(251,191,36,0.08); }
+    50% { box-shadow: 0 0 70px rgba(251,191,36,0.18); }
+}
+.ambient-glow { animation: ambientGlow 5s ease-in-out infinite; }
+
+/* Hub page hero band */
+.sanctum-hero-band {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(251, 191, 36, 0.18);
+    background: linear-gradient(180deg, rgba(251,191,36,0.06) 0%, rgba(0,0,0,0.4) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .veil-pulse, .gold-edge, .float-slow, .ambient-glow { animation: none; }
+}
+
+
 /* ─── The Codex Journal — tabbed grimoire ────────────────────────────── */
 /* Hide the scrollbar on horizontal tab strips while keeping it scrollable */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

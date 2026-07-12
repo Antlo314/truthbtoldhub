@@ -18,6 +18,7 @@ import SacredButton from '@/components/sanctum/SacredButton';
 import ChapterMark from '@/components/sanctum/ChapterMark';
 import VeilPanel from '@/components/sanctum/VeilPanel';
 import { DURATION, EASE, staggerContainer, staggerItem } from '@/lib/design/motion';
+import { BRAND } from '@/lib/brand/assets';
 
 // ============================================================
 //  CHAPTER III — THE FOUR PATHS
@@ -88,8 +89,17 @@ export default function PathPage() {
         <main className="relative bg-black text-white overflow-hidden flex flex-col" style={{ height: '100dvh' }}>
             <CinematicVideo src={CINEMA.paths} overlay="heavy" showMuteControl />
             <div
+                className="absolute inset-0 pointer-events-none opacity-20"
+                style={{
+                    backgroundImage: `url(${BRAND.portal})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    mixBlendMode: 'screen',
+                }}
+            />
+            <div
                 className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.08), transparent 55%)' }}
+                style={{ background: 'radial-gradient(circle at 50% 0%, rgba(251,191,36,0.1), transparent 55%)' }}
             />
 
             <div

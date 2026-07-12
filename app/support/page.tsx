@@ -10,10 +10,19 @@ export default function SupportPage() {
     return (
         <main className="relative min-h-[100dvh] bg-black text-white overflow-x-hidden">
             <div
+                className="pointer-events-none fixed inset-0 opacity-25"
+                style={{
+                    backgroundImage: 'url(/brand/bg-hut-sanctuary.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'saturate(0.7) brightness(0.35)',
+                }}
+            />
+            <div
                 className="pointer-events-none fixed inset-0"
                 style={{
                     background:
-                        'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,191,36,0.12), transparent 55%)',
+                        'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,191,36,0.14), transparent 55%), linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%)',
                 }}
             />
             <div

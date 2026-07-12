@@ -17,6 +17,7 @@ import { useCountUp } from '@/lib/game/useCountUp';
 import { useTiltParallax } from '@/lib/game/useTiltParallax';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
+import { BRAND } from '@/lib/brand/assets';
 
 function TitleCardInner() {
     const searchParams = useSearchParams();
@@ -79,22 +80,28 @@ function TitleCardInner() {
     return (
         <main className="relative min-h-[100dvh] bg-black text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
             <CinematicVideo src={CINEMA.landing} overlay="heavy" showMuteControl />
-            {/* Showcase key art under the cinema — presence even if video is muted/dark */}
+            {/* Dual presence: key art + portal loop under cinema */}
             <div
-                className="absolute inset-0 z-[1] pointer-events-none opacity-35"
+                className="absolute inset-0 z-[1] pointer-events-none opacity-30"
                 style={{
-                    backgroundImage: 'url(/brand/keyart-return-source.jpg)',
+                    backgroundImage: `url(${BRAND.keyart})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     mixBlendMode: 'screen',
                 }}
             />
+            <video
+                autoPlay muted loop playsInline
+                poster={BRAND.portal}
+                className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none opacity-20 mix-blend-screen"
+            >
+                <source src={BRAND.video.portal} type="video/mp4" />
+            </video>
 
-            {/* Atmosphere comes from SanctumShell — keep only focal scrim here */}
             <div className="absolute inset-0 z-[2] pointer-events-none title-vignette" />
             <div
                 className="absolute inset-0 z-[2] pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse 62% 56% at 50% 50%, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.22) 45%, transparent 78%)' }}
+                style={{ background: 'radial-gradient(ellipse 62% 56% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 45%, transparent 78%)' }}
             />
 
             <motion.div
@@ -194,6 +201,15 @@ function TitleCardInner() {
                     </motion.div>
                 </div>
 
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.55, duration: 0.8 }}
+                    className="mb-6 text-[11px] sm:text-xs text-white/40 max-w-sm leading-relaxed text-balance pointer-events-none"
+                >
+                    An aetheric RPG sanctuary. Awaken with Truth, choose your path, and walk the living hut.
+                </motion.p>
+
                 <motion.div
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -216,6 +232,21 @@ function TitleCardInner() {
                             className="rounded-full px-6 py-3"
                         />
                     )}
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.1, duration: 0.8 }}
+                    className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pointer-events-auto text-[9px] uppercase tracking-[0.28em] text-white/30"
+                >
+                    <button type="button" onClick={() => enter('/awakening')} className="hover:text-aether-gold/80 transition-colors">Awaken</button>
+                    <span className="text-white/15">·</span>
+                    <button type="button" onClick={() => enter('/world')} className="hover:text-aether-gold/80 transition-colors">Hut</button>
+                    <span className="text-white/15">·</span>
+                    <button type="button" onClick={() => enter('/archive')} className="hover:text-aether-gold/80 transition-colors">Hall</button>
+                    <span className="text-white/15">·</span>
+                    <button type="button" onClick={() => enter('/cinema')} className="hover:text-aether-gold/80 transition-colors">Cinema</button>
                 </motion.div>
 
                 {founders !== null && (

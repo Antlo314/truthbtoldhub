@@ -6,12 +6,12 @@ namespace Journey3D
     /// without external particle assets (WebGL-safe, low cost).
     public class PresenceVFX : MonoBehaviour
     {
-        public int dustCount = 64;
-        public int emberCount = 32;
-        public float radius = 8.2f;
-        public float height = 3.4f;
-        public Color dustColor = new Color(1f, 0.85f, 0.45f, 0.55f);
-        public Color emberColor = new Color(1f, 0.45f, 0.12f, 0.85f);
+        public int dustCount = 90;
+        public int emberCount = 42;
+        public float radius = 8.5f;
+        public float height = 3.5f;
+        public Color dustColor = new Color(1f, 0.88f, 0.48f, 0.62f);
+        public Color emberColor = new Color(1f, 0.42f, 0.1f, 0.9f);
 
         private Transform[] _dust;
         private Transform[] _ember;

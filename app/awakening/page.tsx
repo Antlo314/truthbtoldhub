@@ -11,6 +11,7 @@ import { gameMusic } from '@/lib/game/music';
 import DialogueBox from '@/components/sanctum/DialogueBox';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
+import { BRAND } from '@/lib/brand/assets';
 
 interface Line {
     t: string;
@@ -126,6 +127,13 @@ export default function AwakeningPage() {
             style={{ height: '100dvh' }}
         >
             <CinematicVideo src={CINEMA.awakening} overlay="heavy" showMuteControl />
+            <video
+                autoPlay muted loop playsInline
+                poster={BRAND.awakening}
+                className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none opacity-25 mix-blend-screen"
+            >
+                <source src={BRAND.video.awakening} type="video/mp4" />
+            </video>
 
             {/* Void phase — pure black breath */}
             <AnimatePresence>
