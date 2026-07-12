@@ -134,10 +134,22 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
             </div>
 
             {showEnterWorld && (
-                <div className="px-5 py-4 border-t border-white/10 shrink-0">
-                    <Link href="/world" className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}>
-                        Enter the Cavern →
+                <div className="px-5 py-4 border-t border-white/10 shrink-0 space-y-2">
+                    <p className="text-center text-[10px] text-white/40 leading-relaxed">
+                        Your path is set. Cross the threshold into Truth&apos;s Hut — stations, lore, and the living Hall await.
+                    </p>
+                    <Link
+                        href="/world"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black cta-pulse"
+                        style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 32px rgba(251,191,36,0.25)' }}
+                    >
+                        Enter Truth&apos;s Hut →
                     </Link>
+                    <div className="flex justify-center gap-4 pt-1">
+                        <Link href="/codex" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">Codex</Link>
+                        <Link href="/archive" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">The Hall</Link>
+                        <Link href="/support" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">Offering</Link>
+                    </div>
                 </div>
             )}
         </div>

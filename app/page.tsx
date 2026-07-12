@@ -126,7 +126,7 @@ function TitleCardInner() {
                     className="mb-7 flex flex-col items-center gap-3"
                 >
                     <span className="text-[10px] uppercase tracking-[0.55em] text-amber-200/70">
-                        An Aetheric Awakening
+                        Awaken · Choose · Enter the Hut
                     </span>
                     <div
                         className="h-px w-28 rule-draw"

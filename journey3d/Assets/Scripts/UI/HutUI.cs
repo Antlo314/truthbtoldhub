@@ -46,6 +46,35 @@ namespace Journey3D
             // soul once before the hut is playable
             if (NeedsCreation())
                 OpenCreator(true);
+            else
+                MaybeShowHutWelcome();
+        }
+
+        /// One-time in-hut welcome after soul exists — closes the "what now?" gap.
+        private void MaybeShowHutWelcome()
+        {
+            if (PlayerPrefs.GetInt("tbth_hut_welcome_v2", 0) == 1) return;
+            OpenHutWelcome();
+        }
+
+        private void OpenHutWelcome()
+        {
+            var body = FreshBody("Welcome to Truth's Hut", UIKit.Gold);
+            var list = UIKit.ScrollList(body);
+            BodyText(list,
+                "You stand in the chamber of return. Gold rings mark living stations. " +
+                "Walk the aisle to Truth. Touch the Ledger, Archive, Forge, Offering, Arcade, and Wayfinder. " +
+                "The Sanctum door opens the living Hall on the Hub.", 150, UIKit.Body);
+            Header(list, "How to move");
+            BodyText(list, "WASD or left stick to walk. Right-drag or right stick to look. E to interact. Esc to close panels.", 70, UIKit.Faint);
+            Header(list, "The path");
+            BodyText(list, "1. Speak with Truth  ·  2. Check the Ledger  ·  3. Open the Sanctum door for community  ·  4. Wayfinder for the roads beyond", 90, UIKit.Body);
+            RowButton(list, "Begin", UIKit.Gold, () =>
+            {
+                PlayerPrefs.SetInt("tbth_hut_welcome_v2", 1);
+                PlayerPrefs.Save();
+                ClosePanel();
+            }, 56);
         }
 
         private void Update()
@@ -282,7 +311,8 @@ namespace Journey3D
                     var bodyTxt = UIKit.Label(row, Truncate(r.body, 220), 17, UIKit.Body);
                     bodyTxt.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
                 }
-                RowButton(list, "Join the conversation in the Sanctum", s.accent, () => OpenWeb("/archive"));
+                RowButton(list, "Join the conversation in the Hall", s.accent, () => OpenWeb("/archive"));
+                RowButton(list, "Read the Codex", UIKit.Faint, () => OpenWeb("/codex"));
             });
         }
 
@@ -334,6 +364,7 @@ namespace Journey3D
                     UIKit.Fill(t.rectTransform, 10);
                 }
                 RowButton(list, "Enter the Library", s.accent, () => OpenWeb("/library"));
+                RowButton(list, "Open the Codex", UIKit.Faint, () => OpenWeb("/codex"));
             });
         }
 
@@ -550,6 +581,9 @@ namespace Journey3D
             _creatorLock = false;
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(true);
             ClosePanel();
+            // Fresh souls get the hut orientation right after creation
+            if (PlayerPrefs.GetInt("tbth_hut_welcome_v2", 0) != 1)
+                OpenHutWelcome();
         }
 
         // =====================================================
@@ -775,9 +809,9 @@ namespace Journey3D
         // =====================================================
         private void OpenWayfinder(Station s)
         {
-            var body = FreshBody("The Wayfinder  ·  The Portal Board", s.accent);
+            var body = FreshBody("The Wayfinder  ·  Roads Beyond", s.accent);
             var list = UIKit.ScrollList(body);
-            Header(list, "Five roads wait beyond the hut. The hut is the epicenter now - the world is being rebuilt around it, and the portals will open again.");
+            Header(list, "The hut is the epicenter. Roads beyond are being laid in 3D — until then, the Hub holds every living path.");
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
@@ -791,8 +825,13 @@ namespace Journey3D
                 var q = UIKit.Label(row, $"\"{d.quote}\"", 16, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Italic);
                 q.gameObject.AddComponent<LayoutElement>().preferredHeight = 44;
             }
-            BodyText(list, "The community ledger and world rhythms live on the Hub while the 3D roads are laid.", 44, UIKit.Faint);
-            RowButton(list, "View the community leaderboard", s.accent, () => OpenWeb("/hierarchy"));
+            Header(list, "Open now on the Hub");
+            RowButton(list, "The Hall — gather with souls", s.accent, () => OpenWeb("/archive"));
+            RowButton(list, "The Codex — memory & whispers", s.accent, () => OpenWeb("/codex"));
+            RowButton(list, "The Cinema — transmissions", s.accent, () => OpenWeb("/cinema"));
+            RowButton(list, "The Library — scrolls", s.accent, () => OpenWeb("/library"));
+            RowButton(list, "Founding seals · hierarchy", s.accent, () => OpenWeb("/hierarchy"));
+            RowButton(list, "The Offering — fuel the vision", UIKit.Gold, () => OpenWeb("/support"));
         }
 
         // =====================================================
@@ -850,13 +889,15 @@ namespace Journey3D
         // =====================================================
         private void OpenSanctum(Station s)
         {
-            var body = FreshBody("The Sanctum  ·  The Community", s.accent);
+            var body = FreshBody("The Hall  ·  Living Community", s.accent);
             var list = UIKit.ScrollList(body);
-            Header(list, "Beyond this door: the living halls.");
+            Header(list, "Beyond this door: chambers of voice.");
             BodyText(list,
-                "The Sanctum is where walking souls gather - halls of talk, direct words soul-to-soul, " +
-                "and the architects' chambers. It lives on the Hub, signed-in and real-time.", 110);
-            RowButton(list, "Open the Sanctum", s.accent, () => OpenWeb("/archive"), 58);
+                "The Hall is where walking souls gather — live chambers, whispers soul-to-soul, " +
+                "and the Architects who keep the peace. Real-time. Signed-in. Sacred.", 110);
+            RowButton(list, "Enter the Hall", s.accent, () => OpenWeb("/archive"), 58);
+            RowButton(list, "Your soul profile", UIKit.Body, () => OpenWeb("/self"), 48);
+            RowButton(list, "Founding seals", UIKit.Faint, () => OpenWeb("/hierarchy"), 48);
         }
 
         // ---------- utils ----------

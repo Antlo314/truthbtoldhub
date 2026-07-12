@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gameMusic } from '@/lib/game/music';
 import { DURATION, EASE } from '@/lib/design/motion';
 import SacredButton from '@/components/sanctum/SacredButton';
+import JourneyBrief from '@/components/sanctum/JourneyBrief';
 
 // =====================================================================
 //  THE JOURNEY 3D — Truth's Hut
@@ -197,6 +198,8 @@ export default function World3DPage() {
                         </p>
                     </div>
                 )}
+
+                {ready && veilLifted && !error && <JourneyBrief ready />}
 
                 <AnimatePresence>
                     {!veilLifted && !error && (
