@@ -184,17 +184,21 @@ export default function World3DPage() {
                     <button
                         type="button"
                         onClick={goFullscreen}
-                        className="absolute top-2 right-2 z-10 px-3 py-2 rounded-full bg-black/65 border border-aether-gold/40 text-aether-gold text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 backdrop-blur-md"
+                        className="absolute z-10 px-4 py-2.5 rounded-full bg-black/70 border border-aether-gold/45 text-aether-gold text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 backdrop-blur-md min-h-[44px] min-w-[44px]"
+                        style={{ top: 'calc(0.5rem + env(safe-area-inset-top))', right: 'calc(0.5rem + env(safe-area-inset-right))' }}
                     >
                         ⛶ Fullscreen
                     </button>
                 )}
 
                 {ready && veilLifted && !error && (
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4">
-                        <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] text-white/35 text-center bg-black/40 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/5">
+                    <div
+                        className="absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4"
+                        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+                    >
+                        <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] text-white/40 text-center bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
                             {isTouch
-                                ? 'Left walk · right look · E interact'
+                                ? 'Left stick walk · drag right look · E interact'
                                 : 'WASD walk · right-drag look · E interact'}
                         </p>
                     </div>

@@ -812,26 +812,28 @@ namespace Journey3D
         {
             var body = FreshBody("The Wayfinder  ·  Roads Beyond", s.accent);
             var list = UIKit.ScrollList(body);
-            Header(list, "The hut is the epicenter. Roads beyond are being laid in 3D — until then, the Hub holds every living path.");
+            Header(list, "Vision portals are open. Full 3D chambers are still being laid — look through the glass, then return to the hut.");
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
-                var row = UIKit.Row(list, 96, new Color(accent.r, accent.g, accent.b, 0.06f));
+                var row = UIKit.Row(list, 110, new Color(accent.r, accent.g, accent.b, 0.08f));
                 var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
                 stack.padding = new RectOffset(14, 14, 8, 8);
+                stack.spacing = 4;
                 stack.childForceExpandHeight = false;
                 stack.childControlHeight = true;
-                var t = UIKit.Label(row, $"{d.name}   ·   guide: {d.guide}   ·   SEALED", 19, accent, TextAnchor.UpperLeft, FontStyle.Bold);
-                t.gameObject.AddComponent<LayoutElement>().preferredHeight = 26;
-                var q = UIKit.Label(row, $"\"{d.quote}\"", 16, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Italic);
-                q.gameObject.AddComponent<LayoutElement>().preferredHeight = 44;
+                var t = UIKit.Label(row, $"{d.name}   ·   {d.guide}", 18, accent, TextAnchor.UpperLeft, FontStyle.Bold);
+                t.gameObject.AddComponent<LayoutElement>().preferredHeight = 24;
+                var q = UIKit.Label(row, $"\"{d.quote}\"", 15, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Italic);
+                q.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
+                string destId = d.id;
+                var openBtn = UIKit.TextButton(row, "Open vision portal →", accent, () => OpenWeb("/vision/" + destId), 16);
+                openBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
             }
-            Header(list, "Open now on the Hub");
+            Header(list, "Also on the Hub");
             RowButton(list, "The Hall — gather with souls", s.accent, () => OpenWeb("/archive"));
             RowButton(list, "The Codex — memory & whispers", s.accent, () => OpenWeb("/codex"));
             RowButton(list, "The Cinema — transmissions", s.accent, () => OpenWeb("/cinema"));
-            RowButton(list, "The Library — scrolls", s.accent, () => OpenWeb("/library"));
-            RowButton(list, "Founding seals · hierarchy", s.accent, () => OpenWeb("/hierarchy"));
             RowButton(list, "The Offering — fuel the vision", UIKit.Gold, () => OpenWeb("/support"));
         }
 

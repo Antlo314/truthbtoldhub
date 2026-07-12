@@ -10,8 +10,8 @@ const KEY = 'tbth-journey-brief-v1';
 const STEPS = [
     { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },
     { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder. Each opens a real system.' },
-    { title: 'Cross the Hub', body: 'The Hall door and Wayfinder open community, Cinema, Library, Codex, and Offering — one constellation.' },
-    { title: 'Return often', body: 'Your soul, iron, and trust with Truth persist across devices. The hut is home. The roads beyond are being laid.' },
+    { title: 'Open the visions', body: 'At the Wayfinder, five vision portals are unsealed — Eden, Giza, the Fair, Kolbrin, Emerald. Look through, then return.' },
+    { title: 'Cross the Hub', body: 'Hall, Cinema, Library, Codex, Offering — one constellation. The veil menu opens them anytime.' },
 ];
 
 /**

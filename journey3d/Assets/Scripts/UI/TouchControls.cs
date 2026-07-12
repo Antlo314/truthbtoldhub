@@ -30,30 +30,47 @@ namespace Journey3D
             canvas.sortingOrder = 50;
             _root = canvas.gameObject;
 
+            // Safe-area aware home positions (phones with home indicator / notches)
+            float safeX = Mathf.Max(24f, Screen.safeArea.xMin);
+            float safeY = Mathf.Max(24f, Screen.safeArea.yMin);
+            // scale stick slightly for small screens
+            float scale = Mathf.Clamp(Screen.height / 900f, 0.85f, 1.15f);
+            float stickPx = StickRadius * 2f * scale;
+
             // left thumb-stick
-            _stickBase = UIKit.Panel(canvas.transform, "stickBase", new Color(1, 1, 1, 0.08f));
-            _stickBase.sizeDelta = new Vector2(StickRadius * 2, StickRadius * 2);
+            _stickBase = UIKit.Panel(canvas.transform, "stickBase", new Color(1, 1, 1, 0.12f));
+            _stickBase.sizeDelta = new Vector2(stickPx, stickPx);
             _stickBase.anchorMin = _stickBase.anchorMax = new Vector2(0, 0);
             _stickBase.pivot = new Vector2(0.5f, 0.5f);
-            _stickBase.anchoredPosition = new Vector2(190, 190);
+            _stickBase.anchoredPosition = new Vector2(safeX + stickPx * 0.55f, safeY + stickPx * 0.55f + 20f);
             var baseImg = _stickBase.GetComponent<Image>();
             baseImg.raycastTarget = false;
             AddCircleOutline(_stickBase, UIKit.Gold);
 
-            _stickKnob = UIKit.Panel(_stickBase, "knob", new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.5f));
-            _stickKnob.sizeDelta = new Vector2(90, 90);
+            _stickKnob = UIKit.Panel(_stickBase, "knob", new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.55f));
+            float knob = 88f * scale;
+            _stickKnob.sizeDelta = new Vector2(knob, knob);
             _stickKnob.anchorMin = _stickKnob.anchorMax = _stickKnob.pivot = new Vector2(0.5f, 0.5f);
             _stickKnob.anchoredPosition = Vector2.zero;
             _stickKnob.GetComponent<Image>().raycastTarget = false;
 
-            // interact button (bottom-right)
-            var interact = UIKit.TextButton(canvas.transform, "E", UIKit.Amber, () => InputHub.QueueInteract(), 40);
+            // interact button (bottom-right) — large thumb target
+            var interact = UIKit.TextButton(canvas.transform, "E", UIKit.Amber, () => InputHub.QueueInteract(), 42);
             var irt = interact.GetComponent<RectTransform>();
             irt.anchorMin = irt.anchorMax = new Vector2(1, 0);
             irt.pivot = new Vector2(1, 0);
-            irt.anchoredPosition = new Vector2(-70, 150);
-            irt.sizeDelta = new Vector2(150, 150);
+            float btn = 160f * scale;
+            irt.anchoredPosition = new Vector2(-(safeX + 28f), safeY + 28f + 40f);
+            irt.sizeDelta = new Vector2(btn, btn);
             MakeRound(irt);
+
+            // Look-hint label (right half)
+            var hint = UIKit.Label(canvas.transform, "drag right side to look", 14, UIKit.Faint, TextAnchor.MiddleCenter);
+            var hrt = hint.rectTransform;
+            hrt.anchorMin = hrt.anchorMax = new Vector2(1, 0);
+            hrt.pivot = new Vector2(1, 0);
+            hrt.anchoredPosition = new Vector2(-(safeX + 20f), safeY + 12f);
+            hrt.sizeDelta = new Vector2(220, 28);
         }
 
         private void Update()
