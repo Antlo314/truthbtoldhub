@@ -13,6 +13,8 @@ namespace Journey3D
         private readonly List<Material> _mats = new List<Material>();
 
         public CharacterRig Rig { get; private set; }
+        public ProceduralLocomotion Proc { get; private set; }
+        public GameObject Model => _model;
 
         /// Per-outfit garment materials to tint (top / legs / boots).
         /// Unmapped materials keep the kit's own colors.
@@ -65,6 +67,13 @@ namespace Journey3D
             _model.transform.localPosition = Vector3.zero;
             _model.transform.localRotation = Quaternion.identity;
             Rig = _model.GetComponent<CharacterRig>();
+            Proc = _model.GetComponent<ProceduralLocomotion>();
+            if (Proc == null)
+            {
+                Proc = _model.AddComponent<ProceduralLocomotion>();
+                var boneRoot = _model.transform.Find("rig") ?? _model.transform;
+                Proc.Bind(boneRoot);
+            }
 
             _mats.Clear();
             foreach (var r in _model.GetComponentsInChildren<Renderer>())

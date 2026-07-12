@@ -42,7 +42,17 @@ namespace Journey3D
 
             bool interact = Input.GetKeyDown(KeyCode.E) || InputHub.ConsumeInteract();
             if (Nearest != null && interact)
+            {
+                // Character stations (Truth) play Interact / Wave so the world feels alive
+                var rig = Nearest.GetComponent<CharacterRig>();
+                if (rig != null)
+                {
+                    if (rig.Has("Interact")) rig.PlayOnce("Interact");
+                    else if (rig.Has("Wave")) rig.PlayOnce("Wave");
+                }
                 ui.OpenStation(Nearest);
+            }
         }
     }
 }
+

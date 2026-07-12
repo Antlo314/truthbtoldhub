@@ -79,6 +79,16 @@ function TitleCardInner() {
     return (
         <main className="relative min-h-[100dvh] bg-black text-white overflow-hidden flex flex-col items-center justify-center px-6 text-center select-none">
             <CinematicVideo src={CINEMA.landing} overlay="heavy" showMuteControl />
+            {/* Showcase key art under the cinema — presence even if video is muted/dark */}
+            <div
+                className="absolute inset-0 z-[1] pointer-events-none opacity-35"
+                style={{
+                    backgroundImage: 'url(/brand/keyart-return-source.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    mixBlendMode: 'screen',
+                }}
+            />
 
             {/* Atmosphere comes from SanctumShell — keep only focal scrim here */}
             <div className="absolute inset-0 z-[2] pointer-events-none title-vignette" />

@@ -36,15 +36,61 @@ namespace Journey3D
             if (ExteriorEnabled) BuildExterior();
             BuildStations();
             var player = BuildPlayer();
+            // Truth (and any other NPC ambients) need the player transform
+            foreach (var ambient in FindObjectsByType<NpcAmbient>(FindObjectsSortMode.None))
+                ambient.Bind(ambient.GetComponent<CharacterRig>(), player.transform);
             var cam = BuildCamera(player);
             BuildSystems(player, cam);
             BuildLights();
+            PresenceVFX.SpawnInHut();
+            BuildSacredAtmosphere();
 
             // startup self-check, visible in the browser console
             bool grounded = Physics.Raycast(new Vector3(0, 2f, -2.2f), Vector3.down, out var hit, 10f);
             Debug.Log(grounded
                 ? $"J3D physics ok: ground '{hit.collider.name}' at y={hit.point.y:F2}"
                 : "J3D physics FAULT: no ground under spawn!");
+        }
+
+        /// Warm gold rim + fill so the chamber reads as a living sanctuary.
+        private void BuildSacredAtmosphere()
+        {
+            // Soft fill from the sanctum end (+Z) — cool indigo counter to the fire
+            var fill = new GameObject("SanctumFill");
+            var fl = fill.AddComponent<Light>();
+            fl.type = LightType.Point;
+            fl.color = new Color(0.45f, 0.55f, 0.95f);
+            fl.intensity = 0.85f;
+            fl.range = 14f;
+            fill.transform.position = new Vector3(0, 2.4f, 4.5f);
+
+            // Gold shaft above Truth
+            var halo = new GameObject("TruthHalo");
+            var hl = halo.AddComponent<Light>();
+            hl.type = LightType.Point;
+            hl.color = new Color(1f, 0.82f, 0.4f);
+            hl.intensity = 1.4f;
+            hl.range = 5.5f;
+            halo.transform.position = new Vector3(0, 2.8f, 3.2f);
+            halo.AddComponent<FlickerLight>().baseIntensity = 1.35f;
+            halo.GetComponent<FlickerLight>().flickerAmount = 0.25f;
+            halo.GetComponent<FlickerLight>().speed = 3.5f;
+
+            // Doorway daylight spill
+            var door = new GameObject("DoorSpill");
+            var dl = door.AddComponent<Light>();
+            dl.type = LightType.Spot;
+            dl.color = new Color(0.75f, 0.88f, 1f);
+            dl.intensity = 1.6f;
+            dl.range = 12f;
+            dl.spotAngle = 55f;
+            door.transform.position = new Vector3(0, 1.8f, -6.5f);
+            door.transform.rotation = Quaternion.Euler(12f, 0f, 0f);
+
+            // Slightly warmer ambient so wood/gold read
+            RenderSettings.ambientLight = new Color(0.58f, 0.50f, 0.42f);
+            RenderSettings.fogColor = new Color(0.09f, 0.10f, 0.14f);
+            RenderSettings.fogDensity = 0.0028f;
         }
 
         // ---------- helpers ----------
@@ -412,6 +458,10 @@ namespace Journey3D
                 new Vector3(0, 0, 3.2f), 180f, 1.86f, collide: true);
             AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
             truth.GetComponent<Station>().interactRadius = 2.8f;
+            // ambient presence — idle is on the rig; Wave when the player draws near
+            // (player transform bound after BuildPlayer in Awake)
+            if (truth.GetComponent<CharacterRig>() != null)
+                truth.AddComponent<NpcAmbient>();
 
             var archive = Spawn("archive_shelf", new Vector3(-6.25f, 0, 1.6f), 90f);
             AddStation(archive, StationId.Archive, "The Archive", "#fcd34d");
@@ -444,9 +494,8 @@ namespace Journey3D
             cc.radius = 0.35f;
             cc.center = new Vector3(0, 0.95f, 0);
 
-            // the soul: a Quaternius character picked + tinted from the saved
-            // build/outfit, held upright in bind pose (animation off until the
-            // shared rig retargets cleanly - see CharacterRig.PlayAnimations)
+            // the soul: Quaternius character tinted from save; WalkAnimator drives
+            // Idle/Walk/Run from CharacterController speed (clips from anims_*)
             _appearance = root.AddComponent<PlayerAppearance>();
             _appearance.Apply();
             root.AddComponent<WalkAnimator>().Bind(_appearance, cc);
@@ -463,8 +512,10 @@ namespace Journey3D
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.52f, 0.73f, 0.92f);   // the sky (no dome mesh)
-            cam.fieldOfView = 60f;
+            // dusk-indigo sky — matches aetheric brand, not toy blue
+            cam.backgroundColor = new Color(0.22f, 0.28f, 0.42f);
+            cam.fieldOfView = 58f;
+            cam.allowHDR = false;
             // tighten the far plane (default 1000 with a 60m sky wastes depth
             // precision -> z-fighting under WebGL's 16-bit depth buffer)
             cam.nearClipPlane = 0.3f;

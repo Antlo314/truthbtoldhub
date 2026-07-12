@@ -37,6 +37,10 @@ namespace Journey3D
             var rig = wrapper.AddComponent<CharacterRig>();
             rig.Bind(inst, donor);
 
+            // Guaranteed motion — bone-driven walk/idle even if FBX clips don't retarget
+            var proc = wrapper.AddComponent<ProceduralLocomotion>();
+            proc.Bind(inst.transform);
+
             if (collide)
             {
                 // simple capsule-ish box so souls can't walk through people
@@ -93,13 +97,12 @@ namespace Journey3D
     }
 
     /// Holds the Legacy Animation for one spawned character and exposes
-    /// simple named playback. Clip names are normalized ("Armature|Walk" ->
-    /// "Walk") so gameplay code can just say Play("Walk").
+    /// simple named playback. Clip names are normalized
+    /// ("CharacterArmature|…|Walk" -> "Walk") so gameplay can say Play("Walk").
     public class CharacterRig : MonoBehaviour
     {
-        // The shared Legacy clips don't retarget cleanly onto these meshes (they
-        // contort them flat), so animation is OFF - characters hold their upright
-        // bind pose. Flip to true once the char/anim rigs are matched.
+        // FBX clips path fine but retarget still glitches; ProceduralLocomotion
+        // is the authoritative walk/idle. Keep false so clips don't fight bones.
         public static bool PlayAnimations = false;
 
         private Animation _anim;
@@ -110,42 +113,93 @@ namespace Journey3D
             _anim = inst.GetComponent<Animation>();
             if (_anim == null) _anim = inst.AddComponent<Animation>();
             _anim.playAutomatically = false;
-            if (!PlayAnimations) return;   // hold bind pose (upright)
+            _anim.cullingType = AnimationCullingType.AlwaysAnimate;
+
+            if (!PlayAnimations)
+            {
+                Debug.LogWarning($"J3D rig '{name}': PlayAnimations=false (bind pose only)");
+                return;
+            }
 
             var clips = Resources.LoadAll<AnimationClip>("Models/quaternius/" + donor);
+            int added = 0;
             foreach (var clip in clips)
             {
-                string name = clip.name;
-                int bar = name.LastIndexOf('|');
-                if (bar >= 0) name = name.Substring(bar + 1);
+                if (clip == null) continue;
+                // Ensure legacy — donor import is Legacy, but be defensive
+                if (!clip.legacy) clip.legacy = true;
+
+                string name = NormalizeClipName(clip.name);
+                if (string.IsNullOrEmpty(name)) continue;
+                if (_anim.GetClip(name) != null) continue;
+
                 _anim.AddClip(clip, name);
                 var st = _anim[name];
-                st.wrapMode = (name == "Idle" || name == "Idle_Neutral" || name == "Walk" ||
-                               name == "Run" || name == "Idle_Sword" || name == "Idle_Gun")
-                    ? WrapMode.Loop : WrapMode.Once;
+                if (st == null) continue;
+                st.wrapMode = IsLoopingClip(name) ? WrapMode.Loop : WrapMode.Once;
+                st.layer = 0;
+                st.blendMode = AnimationBlendMode.Blend;
+                st.enabled = true;
+                st.weight = 1f;
+                added++;
             }
-            if (clips.Length == 0) Debug.LogError("No clips in donor " + donor);
+
+            if (added == 0)
+                Debug.LogError($"J3D rig '{name}': no clips bound from donor '{donor}' (found {clips.Length} raw)");
+            else
+                Debug.Log($"J3D rig '{name}': bound {added} clips from {donor}");
+
             Play(IdleName(), 0f);
         }
 
-        private void LogLiveBounds()
+        private static string NormalizeClipName(string raw)
         {
-            var rends = GetComponentsInChildren<Renderer>();
-            if (rends.Length == 0) return;
-            var b = rends[0].bounds;
-            foreach (var r in rends) b.Encapsulate(r.bounds);
-            Debug.Log($"J3D live '{name}': worldSize={b.size} center={b.center} playing={_current}");
+            if (string.IsNullOrEmpty(raw)) return raw;
+            // "CharacterArmature|CharacterArmature|CharacterArmature|Idle" -> "Idle"
+            int bar = raw.LastIndexOf('|');
+            if (bar >= 0) raw = raw.Substring(bar + 1);
+            // also handle "CharacterArmature|Idle" already stripped once
+            bar = raw.LastIndexOf('|');
+            if (bar >= 0) raw = raw.Substring(bar + 1);
+            return raw.Trim();
+        }
+
+        private static bool IsLoopingClip(string name)
+        {
+            return name == "Idle" || name == "Idle_Neutral" || name == "Walk" ||
+                   name == "Run" || name == "Idle_Sword" || name == "Idle_Gun" ||
+                   name == "Run_Back" || name == "Run_Left" || name == "Run_Right";
         }
 
         public string IdleName() => Has("Idle_Neutral") ? "Idle_Neutral" : "Idle";
         public bool Has(string name) => _anim != null && _anim[name] != null;
+        public string Current => _current;
 
         public void Play(string name, float fade = 0.18f)
         {
-            if (_anim == null || _current == name || _anim[name] == null) return;
+            if (!PlayAnimations || _anim == null || string.IsNullOrEmpty(name)) return;
+            if (_current == name) return;
+            if (_anim[name] == null) return;
             _current = name;
             if (fade <= 0f) _anim.Play(name);
             else _anim.CrossFade(name, fade);
+        }
+
+        /// Fire a one-shot (Interact, Wave, …) then return to idle when done.
+        public void PlayOnce(string name, float fade = 0.12f)
+        {
+            if (!Has(name)) return;
+            Play(name, fade);
+            var st = _anim[name];
+            if (st != null && st.wrapMode != WrapMode.Loop)
+                StartCoroutine(ReturnToIdle(st.length));
+        }
+
+        private System.Collections.IEnumerator ReturnToIdle(float delay)
+        {
+            yield return new WaitForSeconds(Mathf.Max(0.05f, delay - 0.05f));
+            if (_current != "Walk" && _current != "Run")
+                Play(IdleName(), 0.2f);
         }
     }
 }

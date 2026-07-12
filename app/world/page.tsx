@@ -8,8 +8,8 @@ import { DURATION, EASE } from '@/lib/design/motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 
 // =====================================================================
-//  THE JOURNEY 3D — Truth's Hut (Unity WebGL)
-//  Crossing the threshold is lore, not a spinner.
+//  THE JOURNEY 3D — Truth's Hut
+//  Crossing is a ritual. The hut is a living sanctuary.
 // =====================================================================
 
 declare global {
@@ -24,21 +24,19 @@ declare global {
 
 const BUILD_BASE = '/hut3d/Build';
 
-/** Progress-gated whispers while the hut loads */
 const CROSSING: { at: number; t: string }[] = [
-    { at: 0, t: 'The threshold opens…' },
-    { at: 0.12, t: 'Truth kindles the hearth.' },
-    { at: 0.28, t: 'Walls remember every soul who has entered.' },
-    { at: 0.48, t: 'Your vessel takes shape in the light.' },
-    { at: 0.68, t: 'Footsteps settle on sacred ground.' },
-    { at: 0.88, t: 'Almost home.' },
+    { at: 0, t: 'Darkness holds its breath…' },
+    { at: 0.1, t: 'A hearth remembers your name.' },
+    { at: 0.25, t: 'Truth stands in the light, waiting.' },
+    { at: 0.42, t: 'Wood grain. Gold dust. Sacred ground.' },
+    { at: 0.6, t: 'Your vessel steps into the chamber.' },
+    { at: 0.78, t: 'The door is open. Walk.' },
+    { at: 0.92, t: 'Welcome home.' },
 ];
 
 function lineForProgress(p: number): string {
     let line = CROSSING[0].t;
-    for (const c of CROSSING) {
-        if (p >= c.at) line = c.t;
-    }
+    for (const c of CROSSING) if (p >= c.at) line = c.t;
     return line;
 }
 
@@ -72,7 +70,6 @@ export default function World3DPage() {
         window.addEventListener('resize', fitCanvas);
         window.addEventListener('orientationchange', fitCanvas);
 
-        // Soft cavern BGM under the crossing (gesture unlock still required by browsers)
         const startMusic = () => {
             gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
             window.removeEventListener('pointerdown', startMusic);
@@ -80,10 +77,9 @@ export default function World3DPage() {
         };
         window.addEventListener('pointerdown', startMusic);
         window.addEventListener('keydown', startMusic);
-        // If already unlocked from awakening arc, start immediately
         try {
             gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
-        } catch { /* autoplay may block */ }
+        } catch { /* autoplay */ }
 
         let cancelled = false;
         let script: HTMLScriptElement | null = null;
@@ -93,7 +89,7 @@ export default function World3DPage() {
             try {
                 const txt = await fetch(`/hut3d/version.txt?t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.text());
                 if (txt && txt.trim()) v = txt.trim();
-            } catch { /* timestamp fallback */ }
+            } catch { /* */ }
             if (cancelled) return;
             const q = `?v=${encodeURIComponent(v)}`;
 
@@ -111,7 +107,7 @@ export default function World3DPage() {
                             codeUrl: `${BUILD_BASE}/webgl.wasm.unityweb${q}`,
                             companyName: 'Truth B Told',
                             productName: "The Journey - Truth's Hut",
-                            productVersion: '1.1',
+                            productVersion: '1.2',
                             matchWebGLToCanvasSize: false,
                             webglContextAttributes: { preserveDrawingBuffer: true },
                         },
@@ -124,8 +120,7 @@ export default function World3DPage() {
                         }
                         instanceRef.current = instance;
                         setReady(true);
-                        // Brief hold so the last whisper lands, then lift the veil
-                        setTimeout(() => setVeilLifted(true), 700);
+                        setTimeout(() => setVeilLifted(true), 900);
                     })
                     .catch((e: Error) => setError(e.message));
             };
@@ -155,20 +150,19 @@ export default function World3DPage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const so: any = screen.orientation;
             if (so?.lock) await so.lock('landscape').catch(() => undefined);
-        } catch { /* not supported everywhere */ }
+        } catch { /* */ }
         setTimeout(fitCanvas, 350);
     };
 
     const pct = Math.round(progress * 100);
 
     return (
-        <div className="w-full h-[100dvh] bg-[#06080e] flex flex-col overflow-hidden">
-            {/* Veil chrome — soft sacred bar */}
-            <div className="flex items-center justify-between px-3 py-1.5 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-zinc-500 border-b border-white/5 shrink-0 bg-black/40 backdrop-blur-md">
+        <div className="w-full h-[100dvh] bg-[#05060c] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 text-[9px] sm:text-[10px] uppercase tracking-[0.28em] text-zinc-500 border-b border-aether-gold/10 shrink-0 bg-black/55 backdrop-blur-md">
                 <Link href="/" className="hover:text-aether-gold transition-colors whitespace-nowrap">
                     ← Sanctum
                 </Link>
-                <span className="text-aether-gold/80 font-black truncate px-2 tracking-[0.2em]">
+                <span className="text-aether-gold/85 font-black truncate px-2 tracking-[0.22em]">
                     Truth&apos;s Hut
                 </span>
                 <Link href="/support" className="hover:text-white transition-colors whitespace-nowrap">
@@ -176,25 +170,34 @@ export default function World3DPage() {
                 </Link>
             </div>
 
-            <div ref={stageRef} className="relative flex-1 min-h-0 bg-[#06080e]">
+            <div ref={stageRef} className="relative flex-1 min-h-0 bg-[#05060c]">
                 <canvas
                     ref={canvasRef}
                     id="unity-canvas"
                     className="absolute inset-0 w-full h-full block"
-                    style={{ background: '#06080e' }}
+                    style={{ background: '#05060c' }}
                 />
 
                 {ready && isTouch && !error && veilLifted && (
                     <button
                         type="button"
                         onClick={goFullscreen}
-                        className="absolute top-2 right-2 z-10 px-3 py-2 rounded-full bg-black/60 border border-aether-gold/40 text-aether-gold text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 backdrop-blur-md"
+                        className="absolute top-2 right-2 z-10 px-3 py-2 rounded-full bg-black/65 border border-aether-gold/40 text-aether-gold text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 backdrop-blur-md"
                     >
                         ⛶ Fullscreen
                     </button>
                 )}
 
-                {/* Crossing veil — lore load */}
+                {ready && veilLifted && !error && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4">
+                        <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] text-white/35 text-center bg-black/40 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/5">
+                            {isTouch
+                                ? 'Left walk · right look · E interact'
+                                : 'WASD walk · right-drag look · E interact'}
+                        </p>
+                    </div>
+                )}
+
                 <AnimatePresence>
                     {!veilLifted && !error && (
                         <motion.div
@@ -208,71 +211,68 @@ export default function World3DPage() {
                                 className="absolute inset-0 flex flex-col items-center justify-center px-6"
                                 style={{
                                     background:
-                                        'radial-gradient(ellipse 70% 55% at 50% 45%, rgba(20,14,6,0.92) 0%, rgba(6,8,14,0.97) 70%, #06080e 100%)',
+                                        'radial-gradient(ellipse 75% 60% at 50% 42%, rgba(28,18,8,0.94) 0%, rgba(5,6,12,0.98) 72%, #05060c 100%)',
                                 }}
                             >
+                                {/* cinematic film still backdrop if present */}
+                                <div
+                                    className="absolute inset-0 opacity-20 pointer-events-none"
+                                    style={{
+                                        backgroundImage: 'url(/page-images/image-(8).png)',
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        filter: 'saturate(0.7) brightness(0.5)',
+                                    }}
+                                />
                                 <div
                                     aria-hidden
-                                    className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full pointer-events-none title-breath"
+                                    className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full pointer-events-none title-breath"
                                     style={{
                                         background:
-                                            'radial-gradient(circle, rgba(251,191,36,0.18) 0%, transparent 65%)',
-                                        filter: 'blur(12px)',
+                                            'radial-gradient(circle, rgba(251,191,36,0.22) 0%, transparent 65%)',
+                                        filter: 'blur(14px)',
                                     }}
                                 />
 
-                                <motion.p
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: DURATION.settle, ease: EASE.breath }}
-                                    className="relative text-[9px] uppercase tracking-[0.5em] text-aether-gold/60 mb-6"
-                                >
+                                <p className="relative text-[9px] uppercase tracking-[0.55em] text-aether-gold/55 mb-5">
                                     Crossing the threshold
-                                </motion.p>
+                                </p>
 
                                 <AnimatePresence mode="wait">
                                     <motion.p
                                         key={whisper}
-                                        initial={{ opacity: 0, y: 8 }}
+                                        initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -6 }}
+                                        exit={{ opacity: 0, y: -8 }}
                                         transition={{ duration: DURATION.settle, ease: EASE.breath }}
-                                        className="relative font-ritual text-lg sm:text-2xl text-white/90 text-center max-w-md leading-relaxed min-h-[3.5em] flex items-center justify-center"
+                                        className="relative font-ritual text-xl sm:text-3xl text-white/92 text-center max-w-md leading-relaxed min-h-[3.2em] flex items-center justify-center px-2"
                                     >
                                         {whisper}
                                     </motion.p>
                                 </AnimatePresence>
 
-                                <div className="relative mt-8 w-56 sm:w-72">
+                                <div className="relative mt-10 w-56 sm:w-80">
                                     <div className="h-1 rounded-full bg-white/10 overflow-hidden">
                                         <div
-                                            className="h-full rounded-full transition-all duration-200 ease-linear"
+                                            className="h-full rounded-full transition-all duration-200"
                                             style={{
                                                 width: `${pct}%`,
                                                 background: 'linear-gradient(90deg, #b45309, #fcd34d, #fbbf24)',
-                                                boxShadow: '0 0 16px rgba(251,191,36,0.35)',
+                                                boxShadow: '0 0 18px rgba(251,191,36,0.4)',
                                             }}
                                         />
                                     </div>
-                                    <p className="mt-3 text-center text-[9px] uppercase tracking-[0.3em] text-white/30 tabular-nums">
-                                        {ready ? 'Entering…' : `${pct}%`}
+                                    <p className="mt-3 text-center text-[9px] uppercase tracking-[0.32em] text-white/30 tabular-nums">
+                                        {ready ? 'The veil lifts…' : `${pct}%`}
                                     </p>
                                 </div>
-
-                                {!ready && (
-                                    <p className="relative mt-8 text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-zinc-600 text-center max-w-xs leading-relaxed">
-                                        {isTouch
-                                            ? 'Left thumb walk · right thumb look · E interact'
-                                            : 'WASD move · right-drag look · E interact'}
-                                    </p>
-                                )}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
                 {error && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 text-center px-6 bg-black/90">
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 text-center px-6 bg-black/92">
                         <p className="text-[10px] uppercase tracking-[0.4em] text-aether-gold/50">The veil resisted</p>
                         <p className="font-ritual text-lg text-white/80 max-w-sm">{error}</p>
                         <SacredButton onClick={() => window.location.reload()}>
