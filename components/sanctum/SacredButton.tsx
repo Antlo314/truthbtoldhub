@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/design/cn';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 type Variant = 'primary' | 'ghost' | 'veil' | 'link';
 type Size = 'sm' | 'md' | 'lg';
@@ -27,6 +28,8 @@ export default function SacredButton({
     children,
     disabled,
     type = 'button',
+    onClick,
+    onMouseEnter,
     ...rest
 }: SacredButtonProps) {
     const base =
@@ -57,6 +60,14 @@ export default function SacredButton({
                 pulse && variant === 'primary' && 'cta-pulse',
                 className,
             )}
+            onMouseEnter={(e) => {
+                if (!disabled) sacredUi.hover();
+                onMouseEnter?.(e);
+            }}
+            onClick={(e) => {
+                if (!disabled) sacredUi.click();
+                onClick?.(e);
+            }}
             {...rest}
         >
             {children}

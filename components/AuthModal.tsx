@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Mail, Lock, User as UserIcon, Loader2, Sparkles, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { BRAND } from '@/lib/brand/assets';
 
 // TikTok & Google custom icons for premium visual feel
 const GoogleIcon = () => (
@@ -49,7 +51,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
                 if (error) throw error;
 
                 if (data.session) {
-                    setInfoMsg("Access granted. Synchronizing neural profile...");
+                    setInfoMsg("The veil parts. Your soul is recognized…");
+                    sacredUi.access();
                     setTimeout(() => {
                         onClose();
                         if (onSuccess) onSuccess();
@@ -57,7 +60,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
                 }
             } else {
                 if (!username.trim()) {
-                    throw new Error("Initiate name (username) is required.");
+                    throw new Error("A soul name is required.");
                 }
 
                 const { data, error } = await supabase.auth.signUp({
@@ -92,7 +95,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
                     }
 
                     if (data.session) {
-                        setInfoMsg("Protocol established. Soul synchronized!");
+                        setInfoMsg("Soul inscribed. The path opens.");
+                        sacredUi.access();
                         setTimeout(() => {
                             onClose();
                             if (onSuccess) onSuccess();
@@ -168,22 +172,28 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
     };
 
     return (
-        <div className={isGated ? "w-full" : "fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"}>
+        <div className={isGated ? "w-full" : "fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/88 backdrop-blur-md"}>
             <motion.div 
-                initial={isGated ? {} : { opacity: 0, scale: 0.95, y: 20 }}
+                initial={isGated ? {} : { opacity: 0, scale: 0.96, y: 16 }}
                 animate={isGated ? {} : { opacity: 1, scale: 1, y: 0 }}
-                exit={isGated ? {} : { opacity: 0, scale: 0.95, y: 20 }}
-                className="w-full max-w-md bg-[#050505]/90 border border-white/10 rounded-[2rem] p-8 md:p-10 relative overflow-hidden shadow-[0_0_80px_rgba(212,175,55,0.15)]"
+                className="w-full max-w-md bg-black/90 border border-aether-gold/20 rounded-[2rem] p-8 md:p-10 relative overflow-hidden shadow-[0_0_80px_rgba(251,191,36,0.12)] ambient-glow"
             >
-                {/* Decorative gradients */}
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-aether-gold/10 rounded-full blur-[60px] pointer-events-none"></div>
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none"></div>
+                <div
+                    className="absolute inset-0 opacity-[0.14] pointer-events-none"
+                    style={{
+                        backgroundImage: `url(${BRAND.portal})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}
+                />
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-aether-gold/10 rounded-full blur-[60px] pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
 
-                {/* Close Button */}
                 {!isGated && (
                     <button 
-                        onClick={onClose}
-                        className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10"
+                        type="button"
+                        onClick={() => { sacredUi.veilClose(); onClose(); }}
+                        className="absolute top-6 right-6 z-20 text-white/40 hover:text-white transition-colors p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -191,14 +201,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
 
                 <div className="space-y-6 relative z-10">
                     <div className="text-center space-y-2">
-                        <div className="w-12 h-12 bg-white/5 border border-white/15 rounded-2xl mx-auto flex items-center justify-center">
+                        <div className="w-12 h-12 bg-aether-gold/10 border border-aether-gold/25 rounded-2xl mx-auto flex items-center justify-center">
                             <Sparkles className="w-5 h-5 text-aether-gold animate-pulse" />
                         </div>
+                        <p className="text-[9px] uppercase tracking-[0.45em] text-aether-gold/65">Cross the veil</p>
                         <h2 className="font-ritual text-2xl font-black uppercase text-white tracking-widest gold-shimmer">
-                            {mode === 'login' ? 'Access Sanctum' : 'Initialize Soul'}
+                            {mode === 'login' ? 'Return to the Source' : 'Inscribe Your Soul'}
                         </h2>
-                        <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest leading-relaxed">
-                            {mode === 'login' ? 'Establish connections with Diaspora Core' : 'Register your signature on the Sovereign Ledger'}
+                        <p className="text-[10px] text-zinc-500 tracking-wide leading-relaxed max-w-xs mx-auto">
+                            {mode === 'login'
+                                ? 'Sign in to continue your journey into Truth’s Hut.'
+                                : 'Create a signature so your path, soul, and trust can travel with you.'}
                         </p>
                     </div>
 
@@ -267,54 +280,52 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isGated = false 
                         <button 
                             type="submit" 
                             disabled={loading}
-                            className="w-full bg-white text-black py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-[1.01] transition-transform active:scale-95 flex items-center justify-center gap-2"
+                            onClick={() => sacredUi.click()}
+                            className="w-full py-4 rounded-full text-[10px] font-black uppercase tracking-[0.22em] text-black shadow-[0_0_28px_rgba(251,191,36,0.25)] hover:scale-[1.01] transition-transform active:scale-95 flex items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
                         >
                             {loading ? (
                                 <Loader2 className="w-4 h-4 text-black animate-spin" />
                             ) : (
-                                mode === 'login' ? 'Establish Access' : 'Begin Onboarding'
+                                mode === 'login' ? 'Enter the Sanctum' : 'Begin the Awakening'
                             )}
                         </button>
                     </form>
 
                     <div className="relative flex py-2 items-center">
                         <div className="flex-grow border-t border-white/5"></div>
-                        <span className="flex-shrink mx-4 text-[7px] font-mono text-zinc-600 uppercase tracking-widest">or integrate via</span>
+                        <span className="flex-shrink mx-4 text-[7px] uppercase tracking-widest text-zinc-600">or</span>
                         <div className="flex-grow border-t border-white/5"></div>
                     </div>
 
                     <button 
-                        onClick={handleGoogleAuth}
+                        type="button"
+                        onClick={() => { sacredUi.click(); handleGoogleAuth(); }}
                         disabled={loading}
-                        className="w-full bg-white/5 border border-white/15 text-white py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:border-white/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                        className="w-full bg-white/5 border border-white/15 text-white py-3.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:border-aether-gold/30 transition-all flex items-center justify-center gap-3 active:scale-95"
                     >
                         <GoogleIcon />
                         Continue with Google
                     </button>
 
                     <button 
-                        onClick={handleDemoMode}
-                        className="w-full bg-amber-500/10 border border-amber-500/20 text-aether-gold py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-amber-500/20 transition-all flex items-center justify-center gap-3 active:scale-95"
+                        type="button"
+                        onClick={() => { sacredUi.threshold(); handleDemoMode(); }}
+                        className="w-full bg-aether-gold/10 border border-aether-gold/25 text-aether-gold py-3.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] hover:bg-aether-gold/15 transition-all flex items-center justify-center gap-3 active:scale-95"
                     >
                         <Sparkles className="w-4 h-4 text-aether-gold" />
-                        Play in Demo Mode (Offline)
+                        Walk in Demo Mode
                     </button>
 
                     <div className="text-center pt-2">
                         <button 
-                            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                            className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 hover:text-aether-gold transition-colors"
+                            type="button"
+                            onClick={() => { sacredUi.whoosh(); setMode(mode === 'login' ? 'register' : 'login'); }}
+                            className="text-[9px] uppercase tracking-widest text-zinc-500 hover:text-aether-gold transition-colors"
                         >
-                            {mode === 'login' ? "Need a soul signature? Register here" : "Already registered? Login here"}
+                            {mode === 'login' ? 'New soul? Inscribe here' : 'Already walking? Sign in'}
                         </button>
                     </div>
-
-                    {mode === 'login' && (
-                        <div className="text-center border-t border-white/5 pt-4">
-                            <span className="text-[7px] font-mono text-zinc-600 uppercase tracking-widest block">Main Admin Access</span>
-                            <span className="text-[8px] font-mono text-aether-gold uppercase tracking-wider block mt-1">Email: iamwhoiambook@gmail.com</span>
-                        </div>
-                    )}
                 </div>
             </motion.div>
         </div>

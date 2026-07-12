@@ -21,6 +21,7 @@ import { truthAwakeningLine } from '@/lib/game/truthVoice';
 import SacredButton from '@/components/sanctum/SacredButton';
 import ChapterMark from '@/components/sanctum/ChapterMark';
 import VeilPanel from '@/components/sanctum/VeilPanel';
+import { BRAND } from '@/lib/brand/assets';
 
 // ============================================================
 //  CHAPTER II — THE FORGING OF SELF (layered character creator)
@@ -93,7 +94,17 @@ export default function CreatePage() {
         <main className="relative min-h-[100dvh] bg-black text-white overflow-x-hidden overflow-y-auto"
             style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
             <CinematicVideo src={CINEMA.forging} overlay="heavy" showMuteControl />
-            <div className="pointer-events-none fixed inset-0" style={{ background: 'radial-gradient(120% 55% at 50% -5%, rgba(251,191,36,0.10), transparent 60%)' }} />
+            <div
+                className="pointer-events-none fixed inset-0 opacity-20"
+                style={{
+                    backgroundImage: `url(${BRAND.charWalk})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center top',
+                    mixBlendMode: 'screen',
+                    filter: 'saturate(0.8) brightness(0.5)',
+                }}
+            />
+            <div className="pointer-events-none fixed inset-0" style={{ background: 'radial-gradient(120% 55% at 50% -5%, rgba(251,191,36,0.12), transparent 60%)' }} />
 
             <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6"
                 style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>

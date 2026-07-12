@@ -12,6 +12,7 @@ import DialogueBox from '@/components/sanctum/DialogueBox';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 interface Line {
     t: string;
@@ -65,11 +66,13 @@ export default function AwakeningPage() {
     const advance = useCallback(() => {
         if (!typingDone) {
             setReveal(true);
+            sacredUi.whoosh();
             return;
         }
         if (named) return;
         if (current?.name) return;
         if (lineIndex < LINES.length - 1) {
+            sacredUi.whoosh();
             setLineIndex((i) => i + 1);
             setTypingDone(false);
             setReveal(false);

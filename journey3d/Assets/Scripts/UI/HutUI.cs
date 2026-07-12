@@ -231,8 +231,9 @@ namespace Journey3D
             // portrait camera - reset in case the creator left the side layout
             // (a lingering side/dim state would make the panel look empty/hidden)
             SetFrameWide();
-            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.72f);
+            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.78f);
             if (cameraRig != null) cameraRig.portraitMode = false;
+            AudioManager.I?.PlayStationOpen();
 
             switch (s.id)
             {

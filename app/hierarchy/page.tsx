@@ -102,7 +102,7 @@ export default function HierarchyPage() {
                     <div className="absolute inset-0 border-2 border-aether-gold/20 rounded-full animate-ping" />
                     <Hexagon className="w-16 h-16 text-aether-gold animate-spin-slow drop-shadow-[0_0_20px_rgba(212,175,55,0.5)]" />
                 </div>
-                <h2 className="mt-12 font-ritual text-xl text-white tracking-[0.4em] animate-pulse gold-shimmer uppercase">Synchronizing Sovereign Ledger...</h2>
+                <h2 className="mt-12 font-ritual text-xl text-white tracking-[0.4em] animate-pulse gold-shimmer uppercase">Reading the seals…</h2>
             </div>
         );
     }
@@ -112,26 +112,35 @@ export default function HierarchyPage() {
 
     return (
         <div className="min-h-screen bg-void text-white flex flex-col items-center relative overflow-hidden selection:bg-aether-gold/30">
-            {/* Background Texture & Overlays */}
             <div className="fixed inset-0 z-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.03)_0%,transparent_50%)]" />
+                <div
+                    className="absolute inset-0 opacity-20"
+                    style={{
+                        backgroundImage: 'url(/brand/bg-portal.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center top',
+                        filter: 'saturate(0.7) brightness(0.4)',
+                    }}
+                />
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.08)_0%,transparent_50%)]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
             </div>
 
-            {/* Global Navigation Header - Aetheric */}
-            <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center w-full">
+            <header className="sticky top-0 z-50 glass-panel border-b border-aether-gold/10 px-6 py-4 flex justify-between items-center w-full">
                 <div className="flex items-center gap-6">
                     <button 
                         onClick={() => router.push('/')} 
                         onMouseMove={handleMagneticMove}
                         onMouseLeave={handleMagneticLeave}
-                        className="p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-white transition-colors"
+                        className="p-3 bg-white/5 rounded-full border border-white/5 text-zinc-500 hover:text-aether-gold transition-colors"
                         title="Back to Sanctuary"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
                     <div className="flex flex-col">
+                        <span className="text-[8px] uppercase tracking-[0.4em] text-aether-gold/60 mb-0.5">Seals</span>
                         <span className="font-ritual text-xl font-bold tracking-[0.2em] leading-none text-white gold-shimmer">
-                            SOVEREIGN LEDGER
+                            Founding Hierarchy
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                             <div className="flex items-center h-2 gap-[1px]">

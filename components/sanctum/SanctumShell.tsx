@@ -11,6 +11,7 @@ import {
 import AmbientEmbers from '@/components/game/AmbientEmbers';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { cn } from '@/lib/design/cn';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 /** Routes that are pure immersion — no constellation chrome */
 const FULL_IMMERSIVE = [
@@ -49,9 +50,10 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
     const immersive = matchAny(pathname, FULL_IMMERSIVE);
     const ritual = matchAny(pathname, RITUAL_ROUTES);
 
-    // Close veil on navigate
+    // Close veil on navigate + soft threshold tone
     useEffect(() => {
         setOpen(false);
+        sacredUi.unlock();
     }, [pathname]);
 
     // Escape closes
@@ -64,7 +66,13 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
         return () => window.removeEventListener('keydown', onKey);
     }, [open]);
 
-    const toggle = useCallback(() => setOpen((v) => !v), []);
+    const toggle = useCallback(() => {
+        setOpen((v) => {
+            if (v) sacredUi.veilClose();
+            else sacredUi.veilOpen();
+            return !v;
+        });
+    }, []);
 
     return (
         <div className="relative min-h-[100dvh] flex flex-col">
@@ -159,6 +167,8 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
                                                     <li key={item.href}>
                                                         <Link
                                                             href={item.href}
+                                                            onClick={() => sacredUi.threshold()}
+                                                            onMouseEnter={() => sacredUi.hover()}
                                                             className={cn(
                                                                 'flex flex-col gap-0.5 rounded-2xl border px-3 py-3 transition-all duration-300',
                                                                 active
