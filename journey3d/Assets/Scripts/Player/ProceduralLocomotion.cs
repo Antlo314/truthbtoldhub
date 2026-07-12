@@ -3,35 +3,37 @@ using UnityEngine;
 
 namespace Journey3D
 {
-    /// Industry-reliable character motion when FBX retarget fails.
-    /// Finds Quaternius (and generic humanoid) bones by name and drives a
-    /// real walk / run / idle cycle with foot-plant timing, hip sway, and
-    /// arm counter-swing. No AnimationClip required.
+    /// Bone-driven walk when FBX clips are unavailable.
+    /// Swing axes are AUTO-CALIBRATED to the character's right vector so legs
+    /// stride forward/back (not side-to-side) regardless of bone roll.
     public class ProceduralLocomotion : MonoBehaviour
     {
         public enum Mode { Idle, Walk, Run }
 
         [Header("Timing")]
-        public float walkHz = 1.55f;
-        public float runHz = 2.35f;
-        public float idleHz = 0.55f;
+        public float walkHz = 1.65f;
+        public float runHz = 2.4f;
+        public float idleHz = 0.5f;
 
         [Header("Amplitudes (degrees)")]
-        public float legSwingWalk = 32f;
-        public float legSwingRun = 42f;
-        public float kneeBendWalk = 48f;
-        public float kneeBendRun = 62f;
-        public float armSwingWalk = 26f;
-        public float armSwingRun = 38f;
-        public float hipSway = 5f;
-        public float spineBob = 3.5f;
-        public float idleBreath = 2.2f;
-        public float idleWeightShift = 3.5f;
+        public float legSwingWalk = 28f;
+        public float legSwingRun = 38f;
+        public float kneeBendWalk = 55f;
+        public float kneeBendRun = 70f;
+        public float armSwingWalk = 24f;
+        public float armSwingRun = 36f;
+        public float hipSway = 4f;
+        public float spineBob = 3f;
+        public float idleBreath = 2f;
 
-        private Transform _root;           // CharacterArmature or rig root
+        /// When true, LateUpdate drives bones. Set false when CharacterRig clips own the mesh.
+        public bool Active = true;
+
+        private Transform _character;      // facing reference (wrapper)
+        private Transform _root;           // CharacterArmature
         private Transform _hips, _spine, _chest, _head;
-        private Transform _upL, _loL, _upR, _loR;   // legs
-        private Transform _armUL, _armLL, _armUR, _armLR; // arms
+        private Transform _upL, _loL, _upR, _loR;
+        private Transform _armUL, _armLL, _armUR, _armLR;
         private Transform _footL, _footR;
 
         private Quaternion _bHips, _bSpine, _bChest, _bHead;
@@ -40,10 +42,15 @@ namespace Journey3D
         private Quaternion _bFootL, _bFootR;
         private Vector3 _bRootLocalPos;
 
+        // Local swing axes in each bone's bind-pose space (unit vectors)
+        private Vector3 _axUpL, _axLoL, _axUpR, _axLoR;
+        private Vector3 _axAUL, _axALL, _axAUR, _axALR;
+        private Vector3 _axHips, _axSpine;
+
         private float _phase;
         private Mode _mode = Mode.Idle;
         private Mode _target = Mode.Idle;
-        private float _blend; // 0 idle .. 1 full locomotion weight
+        private float _blend;
         private bool _ready;
 
         public Mode CurrentMode => _mode;
@@ -52,114 +59,77 @@ namespace Journey3D
         public void Bind(Transform characterRoot)
         {
             _ready = false;
+            Active = true;
             if (characterRoot == null) return;
 
-            // Prefer the armature node so we don't rotate mesh props
+            // Facing reference: prefer outer wrapper (player-facing), else root
+            _character = characterRoot.parent != null ? characterRoot.parent : characterRoot;
             _root = FindDeep(characterRoot, "CharacterArmature") ?? characterRoot;
             _bRootLocalPos = _root.localPosition;
 
-            // Quaternius Ultimate Modular exact hierarchy:
-            // CharacterArmature/Root/Body/{Hips, UpperLeg.L/R}
-            // CharacterArmature/Root/Body/Hips/Abdomen/Torso/Chest/...
-            // CharacterArmature/Root/Foot.L/R
-            _hips = FindBone(_root, "Hips", "hip", "Pelvis", "pelvis");
-            _spine = FindBone(_root, "Abdomen", "Torso", "Spine", "spine", "Spine1");
-            _chest = FindBone(_root, "Chest", "Torso", "Spine2", "UpperChest");
-            _head = FindBone(_root, "Head", "head");
+            _hips = FindBone(_root, "Hips");
+            _spine = FindBone(_root, "Abdomen", "Torso", "Spine");
+            _chest = FindBone(_root, "Chest");
+            _head = FindBone(_root, "Head");
 
-            _upL = FindBone(_root, "UpperLeg.L", "LeftUpLeg", "LeftUpperLeg", "UpperLeg_L", "Thigh.L");
-            _loL = FindBone(_root, "LowerLeg.L", "LeftLeg", "LeftLowerLeg", "LowerLeg_L", "Shin.L");
-            _upR = FindBone(_root, "UpperLeg.R", "RightUpLeg", "RightUpperLeg", "UpperLeg_R", "Thigh.R");
-            _loR = FindBone(_root, "LowerLeg.R", "RightLeg", "RightLowerLeg", "LowerLeg_R", "Shin.R");
+            _upL = FindBone(_root, "UpperLeg.L");
+            _loL = FindBone(_root, "LowerLeg.L");
+            _upR = FindBone(_root, "UpperLeg.R");
+            _loR = FindBone(_root, "LowerLeg.R");
+            _armUL = FindBone(_root, "UpperArm.L");
+            _armLL = FindBone(_root, "LowerArm.L");
+            _armUR = FindBone(_root, "UpperArm.R");
+            _armLR = FindBone(_root, "LowerArm.R");
+            _footL = FindBone(_root, "Foot.L");
+            _footR = FindBone(_root, "Foot.R");
 
-            _armUL = FindBone(_root, "UpperArm.L", "LeftArm", "LeftUpperArm", "UpperArm_L", "Shoulder.L");
-            _armLL = FindBone(_root, "LowerArm.L", "LeftForeArm", "LeftLowerArm", "LowerArm_L", "ForeArm.L");
-            _armUR = FindBone(_root, "UpperArm.R", "RightArm", "RightUpperArm", "UpperArm_R", "Shoulder.R");
-            _armLR = FindBone(_root, "LowerArm.R", "RightForeArm", "RightLowerArm", "LowerArm_R", "ForeArm.R");
-
-            _footL = FindBone(_root, "Foot.L", "LeftFoot", "Foot_L", "LeftAnkle");
-            _footR = FindBone(_root, "Foot.R", "RightFoot", "Foot_R", "RightAnkle");
-
-            // If Quaternius uses numbered bones, fall back to heuristic under Hips
             if (_upL == null || _upR == null)
-                HeuristicLegsFromHips();
-
-            // Last resort: walk the full tree and assign by index under Hips
-            if (_upL == null || _upR == null)
-                AssignBySpatialHeuristic(characterRoot);
+                HeuristicLegs();
 
             CaptureBind();
+            CalibrateAxes();
+
             int parts = CountBound();
-            _ready = parts >= 2; // even hips-only gets idle breath; legs preferred
-            // Always ready if we found ANY transform tree — body bob still works
-            if (!_ready && _root != null)
-            {
-                _ready = true; // root bob + whatever we have
-            }
-            Debug.Log($"J3D proc loco '{characterRoot.name}': ready={_ready} parts={parts} " +
-                      $"hips={Name(_hips)} upL={Name(_upL)} loL={Name(_loL)} upR={Name(_upR)} loR={Name(_loR)} " +
-                      $"armL={Name(_armUL)} armR={Name(_armUR)} spine={Name(_spine)}");
-            if (_upL == null)
-                LogAllBones(characterRoot, 0, 60);
+            _ready = _upL != null && _upR != null;
+            if (!_ready && _root != null) _ready = true;
+
+            Debug.Log($"J3D proc loco '{characterRoot.name}': ready={_ready} active={Active} " +
+                      $"upL={Name(_upL)} axL={_axUpL} upR={Name(_upR)} axR={_axUpR}");
         }
 
-        private void AssignBySpatialHeuristic(Transform characterRoot)
+        /// World axis for hip flexion = character's RIGHT (legs swing in the sagittal plane).
+        private void CalibrateAxes()
         {
-            var all = new List<Transform>();
-            CollectAll(characterRoot, all);
-            // candidates: bones roughly mid-height that aren't mesh parts
-            var limbs = new List<Transform>();
-            foreach (var t in all)
-            {
-                string n = t.name.ToLowerInvariant();
-                if (n.Contains("body") || n.Contains("mesh") || n.Contains("head") ||
-                    n.Contains("foot") || n.Contains("hand") || n.Contains("finger")) continue;
-                if (t.childCount == 0) continue;
-                limbs.Add(t);
-            }
-            // pick two deepest branches that look opposite in local X
-            if (_hips == null)
-            {
-                foreach (var t in all)
-                    if (t.name.IndexOf("hip", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        t.name.IndexOf("pelvis", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                    { _hips = t; break; }
-            }
-            if (_hips == null && all.Count > 1) _hips = characterRoot;
+            Vector3 worldFlex = _character != null ? _character.right : Vector3.right;
+            // Prefer slightly tilted if character not yet facing
+            if (worldFlex.sqrMagnitude < 0.01f) worldFlex = Vector3.right;
+            worldFlex.Normalize();
 
-            // children of hips sorted by x
-            if (_hips != null && _hips.childCount >= 2)
-            {
-                var kids = new List<Transform>();
-                for (int i = 0; i < _hips.childCount; i++) kids.Add(_hips.GetChild(i));
-                kids.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
-                // leftmost with children = left leg-ish, rightmost = right leg
-                Transform left = null, right = null;
-                foreach (var k in kids)
-                {
-                    string n = k.name.ToLowerInvariant();
-                    if (n.Contains("spine") || n.Contains("chest") || n.Contains("neck") || n.Contains("head")) continue;
-                    if (left == null) left = k;
-                    right = k;
-                }
-                if (_upL == null && left != null) { _upL = left; if (left.childCount > 0) _loL = left.GetChild(0); }
-                if (_upR == null && right != null && right != left) { _upR = right; if (right.childCount > 0) _loR = right.GetChild(0); }
-            }
+            _axUpL = LocalAxis(_upL, worldFlex);
+            _axLoL = LocalAxis(_loL, worldFlex);
+            _axUpR = LocalAxis(_upR, worldFlex);
+            _axLoR = LocalAxis(_loR, worldFlex);
+            _axAUL = LocalAxis(_armUL, worldFlex);
+            _axALL = LocalAxis(_armLL, worldFlex);
+            _axAUR = LocalAxis(_armUR, worldFlex);
+            _axALR = LocalAxis(_armLR, worldFlex);
+            _axHips = LocalAxis(_hips, worldFlex);
+            _axSpine = LocalAxis(_spine, worldFlex);
+
+            // Safety defaults if bone missing
+            if (_axUpL.sqrMagnitude < 0.01f) _axUpL = Vector3.right;
+            if (_axUpR.sqrMagnitude < 0.01f) _axUpR = Vector3.right;
+            if (_axLoL.sqrMagnitude < 0.01f) _axLoL = Vector3.right;
+            if (_axLoR.sqrMagnitude < 0.01f) _axLoR = Vector3.right;
         }
 
-        private static void CollectAll(Transform t, List<Transform> into)
+        private static Vector3 LocalAxis(Transform bone, Vector3 worldAxis)
         {
-            into.Add(t);
-            for (int i = 0; i < t.childCount; i++) CollectAll(t.GetChild(i), into);
-        }
-
-        private static void LogAllBones(Transform t, int depth, int budget)
-        {
-            if (budget <= 0) return;
-            Debug.Log($"J3D bone {new string('-', depth)}{t.name}");
-            budget--;
-            for (int i = 0; i < t.childCount && budget > 0; i++)
-                LogAllBones(t.GetChild(i), depth + 1, budget);
+            if (bone == null) return Vector3.right;
+            // Axis in bone-local space that matches world flex axis at bind pose
+            Vector3 local = bone.InverseTransformDirection(worldAxis);
+            if (local.sqrMagnitude < 1e-6f) return Vector3.right;
+            return local.normalized;
         }
 
         private void CaptureBind()
@@ -187,33 +157,25 @@ namespace Journey3D
             if (_upL) n++; if (_loL) n++;
             if (_upR) n++; if (_loR) n++;
             if (_armUL) n++; if (_armUR) n++;
-            if (_spine) n++;
             return n;
         }
 
-        public void SetMode(Mode mode)
-        {
-            _target = mode;
-        }
+        public void SetMode(Mode mode) => _target = mode;
 
         private void LateUpdate()
         {
-            if (!_ready) return;
+            if (!_ready || !Active) return;
 
-            // Smooth mode blend
+            // Re-calibrate if character turned a lot (axes are in bone space so usually stable)
             float targetBlend = _target == Mode.Idle ? 0f : 1f;
-            _blend = Mathf.MoveTowards(_blend, targetBlend, Time.deltaTime * 4.5f);
-            if (_blend > 0.15f) _mode = _target;
-            else _mode = Mode.Idle;
+            _blend = Mathf.MoveTowards(_blend, targetBlend, Time.deltaTime * 5f);
+            _mode = _blend > 0.12f ? _target : Mode.Idle;
 
             float hz = _mode == Mode.Run ? runHz : _mode == Mode.Walk ? walkHz : idleHz;
             _phase += Time.deltaTime * hz * Mathf.PI * 2f;
-            if (_phase > Mathf.PI * 200f) _phase -= Mathf.PI * 200f;
 
             float t = _phase;
             float s = Mathf.Sin(t);
-            float c = Mathf.Cos(t);
-            // second harmonic for knee snap
             float s2 = Mathf.Sin(t * 2f);
 
             if (_mode == Mode.Idle || _blend < 0.05f)
@@ -226,98 +188,69 @@ namespace Journey3D
             float kneeA = Mathf.Lerp(kneeBendWalk, kneeBendRun, _mode == Mode.Run ? 1f : 0f) * _blend;
             float armA = Mathf.Lerp(armSwingWalk, armSwingRun, _mode == Mode.Run ? 1f : 0f) * _blend;
 
-            // Legs: opposite phase, pitch around local X (forward swing)
-            // Knee only bends on the recovery half (positive swing)
-            float leftLeg = s * legA;
-            float rightLeg = -s * legA;
-            float leftKnee = Mathf.Max(0f, -s) * kneeA + Mathf.Max(0f, s2) * (kneeA * 0.15f);
-            float rightKnee = Mathf.Max(0f, s) * kneeA + Mathf.Max(0f, -s2) * (kneeA * 0.15f);
+            // Sagittal swing: opposite legs, forward/back via calibrated axis
+            float leftSwing = s * legA;
+            float rightSwing = -s * legA;
+            // Knee only folds on recovery (when thigh swings back)
+            float leftKnee = Mathf.Max(0f, -s) * kneeA;
+            float rightKnee = Mathf.Max(0f, s) * kneeA;
 
-            if (_upL) _upL.localRotation = _bUpL * Quaternion.Euler(leftLeg, 0, 0);
-            if (_loL) _loL.localRotation = _bLoL * Quaternion.Euler(leftKnee, 0, 0);
-            if (_upR) _upR.localRotation = _bUpR * Quaternion.Euler(rightLeg, 0, 0);
-            if (_loR) _loR.localRotation = _bLoR * Quaternion.Euler(rightKnee, 0, 0);
+            Apply(_upL, _bUpL, _axUpL, leftSwing);
+            Apply(_loL, _bLoL, _axLoL, leftKnee);
+            Apply(_upR, _bUpR, _axUpR, rightSwing);
+            Apply(_loR, _bLoR, _axLoR, rightKnee);
 
-            // Feet plant: slight counter-pitch
-            if (_footL) _footL.localRotation = _bFootL * Quaternion.Euler(-leftLeg * 0.35f - leftKnee * 0.2f, 0, 0);
-            if (_footR) _footR.localRotation = _bFootR * Quaternion.Euler(-rightLeg * 0.35f - rightKnee * 0.2f, 0, 0);
+            if (_footL) Apply(_footL, _bFootL, _axUpL, -leftSwing * 0.35f - leftKnee * 0.15f);
+            if (_footR) Apply(_footR, _bFootR, _axUpR, -rightSwing * 0.35f - rightKnee * 0.15f);
 
-            // Arms counter-swing
-            if (_armUL) _armUL.localRotation = _bAUL * Quaternion.Euler(-leftLeg * (armA / Mathf.Max(1f, legA)), 0, 6f * _blend);
-            if (_armUR) _armUR.localRotation = _bAUR * Quaternion.Euler(-rightLeg * (armA / Mathf.Max(1f, legA)), 0, -6f * _blend);
-            if (_armLL) _armLL.localRotation = _bALL * Quaternion.Euler(Mathf.Max(0f, s) * 18f * _blend, 0, 0);
-            if (_armLR) _armLR.localRotation = _bALR * Quaternion.Euler(Mathf.Max(0f, -s) * 18f * _blend, 0, 0);
+            // Arms counter-swing on same flex axis
+            Apply(_armUL, _bAUL, _axAUL, -leftSwing * (armA / Mathf.Max(8f, legA)));
+            Apply(_armUR, _bAUR, _axAUR, -rightSwing * (armA / Mathf.Max(8f, legA)));
+            Apply(_armLL, _bALL, _axALL, Mathf.Max(0f, s) * 16f * _blend);
+            Apply(_armLR, _bALR, _axALR, Mathf.Max(0f, -s) * 16f * _blend);
 
-            // Hip sway + vertical bob on armature root
-            if (_hips)
-                _hips.localRotation = _bHips * Quaternion.Euler(s2 * spineBob * 0.4f * _blend, s * hipSway * _blend, c * hipSway * 0.6f * _blend);
-            if (_spine)
-                _spine.localRotation = _bSpine * Quaternion.Euler(s2 * spineBob * _blend, 0, -s * hipSway * 0.4f * _blend);
-            if (_chest)
-                _chest.localRotation = _bChest * Quaternion.Euler(-s2 * spineBob * 0.5f * _blend, 0, 0);
-            if (_head)
-                _head.localRotation = _bHead * Quaternion.Euler(-s2 * 1.5f * _blend, s * 2f * _blend, 0);
+            // Subtle torso
+            if (_hips) Apply(_hips, _bHips, _axHips, s2 * spineBob * 0.35f * _blend);
+            if (_spine) Apply(_spine, _bSpine, _axSpine, s2 * spineBob * _blend);
+            if (_chest) Apply(_chest, _bChest, _axSpine, -s2 * spineBob * 0.45f * _blend);
+            if (_head) Apply(_head, _bHead, _axSpine, -s2 * 1.2f * _blend);
 
-            // Whole-body vertical bob (root)
-            float bob = Mathf.Abs(s2) * 0.028f * _blend * (_mode == Mode.Run ? 1.35f : 1f);
+            float bob = Mathf.Abs(s2) * 0.025f * _blend * (_mode == Mode.Run ? 1.3f : 1f);
             _root.localPosition = _bRootLocalPos + Vector3.up * bob;
+        }
+
+        private static void Apply(Transform bone, Quaternion bind, Vector3 localAxis, float degrees)
+        {
+            if (bone == null || localAxis.sqrMagnitude < 1e-6f) return;
+            bone.localRotation = bind * Quaternion.AngleAxis(degrees, localAxis);
         }
 
         private void ApplyIdle(float t)
         {
             float breath = Mathf.Sin(t) * idleBreath;
-            float shift = Mathf.Sin(t * 0.5f) * idleWeightShift;
+            float shift = Mathf.Sin(t * 0.47f) * 2.5f;
 
-            if (_hips)
-                _hips.localRotation = _bHips * Quaternion.Euler(0, 0, shift * 0.35f);
-            if (_spine)
-                _spine.localRotation = _bSpine * Quaternion.Euler(breath * 0.6f, 0, shift * 0.2f);
-            if (_chest)
-                _chest.localRotation = _bChest * Quaternion.Euler(breath, 0, 0);
-            if (_head)
-                _head.localRotation = _bHead * Quaternion.Euler(-breath * 0.4f, Mathf.Sin(t * 0.37f) * 2.5f, 0);
+            if (_spine) Apply(_spine, _bSpine, _axSpine, breath * 0.7f);
+            if (_chest) Apply(_chest, _bChest, _axSpine, breath);
+            if (_head) Apply(_head, _bHead, _axSpine, -breath * 0.35f);
+            if (_hips) Apply(_hips, _bHips, Vector3.up, shift * 0.4f); // slight yaw weight shift
 
-            // Soft weight shift on legs
-            if (_upL) _upL.localRotation = _bUpL * Quaternion.Euler(shift * 0.4f, 0, shift * 0.25f);
-            if (_upR) _upR.localRotation = _bUpR * Quaternion.Euler(-shift * 0.4f, 0, shift * 0.25f);
-            if (_loL) _loL.localRotation = _bLoL * Quaternion.Euler(Mathf.Abs(shift) * 0.5f, 0, 0);
-            if (_loR) _loR.localRotation = _bLoR * Quaternion.Euler(Mathf.Abs(shift) * 0.5f, 0, 0);
+            // Soft knee ease
+            Apply(_upL, _bUpL, _axUpL, shift * 0.35f);
+            Apply(_upR, _bUpR, _axUpR, -shift * 0.35f);
+            Apply(_loL, _bLoL, _axLoL, Mathf.Abs(shift) * 0.6f);
+            Apply(_loR, _bLoR, _axLoR, Mathf.Abs(shift) * 0.6f);
 
-            // Arms hang with micro motion
-            if (_armUL) _armUL.localRotation = _bAUL * Quaternion.Euler(breath * 0.5f, 0, 2f + shift * 0.3f);
-            if (_armUR) _armUR.localRotation = _bAUR * Quaternion.Euler(breath * 0.5f, 0, -2f + shift * 0.3f);
+            Apply(_armUL, _bAUL, _axAUL, breath * 0.4f);
+            Apply(_armUR, _bAUR, _axAUR, breath * 0.4f);
 
-            _root.localPosition = Vector3.Lerp(_root.localPosition, _bRootLocalPos + Vector3.up * (Mathf.Sin(t) * 0.008f), 0.2f);
+            _root.localPosition = Vector3.Lerp(_root.localPosition,
+                _bRootLocalPos + Vector3.up * (Mathf.Sin(t) * 0.007f), 0.25f);
         }
 
-        // ---------- bone finding ----------
-        private void HeuristicLegsFromHips()
+        private void HeuristicLegs()
         {
-            if (_hips == null) return;
-            // First two deep children that look like limbs
-            var legs = new List<Transform>();
-            CollectByHint(_hips, legs, new[] { "leg", "thigh", "upleg", "upperleg" }, 8);
-            if (legs.Count >= 2)
-            {
-                // sort by x position so left is -x
-                legs.Sort((a, b) => a.position.x.CompareTo(b.position.x));
-                if (_upL == null) _upL = legs[0];
-                if (_upR == null) _upR = legs[legs.Count - 1];
-                if (_loL == null && _upL != null && _upL.childCount > 0) _loL = _upL.GetChild(0);
-                if (_loR == null && _upR != null && _upR.childCount > 0) _loR = _upR.GetChild(0);
-            }
-        }
-
-        private static void CollectByHint(Transform t, List<Transform> into, string[] hints, int max)
-        {
-            if (into.Count >= max) return;
-            string n = t.name.ToLowerInvariant();
-            foreach (var h in hints)
-            {
-                if (n.Contains(h)) { into.Add(t); break; }
-            }
-            for (int i = 0; i < t.childCount; i++)
-                CollectByHint(t.GetChild(i), into, hints, max);
+            // already exact-named for Quaternius; nothing extra
         }
 
         private static Transform FindBone(Transform root, params string[] names)
@@ -325,12 +258,6 @@ namespace Journey3D
             foreach (var name in names)
             {
                 var t = FindDeep(root, name);
-                if (t != null) return t;
-            }
-            // contains match (case insensitive)
-            foreach (var name in names)
-            {
-                var t = FindContains(root, name.ToLowerInvariant());
                 if (t != null) return t;
             }
             return null;
@@ -342,17 +269,6 @@ namespace Journey3D
             for (int i = 0; i < root.childCount; i++)
             {
                 var f = FindDeep(root.GetChild(i), exact);
-                if (f != null) return f;
-            }
-            return null;
-        }
-
-        private static Transform FindContains(Transform root, string part)
-        {
-            if (root.name.ToLowerInvariant().Contains(part)) return root;
-            for (int i = 0; i < root.childCount; i++)
-            {
-                var f = FindContains(root.GetChild(i), part);
                 if (f != null) return f;
             }
             return null;

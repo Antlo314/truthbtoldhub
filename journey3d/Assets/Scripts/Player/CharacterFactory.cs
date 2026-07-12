@@ -2,15 +2,13 @@ using UnityEngine;
 
 namespace Journey3D
 {
-    /// Spawns Quaternius CC0 characters (Resources/Models/quaternius),
-    /// normalized to a real-world height and seated on the ground, and binds
-    /// the shared Legacy animation set for their rig via CharacterRig.
+    /// Spawns Quaternius CC0 characters and binds real Walk/Idle clips from
+    /// anims_masc / anims_fem (same rig as the mesh). Procedural locomotion
+    /// is a calibrated fallback only if clips fail to bind.
     public static class CharacterFactory
     {
         public const float PlayerHeight = 1.72f;
 
-        /// model: e.g. "char_masc_tunic". donor: "anims_masc" / "anims_fem".
-        /// Returns a wrapper whose child is the normalized character instance.
         public static GameObject Spawn(string model, string donor, Vector3 pos, float yaw, float height, bool collide)
         {
             var prefab = Resources.Load<GameObject>("Models/quaternius/" + model);
@@ -27,23 +25,19 @@ namespace Journey3D
             inst.transform.localRotation = Quaternion.identity;
             Normalize(wrapper.transform, inst.transform, height);
 
-            // Skinned-mesh renderer bounds are unreliable for these imported rigs
-            // (they balloon - see Normalize's note), so Unity frustum-culls the
-            // character to INVISIBILITY. Force per-frame bounds recompute so the
-            // character always draws where it actually is.
             foreach (var smr in inst.GetComponentsInChildren<SkinnedMeshRenderer>())
                 smr.updateWhenOffscreen = true;
 
             var rig = wrapper.AddComponent<CharacterRig>();
-            rig.Bind(inst, donor);
+            bool clipsOk = rig.Bind(inst, donor);
 
-            // Guaranteed motion — bone-driven walk/idle even if FBX clips don't retarget
+            // Always attach procedural; disable it when skeletal clips own the bones
             var proc = wrapper.AddComponent<ProceduralLocomotion>();
             proc.Bind(inst.transform);
+            proc.Active = !clipsOk; // clips win when bound
 
             if (collide)
             {
-                // simple capsule-ish box so souls can't walk through people
                 var col = new GameObject("bounds_col");
                 col.transform.SetParent(wrapper.transform, false);
                 col.transform.localPosition = new Vector3(0, height * 0.5f, 0);
@@ -52,11 +46,6 @@ namespace Journey3D
             return wrapper;
         }
 
-        /// Scales the instance so its bind-pose mesh bounds stand `height` tall
-        /// with feet at the wrapper origin. Uses sharedMesh bounds transformed
-        /// by each renderer - Renderer.bounds is NOT valid for skinned meshes
-        /// before their first skinning update (it collapses and the scale
-        /// explodes), so it must not be used here.
         private static void Normalize(Transform wrapper, Transform inst, float height)
         {
             if (!MeshSpaceBounds(inst, out var b))
@@ -65,10 +54,10 @@ namespace Journey3D
                 return;
             }
             float scale = height / Mathf.Max(0.01f, b.size.y);
-            inst.localScale = inst.localScale * scale;   // compose with any import scale
+            inst.localScale = inst.localScale * scale;
             if (!MeshSpaceBounds(inst, out var b2)) return;
             inst.position += wrapper.position - new Vector3(b2.center.x, b2.min.y, b2.center.z);
-            Debug.Log($"J3D char '{wrapper.name}': raw={b.size.y:F2} scale={scale:F4} final={b2.size.y:F2} rootScale={inst.localScale.x:F4}");
+            Debug.Log($"J3D char '{wrapper.name}': raw={b.size.y:F2} scale={scale:F4} final={b2.size.y:F2}");
         }
 
         private static bool MeshSpaceBounds(Transform inst, out Bounds bounds)
@@ -79,7 +68,11 @@ namespace Journey3D
             {
                 Mesh mesh = null;
                 if (r is SkinnedMeshRenderer smr) mesh = smr.sharedMesh;
-                else { var mf = r.GetComponent<MeshFilter>(); if (mf != null) mesh = mf.sharedMesh; }
+                else
+                {
+                    var mf = r.GetComponent<MeshFilter>();
+                    if (mf != null) mesh = mf.sharedMesh;
+                }
                 if (mesh == null) continue;
                 var lb = mesh.bounds;
                 var m = r.transform.localToWorldMatrix;
@@ -96,29 +89,33 @@ namespace Journey3D
         }
     }
 
-    /// Holds the Legacy Animation for one spawned character and exposes
-    /// simple named playback. Clip names are normalized
-    /// ("CharacterArmature|…|Walk" -> "Walk") so gameplay can say Play("Walk").
+    /// Plays Quaternius Legacy clips (Idle / Walk / Run / Interact / Wave).
+    /// Clips live on anims_masc|fem; mesh is char_* — same CharacterArmature paths.
     public class CharacterRig : MonoBehaviour
     {
-        // FBX clips path fine but retarget still glitches; ProceduralLocomotion
-        // is the authoritative walk/idle. Keep false so clips don't fight bones.
-        public static bool PlayAnimations = false;
+        public static bool PlayAnimations = true;
 
         private Animation _anim;
         private string _current = "";
+        private bool _bound;
 
-        public void Bind(GameObject inst, string donor)
+        public bool ClipsBound => _bound;
+        public string Current => _current;
+
+        /// Returns true if Walk (or Idle) clip is ready to play.
+        public bool Bind(GameObject inst, string donor)
         {
+            _bound = false;
             _anim = inst.GetComponent<Animation>();
             if (_anim == null) _anim = inst.AddComponent<Animation>();
             _anim.playAutomatically = false;
             _anim.cullingType = AnimationCullingType.AlwaysAnimate;
+            _anim.enabled = true;
 
             if (!PlayAnimations)
             {
-                Debug.LogWarning($"J3D rig '{name}': PlayAnimations=false (bind pose only)");
-                return;
+                Debug.LogWarning($"J3D rig '{name}': PlayAnimations=false");
+                return false;
             }
 
             var clips = Resources.LoadAll<AnimationClip>("Models/quaternius/" + donor);
@@ -126,39 +123,40 @@ namespace Journey3D
             foreach (var clip in clips)
             {
                 if (clip == null) continue;
-                // Ensure legacy — donor import is Legacy, but be defensive
-                if (!clip.legacy) clip.legacy = true;
+                // Runtime instance so we don't mutate shared import assets
+                var runtime = Object.Instantiate(clip);
+                runtime.name = clip.name;
+                runtime.legacy = true;
+                runtime.wrapMode = WrapMode.Loop;
 
-                string name = NormalizeClipName(clip.name);
-                if (string.IsNullOrEmpty(name)) continue;
-                if (_anim.GetClip(name) != null) continue;
+                string clipName = NormalizeClipName(clip.name);
+                if (string.IsNullOrEmpty(clipName)) continue;
+                if (_anim.GetClip(clipName) != null) continue;
 
-                _anim.AddClip(clip, name);
-                var st = _anim[name];
+                _anim.AddClip(runtime, clipName);
+                var st = _anim[clipName];
                 if (st == null) continue;
-                st.wrapMode = IsLoopingClip(name) ? WrapMode.Loop : WrapMode.Once;
+                st.wrapMode = IsLoopingClip(clipName) ? WrapMode.Loop : WrapMode.Once;
                 st.layer = 0;
                 st.blendMode = AnimationBlendMode.Blend;
-                st.enabled = true;
                 st.weight = 1f;
+                st.enabled = true;
+                st.speed = 1f;
                 added++;
             }
 
-            if (added == 0)
-                Debug.LogError($"J3D rig '{name}': no clips bound from donor '{donor}' (found {clips.Length} raw)");
-            else
-                Debug.Log($"J3D rig '{name}': bound {added} clips from {donor}");
+            _bound = added > 0 && (Has("Walk") || Has("Idle") || Has("Idle_Neutral"));
+            Debug.Log($"J3D rig '{name}': bound {added} clips from {donor}, walk={Has("Walk")}, idle={Has("Idle_Neutral")||Has("Idle")}, ok={_bound}");
 
-            Play(IdleName(), 0f);
+            if (_bound) Play(IdleName(), 0f);
+            return _bound;
         }
 
         private static string NormalizeClipName(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return raw;
-            // "CharacterArmature|CharacterArmature|CharacterArmature|Idle" -> "Idle"
             int bar = raw.LastIndexOf('|');
             if (bar >= 0) raw = raw.Substring(bar + 1);
-            // also handle "CharacterArmature|Idle" already stripped once
             bar = raw.LastIndexOf('|');
             if (bar >= 0) raw = raw.Substring(bar + 1);
             return raw.Trim();
@@ -173,11 +171,10 @@ namespace Journey3D
 
         public string IdleName() => Has("Idle_Neutral") ? "Idle_Neutral" : "Idle";
         public bool Has(string name) => _anim != null && _anim[name] != null;
-        public string Current => _current;
 
-        public void Play(string name, float fade = 0.18f)
+        public void Play(string name, float fade = 0.15f)
         {
-            if (!PlayAnimations || _anim == null || string.IsNullOrEmpty(name)) return;
+            if (!_bound || _anim == null || string.IsNullOrEmpty(name)) return;
             if (_current == name) return;
             if (_anim[name] == null) return;
             _current = name;
@@ -185,7 +182,6 @@ namespace Journey3D
             else _anim.CrossFade(name, fade);
         }
 
-        /// Fire a one-shot (Interact, Wave, …) then return to idle when done.
         public void PlayOnce(string name, float fade = 0.12f)
         {
             if (!Has(name)) return;

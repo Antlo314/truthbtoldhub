@@ -74,6 +74,9 @@ namespace Journey3D
                 var boneRoot = _model.transform.Find("rig") ?? _model.transform;
                 Proc.Bind(boneRoot);
             }
+            // Prefer clips when bound
+            if (Proc != null && Rig != null)
+                Proc.Active = !Rig.ClipsBound;
 
             _mats.Clear();
             foreach (var r in _model.GetComponentsInChildren<Renderer>())
