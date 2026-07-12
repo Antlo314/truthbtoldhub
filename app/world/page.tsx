@@ -97,6 +97,16 @@ export default function World3DPage() {
 
             script = document.createElement('script');
             script.src = `${BUILD_BASE}/webgl.loader.js${q}`;
+            // Warm the browser cache for heavy WebGL binaries while the loader boots
+            try {
+                ['webgl.data.unityweb', 'webgl.framework.js.unityweb', 'webgl.wasm.unityweb'].forEach((f) => {
+                    const l = document.createElement('link');
+                    l.rel = 'prefetch';
+                    l.href = `${BUILD_BASE}/${f}${q}`;
+                    l.as = f.endsWith('.wasm.unityweb') ? 'fetch' : 'fetch';
+                    document.head.appendChild(l);
+                });
+            } catch { /* ignore */ }
             script.onload = () => {
                 if (cancelled || !canvasRef.current || !window.createUnityInstance) return;
                 fitCanvas();
@@ -109,7 +119,7 @@ export default function World3DPage() {
                             codeUrl: `${BUILD_BASE}/webgl.wasm.unityweb${q}`,
                             companyName: 'Truth B Told',
                             productName: "The Journey - Truth's Hut",
-                            productVersion: '1.2',
+                            productVersion: '1.3',
                             matchWebGLToCanvasSize: false,
                             webglContextAttributes: { preserveDrawingBuffer: true },
                         },

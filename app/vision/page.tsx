@@ -79,7 +79,7 @@ export default function VisionsIndexPage() {
                                         {v.name}
                                     </h2>
                                     <p className="text-[10px] uppercase tracking-[0.2em] text-white/35 mt-1">
-                                        {v.guide}
+                                        {v.guide} · vision + trial
                                     </p>
                                     <p className="text-[12px] text-white/45 italic mt-2 line-clamp-2">
                                         “{v.quote}”

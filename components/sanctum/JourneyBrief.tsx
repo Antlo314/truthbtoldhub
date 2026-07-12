@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 
-const KEY = 'tbth-journey-brief-v1';
+const KEY = 'tbth-journey-brief-v2';
 
 const STEPS = [
     { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },

@@ -12,6 +12,13 @@ export const metadata: Metadata = {
         default: 'Truth B Told Hub | Return to the Source',
     },
     description: 'An aetheric awakening RPG. Walk with Truth, choose your path, and return to the Source inside the Truth B Told Hub.',
+    applicationName: 'Sacred Sanctum',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'black-translucent',
+        title: 'Sacred Sanctum',
+    },
     openGraph: {
         title: 'Truth B Told Hub | Return to the Source',
         description: 'Awaken. Walk with Truth. Cross the threshold into an aetheric RPG of prophecy, presence, and return.',
@@ -19,10 +26,10 @@ export const metadata: Metadata = {
         siteName: 'Truth B Told Hub',
         images: [
             {
-                url: 'https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg',
+                url: '/brand/keyart-return-source.jpg',
                 width: 1200,
                 height: 630,
-                alt: 'Truth B Told Hub Preview'
+                alt: 'Return to the Source'
             },
         ],
         locale: 'en_US',
@@ -33,13 +40,16 @@ export const metadata: Metadata = {
         title: 'Truth B Told Hub | Return to the Source',
         description: 'An aetheric awakening experience — prophetic cinema, living community, and the journey home.',
         creator: '@truufbtold',
-        images: ['https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg'],
+        images: ['/brand/keyart-return-source.jpg'],
     },
     metadataBase: new URL('https://truthbtoldhub.com'),
     icons: {
         icon: '/favicon.png',
         shortcut: '/favicon.png',
         apple: '/favicon.png',
+    },
+    other: {
+        'theme-color': '#0a0805',
     },
 };
 

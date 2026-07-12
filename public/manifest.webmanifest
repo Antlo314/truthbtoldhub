@@ -1,0 +1,25 @@
+{
+  "name": "Truth B Told Hub — Return to the Source",
+  "short_name": "Sacred Sanctum",
+  "description": "An aetheric awakening RPG. Walk with Truth, choose your path, enter the hut.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0a0805",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}

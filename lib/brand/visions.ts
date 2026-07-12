@@ -1,6 +1,5 @@
 /**
- * Unsealed "vision portals" — cinematic previews of each destination
- * until full 3D chambers ship. Media from /public/assets/cutscenes.
+ * Unsealed vision portals — cinematic previews until full 3D chambers ship.
  */
 
 export type VisionId = 'eden' | 'fair' | 'giza' | 'kolbrin' | 'emerald';
@@ -14,7 +13,11 @@ export interface VisionDef {
     body: string;
     video: string;
     poster: string;
+    combatVideo: string;
+    combatPoster: string;
+    combatLine: string;
     status: 'open' | 'sealed';
+    music: 'eden_garden' | 'paths_crossroads' | 'world_cavern';
 }
 
 export const VISIONS: VisionDef[] = [
@@ -27,7 +30,11 @@ export const VISIONS: VisionDef[] = [
         body: 'A first vision of the garden before the fracture. Walk with the Gardener in light; the full 3D chamber is still being laid.',
         video: '/assets/cutscenes/dest-eden.mp4',
         poster: '/assets/cutscenes/dest-eden.jpg',
+        combatVideo: '/assets/cutscenes/combat-eden.mp4',
+        combatPoster: '/assets/cutscenes/combat-eden.jpg',
+        combatLine: 'The cherub does not sleep. A trial of fire waits at the gate.',
         status: 'open',
+        music: 'eden_garden',
     },
     {
         id: 'fair',
@@ -38,7 +45,11 @@ export const VISIONS: VisionDef[] = [
         body: 'The fairgrounds glimmer in memory. Mabel Hart waits at the edge of the ivory city — a vision until the road opens.',
         video: '/assets/cutscenes/dest-fair.mp4',
         poster: '/assets/cutscenes/dest-fair.jpg',
+        combatVideo: '/assets/cutscenes/combat-fair.mp4',
+        combatPoster: '/assets/cutscenes/combat-fair.jpg',
+        combatLine: 'Under the lights, something hunts the midway.',
         status: 'open',
+        music: 'paths_crossroads',
     },
     {
         id: 'giza',
@@ -49,7 +60,11 @@ export const VISIONS: VisionDef[] = [
         body: 'Pyramids as engines of memory. Khaemwaset opens a crack in the stone — look through, then return to the hut.',
         video: '/assets/cutscenes/dest-giza.mp4',
         poster: '/assets/cutscenes/dest-giza.jpg',
+        combatVideo: '/assets/cutscenes/combat-giza.mp4',
+        combatPoster: '/assets/cutscenes/combat-giza.jpg',
+        combatLine: 'Iron and dust. The engine still has teeth.',
         status: 'open',
+        music: 'world_cavern',
     },
     {
         id: 'kolbrin',
@@ -60,7 +75,11 @@ export const VISIONS: VisionDef[] = [
         body: 'Buried pages surface in the vault light. The Elder Scribe holds the thread of what survived the fire.',
         video: '/assets/cutscenes/dest-kolbrin.mp4',
         poster: '/assets/cutscenes/dest-kolbrin.jpg',
+        combatVideo: '/assets/cutscenes/combat-kolbrin.mp4',
+        combatPoster: '/assets/cutscenes/combat-kolbrin.jpg',
+        combatLine: 'What guards the vault does not read — it remembers.',
         status: 'open',
+        music: 'world_cavern',
     },
     {
         id: 'emerald',
@@ -71,7 +90,11 @@ export const VISIONS: VisionDef[] = [
         body: 'Halls of green fire and mirrored law. Hermes speaks in fragments until the full road is cut.',
         video: '/assets/cutscenes/dest-emerald.mp4',
         poster: '/assets/cutscenes/dest-emerald.jpg',
+        combatVideo: '/assets/cutscenes/combat-emerald.mp4',
+        combatPoster: '/assets/cutscenes/combat-emerald.jpg',
+        combatLine: 'As above the trial, so below the wound.',
         status: 'open',
+        music: 'eden_garden',
     },
 ];
 
