@@ -8,7 +8,7 @@ import PlayerController from './scene/PlayerController';
 import { StationMarkers } from './scene/Stations';
 import HutRoom from './scene/HutRoom';
 import { ContactShadows } from '@react-three/drei';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Suspense } from 'react';
 
 /**
  * Isolated so dynamic(ssr:false) never pulls three into the server bundle.
@@ -76,7 +76,9 @@ function Scene({
 
             <HutRoom />
             <StationMarkers playerPos={playerPos} />
-            <PlayerController avatar={avatar} onPosition={onPos} />
+            <Suspense fallback={null}>
+                <PlayerController avatar={avatar} onPosition={onPos} />
+            </Suspense>
             <ContactShadows position={[0, 0.015, 0]} opacity={0.4} scale={22} blur={2.2} far={9} />
         </>
     );

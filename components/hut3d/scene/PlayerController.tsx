@@ -3,7 +3,8 @@
 import { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { AvatarMesh, type AvatarHandle } from '../AvatarMesh';
+import type { AvatarHandle } from '../AvatarMesh';
+import { VesselModel } from '../VesselModel';
 import { useHutUi } from '../hutUiStore';
 import type { AvatarConfig } from '@/lib/game/avatar';
 
@@ -274,7 +275,8 @@ export default function PlayerController({
 
     return (
         <group ref={group} position={[0, 0, -2.5]}>
-            <AvatarMesh ref={avatarRef} avatar={avatar} />
+            {/* Blender vessel blockouts — see public/models/vessels/ */}
+            <VesselModel ref={avatarRef} avatar={avatar} />
         </group>
     );
 }
