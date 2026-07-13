@@ -2,10 +2,10 @@
 
 import { HOTSPOTS } from './houseMap';
 
-const WALL = '#2a2438';
-const FLOOR = '#1a1520';
-const WOOD = '#2c241c';
-const RUG = '#3d2a45';
+const WALL = '#3d3550';
+const FLOOR = '#2a2438';
+const WOOD = '#4a3c2e';
+const RUG = '#5a3d62';
 const GOLD = '#fbbf24';
 
 function Box({
@@ -44,7 +44,12 @@ export default function HouseGeometry() {
             {/* Floor */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
                 <planeGeometry args={[18, 18]} />
-                <meshStandardMaterial color={FLOOR} roughness={0.95} />
+                <meshStandardMaterial color={FLOOR} roughness={0.9} />
+            </mesh>
+            {/* Soft fill so voids never read pure black */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
+                <planeGeometry args={[18, 18]} />
+                <meshBasicMaterial color="#3a3250" transparent opacity={0.12} />
             </mesh>
 
             {/* Outer walls */}

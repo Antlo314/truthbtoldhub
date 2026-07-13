@@ -2,9 +2,9 @@
 
 /**
  * First-person multiplayer house.
- * Login OR guest → walk house → E on hotspots → Hub sections / OS.
+ * 3D house loads immediately (guest by default). Login is optional for identity / MP name.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -23,7 +23,10 @@ import { useClientDevice } from '../engine/useClientDevice';
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
     ssr: false,
     loading: () => (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a12] font-mono text-emerald-400/70 text-sm">
+        <div
+            className="fixed inset-0 z-0 flex items-center justify-center bg-[#1a1528] font-mono text-emerald-300 text-sm"
+            style={{ width: '100vw', height: '100dvh' }}
+        >
             loading 3D house…
         </div>
     ),
@@ -35,8 +38,22 @@ function isGuestSession(): boolean {
         if (localStorage.getItem('tbth-demo') === 'true') return true;
         if (document.cookie.includes('sb-access-token=demo-token')) return true;
         if (localStorage.getItem('tbth-house-guest') === '1') return true;
-    } catch { /* */ }
+    } catch {
+        /* private mode */
+    }
     return false;
+}
+
+function ensureGuestId(): string {
+    try {
+        const existing = sessionStorage.getItem('tbth-house-guest-id');
+        if (existing) return existing;
+        const id = 'guest-' + Math.random().toString(36).slice(2, 10);
+        sessionStorage.setItem('tbth-house-guest-id', id);
+        return id;
+    } catch {
+        return 'guest-' + Math.random().toString(36).slice(2, 10);
+    }
 }
 
 export default function HouseExperience() {
@@ -45,9 +62,10 @@ export default function HouseExperience() {
     const { device } = useClientDevice();
     const { enterOs, closeToRoom } = useTruthOs();
 
-    const [ready, setReady] = useState(false);
-    const [authed, setAuthed] = useState(false);
-    const [guest, setGuest] = useState(false);
+    // Start ready + in-house immediately so the game is never a black auth wall
+    const [ready, setReady] = useState(true);
+    const [authed, setAuthed] = useState(true);
+    const [guest, setGuest] = useState(true);
     const [authOpen, setAuthOpen] = useState(false);
     const [hotspot, setHotspot] = useState<Hotspot | null>(null);
     const [peers, setPeers] = useState<HousePeer[]>([]);
@@ -61,38 +79,38 @@ export default function HouseExperience() {
     useEffect(() => {
         applyMusicSetting(loadSettings().music);
 
-        const guestOk = isGuestSession();
-        if (guestOk) {
-            setGuest(true);
-            setAuthed(true);
-            selfId.current = 'guest-' + Math.random().toString(36).slice(2, 9);
-            setReady(true);
-            return;
+        // Persist guest so reloads stay in the house without a gate
+        try {
+            if (!localStorage.getItem('tbth-house-guest') && !isGuestSession()) {
+                localStorage.setItem('tbth-house-guest', '1');
+            }
+        } catch {
+            /* */
         }
+        selfId.current = ensureGuestId();
+        setGuest(true);
+        setAuthed(true);
+        setReady(true);
 
         let cancelled = false;
-        const timeout = window.setTimeout(() => {
-            // Don't leave user on black screen if auth hangs
-            if (!cancelled) setReady(true);
-        }, 2500);
 
         supabase.auth
             .getSession()
             .then(({ data }) => {
                 if (cancelled) return;
                 if (data.session) {
+                    setGuest(false);
                     setAuthed(true);
                     selfId.current = data.session.user.id;
-                } else {
-                    setAuthOpen(true);
+                    try {
+                        localStorage.removeItem('tbth-house-guest');
+                    } catch {
+                        /* */
+                    }
                 }
-                setReady(true);
             })
             .catch(() => {
-                if (!cancelled) {
-                    setAuthOpen(true);
-                    setReady(true);
-                }
+                /* stay guest — house still plays */
             });
 
         const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -101,19 +119,26 @@ export default function HouseExperience() {
                 setGuest(false);
                 setAuthOpen(false);
                 selfId.current = session.user.id;
-            } else if (!isGuestSession()) {
-                setAuthed(false);
+            } else {
+                // Signed out → stay in house as guest
+                selfId.current = ensureGuestId();
+                setGuest(true);
+                setAuthed(true);
+                try {
+                    localStorage.setItem('tbth-house-guest', '1');
+                } catch {
+                    /* */
+                }
             }
         });
 
         return () => {
             cancelled = true;
-            window.clearTimeout(timeout);
             sub.subscription.unsubscribe();
         };
     }, []);
 
-    // Multiplayer (skip pure guest if channel rejects anon — still try with guest id)
+    // Multiplayer presence
     useEffect(() => {
         if (!authed || !selfId.current) return;
         let dead = false;
@@ -187,17 +212,12 @@ export default function HouseExperience() {
         return () => window.removeEventListener('keydown', onKey);
     }, [hotspot, osOpen, activateHotspot, closeToRoom]);
 
-    const enterGuest = () => {
-        localStorage.setItem('tbth-house-guest', '1');
-        selfId.current = 'guest-' + Math.random().toString(36).slice(2, 9);
-        setGuest(true);
-        setAuthed(true);
-        setAuthOpen(false);
-        sacredUi.access();
-    };
-
     const onAuthSuccess = () => {
-        localStorage.removeItem('tbth-house-guest');
+        try {
+            localStorage.removeItem('tbth-house-guest');
+        } catch {
+            /* */
+        }
         setGuest(false);
         setAuthed(true);
         setAuthOpen(false);
@@ -206,41 +226,55 @@ export default function HouseExperience() {
 
     const onLogout = async () => {
         await presence.current?.leave();
-        localStorage.removeItem('tbth-house-guest');
-        localStorage.removeItem('tbth-demo');
+        try {
+            localStorage.setItem('tbth-house-guest', '1');
+            localStorage.removeItem('tbth-demo');
+        } catch {
+            /* */
+        }
         try {
             await supabase.auth.signOut();
-        } catch { /* */ }
-        setAuthed(false);
-        setGuest(false);
+        } catch {
+            /* */
+        }
+        selfId.current = ensureGuestId();
+        setGuest(true);
+        setAuthed(true);
         setOsOpen(false);
         closeToRoom();
-        setAuthOpen(true);
+        setAuthOpen(false);
     };
 
-    const showHouse = ready && authed;
-
     return (
-        <div className="relative h-[100dvh] w-full bg-[#0a0a12] overflow-hidden">
-            {/* 3D — always full viewport when in house */}
-            {showHouse && (
-                <div className="absolute inset-0 z-0 h-full w-full">
-                    <ErrorCatch onError={(m) => setCanvasError(m)}>
+        <div
+            className="relative w-full overflow-hidden bg-[#1a1528]"
+            style={{ height: '100dvh', minHeight: '100vh', width: '100%' }}
+        >
+            {/* 3D — fixed to viewport so flex parents never collapse the canvas */}
+            {ready && authed && (
+                <div
+                    className="fixed inset-0 z-0"
+                    style={{ width: '100vw', height: '100dvh', minHeight: '100vh' }}
+                >
+                    <ErrorBoundary onError={(m) => setCanvasError(m)}>
                         <HouseCanvas
-                            locked={osOpen}
+                            locked={osOpen || authOpen}
                             peers={peers}
                             onHotspot={setHotspot}
                             onPose={onPose}
                         />
-                    </ErrorCatch>
+                    </ErrorBoundary>
                 </div>
             )}
 
             {canvasError && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black p-6 text-center">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black p-6 text-center">
                     <div className="max-w-md space-y-3">
                         <p className="text-red-400 font-mono text-sm">3D failed to start</p>
                         <p className="text-white/50 text-xs break-all">{canvasError}</p>
+                        <p className="text-white/40 text-[11px]">
+                            Try Chrome/Edge, enable hardware acceleration, or reload.
+                        </p>
                         <button
                             type="button"
                             className="px-4 py-2 rounded-lg border border-white/20 text-white text-sm"
@@ -252,48 +286,35 @@ export default function HouseExperience() {
                 </div>
             )}
 
-            {/* Loading */}
-            {!ready && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black font-mono text-emerald-400/60 text-xs tracking-[0.3em]">
-                    waking the house…
-                </div>
-            )}
-
-            {/* Auth gate */}
-            {ready && !authed && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-4 overflow-y-auto">
-                    <div className="w-full max-w-md space-y-4">
-                        <p className="text-center font-mono text-[10px] tracking-[0.4em] text-emerald-400/70">
-                            FOLLOW THE WHITE RABBIT
-                        </p>
+            {/* Optional sign-in (does not block the house) */}
+            {authOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+                    <div className="w-full max-w-md space-y-3">
                         <AuthModal
-                            isOpen={authOpen || true}
-                            isGated
+                            isOpen
+                            isGated={false}
                             onClose={() => setAuthOpen(false)}
                             onSuccess={onAuthSuccess}
                         />
                         <button
                             type="button"
-                            onClick={enterGuest}
-                            className="w-full py-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-sm uppercase tracking-[0.2em] hover:bg-emerald-500/20"
+                            onClick={() => setAuthOpen(false)}
+                            className="w-full py-2 text-xs text-zinc-400 hover:text-white uppercase tracking-widest"
                         >
-                            Enter house as guest →
+                            Keep playing as guest
                         </button>
-                        <p className="text-center text-[11px] text-zinc-600">
-                            Guest mode skips login so you can see the 3D house immediately.
-                        </p>
                     </div>
                 </div>
             )}
 
             {/* HUD */}
-            {showHouse && !osOpen && (
+            {ready && authed && !osOpen && !authOpen && (
                 <>
-                    <div className="absolute top-4 left-4 z-30 pointer-events-none space-y-1">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-mono">
+                    <div className="fixed top-4 left-4 z-30 pointer-events-none space-y-1">
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-mono drop-shadow">
                             Truth.OS House
                         </p>
-                        <p className="text-sm text-white/90 font-medium drop-shadow-md">
+                        <p className="text-sm text-white font-medium drop-shadow-md">
                             {character.name?.trim() || (guest ? 'Guest' : 'Soul')}
                             {peers.length > 0 && (
                                 <span className="text-emerald-400 text-xs ml-2">
@@ -303,17 +324,36 @@ export default function HouseExperience() {
                         </p>
                     </div>
 
-                    <div className="absolute bottom-6 inset-x-0 z-30 flex flex-col items-center gap-2">
+                    {guest && (
+                        <button
+                            type="button"
+                            onClick={() => setAuthOpen(true)}
+                            className="fixed top-4 right-4 z-30 px-3 py-1.5 rounded-full border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/70 hover:text-white hover:border-white/40 backdrop-blur-md"
+                        >
+                            Sign in
+                        </button>
+                    )}
+
+                    {/* Center crosshair so empty-looking views still feel interactive */}
+                    <div
+                        className="fixed left-1/2 top-1/2 z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2 w-3 h-3"
+                        aria-hidden
+                    >
+                        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/40" />
+                        <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/40" />
+                    </div>
+
+                    <div className="fixed bottom-6 inset-x-0 z-30 flex flex-col items-center gap-2 pointer-events-none">
                         {hotspot ? (
                             <button
                                 type="button"
-                                className="px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
+                                className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
                                 onClick={() => activateHotspot(hotspot)}
                             >
                                 E · {hotspot.hint}
                             </button>
                         ) : (
-                            <p className="text-[11px] text-white/50 font-mono bg-black/40 px-3 py-1.5 rounded-full">
+                            <p className="text-[11px] text-white/70 font-mono bg-black/55 px-3 py-1.5 rounded-full border border-white/10">
                                 WASD move · drag to look · E interact
                             </p>
                         )}
@@ -327,8 +367,8 @@ export default function HouseExperience() {
                 <div
                     className={
                         device === 'mobile'
-                            ? 'absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100vw-12px,400px)] h-[min(100dvh-16px,800px)] rounded-[1.75rem] overflow-hidden border-[3px] border-zinc-800'
-                            : 'absolute z-50 inset-[2%] rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-black'
+                            ? 'fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100vw-12px,400px)] h-[min(100dvh-16px,800px)] rounded-[1.75rem] overflow-hidden border-[3px] border-zinc-800'
+                            : 'fixed z-50 inset-[2%] rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-black'
                     }
                 >
                     <button
@@ -350,21 +390,6 @@ export default function HouseExperience() {
         </div>
     );
 }
-
-/** Lightweight error boundary for WebGL failures */
-function ErrorCatch({
-    children,
-    onError,
-}: {
-    children: React.ReactNode;
-    onError: (msg: string) => void;
-}) {
-    return (
-        <ErrorBoundary onError={onError}>{children}</ErrorBoundary>
-    );
-}
-
-import React from 'react';
 
 class ErrorBoundary extends React.Component<
     { children: React.ReactNode; onError: (m: string) => void },

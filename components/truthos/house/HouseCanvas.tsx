@@ -21,39 +21,62 @@ export default function HouseCanvas({
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
 }) {
     return (
-        <Canvas
-            className="!absolute !inset-0 !h-full !w-full"
-            style={{ width: '100%', height: '100%', display: 'block' }}
-            shadows
-            dpr={[1, 1.5]}
-            gl={{
-                antialias: true,
-                powerPreference: 'high-performance',
-                toneMapping: THREE.ACESFilmicToneMapping,
-                toneMappingExposure: 1.15,
-            }}
-            camera={{ fov: 70, near: 0.08, far: 50, position: [0, 1.62, 5.5] }}
-            onCreated={({ gl, camera }) => {
-                gl.setClearColor('#1a1528');
-                camera.lookAt(0, 1.2, 0);
+        <div
+            style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                minHeight: '100dvh',
+                background: '#1a1528',
             }}
         >
-            <color attach="background" args={['#1a1528']} />
-            <fog attach="fog" args={['#1a1528', 12, 32]} />
+            <Canvas
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                    touchAction: 'none',
+                }}
+                shadows
+                dpr={[1, 1.75]}
+                gl={{
+                    antialias: true,
+                    alpha: false,
+                    powerPreference: 'high-performance',
+                    toneMapping: THREE.ACESFilmicToneMapping,
+                    toneMappingExposure: 1.35,
+                }}
+                camera={{ fov: 72, near: 0.08, far: 60, position: [0, 1.62, 5.5] }}
+                onCreated={({ gl, camera, size }) => {
+                    gl.setClearColor('#2a2440', 1);
+                    gl.setSize(size.width, size.height);
+                    camera.position.set(0, 1.62, 5.5);
+                    camera.lookAt(0, 1.35, 0);
+                }}
+            >
+                <color attach="background" args={['#2a2440']} />
+                <fog attach="fog" args={['#2a2440', 14, 36]} />
 
-            <hemisphereLight args={['#9aa8e8', '#2a2030', 0.65]} />
-            <ambientLight intensity={0.45} color="#c8c0d8" />
-            <directionalLight position={[4, 6, 3]} intensity={0.85} color="#c4d0ff" />
-            <pointLight position={[3.2, 1.4, 4.3]} intensity={2.2} color="#4ade80" distance={8} decay={2} />
-            <pointLight position={[-1.5, 1.4, -1]} intensity={1.4} color="#fbbf24" distance={7} decay={2} />
-            <pointLight position={[0, 2.2, -7]} intensity={1.8} color="#a78bfa" distance={10} decay={2} />
-            <pointLight position={[-6, 2.2, -4]} intensity={1.0} color="#e8d5b0" distance={8} decay={2} />
-            <pointLight position={[0, 2.5, 5]} intensity={0.8} color="#ffffff" distance={10} decay={2} />
+                {/* Bright, readable lighting so the house never reads as black */}
+                <hemisphereLight args={['#c8d4ff', '#3a3048', 0.85]} />
+                <ambientLight intensity={0.7} color="#ddd5f0" />
+                <directionalLight position={[5, 8, 4]} intensity={1.15} color="#e8ecff" castShadow />
+                <directionalLight position={[-3, 4, -2]} intensity={0.45} color="#b8a0ff" />
+                <pointLight position={[3.2, 1.4, 4.3]} intensity={2.8} color="#4ade80" distance={10} decay={2} />
+                <pointLight position={[-1.5, 1.4, -1]} intensity={1.8} color="#fbbf24" distance={9} decay={2} />
+                <pointLight position={[0, 2.2, -7]} intensity={2.2} color="#a78bfa" distance={12} decay={2} />
+                <pointLight position={[-6, 2.2, -4]} intensity={1.3} color="#f0e0c0" distance={10} decay={2} />
+                <pointLight position={[0, 2.5, 5]} intensity={1.2} color="#ffffff" distance={12} decay={2} />
+                <pointLight position={[0, 2.0, 0]} intensity={0.9} color="#e0d4ff" distance={14} decay={2} />
 
-            <HouseGeometry />
-            <RemotePlayers peers={peers} />
-            <FirstPersonController locked={locked} onHotspot={onHotspot} onPose={onPose} />
-            <ContactShadows position={[0, 0.02, 0]} opacity={0.35} scale={20} blur={2.2} far={8} />
-        </Canvas>
+                <HouseGeometry />
+                <RemotePlayers peers={peers} />
+                <FirstPersonController locked={locked} onHotspot={onHotspot} onPose={onPose} />
+                <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
+            </Canvas>
+        </div>
     );
 }
