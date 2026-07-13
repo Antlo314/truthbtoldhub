@@ -153,12 +153,9 @@ export default function TruthOSShell({
                 <AnimatePresence>
                     {windows.map((w) =>
                         isPhone ? (
-                            <motion.div
+                            <div
                                 key={w.id}
-                                initial={{ y: '100%' }}
-                                animate={{ y: 0 }}
-                                exit={{ y: '100%' }}
-                                className="absolute inset-0 z-20 flex flex-col bg-[#0c0c0e]"
+                                className="absolute inset-0 flex flex-col bg-[#0c0c0e]"
                                 style={{ zIndex: w.z }}
                             >
                                 <div className="h-12 flex items-center justify-between px-3 border-b border-white/10 bg-black/80">
@@ -167,7 +164,7 @@ export default function TruthOSShell({
                                         className="text-xs text-emerald-400"
                                         onClick={() => closeWindow(w.id)}
                                     >
-                                        ← Home
+                                        Home
                                     </button>
                                     <span className="text-xs text-white/80 truncate max-w-[50%]">{w.title}</span>
                                     <span className="w-10" />
@@ -178,7 +175,7 @@ export default function TruthOSShell({
                                         onExit: closeToRoom,
                                     })}
                                 </div>
-                            </motion.div>
+                            </div>
                         ) : (
                             <OsWindowFrame
                                 key={w.id}
