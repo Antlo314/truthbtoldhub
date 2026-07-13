@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import * as THREE from 'three';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { gameMusic } from '@/lib/game/music';
+import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
+import { unlockAudio } from '@/lib/game/sfx';
 import HutHud from './hud/HutHud';
 import { useHutUi } from './hutUiStore';
 
@@ -12,12 +14,6 @@ const HutCanvas = dynamic(() => import('./HutCanvas'), { ssr: false });
 
 /**
  * Truth's Hut — React Three Fiber.
- * Best practices applied from successful R3F/web games:
- * - Canvas client-only (dynamic, ssr:false)
- * - Game UI as React DOM overlay (not WebGL menus)
- * - Zustand for journey + hut UI state
- * - dpr capped, shadows selective
- * - Keep creator + Truth systems on existing web lore/store
  */
 export default function HutExperience() {
     const character = useGameStore((s) => s.character);
@@ -29,12 +25,45 @@ export default function HutExperience() {
     useEffect(() => {
         closeStation();
         loadFromCloud?.();
+
+        // Respect settings + start hut BGM (browser may block until gesture)
+        const settings = loadSettings();
+        applyMusicSetting(settings.music);
+
+        const startHutMusic = () => {
+            if (!loadSettings().music) return;
+            unlockAudio();
+            gameMusic.playBgm('world_cavern', {
+                variant: gameMusic.pickVariant('world_cavern'),
+                restart: false,
+            });
+        };
+
         try {
-            gameMusic.playBgm('world_cavern', { variant: gameMusic.pickVariant('world_cavern') });
-        } catch { /* autoplay */ }
+            startHutMusic();
+        } catch { /* autoplay policy */ }
+
+        // Retry on first user gesture (required after landing/page transitions)
+        const onGesture = () => {
+            startHutMusic();
+            window.removeEventListener('pointerdown', onGesture);
+            window.removeEventListener('keydown', onGesture);
+            window.removeEventListener('touchstart', onGesture);
+        };
+        window.addEventListener('pointerdown', onGesture, { once: true });
+        window.addEventListener('keydown', onGesture, { once: true });
+        window.addEventListener('touchstart', onGesture, { once: true, passive: true });
+
         const t = window.setTimeout(() => setBooted(true), 400);
+        // Safety re-kick after veil so Howl is not stuck silent
+        const t2 = window.setTimeout(() => startHutMusic(), 700);
+
         return () => {
             window.clearTimeout(t);
+            window.clearTimeout(t2);
+            window.removeEventListener('pointerdown', onGesture);
+            window.removeEventListener('keydown', onGesture);
+            window.removeEventListener('touchstart', onGesture);
             closeStation();
         };
     }, [loadFromCloud, closeStation]);
