@@ -176,6 +176,7 @@ namespace Journey3D
                 inst.transform.position += wrapper.transform.position - new Vector3(b.center.x, b.min.y - 0.008f, b.center.z);
             }
             if (collide) AddBoundsCollider(wrapper);
+            WorldSkin.Skin(wrapper);
             return wrapper;
         }
 

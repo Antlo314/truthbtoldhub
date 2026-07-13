@@ -53,12 +53,12 @@ namespace Journey3D
 
         private static Surf Classify(string n)
         {
-            if (Has(n, "leaves", "canopy")) return Surf.Leaves;
+            if (Has(n, "leaves", "canopy", "leafs", "plant", "flower", "colorpurple", "colorred", "colorwhite", "coloryellow")) return Surf.Leaves;
             if (Has(n, "grass", "ground")) return Surf.Grass;
             if (Has(n, "thatch", "roof")) return Surf.Thatch;
             if (Has(n, "paper", "scroll", "map", "page", "parch")) return Surf.Parchment;
-            if (Has(n, "robe", "tunic", "av_top", "av_bottom", "av_boots", "boot", "cloth", "rug", "garment", "book")) return Surf.Cloth;
-            if (Has(n, "stone", "rock", "hearth", "chimney", "plinth", "pedestal", "anvil", "iron", "brazier", "path", "soot")) return Surf.Stone;
+            if (Has(n, "robe", "tunic", "av_top", "av_bottom", "av_boots", "boot", "cloth", "rug", "garment", "book", "carpet", "suit", "tie", "vest", "cloak", "dress", "gown", "apron", "shirt", "pants", "beige", "brown", "grey", "gray", "white", "black", "blue", "green", "purple", "red", "orange", "yellow", "pink", "lime")) return Surf.Cloth;
+            if (Has(n, "stone", "rock", "hearth", "chimney", "plinth", "pedestal", "anvil", "iron", "brazier", "path", "soot", "dirt")) return Surf.Stone;
             if (Has(n, "wood", "log", "beam", "plank", "post", "door", "frame", "table", "desk",
                     "shelf", "stump", "barrel", "cab", "lectern", "ridge", "gable", "staff", "trunk", "bark", "spine", "foot")) return Surf.Wood;
             return Surf.None;

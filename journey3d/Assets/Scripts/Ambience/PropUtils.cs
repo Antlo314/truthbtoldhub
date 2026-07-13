@@ -61,7 +61,7 @@ namespace Journey3D
 
         public static Material UnlitMat(Color c)
         {
-            var shader = Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default") ?? Shader.Find("Standard");
+            var shader = Shader.Find("Custom/UnlitTextureTint") ?? Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
             var m = new Material(shader);
             if (m.HasProperty("_Color")) m.color = c;
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);

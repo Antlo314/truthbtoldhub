@@ -1,0 +1,896 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.5/staging' branch; Version is '6000.5.2f1 (eb73d3b415a1) revision 15430611'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Channel LicenseClient-aarons doesn't exist
+OS: 'Windows 11  (10.0.26200) Core' Language: 'en' Physical Memory: 16299 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-07-13T23:42:33Z
+[Licensing::Module] Successfully launched the LicensingClient (PId: 40332)
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Unity.exe
+-quit
+-batchmode
+-nographics
+-projectPath
+C:\Users\aarons\Desktop\sacred-sanctum\journey3d
+-executeMethod
+Journey3D.EditorTools.BuildScript.BuildWebGL
+-logFile
+C:\Users\aarons\Desktop\sacred-sanctum\journey3d_build.log
+Successfully changed project path to: C:\Users\aarons\Desktop\sacred-sanctum\journey3d
+C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=0"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.Player connection [41904]  Target information:
+
+Player connection [41904]  * "[IP] 10.0.0.96 [Port] 55504 [Flags] 2 [Guid] 1401000127 [EditorId] 1401000127 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-E3TP040) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [41904] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [41904] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-17956" after 5.7 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+Starting IPC server.
+Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-aarons, press Ctrl-C to exit.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-aarons" at "2026-07-13T23:42:43.1133707Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 40332, path: "C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              dfa38286ff184e5692aa5474334d6966
+  Correlation Id:          6e807039539d4585ab04b1a2b1d2cf7a
+  External correlation Id: 7633306114696602733
+  Machine Id:              54seRt+ltqP1MNJivYJAfz+UQUs=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-aarons" (connect: 9.84s, validation: 0.42s, handshake: 0.64s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-aarons-notifications" at "2026-07-13T23:42:44.1761727Z"
+[Licensing::Module] Connected to LicensingClient (PId: 40332, launch time: 0.13, total connection time: 10.90s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 2476009100483-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 11.09s
+[Licensing::Module] Licensing is initialized (took 5.12s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 7.24 ms, found 0 plugins.
+Initialize engine version: 6000.5.2f1 (eb73d3b415a1)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56956
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.674356 seconds.
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  1.743 seconds
+Domain Reload Profiling: 5689ms
+	BeginReloadAssembly (475ms)
+		CreateAndSetChildDomain (16ms)
+	RebuildCommonClasses (6ms)
+	RebuildNativeTypeToScriptingClass (85ms)
+	initialDomainReloadingComplete (982ms)
+	LoadAllAssembliesAndSetupDomain (2396ms)
+		LoadAssemblies (478ms)
+		AnalyzeDomain (2234ms)
+			TypeCache.Refresh (2232ms)
+				TypeCache.ScanAssembly (1867ms)
+	FinalizeReload (1745ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (108ms)
+			ProcessInitializeOnLoadAttributes (142ms)
+			ProcessInitializeOnLoadMethodAttributes (1390ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 37 packages:
+  Built-in packages:
+    com.unity.ugui@2.5.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.ugui@3d1ea40b73ef)
+    com.unity.modules.accessibility@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.accessibility)
+    com.unity.modules.adaptiveperformance@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.adaptiveperformance)
+    com.unity.modules.ai@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.ai)
+    com.unity.modules.androidjni@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.androidjni)
+    com.unity.modules.animation@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.animation)
+    com.unity.modules.assetbundle@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.assetbundle)
+    com.unity.modules.audio@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.audio)
+    com.unity.modules.cloth@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.cloth)
+    com.unity.modules.director@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.director)
+    com.unity.modules.imageconversion@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.imageconversion)
+    com.unity.modules.imgui@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.modules.particlesystem@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.particlesystem)
+    com.unity.modules.physics@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.physics2d)
+    com.unity.modules.physicscore2d@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.physicscore2d)
+    com.unity.modules.screencapture@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.screencapture)
+    com.unity.modules.terrain@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.terrainphysics)
+    com.unity.modules.tilemap@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.tilemap)
+    com.unity.modules.ui@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.ui)
+    com.unity.modules.uielements@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.uielements)
+    com.unity.modules.umbra@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.umbra)
+    com.unity.modules.unityanalytics@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unityanalytics)
+    com.unity.modules.unitywebrequest@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unitywebrequest)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unitywebrequestaudio)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unitywebrequesttexture)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.unitywebrequestwww)
+    com.unity.modules.vectorgraphics@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.vectorgraphics)
+    com.unity.modules.vehicles@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.vehicles)
+    com.unity.modules.video@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.video)
+    com.unity.modules.wind@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.wind)
+    com.unity.modules.xr@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.xr)
+    com.unity.modules.subsystems@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.subsystems)
+    com.unity.modules.hierarchycore@1.0.0 (location: C:\Users\aarons\Desktop\sacred-sanctum\journey3d\Library\PackageCache\com.unity.modules.hierarchycore)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.02 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:80
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\aarons\Desktop\sacred-sanctum\journey3d
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 169.7743ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/2000b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 7s358ms
+[217/223    5s] Csc Library/Bee/artifacts/2000b0aE.dag/Assembly-CSharp.dll (+2 others)
+Assets\Scripts\UI\UIKit.cs(100,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(76,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(111,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(157,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(158,27): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(20,59): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(20,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(21,65): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(21,22): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\GameBootstrap.cs(43,67): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\GameBootstrap.cs(43,37): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(123,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\GameBootstrap.cs(625,61): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\GameBootstrap.cs(625,32): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\UI\HutUI.cs(913,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\UI\HutUI.cs(913,31): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+[218/223    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[222/223    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+*** Tundra build success (7.28 seconds), 3 items updated, 223 evaluated
+Assets\Scripts\UI\UIKit.cs(100,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(76,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(111,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(157,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(158,27): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Interact\InteractionSystem.cs(20,59): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\Interact\InteractionSystem.cs(20,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\Interact\InteractionSystem.cs(21,65): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\Interact\InteractionSystem.cs(21,22): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\GameBootstrap.cs(43,67): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\GameBootstrap.cs(43,37): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\Interact\InteractionSystem.cs(123,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\GameBootstrap.cs(625,61): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\GameBootstrap.cs(625,32): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\UI\HutUI.cs(913,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\UI\HutUI.cs(913,31): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+AssetDatabase: script compilation time: 11.341819s
+Begin MonoManager ReloadAssembly
+Importing 'GUID: b084dde68a3571c4f880ab450bd396c3 - Path: Assets/Shaders' with importer (DefaultImporter)
+Imported 'GUID: b084dde68a3571c4f880ab450bd396c3' -> (Import Result ID: 'f58666885dafe1956a1876840e42c4f4') in 0.079 seconds [static dependencies only]. Details - ImportResultOutputID=ba36b6a93b70ffefa66062dbac495bb0 DependenciesID=ea98b9463184559d749040ebfec227ca StaticDependenciesID=4a37cc3441590359d51c985334b1026e 
+Native extension for WindowsStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.540 seconds
+Domain Reload Profiling: 1311ms
+	BeginReloadAssembly (418ms)
+		DisableScriptedObjects (32ms)
+		CreateAndSetChildDomain (203ms)
+	RebuildCommonClasses (10ms)
+	RebuildNativeTypeToScriptingClass (22ms)
+	initialDomainReloadingComplete (56ms)
+	LoadAllAssembliesAndSetupDomain (263ms)
+		LoadAssemblies (248ms)
+		AnalyzeDomain (24ms)
+			TypeCache.Refresh (13ms)
+				TypeCache.ScanAssembly (7ms)
+			BuildScriptInfoCaches (7ms)
+	FinalizeReload (541ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (3ms)
+			BeforeProcessingInitializeOnLoad (118ms)
+			ProcessInitializeOnLoadAttributes (87ms)
+			ProcessInitializeOnLoadMethodAttributes (90ms)
+			AfterProcessingInitializeOnLoad (9ms)
+		AwakeInstancesAfterBackupRestoration (28ms)
+Importing 'GUID: d21e9e117a3f2544fbe87dda87dbfea0 - Path: Assets/Shaders/UnlitTextureTint.shader' with importer (ShaderImporter)
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.14 seconds
+Imported 'GUID: d21e9e117a3f2544fbe87dda87dbfea0' -> (Import Result ID: 'd6d3cfe3d4847886d5e6636897370aed') in 0.573 seconds [static and dynamic dependencies]. Details - ImportResultOutputID=90fe8f98505054404213dceed6795311 DependenciesID=185cf5e5bda7e82f13a37f22881ea9a9 StaticDependenciesID=fbc0c9f74cbf03f3712e012f9d84d6dd 
+Starting new worker id: 0 with log in C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Logs/AssetImportWorkerHW0.log
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.02 seconds
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.02 seconds
+
+Asset Pipeline Refresh (id=5872592a0a5c8ec48ac3450c03212ab0): Total: 18.032 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=2 (actual=2, local cache=0, cache server=0)
+		Asset DB Process Time: managed=3 ms, native=3093 ms
+		Asset DB Callback time: managed=154 ms, native=2609 ms
+		Scripting: domain reloads=1, domain reload time=811 ms, compile time=11344 ms, other=15 ms
+		Project Asset Count: scripts=202, non-scripts=157
+		Asset File Changes: new=2, changed=8, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 64.127ms
+	ApplyChangesToAssetFolders: 0.797ms
+	Scan: 131.404ms
+	Collect global state as custom dependencies: 12.919ms
+	OnSourceAssetsModified: 18.973ms
+	CategorizeScriptCompilationAssets: 1.555ms
+	ProcessAssetsWithTransientArtifactChanges: 9.240ms
+	CategorizeAssets: 2.651ms
+	CompileScripts: 11343.855ms
+	ImportOutOfDateAssets: 1218.160ms (547.083ms without children)
+		ImportManagerImport: 657.590ms (4.455ms without children)
+			UpdateCategorizedAssets: 0.055ms
+		UnloadImportedAssets: 0.226ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.057ms
+		ImportSchedulerStart: 13.194ms
+	PostProcessAllAssets: 2682.855ms
+		ShaderAssetModifiedCallback 2527.792ms
+		XRBuildSystem.XRAssetImported 0.097ms
+		VersionControlSettings.HiddenFilePostprocess 0.090ms
+		PostProcessCallbackCreateDeferredMaterials 0.082ms
+		ComputeShaderImportPostprocess 0.059ms
+		MonoPostProcessAllAssets: 153.641ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 46.094ms
+			AssetPostprocessor.OnPostprocessAllAssets 45.419ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 31.211ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 7.185ms
+			AssetChangedListener.OnPostprocessAllAssets 2.975ms
+			SyncVS.PostprocessSyncProject 2.154ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 1.647ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 1.071ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.886ms
+			TMPro_TexturePostProcessor.OnPostprocessAllAssets 0.873ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.705ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.647ms
+			AssetEvents.OnPostprocessAllAssets 0.484ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.427ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.292ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.215ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.186ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.158ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.144ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.118ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.080ms
+	PostAssetChangesProfiler: 1.324ms
+	UnloadStreamsBegin: 2.027ms
+	PersistCurrentRevisions: 0.090ms
+	Untracked: 2535.432ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 4.394ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-The Journey - Truth's Hut
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 421 unused Assets / (0.7 MB). Loaded Objects now: 1061.
+Memory consumption went from 193.0 MB to 192.4 MB.
+Total: 5.973400 ms (FindLiveObjects: 0.118400 ms CreateObjectMapping: 0.070400 ms MarkObjects: 5.271100 ms  DeleteObjects: 0.509300 ms)
+
+Importing 'GUID: 00000000000000004000000000000000 - Path: ProjectSettings/ProjectSettings.asset' with importer (LibraryAssetImporter)
+Imported 'GUID: 00000000000000004000000000000000' -> (Import Result ID: '9084046fa329e26bad0754010d4d6d9f') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=276a810dac73e1f29404d5e5f692e214 DependenciesID=9beca06cb2cc3fdc5119a2ca481e0c1a StaticDependenciesID=084fe178a8cfc543b666a899623f8366 
+Asset Pipeline Refresh (id=2fe3558dd80827e4ca980de5fd217504): Total: 0.029 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 2.1776ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/2000b0aESkipCompile.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssembliesAndTypeDB
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+Worker ready: AssetImportWorkerHW0 0
+ExitCode: 0 Duration: 1s607ms
+[2/3        1s] BuildPlayerDataGenerator Library/BuildPlayerData/Editor/TypeDb-All.json
+*** Tundra build success (1.55 seconds), 1 items updated, 3 evaluated
+Asset Pipeline Refresh (id=a2bb263b30ed8c24186b7577899fb58a): Total: 0.012 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[ScriptCompilation] Requested script compilation because: Recompiling scripts for player build.
+BuildPlayer: start building target 20
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 56.6394ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/2000b0aP.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssembliesAndTypeDB
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+ExitCode: 0 Duration: 12s
+[105/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Unity.InternalAPIEngineBridge.004.dll
+[106/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/UnityEngine.UI.pdb
+[107/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Unity.InternalAPIEngineBridge.004.pdb
+[108/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/UnityEngine.UI.dll
+[109/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Unity.TextMeshPro.dll
+[110/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Unity.TextMeshPro.pdb
+[BUSY       6s] Csc Library/Bee/artifacts/2000b0aP.dag/Assembly-CSharp.dll (+2 others)
+[111/116    9s] Csc Library/Bee/artifacts/2000b0aP.dag/Assembly-CSharp.dll (+2 others)
+Assets\Scripts\UI\UIKit.cs(100,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(20,59): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(20,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(21,65): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(21,22): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\Destination\DestinationManager.cs(76,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\GameBootstrap.cs(43,67): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\GameBootstrap.cs(43,37): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\Destination\DestinationManager.cs(111,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Interact\InteractionSystem.cs(123,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(157,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\Destination\DestinationManager.cs(158,27): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+
+Assets\Scripts\GameBootstrap.cs(625,61): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\GameBootstrap.cs(625,32): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+
+Assets\Scripts\UI\HutUI.cs(913,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+
+Assets\Scripts\UI\HutUI.cs(913,31): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+[112/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Assembly-CSharp.pdb
+[113/116    0s] CopyFiles Library/Bee/PlayerScriptAssemblies/Assembly-CSharp.dll
+[115/116    0s] BuildPlayerDataGenerator Library/BuildPlayerData/Player/RuntimeInitializeOnLoads.json (+1 other)
+*** Tundra build success (12.13 seconds), 10 items updated, 116 evaluated
+Assets\Scripts\UI\UIKit.cs(100,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Interact\InteractionSystem.cs(20,59): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\Interact\InteractionSystem.cs(20,25): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\Interact\InteractionSystem.cs(21,65): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\Interact\InteractionSystem.cs(21,22): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\Destination\DestinationManager.cs(76,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\GameBootstrap.cs(43,67): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\GameBootstrap.cs(43,37): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\Destination\DestinationManager.cs(111,13): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Interact\InteractionSystem.cs(123,31): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(157,17): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\Destination\DestinationManager.cs(158,27): warning CS0618: 'Object.FindFirstObjectByType<T>()' is obsolete: 'FindFirstObjectByType has been deprecated because it relies on instance ID ordering. Use FindAnyObjectByType instead, which does not depend on ordering.'
+Assets\Scripts\GameBootstrap.cs(625,61): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\GameBootstrap.cs(625,32): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Assets\Scripts\UI\HutUI.cs(913,58): warning CS0618: 'FindObjectsSortMode' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSortMode parameter.'
+Assets\Scripts\UI\HutUI.cs(913,31): warning CS0618: 'Object.FindObjectsByType<T>(FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+Not rebuilding Data files -- no changes
+
+
+Mono dependencies included in the build
+Dependency assembly - System.IdentityModel.Selectors.dll
+Dependency assembly - System.Data.Services.Client.dll
+Dependency assembly - System.ComponentModel.Composition.dll
+Dependency assembly - System.ServiceModel.Discovery.dll
+Dependency assembly - System.Data.Services.dll
+Dependency assembly - System.IO.FileSystem.Primitives.dll
+Dependency assembly - System.IO.Compression.dll
+Dependency assembly - System.ComponentModel.Primitives.dll
+Dependency assembly - System.Runtime.Serialization.Formatters.dll
+Dependency assembly - System.Security.Cryptography.Encryption.ECDiffieHellman.dll
+Dependency assembly - System.Windows.dll
+Dependency assembly - Unity.InternalAPIEngineBridge.004.dll
+Dependency assembly - System.Diagnostics.StackTrace.dll
+Dependency assembly - System.Globalization.dll
+Dependency assembly - System.Security.Cryptography.ProtectedData.dll
+Dependency assembly - System.Runtime.Remoting.dll
+Dependency assembly - System.Data.Linq.dll
+Dependency assembly - System.Net.Cache.dll
+Dependency assembly - System.Diagnostics.Debug.dll
+Dependency assembly - System.Xml.XmlDocument.dll
+Dependency assembly - System.Runtime.dll
+Dependency assembly - System.Core.dll
+Dependency assembly - System.ServiceModel.Internals.dll
+Dependency assembly - System.Data.SqlClient.dll
+Dependency assembly - System.Net.ServicePoint.dll
+Dependency assembly - System.Text.Encodings.Web.dll
+Dependency assembly - System.Data.dll
+Dependency assembly - System.Data.Entity.dll
+Dependency assembly - System.Resources.Reader.dll
+Dependency assembly - System.Web.ApplicationServices.dll
+Dependency assembly - System.ServiceModel.dll
+Dependency assembly - System.Security.Cryptography.RandomNumberGenerator.dll
+Dependency assembly - System.ComponentModel.Annotations.dll
+Dependency assembly - System.Linq.dll
+Dependency assembly - System.Security.Cryptography.Encryption.Aes.dll
+Dependency assembly - Assembly-CSharp.dll
+Dependency assembly - System.Security.Claims.dll
+Dependency assembly - System.Net.NetworkInformation.dll
+Dependency assembly - System.ValueTuple.dll
+Dependency assembly - System.Reflection.dll
+Dependency assembly - System.ServiceModel.NetTcp.dll
+Dependency assembly - System.Dynamic.Runtime.dll
+Dependency assembly - System.IO.Hashing.dll
+Dependency assembly - System.ComponentModel.dll
+Dependency assembly - System.Threading.Tasks.dll
+Dependency assembly - System.Configuration.Install.dll
+Dependency assembly - System.Data.DataSetExtensions.dll
+Dependency assembly - System.Diagnostics.TraceSource.dll
+Dependency assembly - System.Reflection.Metadata.dll
+Dependency assembly - System.Collections.Concurrent.dll
+Dependency assembly - System.Net.Http.dll
+Dependency assembly - System.Text.Encoding.Extensions.dll
+Dependency assembly - System.Text.Encoding.dll
+Dependency assembly - System.Management.dll
+Dependency assembly - System.Xml.dll
+Dependency assembly - System.Collections.dll
+Dependency assembly - System.Text.Encoding.CodePages.dll
+Dependency assembly - System.Threading.Thread.dll
+Dependency assembly - Microsoft.Extensions.DependencyInjection.Abstractions.dll
+Dependency assembly - System.Reflection.TypeExtensions.dll
+Dependency assembly - System.Runtime.Extensions.dll
+Dependency assembly - System.Runtime.Serialization.Json.dll
+Dependency assembly - System.Threading.Tasks.Extensions.dll
+Dependency assembly - mscorlib.dll
+Dependency assembly - System.Drawing.Primitives.dll
+Dependency assembly - System.ServiceProcess.ServiceController.dll
+Dependency assembly - System.Threading.Timer.dll
+Dependency assembly - System.Net.WebHeaderCollection.dll
+Dependency assembly - System.Xml.XDocument.dll
+Dependency assembly - System.Threading.Tasks.Parallel.dll
+Dependency assembly - System.Xaml.dll
+Dependency assembly - I18N.CJK.dll
+Dependency assembly - Microsoft.CSharp.dll
+Dependency assembly - System.Security.Cryptography.Encoding.dll
+Dependency assembly - System.ServiceModel.Web.dll
+Dependency assembly - System.Transactions.dll
+Dependency assembly - System.Buffers.dll
+Dependency assembly - System.Web.dll
+Dependency assembly - System.IO.FileSystem.DriveInfo.dll
+Dependency assembly - System.Drawing.Design.dll
+Dependency assembly - System.DirectoryServices.Protocols.dll
+Dependency assembly - System.Threading.ThreadPool.dll
+Dependency assembly - Accessibility.dll
+Dependency assembly - System.Security.Cryptography.Cng.dll
+Dependency assembly - System.EnterpriseServices.dll
+Dependency assembly - System.Net.Requests.dll
+Dependency assembly - Microsoft.Win32.Registry.AccessControl.dll
+Dependency assembly - System.Net.HttpListener.dll
+Dependency assembly - System.Xml.XPath.XDocument.dll
+Dependency assembly - System.Runtime.DurableInstancing.dll
+Dependency assembly - System.Diagnostics.Tools.dll
+Dependency assembly - System.Web.RegularExpressions.dll
+Dependency assembly - System.IO.MemoryMappedFiles.dll
+Dependency assembly - System.Text.RegularExpressions.dll
+Dependency assembly - System.Net.Sockets.dll
+Dependency assembly - I18N.Other.dll
+Dependency assembly - Mono.Data.Tds.dll
+Dependency assembly - System.Numerics.Vectors.dll
+Dependency assembly - Mono.Data.Sqlite.dll
+Dependency assembly - System.Diagnostics.TraceEvent.dll
+Dependency assembly - System.Web.Services.dll
+Dependency assembly - System.Web.DynamicData.dll
+Dependency assembly - System.IO.IsolatedStorage.dll
+Dependency assembly - System.Runtime.Serialization.Primitives.dll
+Dependency assembly - System.Reflection.Primitives.dll
+Dependency assembly - Microsoft.Extensions.Logging.Abstractions.dll
+Dependency assembly - System.Security.AccessControl.dll
+Dependency assembly - System.Resources.Writer.dll
+Dependency assembly - System.Text.Json.dll
+Dependency assembly - System.Security.Cryptography.DeriveBytes.dll
+Dependency assembly - Microsoft.Bcl.AsyncInterfaces.dll
+Dependency assembly - System.Diagnostics.Tracing.dll
+Dependency assembly - System.IO.Pipes.dll
+Dependency assembly - System.Security.SecureString.dll
+Dependency assembly - System.Runtime.InteropServices.dll
+Dependency assembly - System.ComponentModel.EventBasedAsync.dll
+Dependency assembly - System.ObjectModel.dll
+Dependency assembly - System.dll
+Dependency assembly - System.Reflection.Emit.dll
+Dependency assembly - System.Design.dll
+Dependency assembly - System.Messaging.dll
+Dependency assembly - System.Diagnostics.TextWriterTraceListener.dll
+Dependency assembly - System.Net.Primitives.dll
+Dependency assembly - System.IO.Compression.FileSystem.dll
+Dependency assembly - System.Numerics.dll
+Dependency assembly - System.Xml.XmlSerializer.dll
+Dependency assembly - System.Net.Mail.dll
+Dependency assembly - System.Net.Security.dll
+Dependency assembly - System.Reflection.Emit.ILGeneration.dll
+Dependency assembly - System.DirectoryServices.dll
+Dependency assembly - System.ServiceModel.Activation.dll
+Dependency assembly - System.Security.Cryptography.Encryption.dll
+Dependency assembly - System.Security.dll
+Dependency assembly - System.Collections.NonGeneric.dll
+Dependency assembly - System.Reflection.DispatchProxy.dll
+Dependency assembly - System.Net.AuthenticationManager.dll
+Dependency assembly - System.Windows.Forms.DataVisualization.dll
+Dependency assembly - System.Security.Principal.dll
+Dependency assembly - System.Globalization.Extensions.dll
+Dependency assembly - System.Security.Cryptography.Csp.dll
+Dependency assembly - System.IO.Compression.ZipFile.dll
+Dependency assembly - System.IO.dll
+Dependency assembly - System.Runtime.InteropServices.RuntimeInformation.dll
+Dependency assembly - System.Runtime.CompilerServices.VisualC.dll
+Dependency assembly - System.Runtime.InteropServices.WindowsRuntime.dll
+Dependency assembly - System.Diagnostics.FileVersionInfo.dll
+Dependency assembly - Microsoft.Win32.Registry.dll
+Dependency assembly - System.Security.Cryptography.Algorithms.dll
+Dependency assembly - System.Runtime.CompilerServices.Unsafe.dll
+Dependency assembly - UnityEngine.UI.dll
+Dependency assembly - System.IdentityModel.dll
+Dependency assembly - System.Security.Cryptography.RSA.dll
+Dependency assembly - System.Security.Principal.Windows.dll
+Dependency assembly - System.IO.FileSystem.dll
+Dependency assembly - System.Xml.ReaderWriter.dll
+Dependency assembly - System.ServiceProcess.dll
+Dependency assembly - System.Xml.XPath.XmlDocument.dll
+Dependency assembly - Microsoft.Win32.Primitives.dll
+Dependency assembly - I18N.MidEast.dll
+Dependency assembly - System.Xml.XPath.dll
+Dependency assembly - System.Runtime.Serialization.Formatters.Soap.dll
+Dependency assembly - System.Collections.Immutable.dll
+Dependency assembly - System.Xml.Linq.dll
+Dependency assembly - System.Diagnostics.Contracts.dll
+Dependency assembly - System.Threading.AccessControl.dll
+Dependency assembly - I18N.Rare.dll
+Dependency assembly - System.Runtime.Numerics.dll
+Dependency assembly - System.Linq.Queryable.dll
+Dependency assembly - System.Net.WebSockets.dll
+Dependency assembly - System.ComponentModel.TypeConverter.dll
+Dependency assembly - System.ServiceModel.Duplex.dll
+Dependency assembly - System.Data.OracleClient.dll
+Dependency assembly - Unity.TextMeshPro.dll
+Dependency assembly - I18N.dll
+Dependency assembly - System.Security.Cryptography.Pkcs.dll
+Dependency assembly - System.Threading.dll
+Dependency assembly - System.Resources.ResourceManager.dll
+Dependency assembly - System.Console.dll
+Dependency assembly - System.Net.Ping.dll
+Dependency assembly - netstandard.dll
+Dependency assembly - System.ServiceModel.Routing.dll
+Dependency assembly - System.AppContext.dll
+Dependency assembly - System.IO.FileSystem.Watcher.dll
+Dependency assembly - System.Net.dll
+Dependency assembly - System.Net.NameResolution.dll
+Dependency assembly - System.IO.FileSystem.AccessControl.dll
+Dependency assembly - System.Diagnostics.Process.dll
+Dependency assembly - System.ServiceModel.Http.dll
+Dependency assembly - System.Runtime.Serialization.Xml.dll
+Dependency assembly - System.Net.Http.WebRequest.dll
+Dependency assembly - System.Reflection.Extensions.dll
+Dependency assembly - System.Xml.Xsl.Primitives.dll
+Dependency assembly - System.Runtime.Loader.dll
+Dependency assembly - System.Security.Cryptography.Hashing.Algorithms.dll
+Dependency assembly - System.ComponentModel.DataAnnotations.dll
+Dependency assembly - System.Collections.Specialized.dll
+Dependency assembly - System.Configuration.dll
+Dependency assembly - I18N.West.dll
+Dependency assembly - System.Xml.Serialization.dll
+Dependency assembly - System.Security.Cryptography.Hashing.dll
+Dependency assembly - System.Linq.Parallel.dll
+Dependency assembly - System.Reflection.Emit.Lightweight.dll
+Dependency assembly - System.Windows.Forms.dll
+Dependency assembly - System.Security.Cryptography.OpenSsl.dll
+Dependency assembly - System.Runtime.Caching.dll
+Dependency assembly - System.Net.WebSockets.Client.dll
+Dependency assembly - System.Resources.ReaderWriter.dll
+Dependency assembly - Mono.Security.dll
+Dependency assembly - System.Security.Cryptography.Primitives.dll
+Dependency assembly - System.Globalization.Calendars.dll
+Dependency assembly - System.Security.Cryptography.Encryption.ECDsa.dll
+Dependency assembly - System.Runtime.Serialization.dll
+Dependency assembly - System.Runtime.Handles.dll
+Dependency assembly - System.Web.Extensions.dll
+Dependency assembly - System.Json.dll
+Dependency assembly - System.Threading.Overlapped.dll
+Dependency assembly - System.Linq.Expressions.dll
+Dependency assembly - System.Diagnostics.DiagnosticSource.dll
+Dependency assembly - System.ServiceModel.Security.dll
+Dependency assembly - System.Security.Cryptography.X509Certificates.dll
+Dependency assembly - System.Reflection.Context.dll
+Dependency assembly - System.Web.Extensions.Design.dll
+Dependency assembly - System.Drawing.dll
+Dependency assembly - System.Net.Utilities.dll
+Dependency assembly - System.ServiceModel.Primitives.dll
+Dependency assembly - System.Memory.dll
+Dependency assembly - System.Data.Common.dll
+Dependency assembly - System.IO.UnmanagedMemoryStream.dll
+
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 0.2111ms
+Total cache size 176299126
+Total cache size 176299126
+Total cache size after purge 176299126, took 00:00:19.2915436
+Total cache size after purge 176299126, took 00:00:06.8835631
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --dagfile="Library/Bee/Playerac5cebb5.dag" --profile="Library/Bee/backend1.traceevents" Player
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+DisplayProgressbar: Incremental Player Build
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [pending dependencies]
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [success 35b5b73e666cbc51dc6a7cb0619d1817]
+[ 15/266    4s] AddBootConfigGUID Library/Bee/artifacts/WebGL/boot.config
+[BUSY       9s] UnityLinker C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/unitylinker_ber2.traceevents
+[ 16/266   16s] UnityLinker C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/unitylinker_ber2.traceevents
+C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\il2cpp\build\deploy\UnityLinker.exe @Library\Bee\artifacts\rsp\1961033307928954085.rsp
+[ 19/266    0s] CopyFiles Temp/EditorBuildOutput/UnityLinkerToEditorData.json
+[BUSY       6s] IL2CPP_CodeGen C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/il2cpp_conv_0c1r.traceevents
+[ 22/266   12s] IL2CPP_CodeGen C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/il2cpp_conv_0c1r.traceevents
+C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\il2cpp\build\deploy\il2cpp.exe --convert-to-cpp --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/Assembly-CSharp.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/Mono.Security.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/mscorlib.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/System.Configuration.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/System.Core.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/System.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/System.Runtime.CompilerServices.Unsafe.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/System.Xml.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/Unity.Scripting.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.AnimationModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.AudioModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.ContentLoadModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.CoreModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.GridModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.HierarchyCoreModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.IMGUIModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.InputForUIModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.InputLegacyModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.JSONSerializeModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.Physics2DModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.PhysicsModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.PropertiesModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.ScriptingModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.SharedInternalsModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.SpriteShapeModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.TextCoreFontEngineModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.TextCoreTextEngineModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.TextRenderingModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.TilemapModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.UI.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.UIElementsModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.UIModule.dll --assembly=Library/Bee/artifacts/WebGL/ManagedStripped/UnityEngine.UnityWebRequestModule.dll --generatedcppdir=C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/cpp --symbols-folder=C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/cpp/Symbols --enable-analytics --emit-method-map --dotnetprofile=unityaot-linux --usymtool-path=C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Tools\usymtool.exe --profiler-report --profiler-output-file=C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/il2cpp_conv_0c1r.traceevents --print-command-line --static-lib-il2-cpp --data-folder=C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/data
+[246/266    0s] CopyFiles C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/build/Data/Resources/mscorlib.dll-resources.dat
+[247/266    0s] CopyFiles C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/build/Data/Metadata/global-metadata.dat
+[248/266    0s] CopyFiles Temp/EditorBuildOutput/MethodMap.tsv
+[249/266    0s] Assemble WebGL Data Library/Bee/artifacts/WebGL/webgl.data
+[BUSY      12s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/vuaps9w0xc6l.o
+[BUSY      12s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/gaed8iby00h5.o
+[BUSY      22s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/gqvj6i7goafq.o
+[250/266   25s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/cbhfizb5kx5m.o
+[BUSY      32s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/gqvj6i7goafq.o
+[BUSY      38s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/vuaps9w0xc6l.o
+[251/266   41s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/vuaps9w0xc6l.o
+[252/266   40s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/gqvj6i7goafq.o
+[253/266   36s] C_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/gaed8iby00h5.o
+[BUSY       6s] Lib_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/GameAssembly.a
+[BUSY      16s] Lib_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/GameAssembly.a
+[254/266   17s] Lib_WebGL_wasm Library/Bee/artifacts/WebGL/GameAssembly/release_WebGL_wasm/GameAssembly.a
+[255/266    0s] CopyFiles C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/il2cppOutput/build/GameAssembly.a
+[BUSY       6s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      16s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      27s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      37s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      47s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      57s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      67s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      77s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      87s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY      97s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY     107s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[BUSY     117s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+[256/266   125s] Link_WebGL_wasm Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.js (+wasm)
+warning: C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WebGLSupport/BuildTools/lib/lib_webgpu.js:7: #warning "Firefox browser before version 149 has issues with WebGPU (e.g. https://bugzilla.mozilla.org/show_bug.cgi?id=2023423 )"
+warning: C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WebGLSupport/BuildTools/lib/lib_webgpu.js:7: #warning "Firefox browser before version 149 has issues with WebGPU (e.g. https://bugzilla.mozilla.org/show_bug.cgi?id=2023423 )"
+warning: JS library symbol '$stackTrace' is deprecated. Please open a bug if you have a continuing need for this symbol [-Wdeprecated]
+emcc: warning: warnings in JS library compilation [-Wjs-compiler]
+*** Tundra requires additional run (224.71 seconds - 0:03:44), 15 items updated, 266 evaluated
+*** Additional run caused by: timestamp change of Library/Bee/artifacts/WebGL/webgl.data
+ExitCode: 4 Duration: 3m:44s
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\netcorerun\netcorerun.exe "C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\PlaybackEngines\WebGLSupport\WebGLPlayerBuildProgram.exe" "C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WebGLSupport/Bee;C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Tools/BuildPipeline" "Library/Bee/Playerac5cebb5.dag.json" "Library/Bee/Playerac5cebb5-inputdata.json" "Library\Bee\buildprogram0.traceevents"
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+ExitCode: 0 Duration: 2s38ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --dagfile="Library/Bee/Playerac5cebb5.dag" --dagfilejson="Library\Bee\Playerac5cebb5.dag.json" --profile="Library/Bee/backend2.traceevents" Player
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+Finished compiling graph: 457 nodes, 1153 flattened edges (1149 ToBuild, 2 ToUse), maximum node priority 261
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [pending dependencies]
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [success 35b5b73e666cbc51dc6a7cb0619d1817]
+[256/266    0s] Merging JavaScript Code Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.framework.js
+[257/266    1s] 7z Library/Bee/artifacts/WebGL/webgl.data.unmarked
+
+7-Zip (z) 26.01 (x64) : Copyright (c) 1999-2026 Igor Pavlov : 2026-04-27
+
+Scanning the drive:
+1 file, 9985012 bytes (9751 KiB)
+
+Creating archive: C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/webgl.data.unmarked
+
+Add new data to archive: 1 file, 9985012 bytes (9751 KiB)
+
+
+Files read from disk: 1
+Archive size: 4680621 bytes (4571 KiB)
+Everything is Ok
+[258/266    1s] PreprocessJS Library/Bee/artifacts/WebGLwebgl.loader.js
+[259/266    0s] GzipMarker Builds/webgl/Build/webgl.data.unityweb
+[260/266    2s] 7z Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.wasm.unmarked
+
+7-Zip (z) 26.01 (x64) : Copyright (c) 1999-2026 Igor Pavlov : 2026-04-27
+
+Scanning the drive:
+1 file, 28713969 bytes (28 MiB)
+
+Creating archive: C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.wasm.unmarked
+
+Add new data to archive: 1 file, 28713969 bytes (28 MiB)
+
+
+Files read from disk: 1
+Archive size: 7737608 bytes (7557 KiB)
+Everything is Ok
+[261/266    0s] GzipMarker Builds/webgl/Build/webgl.wasm.unityweb
+*** Tundra requires additional run (3.47 seconds), 6 items updated, 266 evaluated
+*** Additional run caused by: timestamp change of Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.framework.js
+ExitCode: 4 Duration: 3s530ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\netcorerun\netcorerun.exe "C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\PlaybackEngines\WebGLSupport\WebGLPlayerBuildProgram.exe" "C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/PlaybackEngines/WebGLSupport/Bee;C:/Program Files/Unity/Hub/Editor/6000.5.2f1/Editor/Data/Tools/BuildPipeline" "Library/Bee/Playerac5cebb5.dag.json" "Library/Bee/Playerac5cebb5-inputdata.json" "Library\Bee\buildprogram1.traceevents"
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+ExitCode: 0 Duration: 0s709ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.2f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --dagfile="Library/Bee/Playerac5cebb5.dag" --dagfilejson="Library\Bee\Playerac5cebb5.dag.json" --profile="Library/Bee/backend3.traceevents" Player
+WorkingDir: C:/Users/aarons/Desktop/sacred-sanctum/journey3d
+Finished compiling graph: 457 nodes, 1153 flattened edges (1149 ToBuild, 2 ToUse), maximum node priority 261
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [pending dependencies]
+[           0s] ComputeLeafInputSignature Lib_WebGL_wasm Library/Bee/artifacts/WebGL/il2cpp/release_WebGL_wasm/il2cpp.a [success 35b5b73e666cbc51dc6a7cb0619d1817]
+[262/266    0s] 7z Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.framework.js.unmarked
+
+7-Zip (z) 26.01 (x64) : Copyright (c) 1999-2026 Igor Pavlov : 2026-04-27
+
+Scanning the drive:
+1 file, 335423 bytes (328 KiB)
+
+Creating archive: C:/Users/aarons/Desktop/sacred-sanctum/journey3d/Library/Bee/artifacts/WebGL/build/debug_WebGL_wasm/build.framework.js.unmarked
+
+Add new data to archive: 1 file, 335423 bytes (328 KiB)
+
+
+Files read from disk: 1
+Archive size: 75776 bytes (74 KiB)
+Everything is Ok
+[263/266    0s] GzipMarker Builds/webgl/Build/webgl.framework.js.unityweb
+[265/266    0s] CopyFiles Builds/webgl/Build/webgl.loader.js
+*** Tundra build success (0.45 seconds), 3 items updated, 266 evaluated
+ExitCode: 0 Duration: 0s482ms
+[websockify wrapper] Start node and websockify.js
+
+-------------------------------------------------------------------------------
+Build Report
+Information on used Assets is not available, since player data was not rebuilt.
+Do a clean build to view the Asset build report information.
+-------------------------------------------------------------------------------
+[Licensing::Client] Successfully resolved entitlement details
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 33 unused Assets / (1.2 MB). Loaded Objects now: 1077.
+Memory consumption went from 198.9 MB to 197.7 MB.
+Total: 10.105700 ms (FindLiveObjects: 0.118700 ms CreateObjectMapping: 0.044700 ms MarkObjects: 9.299700 ms  DeleteObjects: 0.640600 ms)
+
+DisplayProgressNotification: Build Successful
+Build Finished, Result: Success.
+##utp:{"success":true,"type":"PlayerBuildInfo","version":2,"phase":"Immediate","time":1783986460834,"processId":17956,"steps":[{"description":"Preprocess Player","duration":15},{"description":"Prepare For Build","duration":0},{"description":"ProducePlayerScriptAssemblies","duration":14197},{"description":"Verify Build setup","duration":782},{"description":"Prepare assets for target platform","duration":2},{"description":"Prepare splash screen","duration":42},{"description":"Run script only build","duration":363},{"description":"Build scripts DLLs","duration":204},{"description":"Postprocess built player","duration":238717}],"duration":254322}
+Unloading 0 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            0.749 ms
+	Integration:            5.881 ms
+	Integration of assets:  0.002 ms
+	Thread Wait Time:       0.248 ms
+	Total Operation Time:   6.881 ms
+Unloading 0 unused Assets / (Unknown). Loaded Objects now: 1077.
+Memory consumption went from 197.7 MB to 197.7 MB.
+Total: 8.186500 ms (FindLiveObjects: 0.095600 ms CreateObjectMapping: 0.037800 ms MarkObjects: 8.045300 ms  DeleteObjects: 0.006800 ms)
+
+Total cache size 176299126
+Total cache size after purge 176299126, took 00:00:00.3403986
+BUILDSCRIPT result=Succeeded size=12543179 errors=0
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Journey3D.EditorTools.BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:26)
+
+(Filename: Assets/Editor/BuildScript.cs Line: 26)
+
+Batchmode quit successfully invoked - shutting down!
+[websockify wrapper] Kill
+[websockify wrapper] Process killed
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-aarons-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-aarons channel disconnected successfully.
+Shut down.
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+[websockify wrapper] Kill
+abort_threads: Failed aborting id: 0000000000006B28, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 00000000000082BC, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000006B28, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 00000000000082BC, mono_thread_manage will ignore it
+
+debugger-agent: Unable to listen on 2948
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0

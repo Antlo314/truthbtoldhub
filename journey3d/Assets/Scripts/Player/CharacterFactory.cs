@@ -138,10 +138,13 @@ namespace Journey3D
                             c = new Color(0.55f, 0.48f, 0.4f, 1f);           // neutral trim (never pure blue dump)
                     }
 
-                    mats[i] = PropUtils.UnlitMat(c);
+                    var newMat = PropUtils.UnlitMat(c);
+                    newMat.name = src.name;
+                    mats[i] = newMat;
                 }
                 r.materials = mats;
             }
+            WorldSkin.Skin(root);
         }
 
         private static void Normalize(Transform wrapper, Transform inst, float height)
