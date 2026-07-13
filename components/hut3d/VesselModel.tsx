@@ -119,31 +119,27 @@ export const VesselModel = forwardRef<AvatarHandle, {
         const s = Math.sin(phase.current) * ground;
         const o = -s;
 
-        // Jump: pull knees up (negative X tucks thigh forward/up in our layout)
-        // With limbs along −Y, rotation.x > 0 swings foot toward +Z (forward)
-        const jThigh = 0.85 * jp;      // tuck forward/up
-        const jKnee = 1.1 * jp;        // bend knee
-        const jArm = -0.9 * jp;        // arms forward/up (negative if arm hangs −Y… see below)
-        const jArmZ = 0.35 * jp;
+        // Forward = negative rotation.x (limb hangs -Y; +X swings toward -Z)
+        const jThigh = -0.75 * jp;
+        const jKnee = 1.05 * jp;
+        const jArm = -0.55 * jp;
+        const jArmZ = 0.3 * jp;
 
-        // Legs: rotation.x positive → foot moves toward +Z (forward)
-        if (j.lUpLeg) j.lUpLeg.rotation.x = THREE.MathUtils.damp(j.lUpLeg.rotation.x, s * 0.7 + jThigh * 0.5, 14, dt);
-        if (j.rUpLeg) j.rUpLeg.rotation.x = THREE.MathUtils.damp(j.rUpLeg.rotation.x, o * 0.7 + jThigh * 0.5, 14, dt);
-        // Knee: only bend (positive local x on lower leg folds shin back)
-        if (j.lLoLeg) j.lLoLeg.rotation.x = THREE.MathUtils.damp(j.lLoLeg.rotation.x, Math.max(0, -s) * 0.85 + jKnee, 14, dt);
-        if (j.rLoLeg) j.rLoLeg.rotation.x = THREE.MathUtils.damp(j.rLoLeg.rotation.x, Math.max(0, -o) * 0.85 + jKnee, 14, dt);
+        if (j.lUpLeg) j.lUpLeg.rotation.x = THREE.MathUtils.damp(j.lUpLeg.rotation.x, -s * 0.72 + jThigh * 0.45, 14, dt);
+        if (j.rUpLeg) j.rUpLeg.rotation.x = THREE.MathUtils.damp(j.rUpLeg.rotation.x, -o * 0.72 + jThigh * 0.45, 14, dt);
+        if (j.lLoLeg) j.lLoLeg.rotation.x = THREE.MathUtils.damp(j.lLoLeg.rotation.x, Math.max(0, s) * 0.9 + jKnee, 14, dt);
+        if (j.rLoLeg) j.rLoLeg.rotation.x = THREE.MathUtils.damp(j.rLoLeg.rotation.x, Math.max(0, o) * 0.9 + jKnee, 14, dt);
 
-        // Arms opposite legs; hang down −Y, rotation.x positive swings hand toward +Z
         if (j.lUpArm) {
-            j.lUpArm.rotation.x = THREE.MathUtils.damp(j.lUpArm.rotation.x, o * 0.55 + jArm * 0.35, 14, dt);
+            j.lUpArm.rotation.x = THREE.MathUtils.damp(j.lUpArm.rotation.x, -o * 0.55 + jArm, 14, dt);
             j.lUpArm.rotation.z = THREE.MathUtils.damp(j.lUpArm.rotation.z, 0.12 + jArmZ, 12, dt);
         }
         if (j.rUpArm) {
-            j.rUpArm.rotation.x = THREE.MathUtils.damp(j.rUpArm.rotation.x, s * 0.55 + jArm * 0.35, 14, dt);
+            j.rUpArm.rotation.x = THREE.MathUtils.damp(j.rUpArm.rotation.x, -s * 0.55 + jArm, 14, dt);
             j.rUpArm.rotation.z = THREE.MathUtils.damp(j.rUpArm.rotation.z, -0.12 - jArmZ, 12, dt);
         }
-        if (j.lLoArm) j.lLoArm.rotation.x = THREE.MathUtils.damp(j.lLoArm.rotation.x, Math.max(0, o) * 0.35, 12, dt);
-        if (j.rLoArm) j.rLoArm.rotation.x = THREE.MathUtils.damp(j.rLoArm.rotation.x, Math.max(0, s) * 0.35, 12, dt);
+        if (j.lLoArm) j.lLoArm.rotation.x = THREE.MathUtils.damp(j.lLoArm.rotation.x, Math.max(0, -o) * 0.3, 12, dt);
+        if (j.rLoArm) j.rLoArm.rotation.x = THREE.MathUtils.damp(j.rLoArm.rotation.x, Math.max(0, -s) * 0.3, 12, dt);
 
         // Hips / spine
         if (j.hips) {
