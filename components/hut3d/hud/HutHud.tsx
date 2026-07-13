@@ -13,6 +13,7 @@ import {
 } from '@/lib/game/truthLore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { STATIONS } from '../scene/Stations';
+import { queueHutJump } from '../scene/PlayerController';
 import * as THREE from 'three';
 
 /** React DOM overlay — best practice: keep game UI out of WebGL */
@@ -103,6 +104,7 @@ export default function HutHud({
 
                 <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-white/40">
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">WASD move</span>
+                    <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">Space jump</span>
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">E interact</span>
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">Esc close</span>
                     <Link href="/" className="px-2 py-1 rounded-md bg-black/40 border border-white/10 hover:text-aether-gold">
@@ -110,28 +112,38 @@ export default function HutHud({
                     </Link>
                 </div>
 
-                {/* Touch interact */}
-                <button
-                    type="button"
-                    className="sm:hidden w-16 h-16 rounded-full border-2 border-aether-gold/50 bg-aether-gold/15 text-aether-gold font-bold text-lg"
-                    onClick={() => {
-                        const pos = playerPosRef.current;
-                        if (!pos) return;
-                        if (station) {
-                            closeStation();
-                            return;
-                        }
-                        for (const s of STATIONS) {
-                            if (pos.distanceTo(new THREE.Vector3(...s.position)) < s.radius) {
-                                openStation(s.id);
-                                sacredUi.click();
-                                break;
+                {/* Touch: jump + interact */}
+                <div className="sm:hidden flex items-center gap-3">
+                    <button
+                        type="button"
+                        aria-label="Jump"
+                        className="w-14 h-14 rounded-full border-2 border-white/25 bg-white/10 text-white/80 font-bold text-xl"
+                        onClick={() => queueHutJump()}
+                    >
+                        ⤒
+                    </button>
+                    <button
+                        type="button"
+                        className="w-16 h-16 rounded-full border-2 border-aether-gold/50 bg-aether-gold/15 text-aether-gold font-bold text-lg"
+                        onClick={() => {
+                            const pos = playerPosRef.current;
+                            if (!pos) return;
+                            if (station) {
+                                closeStation();
+                                return;
                             }
-                        }
-                    }}
-                >
-                    E
-                </button>
+                            for (const s of STATIONS) {
+                                if (pos.distanceTo(new THREE.Vector3(...s.position)) < s.radius) {
+                                    openStation(s.id);
+                                    sacredUi.click();
+                                    break;
+                                }
+                            }
+                        }}
+                    >
+                        E
+                    </button>
+                </div>
             </div>
 
             {/* Station panel */}
