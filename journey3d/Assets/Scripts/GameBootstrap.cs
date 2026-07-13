@@ -11,6 +11,7 @@ namespace Journey3D
 
         private Transform _playerRoot;
         private PlayerAppearance _appearance;
+        private Transform _hutRoot;
 
         private void Awake()
         {
@@ -31,10 +32,12 @@ namespace Journey3D
             RenderSettings.fogDensity = 0.0035f;
 
             SaveState.Load();
+            _hutRoot = new GameObject("HutRoot").transform;
             BuildSun();
             BuildRoom();
             if (ExteriorEnabled) BuildExterior();
             BuildStations();
+            ParentHutContent();
             var player = BuildPlayer();
             // Truth (and any NPC ambients) need the player transform
             foreach (var ambient in FindObjectsByType<NpcAmbient>(FindObjectsSortMode.None))
@@ -609,6 +612,24 @@ namespace Journey3D
             return rig;
         }
 
+        private void ParentHutContent()
+        {
+            // Everything except Systems/Player/Camera lives under HutRoot so destinations can hide the chamber.
+            string[] keep = { "HutRoot", "Player", "Main Camera", "Systems", "Sun" };
+            foreach (var go in FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                if (go.parent != null) continue;
+                if (go == _hutRoot) continue;
+                bool skip = false;
+                foreach (var k in keep)
+                    if (go.name == k || go.name.StartsWith(k)) { skip = true; break; }
+                if (skip) continue;
+                if (go.GetComponent<PlayerController>() != null) continue;
+                if (go.GetComponent<Camera>() != null) continue;
+                go.SetParent(_hutRoot, true);
+            }
+        }
+
         private void BuildSystems(PlayerController player, CameraRig rig)
         {
             var sys = new GameObject("Systems");
@@ -620,6 +641,12 @@ namespace Journey3D
             var interact = sys.AddComponent<InteractionSystem>();
             interact.player = player.transform;
             interact.ui = ui;
+
+            var dest = sys.AddComponent<DestinationManager>();
+            dest.player = player.transform;
+            dest.ui = ui;
+            dest.hutRoot = _hutRoot;
+            dest.mainCam = Camera.main;
 
             var touch = sys.AddComponent<TouchControls>();
             touch.ui = ui;

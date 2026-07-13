@@ -14,6 +14,9 @@ namespace Journey3D
         private AudioSource _uiSrc;
         private AudioClip _footClip;
         private AudioClip _chimeClip;
+        private AudioClip _clickClip;
+        private AudioClip _tickClip;
+        private AudioClip _successClip;
         private float _stepT;
         private const int SR = 44100;
 
@@ -26,6 +29,9 @@ namespace Journey3D
         {
             _footClip = MakeStep();
             _chimeClip = MakeChime();
+            _clickClip = MakeClick();
+            _tickClip = MakeTick();
+            _successClip = MakeSuccess();
 
             var footGo = new GameObject("Footsteps");
             footGo.transform.SetParent(transform, false);
@@ -52,6 +58,27 @@ namespace Journey3D
             if (_uiSrc == null || _chimeClip == null) return;
             _uiSrc.pitch = Random.Range(0.96f, 1.04f);
             _uiSrc.PlayOneShot(_chimeClip, 0.7f);
+        }
+
+        public void PlayClick()
+        {
+            if (_uiSrc == null || _clickClip == null) return;
+            _uiSrc.pitch = Random.Range(0.97f, 1.05f);
+            _uiSrc.PlayOneShot(_clickClip, 0.55f);
+        }
+
+        public void PlayTick()
+        {
+            if (_uiSrc == null || _tickClip == null) return;
+            _uiSrc.pitch = Random.Range(0.98f, 1.06f);
+            _uiSrc.PlayOneShot(_tickClip, 0.28f);
+        }
+
+        public void PlaySuccess()
+        {
+            if (_uiSrc == null || _successClip == null) return;
+            _uiSrc.pitch = 1f;
+            _uiSrc.PlayOneShot(_successClip, 0.75f);
         }
 
         private void Update()
@@ -105,6 +132,54 @@ namespace Journey3D
                 data[i] = env * (0.55f * a + 0.35f * b) * 0.55f;
             }
             var clip = AudioClip.Create("chime", n, 1, SR, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private AudioClip MakeClick()
+        {
+            int n = SR / 20;
+            var data = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)SR;
+                float env = Mathf.Exp(-55f * t);
+                data[i] = env * Mathf.Sin(2f * Mathf.PI * 880f * t) * 0.55f;
+            }
+            var clip = AudioClip.Create("click", n, 1, SR, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private AudioClip MakeTick()
+        {
+            int n = SR / 28;
+            var data = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)SR;
+                float env = Mathf.Exp(-80f * t);
+                data[i] = env * Mathf.Sin(2f * Mathf.PI * 1200f * t) * 0.35f;
+            }
+            var clip = AudioClip.Create("tick", n, 1, SR, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        private AudioClip MakeSuccess()
+        {
+            int n = SR / 2;
+            var data = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)SR;
+                float env = Mathf.Exp(-3.2f * t);
+                float a = Mathf.Sin(2f * Mathf.PI * 392f * t);
+                float b = Mathf.Sin(2f * Mathf.PI * 523f * t);
+                float c = Mathf.Sin(2f * Mathf.PI * 659f * t);
+                data[i] = env * (0.4f * a + 0.35f * b + 0.25f * c) * 0.5f;
+            }
+            var clip = AudioClip.Create("success", n, 1, SR, false);
             clip.SetData(data, 0);
             return clip;
         }

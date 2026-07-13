@@ -193,7 +193,11 @@ namespace Journey3D
             colors.pressedColor = new Color(0.88f, 0.88f, 0.88f, 1f);
             colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.45f);
             btn.colors = colors;
-            btn.onClick.AddListener(() => onClick?.Invoke());
+            btn.onClick.AddListener(() =>
+            {
+                AudioManager.I?.PlayClick();
+                onClick?.Invoke();
+            });
 
             if (!filled)
             {
@@ -270,7 +274,12 @@ namespace Journey3D
             colors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
             colors.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.5f);
             btn.colors = colors;
-            if (onClick != null && !disabled) btn.onClick.AddListener(() => onClick());
+            if (onClick != null && !disabled)
+                btn.onClick.AddListener(() =>
+                {
+                    AudioManager.I?.PlayClick();
+                    onClick();
+                });
 
             var outline = go.AddComponent<Outline>();
             outline.effectColor = WithA(accent, 0.22f);

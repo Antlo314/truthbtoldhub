@@ -85,8 +85,13 @@ namespace Journey3D
             if (_soulLine != null)
             {
                 var c = SaveState.Character;
-                _soulLine.text = $"{c.name}   ·   {TruthLore.TrustLabel()}   ·   Iron {c.iron}  Copper {c.copper}  Cosmic {c.cosmic}";
+                string place = DestinationManager.I != null && DestinationManager.I.InDestination
+                    ? DestinationManager.I.CurrentId.ToUpperInvariant()
+                    : "HUT";
+                _soulLine.text = $"{c.name}  ·  {place}  ·  {TruthLore.TrustLabel()}  ·  Fe {c.iron}  Cu {c.copper}  ✦ {c.cosmic}";
             }
+            if (_toast != null && _toast.gameObject.activeSelf && Time.unscaledTime > _toastUntil)
+                _toast.gameObject.SetActive(false);
         }
 
         // =====================================================
@@ -132,24 +137,110 @@ namespace Journey3D
             hrt.pivot = new Vector2(1, 0);
             hrt.anchoredPosition = new Vector2(-18, 14);
             hrt.sizeDelta = new Vector2(320, 22);
+
+            // Objective chip (top-right)
+            _objChip = UIKit.Panel(hud, "obj_chip", new Color(0.05f, 0.04f, 0.03f, 0.88f));
+            _objChip.anchorMin = new Vector2(1, 1);
+            _objChip.anchorMax = new Vector2(1, 1);
+            _objChip.pivot = new Vector2(1, 1);
+            _objChip.anchoredPosition = new Vector2(-16, -14);
+            _objChip.sizeDelta = new Vector2(340, 64);
+            var oout = _objChip.gameObject.AddComponent<Outline>();
+            oout.effectColor = new Color(0.98f, 0.75f, 0.22f, 0.4f);
+            oout.effectDistance = new Vector2(1, -1);
+            _objEyebrow = UIKit.Label(_objChip, "OBJECTIVE", 10, UIKit.Gold, TextAnchor.UpperLeft, FontStyle.Bold);
+            var oer = _objEyebrow.rectTransform;
+            oer.anchorMin = new Vector2(0, 1); oer.anchorMax = new Vector2(1, 1); oer.pivot = new Vector2(0, 1);
+            oer.anchoredPosition = new Vector2(14, -10); oer.sizeDelta = new Vector2(-28, 16);
+            _objTitle = UIKit.Label(_objChip, "", 14, UIKit.Body, TextAnchor.UpperLeft, FontStyle.Bold);
+            var otr = _objTitle.rectTransform;
+            otr.anchorMin = new Vector2(0, 1); otr.anchorMax = new Vector2(1, 1); otr.pivot = new Vector2(0, 1);
+            otr.anchoredPosition = new Vector2(14, -26); otr.sizeDelta = new Vector2(-28, 20);
+            _objDetail = UIKit.Label(_objChip, "", 12, UIKit.Faint, TextAnchor.UpperLeft);
+            var odr = _objDetail.rectTransform;
+            odr.anchorMin = new Vector2(0, 1); odr.anchorMax = new Vector2(1, 1); odr.pivot = new Vector2(0, 1);
+            odr.anchoredPosition = new Vector2(14, -44); odr.sizeDelta = new Vector2(-28, 16);
+
+            // Toast
+            _toast = UIKit.Label(hud, "", 15, UIKit.Amber, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var tr = _toast.rectTransform;
+            tr.anchorMin = new Vector2(0.5f, 0.5f);
+            tr.anchorMax = new Vector2(0.5f, 0.5f);
+            tr.pivot = new Vector2(0.5f, 0.5f);
+            tr.anchoredPosition = new Vector2(0, 120);
+            tr.sizeDelta = new Vector2(640, 40);
+            _toast.gameObject.SetActive(false);
+
+            RefreshObjective();
         }
 
         private RectTransform _promptPill;
+        private RectTransform _objChip;
+        private Text _objEyebrow, _objTitle, _objDetail;
+        private Text _toast;
+        private float _toastUntil;
 
         public void SetPrompt(Station s)
         {
+            if (s == null) { SetPromptLabel(null, UIKit.Amber); return; }
+            SetPromptLabel(s.label, s.accent);
+        }
+
+        public void SetPromptLabel(string label, Color accent)
+        {
             if (_prompt == null || _promptPill == null) return;
-            if (s == null)
+            if (string.IsNullOrEmpty(label))
             {
                 _promptPill.gameObject.SetActive(false);
                 _prompt.text = "";
                 return;
             }
             _promptPill.gameObject.SetActive(true);
-            _prompt.text = $"E   ·   {s.label}";
-            _prompt.color = s.accent;
+            _prompt.text = $"E   ·   {label}";
+            _prompt.color = accent;
             var outl = _promptPill.GetComponent<Outline>();
-            if (outl != null) outl.effectColor = UIKit.WithA(s.accent, 0.45f);
+            if (outl != null) outl.effectColor = UIKit.WithA(accent, 0.45f);
+        }
+
+        public void RefreshObjective()
+        {
+            if (_objTitle == null) return;
+            var o = ObjectiveSystem.Current();
+            _objTitle.text = o.title;
+            if (_objDetail != null) _objDetail.text = o.detail;
+        }
+
+        public void ShowToast(string msg)
+        {
+            if (_toast == null) return;
+            _toast.text = msg ?? "";
+            _toast.gameObject.SetActive(true);
+            _toastUntil = Time.unscaledTime + 3.2f;
+        }
+
+        public void OnDestinationEntered(DestinationDef def)
+        {
+            ClosePanel();
+            ShowToast("Entered · " + (def?.name ?? "the road"));
+            RefreshObjective();
+        }
+
+        public void OnDestinationLeft()
+        {
+            ShowToast("Returned to Truth's Hut");
+            RefreshObjective();
+        }
+
+        public void ShowGuideDialogue(DestinationDef def)
+        {
+            if (def == null) return;
+            var list = OpenShell(def.guide, def.name, UIKit.Hex(def.accent));
+            UIKit.HeroCard(list, "Guide", "\"" + def.quote + "\"", UIKit.Hex(def.accent));
+            BodyText(list,
+                "You stand on living ground — not a vision, but a road. Walk the path, claim the relic, and return through the south gate when you are ready.",
+                100, UIKit.Body);
+            PrimaryCta(list, "Continue →", UIKit.Hex(def.accent), ClosePanel);
+            AudioManager.I?.PlayStationOpen();
         }
 
         // =====================================================
@@ -852,18 +943,26 @@ namespace Journey3D
         private void OpenWayfinder(Station s)
         {
             var list = OpenShell("The Wayfinder", "Roads Beyond", s.accent);
-            UIKit.HeroCard(list, "Vision portals",
-                "Look through peace and trial. Claim each road's relic. Full 3D chambers are still being laid.",
+            UIKit.HeroCard(list, "Real places",
+                "Step through and walk Eden, Giza, the Fair, the Vault, the Emerald Halls. Claim relics. Return by the south gate.",
                 s.accent);
-            PrimaryCta(list, "Open full Wayfinder map →", s.accent, () => OpenWeb("/vision"));
-            Header(list, "Unsealed roads");
+            Header(list, "Travel");
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
                 string destId = d.id;
-                UIKit.ListRow(list, d.name, d.guide + "  ·  \"" + Truncate(d.quote, 48) + "\"",
-                    accent, () => OpenWeb("/vision/" + destId), "◈", "›", 86);
+                bool visited = DestinationManager.Visited(destId);
+                bool relic = DestinationManager.HasRelic(destId);
+                string status = relic ? "Relic claimed" : visited ? "Visited" : "Unopened";
+                string sub = d.guide + "  ·  " + status + "  ·  \"" + Truncate(d.quote, 36) + "\"";
+                UIKit.ListRow(list, d.name, sub, accent, () =>
+                {
+                    ClosePanel();
+                    DestinationManager.I?.Enter(destId);
+                }, relic ? "★" : "◈", "TRAVEL", 88);
             }
+            Header(list, "Visions on the Hub");
+            GhostCta(list, "Cinematic vision portals →", s.accent, () => OpenWeb("/vision"));
             Header(list, "Also on the Hub");
             UIKit.ListRow(list, "Epilogue", "Roads so far · Return to the Source", UIKit.Amber, () => OpenWeb("/epilogue"), "☀");
             UIKit.ListRow(list, "The Hall", "Gather with souls", s.accent, () => OpenWeb("/archive"), "◎");
