@@ -1,19 +1,14 @@
 """
-Headless Blender: build low-poly man/woman vessel bases + export GLB.
-Run:
-  blender --background --python tools/blender/build_vessels.py
+Headless Blender: rigged low-poly man/woman vessels (bone-parented limbs).
+Arms attached to shoulders; legs to hips; animatable from Three.js.
 
-These are BLOCKOUT bases (proportions + hierarchy), not painted-ref perfection.
-Refine in Blender UI or replace with sculpted meshes later.
+  "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe" --background --python tools/blender/build_vessels.py
 """
-import math
 import os
-import sys
-
+import math
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
-# Project root = three levels up from this file: tools/blender/build_vessels.py
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 OUT_DIR = os.path.join(ROOT, "public", "models", "vessels")
@@ -22,225 +17,237 @@ OUT_DIR = os.path.join(ROOT, "public", "models", "vessels")
 def clear_scene():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
-    for block in (bpy.data.meshes, bpy.data.materials, bpy.data.armatures):
-        for b in list(block):
-            block.remove(b)
+    for coll in (bpy.data.meshes, bpy.data.materials, bpy.data.armatures, bpy.data.objects):
+        for b in list(coll):
+            coll.remove(b)
 
 
-def mat(name, color, roughness=0.75):
+def make_mat(name, rgb, rough=0.8):
     m = bpy.data.materials.new(name=name)
     m.use_nodes = True
-    bsdf = m.node_tree.nodes.get("Principled BSDF")
+    nt = m.node_tree
+    bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
     if bsdf:
-        bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+        bsdf.inputs["Base Color"].default_value = (*rgb, 1.0)
         if "Roughness" in bsdf.inputs:
-            bsdf.inputs["Roughness"].default_value = roughness
+            bsdf.inputs["Roughness"].default_value = rough
     return m
 
 
-def add_box(name, loc, scale, material, parent=None):
+def mesh_cube(name, loc, size, mat, collection):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
     ob = bpy.context.active_object
     ob.name = name
-    ob.scale = scale
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    if material:
-        ob.data.materials.append(material)
-    if parent:
-        ob.parent = parent
+    ob.scale = size
+    bpy.ops.object.transform_apply(scale=True)
+    if mat:
+        ob.data.materials.append(mat)
     return ob
 
 
-def add_capsule_approx(name, loc, radius, depth, material, parent=None, segments=8):
-    """Vertical capsule-like from cylinder + spheres (low poly)."""
+def mesh_cyl(name, loc, radius, depth, mat, segs=8):
     bpy.ops.mesh.primitive_cylinder_add(
-        vertices=segments, radius=radius, depth=depth, location=loc
-    )
-    body = bpy.context.active_object
-    body.name = name + "_cyl"
-    if material:
-        body.data.materials.append(material)
-
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=segments, ring_count=segments // 2, radius=radius,
-        location=(loc[0], loc[1], loc[2] + depth * 0.5)
-    )
-    top = bpy.context.active_object
-    top.name = name + "_top"
-    if material:
-        top.data.materials.append(material)
-
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=segments, ring_count=segments // 2, radius=radius,
-        location=(loc[0], loc[1], loc[2] - depth * 0.5)
-    )
-    bot = bpy.context.active_object
-    bot.name = name + "_bot"
-    if material:
-        bot.data.materials.append(material)
-
-    # Join
-    for o in (top, bot, body):
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.join()
-    body.name = name
-    if parent:
-        body.parent = parent
-    return body
-
-
-def add_sphere(name, loc, radius, material, parent=None, segments=10):
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=segments, ring_count=segments // 2, radius=radius, location=loc
+        vertices=segs, radius=radius, depth=depth, location=loc
     )
     ob = bpy.context.active_object
     ob.name = name
-    if material:
-        ob.data.materials.append(material)
-    if parent:
-        ob.parent = parent
+    if mat:
+        ob.data.materials.append(mat)
     return ob
 
 
+def mesh_sphere(name, loc, radius, mat, segs=10):
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=segs, ring_count=max(4, segs // 2), radius=radius, location=loc
+    )
+    ob = bpy.context.active_object
+    ob.name = name
+    if mat:
+        ob.data.materials.append(mat)
+    return ob
+
+
+def create_armature(kind):
+    """Standard humanoid, T-pose-ish, feet at Z=0. Units meters."""
+    bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
+    arm_ob = bpy.context.active_object
+    arm_ob.name = f"Armature_{kind}"
+    arm = arm_ob.data
+    arm.name = f"ArmatureData_{kind}"
+
+    # Remove default bone
+    eb = arm.edit_bones
+    for b in list(eb):
+        eb.remove(b)
+
+    def bone(name, head, tail, parent=None):
+        b = eb.new(name)
+        b.head = Vector(head)
+        b.tail = Vector(tail)
+        if parent:
+            b.parent = eb[parent]
+            b.use_connect = False
+        return b
+
+    # Vertical spine (Z-up in Blender)
+    bone("Hips", (0, 0, 0.90), (0, 0, 1.02))
+    bone("Spine", (0, 0, 1.02), (0, 0, 1.22), "Hips")
+    bone("Chest", (0, 0, 1.22), (0, 0, 1.38), "Spine")
+    bone("Neck", (0, 0, 1.38), (0, 0, 1.46), "Chest")
+    bone("Head", (0, 0, 1.46), (0, 0, 1.62), "Neck")
+
+    # Legs
+    bone("LeftUpperLeg", (-0.11, 0, 0.90), (-0.11, 0, 0.50), "Hips")
+    bone("LeftLowerLeg", (-0.11, 0, 0.50), (-0.11, 0, 0.10), "LeftUpperLeg")
+    bone("LeftFoot", (-0.11, 0, 0.10), (-0.11, 0.12, 0.02), "LeftLowerLeg")
+
+    bone("RightUpperLeg", (0.11, 0, 0.90), (0.11, 0, 0.50), "Hips")
+    bone("RightLowerLeg", (0.11, 0, 0.50), (0.11, 0, 0.10), "RightUpperLeg")
+    bone("RightFoot", (0.11, 0, 0.10), (0.11, 0.12, 0.02), "RightLowerLeg")
+
+    # Arms from chest — slightly out (A-pose light)
+    bone("LeftUpperArm", (-0.16, 0, 1.34), (-0.38, 0, 1.18), "Chest")
+    bone("LeftLowerArm", (-0.38, 0, 1.18), (-0.52, 0, 1.00), "LeftUpperArm")
+    bone("LeftHand", (-0.52, 0, 1.00), (-0.58, 0, 0.96), "LeftLowerArm")
+
+    bone("RightUpperArm", (0.16, 0, 1.34), (0.38, 0, 1.18), "Chest")
+    bone("RightLowerArm", (0.38, 0, 1.18), (0.52, 0, 1.00), "RightUpperArm")
+    bone("RightHand", (0.52, 0, 1.00), (0.58, 0, 0.96), "RightLowerArm")
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return arm_ob
+
+
+def parent_to_bone(obj, armature, bone_name):
+    """Bone-parent mesh while keeping current world placement."""
+    mw = obj.matrix_world.copy()
+    obj.parent = armature
+    obj.parent_type = "BONE"
+    obj.parent_bone = bone_name
+    # Restore world matrix after parenting
+    obj.matrix_world = mw
+
+
 def build_vessel(kind="man"):
-    """
-    kind: man | woman
-    Units: meters. Feet on Z=0. Blender Z-up; we'll export Y-up for glTF.
-    Total height ~1.72m, legs ~50%, short torso.
-    """
+    clear_scene()
     is_fem = kind == "woman"
-    # widths
-    shoulder = 0.38 if is_fem else 0.44
+
+    m_skin = make_mat("skin", (0.82, 0.60, 0.45))
+    m_hair = make_mat("hair", (0.12, 0.09, 0.08))
+    m_top = make_mat("cloth_top", (0.22, 0.48, 0.50))
+    m_bottom = make_mat("cloth_bottom", (0.16, 0.18, 0.26))
+    m_boots = make_mat("boots", (0.20, 0.14, 0.10))
+    m_eye = make_mat("eye", (0.12, 0.14, 0.18), 0.35)
+
+    shoulder_w = 0.34 if is_fem else 0.40
     hip_w = 0.36 if is_fem else 0.34
-    torso_r = 0.16 if is_fem else 0.18
-    head_r = 0.105 if is_fem else 0.11
-    leg_spread = 0.09 if is_fem else 0.11
+    torso_r = 0.15 if is_fem else 0.17
+    head_r = 0.10 if is_fem else 0.105
+    arm_r = 0.042 if is_fem else 0.048
+    thigh_r = 0.07 if is_fem else 0.075
 
-    # Materials (tintable names for runtime)
-    m_skin = mat("skin", (0.78, 0.56, 0.42))
-    m_hair = mat("hair", (0.12, 0.10, 0.09))
-    m_top = mat("cloth_top", (0.25, 0.45, 0.48))
-    m_bottom = mat("cloth_bottom", (0.18, 0.20, 0.28))
-    m_boots = mat("boots", (0.22, 0.16, 0.12))
+    arm_ob = create_armature(kind)
 
-    # Empty root at origin (feet)
-    root = bpy.data.objects.new(f"vessel_{kind}", None)
-    bpy.context.collection.objects.link(root)
-    root.empty_display_size = 0.2
+    parts = []
 
-    # —— legs (long) —— hip at z=0.90
-    hip_z = 0.90
-    thigh_len = 0.42
-    shin_len = 0.38
+    # Hips mesh at hips bone
+    hips = mesh_cyl("HipsMesh", (0, 0, 0.94), hip_w * 0.42, 0.14, m_bottom, 10)
+    parts.append((hips, "Hips"))
 
-    for side, sx in (("L", -1), ("R", 1)):
-        x = sx * leg_spread
-        # upper leg
-        uz = hip_z - thigh_len * 0.5
-        add_capsule_approx(
-            f"Thigh_{side}", (x, 0, uz), 0.07, thigh_len * 0.85, m_bottom, root, 8
-        )
-        # lower leg
-        lz = hip_z - thigh_len - shin_len * 0.45
-        add_capsule_approx(
-            f"Shin_{side}", (x, 0, lz), 0.055, shin_len * 0.75, m_bottom, root, 8
-        )
-        # boot
-        add_box(
-            f"Boot_{side}",
-            (x, 0.03, 0.05),
-            (0.11, 0.18, 0.09),
+    # Torso / chest (short)
+    torso = mesh_cyl("TorsoMesh", (0, 0, 1.20), torso_r, 0.30, m_top, 10)
+    parts.append((torso, "Chest"))
+
+    # Head + hair
+    head = mesh_sphere("HeadMesh", (0, 0, 1.52), head_r, m_skin, 12)
+    parts.append((head, "Head"))
+    hair = mesh_sphere("HairMesh", (0, -0.01, 1.56), head_r * 1.06, m_hair, 10)
+    hair.scale = (1.05, 1.05, 0.7)
+    bpy.context.view_layer.objects.active = hair
+    bpy.ops.object.transform_apply(scale=True)
+    parts.append((hair, "Head"))
+
+    # Eyes
+    for sx, name in ((-1, "EyeL"), (1, "EyeR")):
+        e = mesh_sphere(name, (sx * 0.035, 0.09, 1.53), 0.014, m_eye, 6)
+        parts.append((e, "Head"))
+
+    # Legs
+    for sx, side in ((-1, "Left"), (1, "Right")):
+        x = sx * 0.11
+        thigh = mesh_cyl(f"Thigh_{side}", (x, 0, 0.70), thigh_r, 0.38, m_bottom, 8)
+        parts.append((thigh, f"{side}UpperLeg"))
+        shin = mesh_cyl(f"Shin_{side}", (x, 0, 0.30), thigh_r * 0.78, 0.36, m_bottom, 8)
+        parts.append((shin, f"{side}LowerLeg"))
+        foot = mesh_cube(
+            f"Foot_{side}",
+            (x, 0.04, 0.05),
+            (0.10, 0.18, 0.08),
             m_boots,
-            root,
+            None,
         )
+        parts.append((foot, f"{side}Foot"))
 
-    # hips
-    add_capsule_approx("Hips", (0, 0, hip_z - 0.02), hip_w * 0.45, 0.12, m_bottom, root, 8)
+    # Arms — attached along upper/lower arm bones
+    for sx, side in ((-1, "Left"), (1, "Right")):
+        # Upper arm midpoint between shoulder and elbow
+        ux = sx * 0.27
+        uz = 1.26
+        upper = mesh_cyl(f"UpperArm_{side}", (ux, 0, uz), arm_r, 0.30, m_skin, 8)
+        # Rotate cylinder to align roughly along bone (down-out)
+        upper.rotation_euler = (0, 0, sx * 0.55)
+        bpy.context.view_layer.objects.active = upper
+        bpy.ops.object.transform_apply(rotation=True)
+        parts.append((upper, f"{side}UpperArm"))
 
-    # short torso
-    torso_z = 1.12
-    add_capsule_approx("Torso", (0, 0, torso_z), torso_r, 0.32, m_top, root, 10)
+        lx = sx * 0.45
+        lz = 1.09
+        lower = mesh_cyl(f"LowerArm_{side}", (lx, 0, lz), arm_r * 0.9, 0.26, m_skin, 8)
+        lower.rotation_euler = (0, 0, sx * 0.7)
+        bpy.context.view_layer.objects.active = lower
+        bpy.ops.object.transform_apply(rotation=True)
+        parts.append((lower, f"{side}LowerArm"))
 
-    # arms
-    arm_z = 1.28
-    for side, sx in (("L", -1), ("R", 1)):
-        x = sx * (shoulder * 0.55)
-        add_capsule_approx(
-            f"Arm_{side}",
-            (x, 0, arm_z - 0.12),
-            0.045,
-            0.38,
-            m_skin,
-            root,
-            8,
-        )
+        hand = mesh_sphere(f"Hand_{side}", (sx * 0.55, 0, 0.98), 0.04, m_skin, 8)
+        parts.append((hand, f"{side}Hand"))
 
-    # head
-    head_z = 1.52
-    add_sphere("Head", (0, 0, head_z), head_r, m_skin, root, 12)
-    # hair cap
-    hair = add_sphere("Hair", (0, -0.01, head_z + 0.04), head_r * 1.05, m_hair, root, 10)
-    # flatten hair bottom a bit via scale
-    hair.scale = (1.0, 1.0, 0.65)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    # Parent each mesh to its bone (keeps attachment under animation)
+    bpy.context.view_layer.update()
+    for ob, bname in parts:
+        # Clear parent first
+        ob.parent = None
+        parent_to_bone(ob, arm_ob, bname)
 
-    # Simple eyes (markers)
-    eye_y = 0.09
-    for side, sx in (("L", -1), ("R", 1)):
-        add_sphere(
-            f"Eye_{side}",
-            (sx * 0.035, eye_y, head_z + 0.01),
-            0.015,
-            mat(f"eye_{side}", (0.15, 0.18, 0.22), 0.3),
-            root,
-            6,
-        )
+    # Select armature + meshes for export
+    bpy.ops.object.select_all(action="DESELECT")
+    arm_ob.select_set(True)
+    for ob, _ in parts:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = arm_ob
 
-    # Select hierarchy and join into one mesh for easy export (optional keep separate)
-    # Join all mesh children for a single GLB mesh with multi materials
-    meshes = [o for o in bpy.data.objects if o.type == "MESH" and o.parent == root]
-    if meshes:
-        bpy.ops.object.select_all(action="DESELECT")
-        for o in meshes:
-            o.select_set(True)
-        bpy.context.view_layer.objects.active = meshes[0]
-        bpy.ops.object.join()
-        body = bpy.context.active_object
-        body.name = f"VesselBody_{kind}"
-        body.parent = root
-        # Origin at feet
-        bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
-        # Move so lowest vertex sits on Z=0
-        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        min_z = min((body.matrix_world @ Vector(v.co)).z for v in body.data.vertices)
-        body.location.z -= min_z
-        bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
-
-    return root
+    return arm_ob
 
 
-def export_glb(filepath):
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    bpy.ops.object.select_all(action="SELECT")
+def export_glb(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.export_scene.gltf(
-        filepath=filepath,
+        filepath=path,
         export_format="GLB",
         use_selection=False,
-        export_apply=True,
+        export_apply=False,
         export_yup=True,
+        export_animations=False,
+        export_skins=True,
+        export_def_bones=False,
     )
-    print("Exported:", filepath)
+    print("Exported", path)
 
 
 def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
     for kind in ("man", "woman"):
-        clear_scene()
         build_vessel(kind)
-        out = os.path.join(OUT_DIR, f"vessel_{kind}.glb")
-        export_glb(out)
-    print("DONE. Outputs in", OUT_DIR)
+        export_glb(os.path.join(OUT_DIR, f"vessel_{kind}.glb"))
+    print("DONE", OUT_DIR)
 
 
 if __name__ == "__main__":
