@@ -209,6 +209,7 @@ export default function PlayerController({
             const accel = grounded.current ? 14 : 6;
             vel.current.lerp(targetVel, 1 - Math.exp(-accel * clampedDt));
 
+            // Face travel direction; model face is +Z (eyes)
             const targetFace = Math.atan2(vel.current.x, vel.current.z);
             let delta = targetFace - facing.current;
             while (delta > Math.PI) delta -= Math.PI * 2;
