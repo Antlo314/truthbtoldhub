@@ -111,7 +111,7 @@ export default function HouseHints({
                 window.setTimeout(() => {
                     show(
                         'station',
-                        'Gold rings mark Hut stations',
+                        'Gold rings mark house rooms',
                         isMobile ? 'Walk onto a ring, then tap Use' : 'Walk close, then press E',
                         4500,
                     );
@@ -155,7 +155,9 @@ export default function HouseHints({
                 show(
                     `remind-${next}`,
                     `Still unexplored: ${STATION_LABELS[next]}`,
-                    'A Hut station waits in the house',
+                    next === 'computer'
+                        ? 'Truth lives only in Truth.OS — boot the monitor'
+                        : 'A house room waits',
                     5000,
                 );
                 return;
@@ -164,7 +166,9 @@ export default function HouseHints({
             show(
                 key,
                 `Still unexplored: ${STATION_LABELS[id]}`,
-                'A Hut station waits in the house',
+                id === 'computer'
+                    ? 'Truth lives only in Truth.OS — boot the monitor'
+                    : 'A house room waits',
                 5000,
             );
         };
@@ -235,7 +239,7 @@ export default function HouseHints({
                     }}
                 >
                     <p className="text-[9px] uppercase tracking-[0.2em] text-white/35 font-mono bg-black/35 px-2 py-1 rounded-full border border-white/8">
-                        Hut · {progress.seen}/{progress.total}
+                        Rooms · {progress.seen}/{progress.total}
                     </p>
                 </div>
             )}

@@ -1,71 +1,54 @@
 'use client';
 
 /**
- * In-house station panels — all content stays on this Truth.OS House build.
- * Chamber embeds the Hut 3D experience; hub sections load as same-origin frames.
+ * House station panels — hub sections only.
+ * Truth is never opened here — only via Truth.OS on the computer.
  */
-import dynamic from 'next/dynamic';
 import { useHouseUi, type HousePanelId } from './houseUiStore';
-import TruthPanel from '@/components/hut3d/hud/TruthPanel';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import { visionStats } from '@/lib/brand/visionProgress';
 import { suggestNextRoad } from '@/lib/brand/nextRoad';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
-const HutExperience = dynamic(() => import('@/components/hut3d/HutExperience'), {
-    ssr: false,
-    loading: () => (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#05060c] text-aether-gold/70 text-sm tracking-[0.3em] uppercase">
-            Kindling the chamber…
-        </div>
-    ),
-});
-
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'chamber' | 'truth' | 'soul' | 'forge'>,
+    Exclude<HousePanelId, 'soul' | 'forge' | 'wayfinder'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
         title: 'Library',
         accent: 'text-violet-300',
         src: '/library',
-        blurb: 'Scrolls and sealed texts — staged inside the house.',
+        blurb: 'Scrolls and sealed texts.',
     },
     codex: {
         title: 'Codex',
         accent: 'text-fuchsia-300',
         src: '/codex',
-        blurb: 'Memory, whispers, and threads you open with Truth.',
+        blurb: 'Memory and whispers.',
     },
     cinema: {
         title: 'Cinema',
         accent: 'text-rose-300',
         src: '/cinema',
-        blurb: 'Transmissions and film. Same sanctum spine, same build.',
+        blurb: 'Transmissions and film.',
     },
     hall: {
         title: 'The Hall',
         accent: 'text-sky-300',
         src: '/archive',
-        blurb: 'Voices gather — community without leaving the house shell.',
+        blurb: 'Voices gather.',
     },
     offering: {
         title: 'The Offering',
         accent: 'text-amber-300',
         src: '/support',
-        blurb: 'Sustain the work that keeps this house online.',
+        blurb: 'Sustain the work.',
     },
     ledger: {
         title: 'The Ledger',
         accent: 'text-amber-200',
         src: '/archive',
-        blurb: 'Daily word and dispatches — hut ledger on the living spine.',
-    },
-    wayfinder: {
-        title: 'Wayfinder',
-        accent: 'text-emerald-300',
-        src: '/vision/eden',
-        blurb: 'Eden is the open road. Other ages stay sealed until the garden is complete.',
+        blurb: 'Daily word and dispatches.',
     },
 };
 
@@ -100,7 +83,7 @@ function Shell({
             >
                 <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-black/50">
                     <div>
-                        <p className={`text-[10px] uppercase tracking-[0.3em] font-mono ${accent}`}>House station</p>
+                        <p className={`text-[10px] uppercase tracking-[0.3em] font-mono ${accent}`}>House</p>
                         <h2 className="text-white font-semibold text-lg leading-tight">{title}</h2>
                     </div>
                     <button
@@ -148,8 +131,7 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
         <Shell title="Wayfinder" accent="text-emerald-300" onClose={onClose}>
             <div className="p-5 space-y-4 overflow-y-auto h-full">
                 <p className="text-sm text-white/70 leading-relaxed">
-                    Only Eden is open while the garden is completed. Other ages remain sealed. Everything
-                    routes through this house — no legacy chamber jump.
+                    Only Eden is open while the garden is completed. Other ages remain sealed.
                 </p>
                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-2">
                     <p className="text-emerald-300 font-medium">Eden · first road</p>
@@ -168,17 +150,7 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                     }}
                     className="w-full py-3 rounded-xl border border-emerald-400/35 text-emerald-100 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
                 >
-                    Eden vision · in-house
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        sacredUi.click();
-                        openPanel('chamber');
-                    }}
-                    className="w-full py-3 rounded-xl border border-violet-400/35 text-violet-100 text-sm uppercase tracking-[0.18em] hover:bg-violet-500/10"
-                >
-                    Enter 3D Chamber (Hut)
+                    Eden vision · cinema
                 </button>
             </div>
         </Shell>
@@ -205,22 +177,6 @@ function ForgePanel({ onClose }: { onClose: () => void }) {
     );
 }
 
-function ChamberPanel({ onClose }: { onClose: () => void }) {
-    return (
-        <div className="fixed inset-0 z-[55] bg-black">
-            <button
-                type="button"
-                onClick={onClose}
-                className="absolute top-3 left-3 z-[60] px-3 py-2 rounded-xl border border-white/20 bg-black/70 text-[10px] uppercase tracking-widest text-white/80 hover:text-white backdrop-blur-md"
-                style={{ marginTop: 'env(safe-area-inset-top)' }}
-            >
-                ← Return to house
-            </button>
-            <HutExperience />
-        </div>
-    );
-}
-
 export default function HousePanels() {
     const panel = useHouseUi((s) => s.panel);
     const closePanel = useHouseUi((s) => s.closePanel);
@@ -232,14 +188,6 @@ export default function HousePanels() {
         closePanel();
     };
 
-    if (panel === 'chamber') return <ChamberPanel onClose={onClose} />;
-    if (panel === 'truth') {
-        return (
-            <Shell title="Ask Truth" accent="text-orange-300" onClose={onClose}>
-                <TruthPanel onClose={onClose} />
-            </Shell>
-        );
-    }
     if (panel === 'soul') return <SoulNative onClose={onClose} />;
     if (panel === 'forge') return <ForgePanel onClose={onClose} />;
     if (panel === 'wayfinder') return <WayfinderNative onClose={onClose} />;
@@ -248,4 +196,3 @@ export default function HousePanels() {
     }
     return null;
 }
-

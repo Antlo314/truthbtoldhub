@@ -2,13 +2,11 @@
 
 import { create } from 'zustand';
 
-/** In-house stations — Hut features staged as house rooms */
+/** House panels only — Truth is never here; Truth is only in Truth.OS */
 export type HousePanelId =
-    | 'truth'
     | 'soul'
     | 'wayfinder'
     | 'ledger'
-    | 'chamber'
     | 'library'
     | 'codex'
     | 'cinema'
@@ -26,7 +24,7 @@ type HouseUiState = {
     nextWalkthrough: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v2';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v3';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -61,38 +59,30 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     },
 }));
 
-/**
- * New-member tour — maps classic Hut stations into the house layout.
- */
 export const WALKTHROUGH_STEPS = [
     {
         title: 'Welcome to the House',
-        body: 'This is Truth.OS House — the Hut, rebuilt as a home you walk. Every station from the old sanctum lives in a room here.',
+        body: 'This is Truth.OS House — a walkable home. Rooms open hub sections. There is no separate Hut.',
         tip: 'Continue when you’re ready',
     },
     {
         title: 'How to move',
-        body: 'Desktop: WASD or arrows. Mobile: hold the left half of the screen and slide. Drag the right side to look around.',
-        tip: 'You’re free to explore anytime',
+        body: 'Desktop: WASD or arrows · click to look. Mobile: left stick · right drag look.',
+        tip: 'Explore at your pace',
     },
     {
-        title: 'Hut stations = gold rings',
-        body: 'Truth (dais), Soul Mirror, Wayfinder, Ledger, and the Sanctum door are the core Hut. Library, Hall, Cinema, and Offering expand the house.',
+        title: 'Gold rings',
+        body: 'Gold rings mark interactables: library, cinema, hall, offering, mirror, and more.',
         tip: 'Walk onto a ring · E or Use',
     },
     {
-        title: 'Truth.OS computer',
-        body: 'The bedroom monitor boots Truth.OS — apps for every station without leaving this build.',
-        tip: 'Green screen in the bedroom',
-    },
-    {
-        title: 'Who you will see',
-        body: 'Only LIVE players who are in the house with you right now appear as people. Truth is a totem on the dais — not a person, not a bot.',
-        tip: 'If no one else is online, you walk alone',
+        title: 'Truth lives in Truth.OS',
+        body: 'All Truth threads, lore, and Ask Truth content open only inside Truth.OS — boot the green computer in the bedroom. Nowhere else.',
+        tip: 'Bedroom · glowing monitor',
     },
     {
         title: 'You’re home',
-        body: 'Explore at your pace. A quiet Hut counter tracks stations you’ve opened. Replay this tour with ? anytime.',
+        body: 'Only LIVE players share the space with you. Replay this tour with Tour anytime.',
         tip: 'Enter the house',
     },
 ] as const;

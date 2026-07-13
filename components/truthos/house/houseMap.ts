@@ -1,18 +1,16 @@
 /**
- * House layout + solid colliders.
- * Spawn is on open floor — never inside furniture.
+ * House layout — hub rooms only.
+ * Truth lives exclusively in Truth.OS (computer). No Hut / no Speak-with-Truth in world.
  */
 
 import type { HousePanelId } from './houseUiStore';
 
 export type HotspotId =
     | 'computer'
-    | 'truth'
     | 'envelope'
     | 'library'
     | 'codex'
     | 'ledger'
-    | 'chamber'
     | 'cinema'
     | 'hall'
     | 'soul_mirror'
@@ -34,7 +32,7 @@ export const HOUSE_BOUNDS = {
     maxZ: 8.15,
 };
 
-/** Open bedroom floor, clear of bed/desk — facing into the house */
+/** Open bedroom floor — facing house center */
 export const SPAWN: [number, number, number] = [0, 1.62, 4.0];
 
 export const HOTSPOTS: Hotspot[] = [
@@ -45,14 +43,6 @@ export const HOTSPOTS: Hotspot[] = [
         position: [3.2, 1.0, 4.2],
         radius: 1.55,
         action: { type: 'os' },
-    },
-    {
-        id: 'truth',
-        label: 'Truth',
-        hint: 'Speak with Truth',
-        position: [0.2, 1.0, -0.2],
-        radius: 1.7,
-        action: { type: 'panel', panel: 'truth' },
     },
     {
         id: 'envelope',
@@ -85,14 +75,6 @@ export const HOTSPOTS: Hotspot[] = [
         position: [-4.2, 1.0, 1.2],
         radius: 1.4,
         action: { type: 'panel', panel: 'ledger' },
-    },
-    {
-        id: 'chamber',
-        label: 'Sanctum',
-        hint: '3D Chamber · Hut',
-        position: [0, 1.2, -7.0],
-        radius: 1.8,
-        action: { type: 'panel', panel: 'chamber' },
     },
     {
         id: 'wayfinder',
@@ -130,64 +112,35 @@ export const HOTSPOTS: Hotspot[] = [
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
-/** Half-extents in XZ — solid objects only (player radius applied separately) */
 export const COLLIDERS: Collider[] = [
-    // Outer walls
     { x: 0, z: -8.5, hx: 9.2, hz: 0.22 },
     { x: 0, z: 8.5, hx: 9.2, hz: 0.22 },
     { x: -8.5, z: 0, hx: 0.22, hz: 9.2 },
     { x: 8.5, z: 0, hx: 0.22, hz: 9.2 },
 
-    // Bedroom / living split — doorway gap |x| < 1.05
     { x: -2.9, z: 2.5, hx: 1.7, hz: 0.14 },
     { x: 2.9, z: 2.5, hx: 1.7, hz: 0.14 },
 
-    // Room dividers
     { x: -3.2, z: -3.0, hx: 0.14, hz: 2.1 },
     { x: 3.2, z: -3.0, hx: 0.14, hz: 2.1 },
 
-    // Bed (tighter — must not cover spawn at z=4)
     { x: -0.5, z: 6.35, hx: 1.15, hz: 0.75 },
-    // Desk + computer
     { x: 3.2, z: 4.55, hx: 0.85, hz: 0.38 },
-    // Mirror
     { x: 2.85, z: 6.85, hx: 0.16, hz: 0.38 },
-    // Vessel near mirror
-    { x: 2.35, z: 6.4, hx: 0.32, hz: 0.32 },
 
-    // Coffee table
     { x: -1.5, z: -1.0, hx: 0.65, hz: 0.38 },
-    // Sofa
     { x: 1.5, z: -2.25, hx: 1.25, hz: 0.5 },
 
-    // Truth dais
-    { x: 0.2, z: -0.2, hx: 0.65, hz: 0.65 },
-
-    // Ledger
     { x: -4.2, z: 1.2, hx: 0.38, hz: 0.38 },
-
-    // Library shelves
     { x: -7.15, z: -5.5, hx: 0.38, hz: 1.85 },
-
-    // Study
     { x: 5.5, z: -4.2, hx: 0.75, hz: 0.42 },
     { x: 6.5, z: -5.5, hx: 0.32, hz: 1.0 },
-
-    // Cinema
     { x: 6.55, z: 1.5, hx: 0.18, hz: 1.15 },
-
-    // Hall pillars
     { x: -6.0, z: 1.5, hx: 0.24, hz: 0.18 },
     { x: -5.0, z: 1.5, hx: 0.24, hz: 0.18 },
-
-    // Sanctum frame
     { x: -1.3, z: -7.75, hx: 0.28, hz: 0.3 },
     { x: 1.3, z: -7.75, hx: 0.28, hz: 0.3 },
-
-    // Wayfinder
     { x: 0, z: -5.45, hx: 0.75, hz: 0.14 },
-
-    // Hearth
     { x: -6.8, z: 3.2, hx: 0.68, hz: 0.42 },
 ];
 
@@ -202,7 +155,6 @@ function overlaps(x: number, z: number, c: Collider, r: number): boolean {
     );
 }
 
-/** Push the player out of any overlapping solid (unstick). */
 export function resolveStuck(x: number, z: number, radius = PLAYER_R): { x: number; z: number } {
     let px = x;
     let pz = z;
@@ -232,10 +184,6 @@ export function resolveStuck(x: number, z: number, radius = PLAYER_R): { x: numb
     return { x: px, z: pz };
 }
 
-/**
- * Axis-separated move with wall sliding.
- * Always unsticks first so a bad spawn can never freeze the player.
- */
 export function collideMove(
     x: number,
     z: number,
@@ -247,17 +195,14 @@ export function collideMove(
     let nx = free.x + dx;
     let nz = free.z;
 
-    // X axis
     for (const c of COLLIDERS) {
         if (overlaps(nx, nz, c, radius)) nx = free.x;
     }
-    // Z axis
     nz = free.z + dz;
     for (const c of COLLIDERS) {
         if (overlaps(nx, nz, c, radius)) nz = free.z;
     }
 
-    // Corner catch — if still overlapping, slide on whichever axis is free
     if (COLLIDERS.some((c) => overlaps(nx, nz, c, radius))) {
         const tryX = free.x + dx;
         const tryZ = free.z + dz;

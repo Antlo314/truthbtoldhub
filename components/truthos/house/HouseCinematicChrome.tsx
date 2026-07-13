@@ -123,7 +123,7 @@ export default function HouseCinematicChrome({
                 </p>
                 {hut.seen < hut.total && (
                     <p className="text-[10px] text-white/35 font-mono tracking-wider">
-                        Hut stations {hut.seen}/{hut.total}
+                        Rooms {hut.seen}/{hut.total}
                     </p>
                 )}
             </div>

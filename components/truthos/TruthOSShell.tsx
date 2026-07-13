@@ -13,7 +13,6 @@ const DOCK: { app: OsAppId; label: string; glyph: string }[] = [
     { app: 'truth', label: 'Truth', glyph: '::' },
     { app: 'soul', label: 'Vessel', glyph: '◎' },
     { app: 'wayfinder', label: 'Roads', glyph: '◈' },
-    { app: 'chamber', label: 'Chamber', glyph: '⬡' },
     { app: 'hall', label: 'Hall', glyph: '◎' },
     { app: 'codex', label: 'Codex', glyph: '§' },
     { app: 'cinema', label: 'Cinema', glyph: '▶' },

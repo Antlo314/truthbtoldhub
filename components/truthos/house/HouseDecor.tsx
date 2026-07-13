@@ -1,23 +1,20 @@
 'use client';
 
 /**
- * House staging: Truth totem (not a person), stations, hearth.
- * No fake NPCs / no mirror vessel body.
+ * House props — no Truth figure, no Hut totem, no chamber portal.
+ * Truth content is only inside Truth.OS.
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TruthTotem } from '@/components/hut3d/TruthTotem';
 import { HOTSPOTS } from './houseMap';
 
 const ACCENT: Record<string, string> = {
     computer: '#22c55e',
-    truth: '#f97316',
     envelope: '#fbbf24',
     library: '#a78bfa',
     codex: '#e879f9',
     ledger: '#fbbf24',
-    chamber: '#7c5cff',
     wayfinder: '#22c55e',
     cinema: '#c084fc',
     hall: '#38bdf8',
@@ -52,29 +49,6 @@ function SpinRing({
     );
 }
 
-function TruthDais({ low }: { low?: boolean }) {
-    return (
-        <group position={[0.2, 0, -0.2]}>
-            <mesh position={[0, 0.1, 0]} receiveShadow={!low}>
-                <cylinderGeometry args={[0.85, 0.95, 0.2, low ? 12 : 24]} />
-                <meshStandardMaterial color="#2c2118" roughness={0.9} />
-            </mesh>
-            <mesh position={[0, 0.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.7, 0.85, low ? 16 : 32]} />
-                <meshStandardMaterial
-                    color="#fbbf24"
-                    emissive="#fbbf24"
-                    emissiveIntensity={0.4}
-                    side={THREE.DoubleSide}
-                />
-            </mesh>
-            {/* Totem — never a person */}
-            <TruthTotem position={[0, 0.22, 0]} low={low} scale={0.95} />
-        </group>
-    );
-}
-
-/** Soul mirror — glass only, no second body */
 function SoulMirrorOnly({ low }: { low?: boolean }) {
     return (
         <group position={[2.75, 0, 6.8]}>
@@ -165,10 +139,26 @@ function HearthWest({ low }: { low?: boolean }) {
     );
 }
 
+/** Living room center — simple table accent, no Truth dais */
+function LivingCenter() {
+    return (
+        <group position={[0.2, 0, -0.2]}>
+            <mesh position={[0, 0.35, 0]}>
+                <cylinderGeometry args={[0.55, 0.6, 0.7, 16]} />
+                <meshStandardMaterial color="#2c241c" roughness={0.88} />
+            </mesh>
+            <mesh position={[0, 0.72, 0]}>
+                <cylinderGeometry args={[0.62, 0.62, 0.06, 16]} />
+                <meshStandardMaterial color="#3d2e22" roughness={0.85} />
+            </mesh>
+        </group>
+    );
+}
+
 export default function HouseDecor({ low = false }: { low?: boolean }) {
     return (
         <group>
-            <TruthDais low={low} />
+            <LivingCenter />
             <SoulMirrorOnly low={low} />
             <LedgerPedestal />
             <WayfinderMap />

@@ -1,23 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useGameStore } from '@/lib/store/useGameStore';
-import { truthDepth, truthTrustLabel, TRUTH_QUESTIONS } from '@/lib/game/truthLore';
-import { useHouseUi } from './houseUiStore';
-
 /**
- * Truth as a small guide widget — never takes over the experience.
+ * Small house tip widget — never opens Truth lore.
+ * Points players to the computer for Truth.OS only.
  */
+import { useState } from 'react';
+
 export default function TruthGuideWidget({
     placement = 'desktop',
 }: {
     placement?: 'desktop' | 'mobile';
 }) {
     const [open, setOpen] = useState(false);
-    const character = useGameStore((s) => s.character);
-    const depth = truthDepth(character);
-    const trust = truthTrustLabel(character);
-    const openPanel = useHouseUi((s) => s.openPanel);
 
     const wrapClass =
         placement === 'mobile'
@@ -34,29 +28,17 @@ export default function TruthGuideWidget({
                     ].join(' ')}
                 >
                     <div className="px-3 py-2 border-b border-emerald-500/20 flex justify-between items-center">
-                        <span className="text-emerald-400/90 tracking-widest">TRUTH.GUIDE</span>
+                        <span className="text-emerald-400/90 tracking-widest">HOUSE.TIP</span>
                         <button type="button" className="text-white/40 hover:text-white" onClick={() => setOpen(false)}>
                             ×
                         </button>
                     </div>
                     <div className="p-3 space-y-2 text-emerald-400/85 leading-relaxed">
-                        <p>I am a guide process — not the whole system.</p>
+                        <p>Walk the house. Gold rings open hub rooms.</p>
                         <p className="text-emerald-600">
-                            Walk the house. Gold rings open stations in-house: Truth, library, chamber, hall…
+                            All Truth content lives only in <span className="text-emerald-300">Truth.OS</span> —
+                            boot the green computer in the bedroom.
                         </p>
-                        <p className="text-[10px] text-emerald-700">
-                            {trust} · threads {depth}/{TRUTH_QUESTIONS.length}
-                        </p>
-                        <button
-                            type="button"
-                            className="w-full mt-1 py-2 rounded-lg border border-emerald-500/30 text-emerald-300 uppercase tracking-wider text-[10px] hover:bg-emerald-500/10"
-                            onClick={() => {
-                                setOpen(false);
-                                openPanel('truth');
-                            }}
-                        >
-                            Open Ask Truth
-                        </button>
                     </div>
                 </div>
             )}
@@ -64,9 +46,9 @@ export default function TruthGuideWidget({
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className="w-12 h-12 rounded-full border border-emerald-500/40 bg-black/80 text-emerald-400 font-mono text-xs shadow-lg hover:bg-emerald-500/10 hover:border-emerald-400/60"
-                title="Truth guide"
+                title="House tip"
             >
-                ::
+                ?
             </button>
         </div>
     );

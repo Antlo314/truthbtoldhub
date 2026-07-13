@@ -126,31 +126,6 @@ export function WayfinderApp() {
             <PrimaryBtn onClick={() => openHouse('cinema')} tone="emerald">
                 Eden vision · cinema
             </PrimaryBtn>
-            <PrimaryBtn onClick={() => openHouse('chamber')} tone="violet">
-                Enter 3D chamber
-            </PrimaryBtn>
-        </Panel>
-    );
-}
-
-export function ChamberApp() {
-    return (
-        <Panel className="bg-zinc-950 flex flex-col gap-4">
-            <AppHeader title="Chamber.exe" sub="Truth’s Hut · walkable sanctum" accent="text-violet-400/80" />
-            <div className="rounded-2xl border border-violet-400/25 bg-violet-500/5 p-4 space-y-2">
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                    Full hut runtime on this build: stations, Truth, vessel, free look. Exit returns you to the
-                    first-person house — no legacy shell.
-                </p>
-                <ul className="text-xs text-zinc-500 space-y-1.5 pt-1">
-                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Ask Truth on the dais</li>
-                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Soul mirror · forge appearance</li>
-                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Wayfinder & ledger stations</li>
-                </ul>
-            </div>
-            <PrimaryBtn onClick={() => openHouse('chamber')} tone="violet">
-                Enter chamber →
-            </PrimaryBtn>
         </Panel>
     );
 }
@@ -251,17 +226,26 @@ export function renderOsApp(
         case 'wayfinder':
             return <WayfinderApp />;
         case 'chamber':
-            return <ChamberApp />;
+            // Hut removed — point to home
+            return (
+                <Panel className="bg-zinc-950 space-y-3">
+                    <AppHeader title="Home" sub="Truth.OS House" accent="text-zinc-400" />
+                    <p className="text-sm text-zinc-400 leading-relaxed">
+                        The separate Hut chamber is retired. Walk the house rooms, or open Truth.sys for all Truth
+                        content.
+                    </p>
+                </Panel>
+            );
         case 'ledger':
             return (
                 <StationApp
                     title="Ledger.exe"
                     sub="Daily word & dispatches"
-                    body="The hut ledger lives on the house spine — same build, no detour."
+                    body="Ledger opens on the house spine."
                     panel="ledger"
                     accent="text-amber-400/80"
                     tone="amber"
-                    bullets={['Community word', 'Sanctum dispatches', 'Keep the fire lit']}
+                    bullets={['Community word', 'Dispatches', 'Keep the fire lit']}
                 />
             );
         case 'hall':

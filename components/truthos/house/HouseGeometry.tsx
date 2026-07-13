@@ -192,16 +192,12 @@ export default function HouseGeometry({
                 <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.3} />
             </mesh>
 
-            {/* ── SANCTUM DOOR ── */}
-            <Box pos={[-1.3, 1.3, -7.8]} size={[0.35, 2.6, 0.35]} color="#1a1230" shadows={sh} />
-            <Box pos={[1.3, 1.3, -7.8]} size={[0.35, 2.6, 0.35]} color="#1a1230" shadows={sh} />
-            <mesh position={[0, 1.4, -7.65]}>
-                <planeGeometry args={[1.8, 2.4]} />
-                <meshStandardMaterial color="#2e1065" emissive="#7c5cff" emissiveIntensity={0.5} toneMapped={false} />
-            </mesh>
-            <mesh position={[0, 2.7, -7.5]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.3, 0.45, low ? 12 : 24]} />
-                <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.4} side={2} />
+            {/* North wall art — decorative only (no Hut / no chamber entry) */}
+            <Box pos={[-1.3, 1.3, -8.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
+            <Box pos={[1.3, 1.3, -8.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
+            <mesh position={[0, 1.6, -8.32]}>
+                <planeGeometry args={[2.2, 1.4]} />
+                <meshStandardMaterial color="#1a1528" emissive="#312e81" emissiveIntensity={0.25} />
             </mesh>
 
             {/* Interior partial walls */}
