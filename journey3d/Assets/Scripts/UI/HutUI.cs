@@ -19,7 +19,9 @@ namespace Journey3D
         private RectTransform _panelFrame;  // the card itself (wide or side layout)
         private RectTransform _panelBody;   // content area rebuilt per station
         private Text _panelTitle;
+        private Text _panelEyebrow;
         private Image _panelTitleBar;
+        private Image _panelAccentBar;
         private Button _closeBtn;
         private GameObject _arcadeGameHost; // live mini-game overlay
         private bool _creatorLock;          // first-run: cannot close until the soul is made
@@ -59,22 +61,23 @@ namespace Journey3D
 
         private void OpenHutWelcome()
         {
-            var body = FreshBody("Welcome to Truth's Hut", UIKit.Gold);
-            var list = UIKit.ScrollList(body);
-            BodyText(list,
-                "You stand in the chamber of return. Gold rings mark living stations. " +
-                "Walk the aisle to Truth. Touch the Ledger, Archive, Forge, Offering, Arcade, and Wayfinder. " +
-                "The Sanctum door opens the living Hall on the Hub.", 140, UIKit.Body);
+            var list = OpenShell("Orientation", "Welcome to Truth's Hut", UIKit.Gold);
+            UIKit.HeroCard(list, "Chamber of return",
+                "Gold rings mark living stations. Walk the aisle to Truth. The Sanctum door opens the living Hall.",
+                UIKit.Gold);
             Header(list, "How to move");
-            BodyText(list, "WASD or left stick to walk. Right-drag or right stick to look. E to interact. Esc to close panels.", 64, UIKit.Faint);
-            Header(list, "The path");
-            BodyText(list, "1. Speak with Truth  ·  2. Check the Ledger  ·  3. Sanctum door for community  ·  4. Wayfinder for vision portals", 80, UIKit.Body);
-            RowButton(list, "Begin", UIKit.Gold, () =>
+            UIKit.ListRow(list, "Walk & look", "WASD or left stick · right-drag / right stick look", UIKit.Faint, null, "◎", "", 64, true);
+            UIKit.ListRow(list, "Interact", "E to open a station · Esc to close panels", UIKit.Faint, null, "◎", "", 64, true);
+            Header(list, "First path");
+            UIKit.ListRow(list, "1 · Speak with Truth", "North dais — ask what only he will answer", UIKit.Amber, null, "1", "", 64, true);
+            UIKit.ListRow(list, "2 · Ledger & Hall", "Word of the day, then community beyond the door", UIKit.Amber, null, "2", "", 64, true);
+            UIKit.ListRow(list, "3 · Wayfinder", "Vision portals for the roads beyond the hut", UIKit.Amber, null, "3", "", 64, true);
+            PrimaryCta(list, "Begin the walk →", UIKit.Gold, () =>
             {
                 PlayerPrefs.SetInt("tbth_hut_welcome_v2", 1);
                 PlayerPrefs.Save();
                 ClosePanel();
-            }, 56);
+            });
         }
 
         private void Update()
@@ -94,38 +97,59 @@ namespace Journey3D
             var hud = UIKit.Panel(_canvas.transform, "hud", Color.clear);
             UIKit.Fill(hud);
 
-            _prompt = UIKit.Label(hud, "", 26, UIKit.Amber, TextAnchor.MiddleCenter, FontStyle.Bold);
-            var prt = _prompt.rectTransform;
-            prt.anchorMin = new Vector2(0.5f, 0f);
-            prt.anchorMax = new Vector2(0.5f, 0f);
-            prt.pivot = new Vector2(0.5f, 0f);
-            prt.anchoredPosition = new Vector2(0, 70);
-            prt.sizeDelta = new Vector2(900, 44);
+            // Bottom interact prompt — pill
+            var promptPill = UIKit.Panel(hud, "prompt_pill", new Color(0.04f, 0.03f, 0.02f, 0.82f));
+            promptPill.anchorMin = new Vector2(0.5f, 0f);
+            promptPill.anchorMax = new Vector2(0.5f, 0f);
+            promptPill.pivot = new Vector2(0.5f, 0f);
+            promptPill.anchoredPosition = new Vector2(0, 56);
+            promptPill.sizeDelta = new Vector2(420, 48);
+            var pout = promptPill.gameObject.AddComponent<Outline>();
+            pout.effectColor = new Color(0.98f, 0.75f, 0.22f, 0.35f);
+            pout.effectDistance = new Vector2(1, -1);
+            _prompt = UIKit.Label(promptPill, "", 16, UIKit.Amber, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Fill(_prompt.rectTransform, 8);
+            promptPill.gameObject.SetActive(false);
+            _promptPill = promptPill;
 
-            var topBar = UIKit.Panel(hud, "topbar", new Color(0.04f, 0.03f, 0.02f, 0.62f));
+            // Top soul status — glass bar
+            var topBar = UIKit.Panel(hud, "topbar", new Color(0.05f, 0.04f, 0.03f, 0.78f));
             topBar.anchorMin = new Vector2(0, 1);
             topBar.anchorMax = new Vector2(0, 1);
             topBar.pivot = new Vector2(0, 1);
-            topBar.anchoredPosition = new Vector2(16, -12);
-            topBar.sizeDelta = new Vector2(680, 44);
-            _soulLine = UIKit.Label(topBar, "", 17, UIKit.Amber, TextAnchor.MiddleLeft);
-            UIKit.Fill(_soulLine.rectTransform, 12);
+            topBar.anchoredPosition = new Vector2(16, -14);
+            topBar.sizeDelta = new Vector2(520, 42);
+            var tout = topBar.gameObject.AddComponent<Outline>();
+            tout.effectColor = new Color(1f, 1f, 1f, 0.08f);
+            tout.effectDistance = new Vector2(1, -1);
+            _soulLine = UIKit.Label(topBar, "", 14, UIKit.Amber, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Fill(_soulLine.rectTransform, 14);
 
-            var help = UIKit.Label(hud, "WASD walk  ·  Right-drag look  ·  E interact  ·  Esc close", 14, UIKit.Faint, TextAnchor.MiddleRight);
+            var help = UIKit.Label(hud, "WASD  ·  look  ·  E  ·  Esc", 12, UIKit.Muted, TextAnchor.MiddleRight);
             var hrt = help.rectTransform;
             hrt.anchorMin = new Vector2(1, 0);
             hrt.anchorMax = new Vector2(1, 0);
             hrt.pivot = new Vector2(1, 0);
             hrt.anchoredPosition = new Vector2(-18, 14);
-            hrt.sizeDelta = new Vector2(600, 24);
+            hrt.sizeDelta = new Vector2(320, 22);
         }
+
+        private RectTransform _promptPill;
 
         public void SetPrompt(Station s)
         {
-            if (_prompt == null) return;
-            if (s == null) { _prompt.text = ""; return; }
-            _prompt.text = $"[E]  {s.label}";
+            if (_prompt == null || _promptPill == null) return;
+            if (s == null)
+            {
+                _promptPill.gameObject.SetActive(false);
+                _prompt.text = "";
+                return;
+            }
+            _promptPill.gameObject.SetActive(true);
+            _prompt.text = $"E   ·   {s.label}";
             _prompt.color = s.accent;
+            var outl = _promptPill.GetComponent<Outline>();
+            if (outl != null) outl.effectColor = UIKit.WithA(s.accent, 0.45f);
         }
 
         // =====================================================
@@ -135,40 +159,60 @@ namespace Journey3D
 
         private void BuildPanelFrame()
         {
-            _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", new Color(0, 0, 0, 0.72f));
+            _panelRoot = UIKit.Panel(_canvas.transform, "panelRoot", UIKit.Dim);
             _dimImage = _panelRoot.GetComponent<Image>();
             UIKit.Fill(_panelRoot);
 
-            // Centered sacred card · wide on desktop, full with margins on phone
             var frame = UIKit.Panel(_panelRoot, "frame", UIKit.PanelBg);
             _panelFrame = frame;
             SetFrameWide();
             var outline = frame.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.98f, 0.75f, 0.22f, 0.55f);
+            outline.effectColor = new Color(0.98f, 0.75f, 0.22f, 0.4f);
             outline.effectDistance = new Vector2(1.5f, -1.5f);
 
-            // top gold hairline
-            var hair = UIKit.Panel(frame, "hair", new Color(0.98f, 0.75f, 0.22f, 0.85f));
-            hair.anchorMin = new Vector2(0, 1);
-            hair.anchorMax = new Vector2(1, 1);
-            hair.pivot = new Vector2(0.5f, 1);
-            hair.sizeDelta = new Vector2(0, 3);
+            // left accent strip (recolored per station)
+            var accentStrip = UIKit.Panel(frame, "accent_strip", UIKit.Gold);
+            accentStrip.anchorMin = new Vector2(0, 0);
+            accentStrip.anchorMax = new Vector2(0, 1);
+            accentStrip.pivot = new Vector2(0, 0.5f);
+            accentStrip.anchoredPosition = Vector2.zero;
+            accentStrip.sizeDelta = new Vector2(4, 0);
+            _panelAccentBar = accentStrip.GetComponent<Image>();
 
-            var titleBar = UIKit.Panel(frame, "titlebar", new Color(0.09f, 0.07f, 0.04f, 1f));
+            // header block
+            var titleBar = UIKit.Panel(frame, "titlebar", new Color(0.07f, 0.055f, 0.035f, 1f));
             titleBar.anchorMin = new Vector2(0, 1);
             titleBar.anchorMax = new Vector2(1, 1);
             titleBar.pivot = new Vector2(0.5f, 1);
-            titleBar.anchoredPosition = new Vector2(0, -3);
-            titleBar.sizeDelta = new Vector2(0, 72);
+            titleBar.anchoredPosition = Vector2.zero;
+            titleBar.sizeDelta = new Vector2(0, 86);
             _panelTitleBar = titleBar.GetComponent<Image>();
-            _panelTitle = UIKit.Label(titleBar, "", 24, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            var trt = _panelTitle.rectTransform;
-            trt.anchorMin = new Vector2(0, 0);
-            trt.anchorMax = new Vector2(1, 1);
-            trt.offsetMin = new Vector2(22, 8);
-            trt.offsetMax = new Vector2(-64, -8);
 
-            _closeBtn = UIKit.TextButton(titleBar, "?", UIKit.Gold, ClosePanel, 20);
+            _panelEyebrow = UIKit.Label(titleBar, "", 11, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Bold);
+            var ert = _panelEyebrow.rectTransform;
+            ert.anchorMin = new Vector2(0, 1);
+            ert.anchorMax = new Vector2(1, 1);
+            ert.pivot = new Vector2(0, 1);
+            ert.anchoredPosition = new Vector2(22, -14);
+            ert.sizeDelta = new Vector2(-90, 18);
+
+            _panelTitle = UIKit.Label(titleBar, "", 26, UIKit.Gold, TextAnchor.UpperLeft, FontStyle.Bold);
+            var trt = _panelTitle.rectTransform;
+            trt.anchorMin = new Vector2(0, 1);
+            trt.anchorMax = new Vector2(1, 1);
+            trt.pivot = new Vector2(0, 1);
+            trt.anchoredPosition = new Vector2(22, -34);
+            trt.sizeDelta = new Vector2(-90, 40);
+
+            // hairline under header
+            var hair = UIKit.Panel(frame, "hair", UIKit.Rule);
+            hair.anchorMin = new Vector2(0, 1);
+            hair.anchorMax = new Vector2(1, 1);
+            hair.pivot = new Vector2(0.5f, 1);
+            hair.anchoredPosition = new Vector2(0, -86);
+            hair.sizeDelta = new Vector2(0, 1);
+
+            _closeBtn = UIKit.GhostButton(titleBar, "✕", UIKit.Gold, ClosePanel);
             var crt = _closeBtn.GetComponent<RectTransform>();
             crt.anchorMin = new Vector2(1, 0.5f);
             crt.anchorMax = new Vector2(1, 0.5f);
@@ -179,40 +223,43 @@ namespace Journey3D
             _panelBody = UIKit.Panel(frame, "body", Color.clear);
             _panelBody.anchorMin = Vector2.zero;
             _panelBody.anchorMax = Vector2.one;
-            _panelBody.offsetMin = new Vector2(16, 16);
-            _panelBody.offsetMax = new Vector2(-16, -84);
+            _panelBody.offsetMin = new Vector2(8, 12);
+            _panelBody.offsetMax = new Vector2(-8, -94);
 
             _panelRoot.gameObject.SetActive(false);
         }
 
         private void SetFrameWide()
         {
-            // letterboxed card · never edge-to-edge chaos
             _panelFrame.anchorMin = new Vector2(0.5f, 0.5f);
             _panelFrame.anchorMax = new Vector2(0.5f, 0.5f);
             _panelFrame.pivot = new Vector2(0.5f, 0.5f);
-            _panelFrame.sizeDelta = new Vector2(720, 780);
-            // clamp via anchors on small screens
-            float w = Mathf.Min(720f, Screen.width * 0.94f);
-            float h = Mathf.Min(780f, Screen.height * 0.88f);
+            float w = Mathf.Min(760f, Screen.width * 0.94f);
+            float h = Mathf.Min(820f, Screen.height * 0.9f);
             _panelFrame.sizeDelta = new Vector2(w, h);
             _panelFrame.anchoredPosition = Vector2.zero;
         }
 
         private void SetFrameSide()
         {
-            // creator: side card so the live avatar stays visible
-            SetFrameWide();
+            // Creator: dock right so avatar stays in view
+            _panelFrame.anchorMin = new Vector2(1f, 0.5f);
+            _panelFrame.anchorMax = new Vector2(1f, 0.5f);
+            _panelFrame.pivot = new Vector2(1f, 0.5f);
+            float w = Mathf.Min(520f, Screen.width * 0.48f);
+            float h = Mathf.Min(820f, Screen.height * 0.9f);
+            _panelFrame.sizeDelta = new Vector2(Mathf.Max(360f, w), h);
+            _panelFrame.anchoredPosition = new Vector2(-16f, 0);
         }
 
         public void ClosePanel()
         {
-            if (_creatorLock) return;   // first-run soul creation must be completed
+            if (_creatorLock) return;
             if (_arcadeGameHost != null) Destroy(_arcadeGameHost);
             _arcadeGameHost = null;
             _panelRoot.gameObject.SetActive(false);
             if (cameraRig != null) cameraRig.portraitMode = false;
-            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.72f);
+            if (_dimImage != null) _dimImage.color = UIKit.Dim;
             SetFrameWide();
             LockInput(false);
         }
@@ -223,14 +270,49 @@ namespace Journey3D
             if (cameraRig != null) cameraRig.inputLocked = locked;
         }
 
+        /// Clears body, themes chrome, shows panel. Returns raw body for custom layouts (creator).
         private RectTransform FreshBody(string title, Color accent)
         {
+            return PrepareShell("Station", title, accent);
+        }
+
+        private RectTransform PrepareShell(string eyebrow, string title, Color accent)
+        {
             foreach (Transform child in _panelBody) Destroy(child.gameObject);
-            _panelTitle.text = title;
+            if (_panelEyebrow != null)
+            {
+                _panelEyebrow.text = (eyebrow ?? "STATION").ToUpperInvariant();
+                _panelEyebrow.color = UIKit.WithA(accent, 0.85f);
+            }
+            _panelTitle.text = title ?? "";
             _panelTitle.color = accent;
+            if (_panelAccentBar != null) _panelAccentBar.color = accent;
+            if (_panelTitleBar != null)
+                _panelTitleBar.color = Color.Lerp(new Color(0.07f, 0.055f, 0.035f, 1f), UIKit.WithA(accent, 0.18f), 0.35f);
+            var outl = _panelFrame != null ? _panelFrame.GetComponent<Outline>() : null;
+            if (outl != null) outl.effectColor = UIKit.WithA(accent, 0.45f);
             _panelRoot.gameObject.SetActive(true);
+            UIKit.PlayOpen(_panelFrame.gameObject);
             LockInput(true);
             return _panelBody;
+        }
+
+        /// Themed shell + scroll list (standard station menus).
+        private RectTransform OpenShell(string eyebrow, string title, Color accent)
+        {
+            return UIKit.ScrollList(PrepareShell(eyebrow, title, accent));
+        }
+
+        private void PrimaryCta(Transform list, string label, Color accent, System.Action onClick)
+        {
+            var b = UIKit.PrimaryButton(list, label, accent, onClick);
+            UIKit.LE(b, prefH: 54, minH: 52);
+        }
+
+        private void GhostCta(Transform list, string label, Color accent, System.Action onClick)
+        {
+            var b = UIKit.GhostButton(list, label, accent, onClick);
+            UIKit.LE(b, prefH: 50, minH: 48);
         }
 
         // =====================================================
@@ -261,32 +343,22 @@ namespace Journey3D
             }
         }
 
-        private Text Header(Transform parent, string text)
+        private void Header(Transform parent, string text)
         {
             UIKit.RuleLine(parent);
-            var t = UIKit.Label(parent, text.ToUpperInvariant(), 13, UIKit.Faint, TextAnchor.MiddleLeft, FontStyle.Bold);
-            var le = t.gameObject.AddComponent<LayoutElement>();
-            le.preferredHeight = 32;
-            le.minHeight = 28;
-            return t;
+            UIKit.SectionLabel(parent, text);
         }
 
         private void BodyText(Transform parent, string text, float height, Color? color = null)
         {
-            var t = UIKit.Label(parent, text, 17, color ?? UIKit.Body);
-            var le = t.gameObject.AddComponent<LayoutElement>();
-            le.minHeight = Mathf.Max(36f, height * 0.55f);
-            le.preferredHeight = height;
-            le.flexibleWidth = 1;
+            var t = UIKit.Label(parent, text, 15, color ?? UIKit.Body);
+            UIKit.LE(t, prefH: height, minH: Mathf.Max(32f, height * 0.5f));
         }
 
         private Button RowButton(Transform parent, string label, Color accent, System.Action onClick, float height = 52)
         {
-            var b = UIKit.TextButton(parent, label, accent, onClick);
-            var le = b.gameObject.AddComponent<LayoutElement>();
-            le.preferredHeight = Mathf.Max(48f, height);
-            le.minHeight = 48f;
-            le.flexibleWidth = 1;
+            // Map legacy row buttons to industry list rows
+            var b = UIKit.ListRow(parent, label, "", accent, onClick, "◆", "›", Mathf.Max(UIKit.TouchMin, height));
             return b;
         }
 
@@ -300,37 +372,24 @@ namespace Journey3D
         // =====================================================
         private void OpenLedger(Station s)
         {
-            var body = FreshBody("The Ledger  ·  The Daily Word", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Words from Truth, carried in from the wider Hub.");
-            var loading = UIKit.Label(list, "Unrolling the scrolls...", 19, UIKit.Faint, TextAnchor.MiddleCenter, FontStyle.Italic);
-            loading.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+            var list = OpenShell("The Ledger", "The Daily Word", s.accent);
+            UIKit.HeroCard(list, "From Truth", "Words carried in from the wider Hub — pinned dispatches first.", s.accent);
+            var loading = UIKit.LoadingState(list, "Unrolling the scrolls…");
 
             SupabaseClient.I.FetchBulletins(8, rows =>
             {
                 if (loading != null) Destroy(loading.gameObject);
                 if (rows.Count == 0)
-                {
-                    BodyText(list, "The ledger page is quiet today. The word will come.", 60);
-                }
+                    UIKit.EmptyState(list, "The page is quiet", "No dispatches today. The word will come.", s.accent);
                 foreach (var r in rows)
                 {
-                    var row = UIKit.Row(list, 10, new Color(1, 1, 1, 0.04f));
-                    var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
-                    stack.padding = new RectOffset(12, 12, 8, 8);
-                    stack.spacing = 4;
-                    stack.childForceExpandHeight = false;
-                    stack.childControlHeight = true;
-                    row.GetComponent<LayoutElement>().preferredHeight = 130;
-                    var title = UIKit.Label(row, (r.pinned ? "* " : "") + r.title, 21, s.accent, TextAnchor.UpperLeft, FontStyle.Bold);
-                    title.gameObject.AddComponent<LayoutElement>().preferredHeight = 28;
-                    var date = UIKit.Label(row, ShortDate(r.published_at), 14, UIKit.Faint);
-                    date.gameObject.AddComponent<LayoutElement>().preferredHeight = 18;
-                    var bodyTxt = UIKit.Label(row, Truncate(r.body, 220), 17, UIKit.Body);
-                    bodyTxt.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
+                    string title = (r.pinned ? "★  " : "") + r.title;
+                    string sub = ShortDate(r.published_at) + "  ·  " + Truncate(r.body, 90);
+                    UIKit.ListRow(list, title, sub, s.accent, null, r.pinned ? "★" : "☰", "", 84, true);
                 }
-                RowButton(list, "Join the conversation in the Hall", s.accent, () => OpenWeb("/archive"));
-                RowButton(list, "Read the Codex", UIKit.Faint, () => OpenWeb("/codex"));
+                Header(list, "Continue");
+                PrimaryCta(list, "Join the Hall →", s.accent, () => OpenWeb("/archive"));
+                GhostCta(list, "Read the Codex", UIKit.Faint, () => OpenWeb("/codex"));
             });
         }
 
@@ -339,24 +398,24 @@ namespace Journey3D
         // =====================================================
         private void OpenSeeingGlass(Station s)
         {
-            var body = FreshBody("The Seeing Glass  ·  Visions", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Dispatches of light - videos and images from the work. This glass shows their titles; the Hub plays them in full.");
-            var loading = UIKit.Label(list, "The glass is clearing...", 19, UIKit.Faint, TextAnchor.MiddleCenter, FontStyle.Italic);
-            loading.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+            var list = OpenShell("Seeing Glass", "Visions & Light", s.accent);
+            UIKit.HeroCard(list, "Dispatches of light", "Titles of films and stills. Full playback lives on the Hub.", s.accent);
+            var loading = UIKit.LoadingState(list, "The glass is clearing…");
 
             SupabaseClient.I.FetchMedia("video,image", 12, rows =>
             {
                 if (loading != null) Destroy(loading.gameObject);
-                if (rows.Count == 0) BodyText(list, "No visions yet - the glass waits for new light.", 50);
+                if (rows.Count == 0)
+                    UIKit.EmptyState(list, "No visions yet", "The glass waits for new light.", s.accent);
                 foreach (var r in rows)
                 {
-                    var row = UIKit.Row(list, 54, new Color(1, 1, 1, 0.04f));
-                    var t = UIKit.Label(row, $"{(r.kind == "video" ? "[Vision]" : "[Still]")}  {r.title}", 18, UIKit.Body, TextAnchor.MiddleLeft);
-                    UIKit.Fill(t.rectTransform, 10);
+                    string glyph = r.kind == "video" ? "▶" : "▣";
+                    string kind = r.kind == "video" ? "Vision" : "Still";
+                    UIKit.ListRow(list, r.title, kind, s.accent, null, glyph, "", 68, true);
                 }
-                RowButton(list, "Open the Wayfinder portals", s.accent, () => OpenWeb("/vision"));
-                RowButton(list, "Watch the transmissions", UIKit.Faint, () => OpenWeb("/cinema"));
+                Header(list, "Open on the Hub");
+                PrimaryCta(list, "Wayfinder portals →", s.accent, () => OpenWeb("/vision"));
+                GhostCta(list, "Cinema transmissions", UIKit.Faint, () => OpenWeb("/cinema"));
             });
         }
 
@@ -365,25 +424,24 @@ namespace Journey3D
         // =====================================================
         private void OpenArchive(Station s)
         {
-            var body = FreshBody("The Archive  ·  Scrolls & Frequencies", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Scrolls to study, frequencies to hear. The Library holds the full shelves.");
-            var loading = UIKit.Label(list, "Dusting the shelves...", 19, UIKit.Faint, TextAnchor.MiddleCenter, FontStyle.Italic);
-            loading.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+            var list = OpenShell("The Archive", "Scrolls & Frequencies", s.accent);
+            UIKit.HeroCard(list, "Shelves of the hut", "Scrolls to study, frequencies to hear. The Library holds the full collection.", s.accent);
+            var loading = UIKit.LoadingState(list, "Dusting the shelves…");
 
             SupabaseClient.I.FetchMedia("pdf,link,audio", 12, rows =>
             {
                 if (loading != null) Destroy(loading.gameObject);
-                if (rows.Count == 0) BodyText(list, "The shelves are being restocked.", 50);
+                if (rows.Count == 0)
+                    UIKit.EmptyState(list, "Shelves restocking", "Return soon — or enter the Library now.", s.accent);
                 foreach (var r in rows)
                 {
-                    var row = UIKit.Row(list, 54, new Color(1, 1, 1, 0.04f));
-                    string tag = r.kind == "audio" ? "[Frequency]" : "[Scroll]";
-                    var t = UIKit.Label(row, $"{tag}  {r.title}", 18, UIKit.Body, TextAnchor.MiddleLeft);
-                    UIKit.Fill(t.rectTransform, 10);
+                    string glyph = r.kind == "audio" ? "♪" : "§";
+                    string kind = r.kind == "audio" ? "Frequency" : "Scroll";
+                    UIKit.ListRow(list, r.title, kind, s.accent, null, glyph, "", 68, true);
                 }
-                RowButton(list, "Enter the Library", s.accent, () => OpenWeb("/library"));
-                RowButton(list, "Open the Codex", UIKit.Faint, () => OpenWeb("/codex"));
+                Header(list, "Open on the Hub");
+                PrimaryCta(list, "Enter the Library →", s.accent, () => OpenWeb("/library"));
+                GhostCta(list, "Open the Codex", UIKit.Faint, () => OpenWeb("/codex"));
             });
         }
 
@@ -416,7 +474,8 @@ namespace Journey3D
         {
             var accent = UIKit.Amber;
             var c = SaveState.Character;
-            var body = FreshBody(_creatorLock ? "Shape Your Soul  ·  Welcome, wanderer" : "Your Soul", accent);
+            var body = PrepareShell(_creatorLock ? "First shape" : "Soul Mirror",
+                _creatorLock ? "Shape Your Soul" : "Your Soul", accent);
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(!_creatorLock);
 
             // tab bar
@@ -605,88 +664,71 @@ namespace Journey3D
         }
 
         // =====================================================
-
-        
-        // =====================================================
         //  5. THE FORGE
         // =====================================================
         private void OpenForge(Station s)
         {
-            var body = FreshBody("The Forge  ·  Steel & Tonics", s.accent);
-            var list = UIKit.ScrollList(body);
+            var list = OpenShell("The Forge", "Steel & Tonics", s.accent);
             var c = SaveState.Character;
 
-            // one-time starter pouch so new souls can work the forge
             if (!c.discovered.Contains("hut3d_starter_pouch"))
             {
                 c.iron += 3; c.copper += 2;
                 SaveState.MarkDiscovered("hut3d_starter_pouch");
-                BodyText(list, "Truth presses a small pouch into your hand: \"Every smith starts with borrowed ore. Repay the road, not me.\"  (+3 iron, +2 copper)", 70, UIKit.Amber);
+                UIKit.HeroCard(list, "Starter pouch",
+                    "Truth presses ore into your hand: \"Every smith starts with borrowed ore.\"  (+3 iron, +2 copper)",
+                    UIKit.Amber);
             }
 
-            Header(list, $"Your satchel:  Iron {c.iron}  ·  Copper {c.copper}  ·  Cosmic {c.cosmic}");
+            UIKit.StatPills(list, new[]
+            {
+                ("Iron", c.iron.ToString()),
+                ("Copper", c.copper.ToString()),
+                ("Cosmic", c.cosmic.ToString()),
+            }, s.accent);
 
-            BodyText(list, "· THE WEAPON LADDER ·", 30, s.accent);
+            Header(list, "Weapon ladder");
             foreach (var w in GameData.Data.weapons)
             {
                 bool owned = c.ownedWeapons.Contains(w.id);
                 bool equipped = c.equippedWeapon == w.id;
                 string cost = CostString(w.iron, w.copper, w.cosmic);
-                string status = equipped ? "  [BEARING]" : owned ? "  [FORGED]" : "";
-                var row = UIKit.Row(list, 96, new Color(1, 1, 1, 0.04f));
-                var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
-                stack.padding = new RectOffset(12, 12, 6, 6);
-                stack.childForceExpandHeight = false;
-                stack.childControlHeight = true;
-                var title = UIKit.Label(row, $"{w.name}{status}   ·   might {w.damage}  reach {w.reach}", 19, equipped ? UIKit.Amber : UIKit.Body, TextAnchor.UpperLeft, FontStyle.Bold);
-                title.gameObject.AddComponent<LayoutElement>().preferredHeight = 26;
-                var fl = UIKit.Label(row, w.flavor + (cost.Length > 0 ? $"   ({cost})" : ""), 15, UIKit.Faint);
-                fl.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+                string status = equipped ? "Bearing" : owned ? "Forged" : (cost.Length > 0 ? cost : "Free");
+                string sub = "Might " + w.damage + " · Reach " + w.reach + "  ·  " + status;
+                string glyph = equipped ? "W" : owned ? "+" : "o";
                 if (!owned)
                 {
-                    string label = SaveState.CanForge(w) ? $"Forge  ·  {cost}" : $"Needs {cost}";
-                    var btn = UIKit.TextButton(row, label, s.accent, () =>
+                    bool can = SaveState.CanForge(w);
+                    UIKit.ListRow(list, w.name, sub + "  ·  " + Truncate(w.flavor, 40), s.accent, () =>
                     {
                         if (SaveState.Forge(w)) OpenForge(s);
-                    }, 16);
-                    btn.interactable = SaveState.CanForge(w);
-                    btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 30;
+                    }, glyph, can ? "FORGE" : "...", 86, !can);
                 }
                 else if (!equipped)
                 {
-                    var btn = UIKit.TextButton(row, "Take up", UIKit.Amber, () =>
+                    UIKit.ListRow(list, w.name, sub, UIKit.Amber, () =>
                     {
                         c.equippedWeapon = w.id; SaveState.Save(); OpenForge(s);
-                    }, 16);
-                    btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 30;
+                    }, glyph, "WIELD", 78);
+                }
+                else
+                {
+                    UIKit.ListRow(list, w.name, sub, UIKit.Amber, null, glyph, "EQ", 72, true);
                 }
             }
 
-            BodyText(list, "· TONICS FOR THE ROAD ·  (drink before a fight; max 5 of each)", 34, s.accent);
+            Header(list, "Tonics for the road");
             foreach (var t in GameData.Data.consumables)
             {
-                if (c.cleared.Count < t.minClears) continue;   // sealed recipes stay hidden, like the web hut
+                if (c.cleared.Count < t.minClears) continue;
                 int stock = SaveState.Stock(t.id);
-                string effect = (t.hp > 0 ? $"+{t.hp} vitality " : "") + (t.damage > 0 ? $"+{t.damage} might" : "");
-                var row = UIKit.Row(list, 88, new Color(1, 1, 1, 0.04f));
-                var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
-                stack.padding = new RectOffset(12, 12, 6, 6);
-                stack.childForceExpandHeight = false;
-                stack.childControlHeight = true;
+                string effect = (t.hp > 0 ? "+" + t.hp + " HP " : "") + (t.damage > 0 ? "+" + t.damage + " dmg" : "");
                 var accent = UIKit.Hex(t.accent);
-                var title = UIKit.Label(row, $"{t.name}   ·   {effect}   ·   stock {stock}/{SaveState.MaxConsumableStack}", 18, accent, TextAnchor.UpperLeft, FontStyle.Bold);
-                title.gameObject.AddComponent<LayoutElement>().preferredHeight = 24;
-                var d = UIKit.Label(row, t.desc, 15, UIKit.Faint);
-                d.gameObject.AddComponent<LayoutElement>().preferredHeight = 34;
-                var btn = UIKit.TextButton(row, $"Brew  ·  {CostString(t.iron, t.copper, t.cosmic)}", accent, () =>
-                {
-                    if (SaveState.Craft(t)) OpenForge(s);
-                }, 15);
-                btn.interactable = SaveState.CanCraft(t);
-                btn.gameObject.AddComponent<LayoutElement>().preferredHeight = 28;
+                bool can = SaveState.CanCraft(t);
+                UIKit.ListRow(list, t.name, effect + " · stock " + stock + "/" + SaveState.MaxConsumableStack + " · " + CostString(t.iron, t.copper, t.cosmic),
+                    accent, () => { if (SaveState.Craft(t)) OpenForge(s); }, "+", can ? "BREW" : "...", 78, !can);
             }
         }
-
         private static string CostString(int iron, int copper, int cosmic)
         {
             var parts = new List<string>();
@@ -701,17 +743,17 @@ namespace Journey3D
         // =====================================================
         private void OpenOffering(Station s)
         {
-            var body = FreshBody("The Offering  ·  Fuel the Vision", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "The work of light runs on more than willpower.");
+            var list = OpenShell("The Offering", "Fuel the Vision", s.accent);
+            UIKit.HeroCard(list, "Patronage",
+                "The hut, the Hall, and the 400 Series are built in the open. Every offering keeps the forge lit.",
+                s.accent);
             BodyText(list,
-                "This hut, the Sanctum, and the 400 Series - a cinematic telling of Israelite history and recovered scroll-wisdom - " +
-                "are built in the open, by one man refusing to quit the last run.\n\n" +
-                "Patronage keeps the forge lit: it funds the recovery of buried knowledge, the craft of the 400 Series, " +
-                "and the ground this chamber stands on. Every offering, one-time or monthly, is fuel.", 220);
-            RowButton(list, "Make an offering", s.accent, () => OpenWeb("/support"), 58);
-            RowButton(list, "Learn about the 400 Series", UIKit.Hex("#a855f7"), () => OpenWeb("/cinema"), 58);
-            BodyText(list, "\"When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone.\" - Truth", 90, UIKit.Faint);
+                "Funds the recovery of buried knowledge, the craft of the 400 Series, and the ground this chamber stands on.",
+                72, UIKit.Faint);
+            PrimaryCta(list, "Make an offering →", s.accent, () => OpenWeb("/support"));
+            GhostCta(list, "Learn about the 400 Series", UIKit.Hex("#a855f7"), () => OpenWeb("/cinema"));
+            Header(list, "From Truth");
+            BodyText(list, "\"When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone.\"", 80, UIKit.Faint);
         }
 
         // =====================================================
@@ -719,9 +761,8 @@ namespace Journey3D
         // =====================================================
         private void OpenArcade(Station s)
         {
-            var body = FreshBody("The Arcade  ·  Season " + GameData.CurrentSeason(), s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Three cabinets hum in the corner. Runs are etched onto the season board of the Hub.");
+            var list = OpenShell("The Arcade", "Season " + GameData.CurrentSeason(), s.accent);
+            UIKit.HeroCard(list, "Three cabinets", "Runs etch onto the season board of the Hub.", s.accent);
 
             AddArcadeCard(list, "tetra", "TETRA", "Stack the falling forms. Clear lines. Ascend.", UIKit.Hex("#22d3ee"));
             AddArcadeCard(list, "serpent", "SERPENT", "Grow by the luminous orbs. Do not bite yourself.", UIKit.Hex("#22c55e"));
@@ -730,53 +771,32 @@ namespace Journey3D
 
         private void AddArcadeCard(Transform list, string gameId, string title, string blurb, Color accent)
         {
-            var row = UIKit.Row(list, 120, new Color(accent.r, accent.g, accent.b, 0.07f));
-            var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
-            stack.padding = new RectOffset(14, 14, 8, 8);
-            stack.spacing = 4;
-            stack.childForceExpandHeight = false;
-            stack.childControlHeight = true;
-            var t = UIKit.Label(row, title, 24, accent, TextAnchor.UpperLeft, FontStyle.Bold);
-            t.gameObject.AddComponent<LayoutElement>().preferredHeight = 30;
-            var b = UIKit.Label(row, blurb, 16, UIKit.Body);
-            b.gameObject.AddComponent<LayoutElement>().preferredHeight = 24;
-
-            var btnRow = UIKit.Panel(row, "btns", Color.clear);
-            btnRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
-            var h = btnRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 12;
-            h.childForceExpandWidth = true;
-            h.childControlWidth = true;
-            h.childForceExpandHeight = true;
-            h.childControlHeight = true;
-            UIKit.TextButton(btnRow, "PLAY", accent, () => LaunchGame(gameId, accent), 18);
-            UIKit.TextButton(btnRow, "Season board", accent, () => ShowLeaderboard(gameId, title, accent), 16);
+            UIKit.ListRow(list, title, blurb, accent, () => LaunchGame(gameId, accent), "▶", "PLAY", 80);
+            GhostCta(list, $"Season board · {title}", accent, () => ShowLeaderboard(gameId, title, accent));
         }
 
         private void ShowLeaderboard(string gameId, string title, Color accent)
         {
-            var body = FreshBody($"{title}  ·  Season board  ·  {GameData.CurrentSeason()}", accent);
-            var list = UIKit.ScrollList(body);
-            var loading = UIKit.Label(list, "Consulting the board keeper...", 19, UIKit.Faint, TextAnchor.MiddleCenter, FontStyle.Italic);
-            loading.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+            var list = OpenShell("Season board", title + " · " + GameData.CurrentSeason(), accent);
+            var loading = UIKit.LoadingState(list, "Consulting the board keeper…");
             SupabaseClient.I.FetchLeaderboard(gameId, GameData.CurrentSeason(), 400, rows =>
             {
                 if (loading != null) Destroy(loading.gameObject);
-                if (rows.Count == 0) BodyText(list, "No runs etched this season yet. Be the first.", 50);
+                if (rows.Count == 0)
+                    UIKit.EmptyState(list, "No runs yet", "Be the first etched this season.", accent);
                 int rank = 1;
                 foreach (var r in rows)
                 {
                     if (rank > 10) break;
                     bool you = r.player_name == SaveState.Character.name;
-                    var row = UIKit.Row(list, 46, new Color(1, 1, 1, you ? 0.12f : 0.04f));
-                    string metric = gameId == "tetra" ? $"lines {r.lines}  lv {r.level}"
+                    string metric = gameId == "tetra" ? $"lines {r.lines} · lv {r.level}"
                                   : gameId == "veil" ? $"try {r.level}" : "";
-                    var t = UIKit.Label(row, $"#{rank}   {r.player_name}   ·   {r.score:n0}   {metric}", 18,
-                        you ? UIKit.Amber : UIKit.Body, TextAnchor.MiddleLeft, you ? FontStyle.Bold : FontStyle.Normal);
-                    UIKit.Fill(t.rectTransform, 10);
+                    string sub = $"{r.score:n0}" + (metric.Length > 0 ? "  ·  " + metric : "");
+                    UIKit.ListRow(list, $"#{rank}  {r.player_name}", sub, you ? UIKit.Amber : accent, null,
+                        rank <= 3 ? "★" : "·", "", 64, true);
                     rank++;
                 }
-                RowButton(list, "Back to the cabinets", accent, () => OpenArcade(GetStation(StationId.Arcade)));
+                PrimaryCta(list, "Back to cabinets →", accent, () => OpenArcade(GetStation(StationId.Arcade)));
             });
         }
 
@@ -789,9 +809,7 @@ namespace Journey3D
 
         private void LaunchGame(string gameId, Color accent)
         {
-            foreach (Transform child in _panelBody) Destroy(child.gameObject);
-            _panelTitle.text = gameId.ToUpper() + "  ·  Esc to abandon the run";
-            _panelTitle.color = accent;
+            PrepareShell("Arcade run", gameId.ToUpperInvariant() + "  ·  Esc to abandon", accent);
 
             _arcadeGameHost = new GameObject("arcade_" + gameId);
             var rt = UIKit.Rect(_arcadeGameHost, _panelBody);
@@ -812,16 +830,19 @@ namespace Journey3D
             if (_arcadeGameHost != null) Destroy(_arcadeGameHost);
             _arcadeGameHost = null;
 
-            var body = FreshBody("Run complete", accent);
-            var list = UIKit.ScrollList(body);
-            string metric = result.game == "tetra" ? $"\nLines {result.lines}   ·   Level {result.level}"
-                          : result.game == "veil" ? $"\nAttempts {result.level}" : "";
-            BodyText(list, $"{result.game.ToUpper()}\n\nScore  {result.score:n0}{metric}", 140, accent);
-            BodyText(list, "Etching the run onto the season board...", 40, UIKit.Faint);
+            var list = OpenShell("Run complete", result.game.ToUpperInvariant(), accent);
+            string metric = result.game == "tetra" ? $"Lines {result.lines} · Level {result.level}"
+                          : result.game == "veil" ? $"Attempts {result.level}" : "Season board";
+            UIKit.StatPills(list, new[]
+            {
+                ("Score", result.score.ToString("n0")),
+                ("Detail", metric),
+            }, accent);
+            BodyText(list, "Etching the run onto the season board…", 36, UIKit.Faint);
             SupabaseClient.I.SubmitScore(result, SaveState.Character.name, (ok, msg) =>
             {
-                BodyText(list, (ok ? "" : "") + msg, 70, ok ? UIKit.Amber : UIKit.Faint);
-                RowButton(list, "Back to the cabinets", accent, () => OpenArcade(GetStation(StationId.Arcade)));
+                BodyText(list, msg ?? (ok ? "Etched." : "Could not etch."), 50, ok ? UIKit.Amber : UIKit.Faint);
+                PrimaryCta(list, "Back to cabinets →", accent, () => OpenArcade(GetStation(StationId.Arcade)));
             });
         }
 
@@ -830,33 +851,25 @@ namespace Journey3D
         // =====================================================
         private void OpenWayfinder(Station s)
         {
-            var body = FreshBody("The Wayfinder  ·  Roads Beyond", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Vision portals are open. Look through peace and trial, claim each road's relic. Full 3D chambers are still being laid.");
-            RowButton(list, "Open the full Wayfinder map ?", s.accent, () => OpenWeb("/vision"), 52);
+            var list = OpenShell("The Wayfinder", "Roads Beyond", s.accent);
+            UIKit.HeroCard(list, "Vision portals",
+                "Look through peace and trial. Claim each road's relic. Full 3D chambers are still being laid.",
+                s.accent);
+            PrimaryCta(list, "Open full Wayfinder map →", s.accent, () => OpenWeb("/vision"));
+            Header(list, "Unsealed roads");
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
-                var row = UIKit.Row(list, 110, new Color(accent.r, accent.g, accent.b, 0.08f));
-                var stack = row.gameObject.AddComponent<VerticalLayoutGroup>();
-                stack.padding = new RectOffset(14, 14, 8, 8);
-                stack.spacing = 4;
-                stack.childForceExpandHeight = false;
-                stack.childControlHeight = true;
-                var t = UIKit.Label(row, $"{d.name}   ·   {d.guide}", 18, accent, TextAnchor.UpperLeft, FontStyle.Bold);
-                t.gameObject.AddComponent<LayoutElement>().preferredHeight = 24;
-                var q = UIKit.Label(row, $"\"{d.quote}\"", 15, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Italic);
-                q.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
                 string destId = d.id;
-                var openBtn = UIKit.TextButton(row, "Open vision portal ?", accent, () => OpenWeb("/vision/" + destId), 16);
-                openBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
+                UIKit.ListRow(list, d.name, d.guide + "  ·  \"" + Truncate(d.quote, 48) + "\"",
+                    accent, () => OpenWeb("/vision/" + destId), "◈", "›", 86);
             }
             Header(list, "Also on the Hub");
-            RowButton(list, "Epilogue · roads so far / Source", UIKit.Amber, () => OpenWeb("/epilogue"));
-            RowButton(list, "The Hall · gather with souls", s.accent, () => OpenWeb("/archive"));
-            RowButton(list, "The Codex · memory & whispers", s.accent, () => OpenWeb("/codex"));
-            RowButton(list, "The Cinema · transmissions", s.accent, () => OpenWeb("/cinema"));
-            RowButton(list, "The Offering · fuel the vision", UIKit.Gold, () => OpenWeb("/support"));
+            UIKit.ListRow(list, "Epilogue", "Roads so far · Return to the Source", UIKit.Amber, () => OpenWeb("/epilogue"), "☀");
+            UIKit.ListRow(list, "The Hall", "Gather with souls", s.accent, () => OpenWeb("/archive"), "◎");
+            UIKit.ListRow(list, "The Codex", "Memory & whispers", s.accent, () => OpenWeb("/codex"), "§");
+            UIKit.ListRow(list, "The Cinema", "Transmissions", s.accent, () => OpenWeb("/cinema"), "▶");
+            UIKit.ListRow(list, "The Offering", "Fuel the vision", UIKit.Gold, () => OpenWeb("/support"), "✦");
         }
 
         // =====================================================
@@ -864,49 +877,54 @@ namespace Journey3D
         // =====================================================
         private void OpenTruth(Station s)
         {
-            var body = FreshBody("Ask Truth", s.accent);
-            var list = UIKit.ScrollList(body);
-            BodyText(list, TruthLore.Intro(), 90, UIKit.Body);
-            Header(list, $"Standing: {TruthLore.TrustLabel()}  ·  Threads {TruthLore.Depth()}/{GameData.Lore.questions.Count}");
+            var list = OpenShell("Ask Truth", "The Brother Behind the Hood", s.accent);
+            UIKit.HeroCard(list, TruthLore.TrustLabel(),
+                TruthLore.Intro(),
+                s.accent);
+            int depth = TruthLore.Depth();
+            int total = GameData.Lore.questions.Count;
+            UIKit.StatPills(list, new[]
+            {
+                ("Threads", $"{depth}/{total}"),
+                ("Standing", TruthLore.TrustLabel()),
+            }, s.accent);
+            UIKit.ProgressBar(list, total > 0 ? (float)depth / total : 0f, s.accent);
 
+            Header(list, "Threads");
             var asked = new HashSet<string>(TruthLore.Asked());
             foreach (var q in GameData.Lore.questions)
             {
                 bool opened = asked.Contains(q.id);
                 bool unlocked = TruthLore.IsUnlocked(q);
-                var color = opened ? UIKit.Amber : unlocked ? s.accent : new Color(1, 1, 1, 0.28f);
-                string prefix = opened ? "· " : unlocked ? "? " : "~ ";
-                RowButton(list, prefix + q.prompt, color, () =>
+                var color = opened ? UIKit.Amber : unlocked ? s.accent : UIKit.Muted;
+                string glyph = opened ? "●" : unlocked ? "?" : "◌";
+                string status = opened ? "Opened" : unlocked ? "Ask now" : "Sealed";
+                UIKit.ListRow(list, q.prompt, status, color, () =>
                 {
                     if (unlocked || opened) ShowTruthAnswer(s, q);
                     else ShowTruthDeflection(s, q);
-                }, 46);
+                }, glyph, unlocked || opened ? "›" : "", 72, !unlocked && !opened);
             }
         }
 
         private void ShowTruthAnswer(Station s, TruthQuestionDef q)
         {
             SaveState.MarkDiscovered(TruthLore.DiscId(q.id));
-            var body = FreshBody("Truth speaks", s.accent);
-            var list = UIKit.ScrollList(body);
-            BodyText(list, q.prompt, 40, UIKit.Faint);
-            BodyText(list, q.answer, 260, UIKit.Body);
+            var list = OpenShell("Truth speaks", q.prompt, s.accent);
+            BodyText(list, q.answer, 220, UIKit.Body);
             if (!string.IsNullOrEmpty(q.accountTitle))
             {
-                BodyText(list, "· CODEX PAGE UNLOCKED ·", 34, UIKit.Amber);
-                BodyText(list, q.accountTitle, 30, UIKit.Amber);
-                BodyText(list, q.accountBody, 120, UIKit.Faint);
+                Header(list, "Codex page unlocked");
+                UIKit.ListRow(list, q.accountTitle, Truncate(q.accountBody, 100), UIKit.Amber, null, "§", "", 80, true);
             }
-            RowButton(list, "Ask more", s.accent, () => OpenTruth(s));
+            PrimaryCta(list, "Ask more →", s.accent, () => OpenTruth(s));
         }
 
         private void ShowTruthDeflection(Station s, TruthQuestionDef q)
         {
-            var body = FreshBody("Truth holds the thread", s.accent);
-            var list = UIKit.ScrollList(body);
-            BodyText(list, q.prompt, 40, UIKit.Faint);
+            var list = OpenShell("Truth holds the thread", q.prompt, s.accent);
             BodyText(list, TruthLore.Deflection(q), 140, UIKit.Body);
-            RowButton(list, "Ask something else", s.accent, () => OpenTruth(s));
+            GhostCta(list, "Ask something else", s.accent, () => OpenTruth(s));
         }
 
         // =====================================================
@@ -914,15 +932,13 @@ namespace Journey3D
         // =====================================================
         private void OpenSanctum(Station s)
         {
-            var body = FreshBody("The Hall  ·  Living Community", s.accent);
-            var list = UIKit.ScrollList(body);
-            Header(list, "Beyond this door: chambers of voice.");
-            BodyText(list,
-                "The Hall is where walking souls gather · live chambers, whispers soul-to-soul, " +
-                "and the Architects who keep the peace. Real-time. Signed-in. Sacred.", 110);
-            RowButton(list, "Enter the Hall", s.accent, () => OpenWeb("/archive"), 58);
-            RowButton(list, "Your soul profile", UIKit.Body, () => OpenWeb("/self"), 48);
-            RowButton(list, "Founding seals", UIKit.Faint, () => OpenWeb("/hierarchy"), 48);
+            var list = OpenShell("The Hall", "Living Community", s.accent);
+            UIKit.HeroCard(list, "Beyond this door",
+                "Chambers of voice. Whispers soul-to-soul. Architects keep the peace. Real-time. Signed-in. Sacred.",
+                s.accent);
+            PrimaryCta(list, "Enter the Hall →", s.accent, () => OpenWeb("/archive"));
+            UIKit.ListRow(list, "Your soul profile", "Identity core on the Hub", UIKit.Body, () => OpenWeb("/self"), "◎");
+            UIKit.ListRow(list, "Founding seals", "The 144 · hierarchy", UIKit.Faint, () => OpenWeb("/hierarchy"), "★");
         }
 
         // ---------- utils ----------
