@@ -1,8 +1,13 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+/**
+ * Hierarchical humanoid vessel (Three.js groups = joints).
+ * Blender bone-parented GLBs were mis-exported (limbs above head);
+ * this rebuild keeps appendages attached and walk/jump readable.
+ * Refs: public/references/characters/NOTES.md
+ */
+import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import {
     SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS, EYE_COLORS,
@@ -10,85 +15,47 @@ import {
 } from '@/lib/game/avatar';
 import type { AvatarHandle } from './AvatarMesh';
 
-const MAN_URL = '/models/vessels/vessel_man.glb';
-const WOMAN_URL = '/models/vessels/vessel_woman.glb';
+type Joints = {
+    hips: THREE.Group;
+    spine: THREE.Group;
+    chest: THREE.Group;
+    head: THREE.Group;
+    lUpLeg: THREE.Group;
+    rUpLeg: THREE.Group;
+    lLoLeg: THREE.Group;
+    rLoLeg: THREE.Group;
+    lUpArm: THREE.Group;
+    rUpArm: THREE.Group;
+    lLoArm: THREE.Group;
+    rLoArm: THREE.Group;
+};
 
-useGLTF.preload(MAN_URL);
-useGLTF.preload(WOMAN_URL);
-
-type BoneMap = Record<string, THREE.Object3D>;
-
-function findBones(root: THREE.Object3D): BoneMap {
-    const map: BoneMap = {};
-    root.traverse((o) => {
-        // Blender bones often export as Bone_* or plain names
-        const n = o.name.replace(/^Armature_?(man|woman)?_?/i, '').replace(/^mixamorig:/, '');
-        if (n && !map[n]) map[n] = o;
-        // also index short aliases
-        const lower = n.toLowerCase();
-        if (lower.includes('leftupperleg') || lower === 'leftupleg') map.LeftUpperLeg = o;
-        if (lower.includes('rightupperleg') || lower === 'rightupleg') map.RightUpperLeg = o;
-        if (lower.includes('leftlowerleg') || lower === 'leftleg') map.LeftLowerLeg = o;
-        if (lower.includes('rightlowerleg') || lower === 'rightleg') map.RightLowerLeg = o;
-        if (lower.includes('leftupperarm') || lower === 'leftarm') map.LeftUpperArm = o;
-        if (lower.includes('rightupperarm') || lower === 'rightarm') map.RightUpperArm = o;
-        if (lower.includes('leftlowerarm') || lower === 'leftforearm') map.LeftLowerArm = o;
-        if (lower.includes('rightlowerarm') || lower === 'rightforearm') map.RightLowerArm = o;
-        if (lower === 'hips' || lower === 'pelvis') map.Hips = o;
-        if (lower === 'spine') map.Spine = o;
-        if (lower === 'chest' || lower === 'spine1' || lower === 'spine2') map.Chest = o;
-        if (lower === 'head') map.Head = o;
-    });
-    return map;
+function Mat({ color, roughness = 0.82 }: { color: string; roughness?: number }) {
+    return <meshStandardMaterial color={color} roughness={roughness} metalness={0.05} />;
 }
 
-function applyAvatarColors(root: THREE.Object3D, avatar: AvatarConfig) {
-    const palette = {
-        skin: new THREE.Color(SKIN_TONES[avatar.skin] ?? SKIN_TONES[6]),
-        hair: new THREE.Color(HAIR_COLORS[avatar.hairColor] ?? HAIR_COLORS[0]),
-        top: new THREE.Color(CLOTH_COLORS[avatar.top] ?? CLOTH_COLORS[5]),
-        bottom: new THREE.Color(CLOTH_COLORS[avatar.bottom] ?? CLOTH_COLORS[12]),
-        boots: new THREE.Color(BOOT_COLORS[avatar.boots] ?? BOOT_COLORS[0]),
-        eyes: new THREE.Color(EYE_COLORS[avatar.eyes ?? 0] ?? EYE_COLORS[0]),
-    };
-
-    root.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh || !mesh.material) return;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-
-        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        const next = list.map((raw) => {
-            if (!raw) return raw;
-            const mat = (raw as THREE.Material).clone() as THREE.MeshStandardMaterial;
-            if (!('color' in mat) || !mat.color) return mat;
-            const n = `${mat.name} ${raw.name} ${mesh.name}`.toLowerCase();
-            if (n.includes('skin') || n.includes('head') || n.includes('hand') || n.includes('arm'))
-                mat.color.copy(palette.skin);
-            else if (n.includes('hair')) mat.color.copy(palette.hair);
-            else if (n.includes('top') || n.includes('torso') || n.includes('chest'))
-                mat.color.copy(palette.top);
-            else if (
-                n.includes('bottom') || n.includes('thigh') || n.includes('shin')
-                || n.includes('hip') || n.includes('leg')
-            ) mat.color.copy(palette.bottom);
-            else if (n.includes('boot') || n.includes('foot')) mat.color.copy(palette.boots);
-            else if (n.includes('eye')) mat.color.copy(palette.eyes);
-            mat.needsUpdate = true;
-            return mat;
-        });
-        mesh.material = next.length === 1 ? next[0] : next;
-    });
-}
-
-function dampEuler(obj: THREE.Object3D | undefined, axis: 'x' | 'y' | 'z', target: number, lambda: number, dt: number) {
-    if (!obj) return;
-    obj.rotation[axis] = THREE.MathUtils.damp(obj.rotation[axis], target, lambda, dt);
+/** Capsule limb: pivot at top of joint, extends down local −Y */
+function Limb({
+    radius,
+    length,
+    color,
+}: {
+    radius: number;
+    length: number;
+    color: string;
+}) {
+    // capsuleGeometry is Y-aligned, centered; shift so top sits at origin
+    return (
+        <mesh position={[0, -length * 0.5, 0]} castShadow>
+            <capsuleGeometry args={[radius, Math.max(0.01, length - radius * 2), 4, 8]} />
+            <Mat color={color} />
+        </mesh>
+    );
 }
 
 /**
- * Rigged Blender vessel — limbs bone-parented, walk/jump driven in Three.js.
+ * ~7.5-head adult, feet on y=0, face +Z.
+ * Legs ~50% · short torso · arms hang from shoulders.
  */
 export const VesselModel = forwardRef<AvatarHandle, {
     avatar: AvatarConfig;
@@ -99,90 +66,252 @@ export const VesselModel = forwardRef<AvatarHandle, {
     { avatar, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 },
     ref,
 ) {
-    const kind = avatar.build === 'fem' ? 'woman' : 'man';
-    const url = kind === 'woman' ? WOMAN_URL : MAN_URL;
-    const gltf = useGLTF(url);
-
+    const joints = useRef<Partial<Joints>>({});
     const gait = useRef(0);
     const jump = useRef(0);
     const phase = useRef(0);
-    const bones = useRef<BoneMap>({});
-
-    const cloned = useMemo(() => gltf.scene.clone(true), [gltf.scene, kind]);
-
-    useEffect(() => {
-        applyAvatarColors(cloned, avatar);
-        bones.current = findBones(cloned);
-        // Debug once in dev
-        if (process.env.NODE_ENV === 'development') {
-            const keys = Object.keys(bones.current).filter((k) =>
-                /Leg|Arm|Hips|Spine|Chest|Head/i.test(k),
-            );
-            console.log('[VesselModel] bones', kind, keys);
-        }
-    }, [cloned, avatar, kind]);
 
     useImperativeHandle(ref, () => ({
         setGait: (s) => { gait.current = THREE.MathUtils.clamp(s, 0, 1); },
         setJump: (a) => { jump.current = THREE.MathUtils.clamp(a, 0, 1); },
     }), []);
 
+    const c = useMemo(() => ({
+        skin: SKIN_TONES[avatar.skin] ?? SKIN_TONES[6],
+        hair: HAIR_COLORS[avatar.hairColor] ?? HAIR_COLORS[0],
+        top: CLOTH_COLORS[avatar.top] ?? CLOTH_COLORS[5],
+        bottom: CLOTH_COLORS[avatar.bottom] ?? CLOTH_COLORS[12],
+        boots: BOOT_COLORS[avatar.boots] ?? BOOT_COLORS[0],
+        eyes: EYE_COLORS[avatar.eyes ?? 0] ?? EYE_COLORS[0],
+    }), [avatar]);
+
+    const fem = avatar.build === 'fem';
+    // widths
+    const shoulder = fem ? 0.34 : 0.40;
+    const hipW = fem ? 0.36 : 0.34;
+    const chestR = fem ? 0.15 : 0.17;
+    const headR = fem ? 0.105 : 0.11;
+    const thighR = fem ? 0.07 : 0.078;
+    const shinR = fem ? 0.055 : 0.06;
+    const armR = fem ? 0.042 : 0.048;
+    const legX = fem ? 0.10 : 0.12;
+
+    // heights (meters-ish)
+    const HIP = 0.92;          // hip joint y
+    const THIGH = 0.42;        // upper leg length
+    const SHIN = 0.40;         // lower leg length
+    const SPINE = 0.14;        // hip → spine
+    const CHEST_H = 0.28;      // short torso
+    const NECK = 0.08;
+    const ARM = 0.30;          // upper arm
+    const FORE = 0.28;         // forearm
+
     useFrame((_, dt) => {
-        const b = bones.current;
+        const j = joints.current;
         const g = gait.current;
-        const j = jump.current;
-        const groundGait = g * (1 - j * 0.85);
+        const jp = jump.current;
+        const ground = g * (1 - jp * 0.9);
 
-        const rate = THREE.MathUtils.lerp(0, 9.0, groundGait);
-        phase.current += dt * (rate || (j > 0.1 ? 1.5 : 0.3));
+        phase.current += dt * (ground > 0.04 ? 8.5 * (0.55 + ground * 0.45) : 0.35);
 
-        const swing = Math.sin(phase.current) * groundGait;
-        const opp = -swing;
+        // Positive swing = thigh rotates forward (+Z direction of travel)
+        // Invert was "reverse walk" — use standard: left +sin with velocity +Z face
+        const s = Math.sin(phase.current) * ground;
+        const o = -s;
 
-        // Jump pose overlays
-        const jLeg = -0.7 * j;
-        const jKnee = 0.9 * j;
-        const jArm = -0.95 * j;
-        const jArmOut = 0.25 * j;
+        // Jump: pull knees up (negative X tucks thigh forward/up in our layout)
+        // With limbs along −Y, rotation.x > 0 swings foot toward +Z (forward)
+        const jThigh = 0.85 * jp;      // tuck forward/up
+        const jKnee = 1.1 * jp;        // bend knee
+        const jArm = -0.9 * jp;        // arms forward/up (negative if arm hangs −Y… see below)
+        const jArmZ = 0.35 * jp;
 
-        // Legs (swing in local X — forward/back)
-        dampEuler(b.LeftUpperLeg, 'x', swing * 0.75 + jLeg, 14, dt);
-        dampEuler(b.RightUpperLeg, 'x', opp * 0.75 + jLeg * 0.95, 14, dt);
-        dampEuler(b.LeftLowerLeg, 'x', Math.max(0, -swing) * 0.55 + jKnee, 14, dt);
-        dampEuler(b.RightLowerLeg, 'x', Math.max(0, -opp) * 0.55 + jKnee * 0.95, 14, dt);
+        // Legs: rotation.x positive → foot moves toward +Z (forward)
+        if (j.lUpLeg) j.lUpLeg.rotation.x = THREE.MathUtils.damp(j.lUpLeg.rotation.x, s * 0.7 + jThigh * 0.5, 14, dt);
+        if (j.rUpLeg) j.rUpLeg.rotation.x = THREE.MathUtils.damp(j.rUpLeg.rotation.x, o * 0.7 + jThigh * 0.5, 14, dt);
+        // Knee: only bend (positive local x on lower leg folds shin back)
+        if (j.lLoLeg) j.lLoLeg.rotation.x = THREE.MathUtils.damp(j.lLoLeg.rotation.x, Math.max(0, -s) * 0.85 + jKnee, 14, dt);
+        if (j.rLoLeg) j.rLoLeg.rotation.x = THREE.MathUtils.damp(j.rLoLeg.rotation.x, Math.max(0, -o) * 0.85 + jKnee, 14, dt);
 
-        // Arms opposite to legs — attached via bones
-        dampEuler(b.LeftUpperArm, 'x', opp * 0.55 + jArm, 14, dt);
-        dampEuler(b.RightUpperArm, 'x', swing * 0.55 + jArm * 0.95, 14, dt);
-        dampEuler(b.LeftUpperArm, 'z', 0.15 + jArmOut, 10, dt);
-        dampEuler(b.RightUpperArm, 'z', -0.15 - jArmOut, 10, dt);
-        dampEuler(b.LeftLowerArm, 'x', Math.max(0, opp) * 0.25 + 0.15 * j, 12, dt);
-        dampEuler(b.RightLowerArm, 'x', Math.max(0, swing) * 0.25 + 0.15 * j, 12, dt);
+        // Arms opposite legs; hang down −Y, rotation.x positive swings hand toward +Z
+        if (j.lUpArm) {
+            j.lUpArm.rotation.x = THREE.MathUtils.damp(j.lUpArm.rotation.x, o * 0.55 + jArm * 0.35, 14, dt);
+            j.lUpArm.rotation.z = THREE.MathUtils.damp(j.lUpArm.rotation.z, 0.12 + jArmZ, 12, dt);
+        }
+        if (j.rUpArm) {
+            j.rUpArm.rotation.x = THREE.MathUtils.damp(j.rUpArm.rotation.x, s * 0.55 + jArm * 0.35, 14, dt);
+            j.rUpArm.rotation.z = THREE.MathUtils.damp(j.rUpArm.rotation.z, -0.12 - jArmZ, 12, dt);
+        }
+        if (j.lLoArm) j.lLoArm.rotation.x = THREE.MathUtils.damp(j.lLoArm.rotation.x, Math.max(0, o) * 0.35, 12, dt);
+        if (j.rLoArm) j.rLoArm.rotation.x = THREE.MathUtils.damp(j.rLoArm.rotation.x, Math.max(0, s) * 0.35, 12, dt);
 
-        // Hips / spine sway
-        dampEuler(b.Hips, 'y', -swing * 0.06, 10, dt);
-        dampEuler(b.Hips, 'x', j * -0.05, 10, dt);
-        dampEuler(b.Spine ?? b.Chest, 'y', swing * 0.05, 10, dt);
-        dampEuler(b.Chest, 'x', j * -0.08, 10, dt);
-        dampEuler(b.Head, 'y', -swing * 0.04, 8, dt);
+        // Hips / spine
+        if (j.hips) {
+            j.hips.rotation.y = THREE.MathUtils.damp(j.hips.rotation.y, -s * 0.07, 10, dt);
+            j.hips.position.y = THREE.MathUtils.damp(
+                j.hips.position.y,
+                HIP + Math.abs(Math.sin(phase.current * 2)) * 0.015 * ground - jp * 0.02,
+                12,
+                dt,
+            );
+        }
+        if (j.spine) j.spine.rotation.y = THREE.MathUtils.damp(j.spine.rotation.y, s * 0.05, 10, dt);
+        if (j.chest) {
+            j.chest.rotation.y = THREE.MathUtils.damp(j.chest.rotation.y, s * 0.04, 10, dt);
+            j.chest.rotation.x = THREE.MathUtils.damp(j.chest.rotation.x, -0.08 * jp, 10, dt);
+        }
+        if (j.head) j.head.rotation.y = THREE.MathUtils.damp(j.head.rotation.y, -s * 0.06, 8, dt);
 
-        // Idle settle
-        if (groundGait < 0.06 && j < 0.05) {
-            dampEuler(b.LeftUpperLeg, 'x', 0, 8, dt);
-            dampEuler(b.RightUpperLeg, 'x', 0, 8, dt);
-            dampEuler(b.LeftLowerLeg, 'x', 0, 8, dt);
-            dampEuler(b.RightLowerLeg, 'x', 0, 8, dt);
-            dampEuler(b.LeftUpperArm, 'x', 0, 8, dt);
-            dampEuler(b.RightUpperArm, 'x', 0, 8, dt);
-            dampEuler(b.Hips, 'y', 0, 8, dt);
-            dampEuler(b.Hips, 'x', 0, 8, dt);
+        // Idle breath
+        if (ground < 0.05 && jp < 0.05 && j.chest) {
+            const breath = Math.sin(performance.now() * 0.0016) * 0.008;
+            j.chest.position.y = THREE.MathUtils.damp(j.chest.position.y, SPINE + breath, 6, dt);
+            if (j.lUpLeg) j.lUpLeg.rotation.x = THREE.MathUtils.damp(j.lUpLeg.rotation.x, 0, 8, dt);
+            if (j.rUpLeg) j.rUpLeg.rotation.x = THREE.MathUtils.damp(j.rUpLeg.rotation.x, 0, 8, dt);
+            if (j.lLoLeg) j.lLoLeg.rotation.x = THREE.MathUtils.damp(j.lLoLeg.rotation.x, 0, 8, dt);
+            if (j.rLoLeg) j.rLoLeg.rotation.x = THREE.MathUtils.damp(j.rLoLeg.rotation.x, 0, 8, dt);
+            if (j.lUpArm) {
+                j.lUpArm.rotation.x = THREE.MathUtils.damp(j.lUpArm.rotation.x, 0, 8, dt);
+                j.lUpArm.rotation.z = THREE.MathUtils.damp(j.lUpArm.rotation.z, 0.1, 8, dt);
+            }
+            if (j.rUpArm) {
+                j.rUpArm.rotation.x = THREE.MathUtils.damp(j.rUpArm.rotation.x, 0, 8, dt);
+                j.rUpArm.rotation.z = THREE.MathUtils.damp(j.rUpArm.rotation.z, -0.1, 8, dt);
+            }
+        } else if (j.chest) {
+            j.chest.position.y = THREE.MathUtils.damp(j.chest.position.y, SPINE, 10, dt);
         }
     });
 
+    const shoulderY = SPINE + CHEST_H * 0.55;
+
     return (
         <group position={position} rotation={rotation} scale={scale}>
-            {/* Face +Z (our player forward) */}
-            <primitive object={cloned} />
+            {/* —— HIPS (root of body) —— */}
+            <group
+                ref={(n) => { if (n) joints.current.hips = n; }}
+                position={[0, HIP, 0]}
+            >
+                <mesh castShadow>
+                    <capsuleGeometry args={[hipW * 0.42, 0.1, 4, 8]} />
+                    <Mat color={c.bottom} />
+                </mesh>
+
+                {/* LEFT LEG */}
+                <group
+                    ref={(n) => { if (n) joints.current.lUpLeg = n; }}
+                    position={[-legX, 0, 0]}
+                >
+                    <Limb radius={thighR} length={THIGH} color={c.bottom} />
+                    <group
+                        ref={(n) => { if (n) joints.current.lLoLeg = n; }}
+                        position={[0, -THIGH, 0]}
+                    >
+                        <Limb radius={shinR} length={SHIN} color={c.bottom} />
+                        {/* foot */}
+                        <mesh position={[0, -SHIN - 0.02, 0.06]} castShadow>
+                            <boxGeometry args={[0.11, 0.08, 0.22]} />
+                            <Mat color={c.boots} roughness={0.9} />
+                        </mesh>
+                    </group>
+                </group>
+
+                {/* RIGHT LEG */}
+                <group
+                    ref={(n) => { if (n) joints.current.rUpLeg = n; }}
+                    position={[legX, 0, 0]}
+                >
+                    <Limb radius={thighR} length={THIGH} color={c.bottom} />
+                    <group
+                        ref={(n) => { if (n) joints.current.rLoLeg = n; }}
+                        position={[0, -THIGH, 0]}
+                    >
+                        <Limb radius={shinR} length={SHIN} color={c.bottom} />
+                        <mesh position={[0, -SHIN - 0.02, 0.06]} castShadow>
+                            <boxGeometry args={[0.11, 0.08, 0.22]} />
+                            <Mat color={c.boots} roughness={0.9} />
+                        </mesh>
+                    </group>
+                </group>
+
+                {/* SPINE */}
+                <group
+                    ref={(n) => { if (n) joints.current.spine = n; }}
+                    position={[0, 0.06, 0]}
+                >
+                    {/* CHEST / short torso */}
+                    <group
+                        ref={(n) => { if (n) joints.current.chest = n; }}
+                        position={[0, SPINE, 0]}
+                    >
+                        <mesh position={[0, CHEST_H * 0.35, 0]} castShadow>
+                            <capsuleGeometry args={[chestR, CHEST_H * 0.55, 4, 10]} />
+                            <Mat color={c.top} roughness={0.75} />
+                        </mesh>
+
+                        {/* LEFT ARM — hangs from shoulder */}
+                        <group
+                            ref={(n) => { if (n) joints.current.lUpArm = n; }}
+                            position={[-shoulder * 0.55, shoulderY - SPINE, 0]}
+                            rotation={[0, 0, 0.12]}
+                        >
+                            <Limb radius={armR} length={ARM} color={c.skin} />
+                            <group
+                                ref={(n) => { if (n) joints.current.lLoArm = n; }}
+                                position={[0, -ARM, 0]}
+                            >
+                                <Limb radius={armR * 0.9} length={FORE} color={c.skin} />
+                                <mesh position={[0, -FORE - 0.02, 0]} castShadow>
+                                    <sphereGeometry args={[0.04, 8, 8]} />
+                                    <Mat color={c.skin} />
+                                </mesh>
+                            </group>
+                        </group>
+
+                        {/* RIGHT ARM */}
+                        <group
+                            ref={(n) => { if (n) joints.current.rUpArm = n; }}
+                            position={[shoulder * 0.55, shoulderY - SPINE, 0]}
+                            rotation={[0, 0, -0.12]}
+                        >
+                            <Limb radius={armR} length={ARM} color={c.skin} />
+                            <group
+                                ref={(n) => { if (n) joints.current.rLoArm = n; }}
+                                position={[0, -ARM, 0]}
+                            >
+                                <Limb radius={armR * 0.9} length={FORE} color={c.skin} />
+                                <mesh position={[0, -FORE - 0.02, 0]} castShadow>
+                                    <sphereGeometry args={[0.04, 8, 8]} />
+                                    <Mat color={c.skin} />
+                                </mesh>
+                            </group>
+                        </group>
+
+                        {/* HEAD */}
+                        <group
+                            ref={(n) => { if (n) joints.current.head = n; }}
+                            position={[0, CHEST_H * 0.75 + NECK, 0]}
+                        >
+                            <mesh position={[0, headR + 0.02, 0]} castShadow>
+                                <sphereGeometry args={[headR, 16, 16]} />
+                                <Mat color={c.skin} roughness={0.65} />
+                            </mesh>
+                            <mesh position={[0, headR + 0.1, -0.01]} castShadow>
+                                <sphereGeometry args={[headR * 1.05, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+                                <Mat color={c.hair} roughness={0.9} />
+                            </mesh>
+                            <mesh position={[-0.04, headR + 0.04, headR * 0.85]}>
+                                <sphereGeometry args={[0.02, 8, 8]} />
+                                <Mat color={c.eyes} roughness={0.35} />
+                            </mesh>
+                            <mesh position={[0.04, headR + 0.04, headR * 0.85]}>
+                                <sphereGeometry args={[0.02, 8, 8]} />
+                                <Mat color={c.eyes} roughness={0.35} />
+                            </mesh>
+                        </group>
+                    </group>
+                </group>
+            </group>
         </group>
     );
 });
