@@ -10,16 +10,25 @@ namespace Journey3D
         public static Vector2 MoveTouch;      // -1..1 from the on-screen stick
         public static Vector2 LookTouchDelta; // drag delta from the look pad (px)
         private static bool _interactQueued;
+        private static bool _jumpQueued;
 
         public static bool ShowTouchUI =>
             Application.isMobilePlatform || Input.touchSupported;
 
         public static void QueueInteract() => _interactQueued = true;
+        public static void QueueJump() => _jumpQueued = true;
 
         public static bool ConsumeInteract()
         {
             if (!_interactQueued) return false;
             _interactQueued = false;
+            return true;
+        }
+
+        public static bool ConsumeJump()
+        {
+            if (!_jumpQueued) return false;
+            _jumpQueued = false;
             return true;
         }
 

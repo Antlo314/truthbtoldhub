@@ -67,11 +67,12 @@ namespace Journey3D
                 UIKit.Gold);
             Header(list, "How to move");
             UIKit.ListRow(list, "Walk & look", "WASD or left stick · right-drag / right stick look", UIKit.Faint, null, "◎", "", 64, true);
+            UIKit.ListRow(list, "Jump", "Space · or the ⤒ pad on touch", UIKit.Faint, null, "◎", "", 64, true);
             UIKit.ListRow(list, "Interact", "E to open a station · Esc to close panels", UIKit.Faint, null, "◎", "", 64, true);
             Header(list, "First path");
             UIKit.ListRow(list, "1 · Speak with Truth", "North dais — ask what only he will answer", UIKit.Amber, null, "1", "", 64, true);
-            UIKit.ListRow(list, "2 · Ledger & Hall", "Word of the day, then community beyond the door", UIKit.Amber, null, "2", "", 64, true);
-            UIKit.ListRow(list, "3 · Wayfinder", "Vision portals for the roads beyond the hut", UIKit.Amber, null, "3", "", 64, true);
+            UIKit.ListRow(list, "2 · Wayfinder → Eden", "Only Eden is open — receive your first staff", UIKit.Amber, null, "2", "", 64, true);
+            UIKit.ListRow(list, "3 · Ledger & Hall", "Word of the day, then community beyond the door", UIKit.Amber, null, "3", "", 64, true);
             PrimaryCta(list, "Begin the walk →", UIKit.Gold, () =>
             {
                 PlayerPrefs.SetInt("tbth_hut_welcome_v2", 1);
@@ -237,14 +238,25 @@ namespace Journey3D
             var accent = UIKit.Hex(def.accent);
             var list = OpenShell(def.guide, def.name, accent);
             UIKit.HeroCard(list, "Guide", "\"" + def.quote + "\"", accent);
-            BodyText(list,
-                "This is a living road — not a film. Walk the path north. Complete the three sites. Face the guardian. Claim the relic. Return south when the work is done.",
-                110, UIKit.Body);
+            if (def.id == "eden")
+            {
+                BodyText(list,
+                    "Welcome to the garden before the fall. Take this wooden staff — your first weapon. Tend three living sites, then face the guardian of the hedge. The Seed waits under the Tree of Life.",
+                    120, UIKit.Body);
+                if (SaveState.HasWeapon("wood_staff"))
+                    UIKit.ListRow(list, "Wooden Staff", "Equipped · your first weapon of the road", accent, null, "⚔", "", 56, true);
+            }
+            else
+            {
+                BodyText(list,
+                    "Walk the path. Complete the sites. Face the guardian. Claim the relic. Return south when ready.",
+                    90, UIKit.Body);
+            }
             Header(list, "The work");
-            UIKit.ListRow(list, "1 · Tend three sites", "Marked along the path — press E at each", accent, null, "1", "", 60, true);
-            UIKit.ListRow(list, "2 · Challenge the guardian", "When sites are done — strike with E three times", accent, null, "2", "", 60, true);
-            UIKit.ListRow(list, "3 · Claim the relic", "North dais opens after the guardian falls", accent, null, "3", "", 60, true);
-            PrimaryCta(list, "I will walk the road →", accent, ClosePanel);
+            UIKit.ListRow(list, "1 · Tend three sites", "Press E at each living marker", accent, null, "1", "", 56, true);
+            UIKit.ListRow(list, "2 · Challenge the guardian", "After sites — E three times", accent, null, "2", "", 56, true);
+            UIKit.ListRow(list, "3 · Claim the Seed", "Under the Tree of Life", accent, null, "3", "", 56, true);
+            PrimaryCta(list, "I will walk the garden →", accent, ClosePanel);
             AudioManager.I?.PlayStationOpen();
         }
 
@@ -947,34 +959,33 @@ namespace Journey3D
         // =====================================================
         private void OpenWayfinder(Station s)
         {
-            var list = OpenShell("The Wayfinder", "Roads Beyond", s.accent);
-            UIKit.HeroCard(list, "Playable roads",
-                "Eden is a full low-poly garden. Walk the path, tend the sites, face the guardian, claim the Seed under the Tree of Life.",
+            var list = OpenShell("The Wayfinder", "Eden", s.accent);
+            UIKit.HeroCard(list, "The first road",
+                "Only Eden is open. Walk the garden, receive your first staff from the Gardener, tend three sites, face the guardian, claim the Seed.",
                 s.accent);
-            Header(list, "Travel");
+            Header(list, "Open road");
+            // Other ages stay sealed until Eden is fully complete
             foreach (var d in GameData.Data.destinations)
             {
+                if (d.id != "eden") continue;
                 var accent = UIKit.Hex(d.accent);
-                string destId = d.id;
-                bool visited = DestinationManager.Visited(destId);
-                bool relic = DestinationManager.HasRelic(destId);
-                bool guardian = SaveState.Character.cleared.Contains(destId)
-                    || SaveState.Character.discovered.Contains("guardian_" + destId);
-                string status = relic ? "Complete" : guardian ? "Guardian down" : visited ? "In progress" : "Unopened";
-                string sub = d.guide + "  ·  " + status;
+                bool relic = DestinationManager.HasRelic(d.id);
+                bool visited = DestinationManager.Visited(d.id);
+                string status = relic ? "Complete" : visited ? "In progress" : "Ready";
+                string sub = d.guide + "  ·  " + status + "  ·  first weapon here";
                 UIKit.ListRow(list, d.name, sub, accent, () =>
                 {
                     ClosePanel();
-                    DestinationManager.I?.Enter(destId);
+                    DestinationManager.I?.Enter(d.id);
                 }, relic ? "★" : "◈", "TRAVEL", 88);
             }
-            Header(list, "Visions on the Hub");
-            GhostCta(list, "Cinematic vision portals →", s.accent, () => OpenWeb("/vision"));
+            Header(list, "Sealed for now");
+            UIKit.ListRow(list, "Further ages", "St. Louis · Giza · Kolbrin · Emerald — after Eden is complete",
+                UIKit.Muted, null, "◌", "", 64, true);
             Header(list, "Also on the Hub");
-            UIKit.ListRow(list, "Epilogue", "Roads so far · Return to the Source", UIKit.Amber, () => OpenWeb("/epilogue"), "☀");
+            GhostCta(list, "Eden vision (cinema) →", s.accent, () => OpenWeb("/vision/eden"));
             UIKit.ListRow(list, "The Hall", "Gather with souls", s.accent, () => OpenWeb("/archive"), "◎");
             UIKit.ListRow(list, "The Codex", "Memory & whispers", s.accent, () => OpenWeb("/codex"), "§");
-            UIKit.ListRow(list, "The Cinema", "Transmissions", s.accent, () => OpenWeb("/cinema"), "▶");
             UIKit.ListRow(list, "The Offering", "Fuel the vision", UIKit.Gold, () => OpenWeb("/support"), "✦");
         }
 

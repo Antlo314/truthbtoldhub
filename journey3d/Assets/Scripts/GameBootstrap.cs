@@ -586,9 +586,11 @@ namespace Journey3D
             _appearance = root.AddComponent<PlayerAppearance>();
             _appearance.Apply();
             root.AddComponent<WalkAnimator>().Bind(_appearance, cc);
+            root.AddComponent<PlayerWeaponView>();
 
             var pc = root.AddComponent<PlayerController>();
-            pc.avatar = null;
+            // Bob visual is the appearance model child if present
+            if (_appearance.Model != null) pc.avatar = _appearance.Model.transform;
             _playerRoot = root.transform;
             return pc;
         }

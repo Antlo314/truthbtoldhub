@@ -105,19 +105,37 @@ namespace Journey3D
 
                     if (truthKing)
                     {
-                        if (n.Contains("skin")) c = new Color(0.92f, 0.78f, 0.65f, 1f);
+                        // Color by mesh part + material name (King is multi-mat, not all-blue)
+                        string part = r.gameObject.name.ToLowerInvariant();
+                        bool head = part.Contains("head") || n.Contains("skin") || n.Contains("hair")
+                            || n.Contains("eye") || n.Contains("beard") || n.Contains("white");
+                        bool feet = part.Contains("feet") || part.Contains("foot") || n.Contains("boot");
+                        bool legs = part.Contains("leg");
+
+                        if (n.Contains("skin") || (head && !n.Contains("hair") && !n.Contains("white") && !n.Contains("gold") && !n.Contains("metal") && !n.Contains("eye")))
+                            c = new Color(0.93f, 0.76f, 0.62f, 1f);          // skin
                         else if (n.Contains("hair") || n.Contains("beard") || n.Contains("white"))
-                            c = new Color(0.92f, 0.92f, 0.95f, 1f);
-                        else if (n.Contains("gold") || n.Contains("metal"))
-                            c = new Color(0.95f, 0.78f, 0.25f, 1f);
-                        else if (n.Contains("blue"))
-                            c = new Color(0.25f, 0.35f, 0.75f, 1f);
+                            c = new Color(0.94f, 0.94f, 0.96f, 1f);          // white hair/beard
+                        else if (n.Contains("gold"))
+                            c = new Color(0.98f, 0.82f, 0.28f, 1f);          // crown / trim
+                        else if (n.Contains("metal") && n.Contains("dark"))
+                            c = new Color(0.28f, 0.26f, 0.3f, 1f);           // dark metal
+                        else if (n.Contains("metal"))
+                            c = new Color(0.75f, 0.72f, 0.68f, 1f);          // silver metal
                         else if (n.Contains("eye"))
-                            c = new Color(0.15f, 0.35f, 0.55f, 1f);
-                        else if (n.Contains("beige") || n.Contains("brown"))
-                            c = new Color(0.55f, 0.4f, 0.28f, 1f);
+                            c = new Color(0.2f, 0.35f, 0.5f, 1f);
+                        else if (n.Contains("beige") || n.Contains("brown") || n.Contains("darkbrown"))
+                            c = new Color(0.48f, 0.32f, 0.2f, 1f);           // belts / leather
+                        else if (feet || n.Contains("boot"))
+                            c = new Color(0.22f, 0.16f, 0.12f, 1f);          // boots
+                        else if (legs && !n.Contains("blue"))
+                            c = new Color(0.2f, 0.18f, 0.28f, 1f);           // dark pants
+                        else if (n.Contains("blue"))
+                            c = new Color(0.22f, 0.32f, 0.62f, 1f);          // robe only
+                        else if (part.Contains("body"))
+                            c = new Color(0.22f, 0.32f, 0.62f, 1f);          // body robe
                         else
-                            c = new Color(0.35f, 0.4f, 0.7f, 1f); // robe default
+                            c = new Color(0.55f, 0.48f, 0.4f, 1f);           // neutral trim (never pure blue dump)
                     }
 
                     mats[i] = PropUtils.UnlitMat(c);
@@ -252,30 +270,38 @@ namespace Journey3D
         public string IdleName() => Has("Idle_Neutral") ? "Idle_Neutral" : "Idle";
         public bool Has(string name) => _anim != null && _anim[name] != null;
 
-        public void Play(string name, float fade = 0.15f)
+        public void Play(string name, float fade = 0.22f)
         {
             if (!_bound || _anim == null || string.IsNullOrEmpty(name)) return;
             if (_current == name) return;
             if (_anim[name] == null) return;
             _current = name;
-            if (fade <= 0f) _anim.Play(name);
-            else _anim.CrossFade(name, fade);
+            // Longer crossfades = less pop on walk/idle transitions
+            float f = fade <= 0f ? 0f : Mathf.Max(fade, 0.22f);
+            if (f <= 0f) _anim.Play(name);
+            else _anim.CrossFade(name, f);
         }
 
-        public void PlayOnce(string name, float fade = 0.12f)
+        public void SetSpeed(string name, float speed)
+        {
+            if (_anim == null || _anim[name] == null) return;
+            _anim[name].speed = Mathf.Clamp(speed, 0.7f, 1.35f);
+        }
+
+        public void PlayOnce(string name, float fade = 0.14f)
         {
             if (!Has(name)) return;
             Play(name, fade);
             var st = _anim[name];
             if (st != null && st.wrapMode != WrapMode.Loop)
-                StartCoroutine(ReturnToIdle(st.length));
+                StartCoroutine(ReturnToIdle(st.length / Mathf.Max(0.01f, st.speed)));
         }
 
         private System.Collections.IEnumerator ReturnToIdle(float delay)
         {
             yield return new WaitForSeconds(Mathf.Max(0.05f, delay - 0.05f));
             if (_current != "Walk" && _current != "Run")
-                Play(IdleName(), 0.2f);
+                Play(IdleName(), 0.26f);
         }
     }
 }

@@ -42,8 +42,9 @@ namespace Journey3D
         public int iron;
         public int copper;
         public int cosmic;
-        public string equippedWeapon = "wood_staff";
-        public List<string> ownedWeapons = new List<string> { "wood_staff" };
+        // First weapon is earned in Eden (not at creation)
+        public string equippedWeapon = "";
+        public List<string> ownedWeapons = new List<string>();
         public List<ItemStack> consumables = new List<ItemStack>();
         public List<string> discovered = new List<string>();  // truth_qa_* ids and more
         public List<string> cleared = new List<string>();     // guardians felled
@@ -145,6 +146,20 @@ namespace Journey3D
             Save();
             return true;
         }
+
+        public static bool GrantWeapon(string id, bool equip = true)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            if (!Character.ownedWeapons.Contains(id))
+                Character.ownedWeapons.Add(id);
+            if (equip || string.IsNullOrEmpty(Character.equippedWeapon))
+                Character.equippedWeapon = id;
+            Save();
+            return true;
+        }
+
+        public static bool HasWeapon(string id) =>
+            !string.IsNullOrEmpty(id) && Character.ownedWeapons.Contains(id);
 
         // ---------- discovery (Ask Truth) ----------
         public static void MarkDiscovered(string id)

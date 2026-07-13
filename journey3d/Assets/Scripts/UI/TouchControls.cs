@@ -64,8 +64,18 @@ namespace Journey3D
             irt.sizeDelta = new Vector2(btn, btn);
             MakeRound(irt);
 
+            // jump button (above interact)
+            var jump = UIKit.TextButton(canvas.transform, "⤒", UIKit.Gold, () => InputHub.QueueJump(), 38);
+            var jrt = jump.GetComponent<RectTransform>();
+            jrt.anchorMin = jrt.anchorMax = new Vector2(1, 0);
+            jrt.pivot = new Vector2(1, 0);
+            float jbtn = 110f * scale;
+            jrt.anchoredPosition = new Vector2(-(safeX + 28f + btn + 12f), safeY + 28f + 50f);
+            jrt.sizeDelta = new Vector2(jbtn, jbtn);
+            MakeRound(jrt);
+
             // Look-hint label (right half)
-            var hint = UIKit.Label(canvas.transform, "drag right side to look", 14, UIKit.Faint, TextAnchor.MiddleCenter);
+            var hint = UIKit.Label(canvas.transform, "drag right · ⤒ jump", 14, UIKit.Faint, TextAnchor.MiddleCenter);
             var hrt = hint.rectTransform;
             hrt.anchorMin = hrt.anchorMax = new Vector2(1, 0);
             hrt.pivot = new Vector2(1, 0);

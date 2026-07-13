@@ -119,6 +119,19 @@ namespace Journey3D
                     Refresh();
                     break;
                 case DestAction.Challenge:
+                    // Strike anim — staff attack if bound, else punch / interact
+                    var app = Object.FindFirstObjectByType<PlayerAppearance>();
+                    if (app != null && app.Rig != null)
+                    {
+                        string[] strikes = {
+                            "Attack", "Punch", "Hit", "Sword_Slash", "Sword_Attack",
+                            "Interact", "Wave"
+                        };
+                        foreach (var clip in strikes)
+                        {
+                            if (app.Rig.Has(clip)) { app.Rig.PlayOnce(clip); break; }
+                        }
+                    }
                     DestinationManager.I?.Challenge(d.destId, d);
                     Refresh();
                     break;

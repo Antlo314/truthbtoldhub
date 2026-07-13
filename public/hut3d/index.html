@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Journey - Truth's Hut</title>
+    <style>
+        html, body { margin: 0; padding: 0; background: #06080e; height: 100%; overflow: hidden; }
+        #unity-canvas { width: 100%; height: 100%; display: block; background: #06080e; }
+    </style>
+</head>
+<body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <script src="Build/webgl.loader.js"></script>
+    <script>
+        createUnityInstance(document.querySelector("#unity-canvas"), {
+            dataUrl: "Build/webgl.data.unityweb",
+            frameworkUrl: "Build/webgl.framework.js.unityweb",
+            codeUrl: "Build/webgl.wasm.unityweb",
+            companyName: "Truth B Told",
+            productName: "The Journey - Truth's Hut",
+            productVersion: "1.0"
+        });
+    </script>
+</body>
+</html>

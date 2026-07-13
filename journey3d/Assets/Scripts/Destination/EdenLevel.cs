@@ -22,18 +22,21 @@ namespace Journey3D
             BuildGardenBeds(root.transform, accent);
             BuildStream(root.transform);
 
-            // Guide — Gardener
-            var guide = SpawnPerson("char_fem_gown", "anims_fem", new Vector3(0, 0, 3.5f), 180f, player);
-            DestInteractable guideDi = null;
+            // Guide — open grass platform (no rocks underfoot)
+            BuildGuidePlatform(root.transform, new Vector3(0, 0, 5f), accent);
+            var guide = SpawnPerson("char_fem_gown", "anims_fem", new Vector3(0, 0.08f, 5f), 180f, player);
             if (guide != null)
             {
                 guide.transform.SetParent(root.transform, true);
-                guideDi = guide.AddComponent<DestInteractable>();
-                guideDi.action = DestAction.SpeakGuide;
-                guideDi.destId = Id;
-                guideDi.label = "The Gardener";
-                guideDi.accent = accent;
-                guideDi.interactRadius = 3.2f;
+                // Ensure she is not buried: re-seat after parent
+                var ccGuide = guide.GetComponentInChildren<Collider>();
+                guide.transform.position = new Vector3(0, 0.08f, 5f);
+                var di = guide.AddComponent<DestInteractable>();
+                di.action = DestAction.SpeakGuide;
+                di.destId = Id;
+                di.label = "The Gardener";
+                di.accent = accent;
+                di.interactRadius = 3.2f;
             }
 
             // Three physical tend sites (no giant world titles — HUD prompt only)
@@ -84,11 +87,17 @@ namespace Journey3D
 
         private static void ApplySky()
         {
+            // Soft dawn garden sky (distinct from hut dusk-indigo)
             if (Camera.main != null)
-                Camera.main.backgroundColor = new Color(0.45f, 0.72f, 0.85f);
-            RenderSettings.fogColor = new Color(0.55f, 0.75f, 0.65f);
-            RenderSettings.fogDensity = 0.0035f;
-            RenderSettings.ambientLight = new Color(0.55f, 0.65f, 0.48f);
+            {
+                Camera.main.backgroundColor = new Color(0.55f, 0.78f, 0.92f);
+                Camera.main.clearFlags = CameraClearFlags.SolidColor;
+            }
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = new Color(0.65f, 0.82f, 0.7f);
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogDensity = 0.0028f;
+            RenderSettings.ambientLight = new Color(0.62f, 0.72f, 0.52f);
         }
 
         private static void BuildTerrain(Transform parent, Color accent)
@@ -132,20 +141,45 @@ namespace Journey3D
             }
         }
 
+        private static void BuildGuidePlatform(Transform parent, Vector3 pos, Color accent)
+        {
+            // Flat moss ring — keeps rocks/trees away from the Gardener
+            var pad = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            pad.name = "guide_pad";
+            pad.transform.SetParent(parent, false);
+            pad.transform.position = pos + Vector3.up * 0.02f;
+            pad.transform.localScale = new Vector3(4.5f, 0.04f, 4.5f);
+            Object.Destroy(pad.GetComponent<Collider>());
+            pad.GetComponent<MeshRenderer>().sharedMaterial =
+                PropUtils.UnlitMat(new Color(0.25f, 0.48f, 0.24f));
+            PropUtils.GoldRing(parent, 2.0f, 0.05f, UIKit.WithA(accent, 0.55f), 0.04f);
+            // flowers only at edge of pad (not center)
+            for (int i = 0; i < 6; i++)
+            {
+                float a = i / 6f * Mathf.PI * 2f;
+                var f = SpawnKenney("nat_flower_yellowB",
+                    pos + new Vector3(Mathf.Cos(a) * 2.1f, 0, Mathf.Sin(a) * 2.1f), i * 40f, 0.55f);
+                if (f != null) f.transform.SetParent(parent, true);
+            }
+        }
+
         private static void BuildGateClearing(Transform parent, Color accent)
         {
-            // Return gate — stone + living arch of trees (no floating text)
+            // Return gate — living tree arch only (stones off to the side, not under NPCs)
             var gate = new GameObject("ReturnGate");
             gate.transform.SetParent(parent, false);
             gate.transform.position = new Vector3(0, 0, -8f);
 
             for (int i = -1; i <= 1; i += 2)
             {
-                var t = SpawnKenney("nat_tree_oak", new Vector3(i * 2.2f, 0, 0), i * 20f, 5.5f);
+                var t = SpawnKenney("nat_tree_oak", new Vector3(i * 2.4f, 0, 0), i * 20f, 5.5f);
                 if (t != null) t.transform.SetParent(gate.transform, true);
-                var stone = SpawnKenney("nat_stone_tallC", new Vector3(i * 1.4f, 0, 0.3f), 10f, 2.4f);
-                if (stone != null) stone.transform.SetParent(gate.transform, true);
             }
+            // stones well clear of path center
+            var stoneL = SpawnKenney("nat_stone_tallC", new Vector3(-4.5f, 0, -1.5f), 10f, 2.0f);
+            if (stoneL != null) stoneL.transform.SetParent(parent, true);
+            var stoneR = SpawnKenney("nat_stone_tallC", new Vector3(4.5f, 0, -1.2f), -15f, 1.9f);
+            if (stoneR != null) stoneR.transform.SetParent(parent, true);
             // Portal orb between trees
             var orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             orb.transform.SetParent(gate.transform, false);
@@ -162,8 +196,8 @@ namespace Journey3D
             di.accent = accent;
             di.interactRadius = 3f;
 
-            // Welcome dais stones
-            var dais = SpawnKenney("nat_stone_largeB", new Vector3(0, 0, -2f), 0, 2.5f);
+            // Path stones to the sides only
+            var dais = SpawnKenney("nat_stone_largeB", new Vector3(-5f, 0, -3f), 0, 2.0f);
             if (dais != null) dais.transform.SetParent(parent, true);
         }
 
@@ -372,6 +406,9 @@ namespace Journey3D
         {
             string[] trees = { "nat_tree_oak", "nat_tree_detailed", "nat_tree_default", "nat_tree_fat",
                                "nat_tree_pineTallA", "nat_tree_pineRoundC", "nat_plant_bushLarge" };
+            // Guide stands at (0, 5) — keep a clear circle free of trees/rocks
+            Vector3 guideClear = new Vector3(0, 0, 5f);
+            const float guideClearR = 4.2f;
             for (int i = 0; i < 48; i++)
             {
                 float ang = (i / 48f) * Mathf.PI * 2f;
@@ -380,6 +417,7 @@ namespace Journey3D
                 float z = 14f + Mathf.Sin(ang) * r;
                 // leave south gate approach open
                 if (z < -2f && Mathf.Abs(x) < 4f) continue;
+                if (Vector3.Distance(new Vector3(x, 0, z), guideClear) < guideClearR) continue;
                 var t = SpawnKenney(trees[i % trees.Length], new Vector3(x, 0, z), i * 17f,
                     4f + (i % 5) * 0.8f);
                 if (t != null) t.transform.SetParent(parent, true);
@@ -389,8 +427,11 @@ namespace Journey3D
             {
                 float ang = (i / 30f) * Mathf.PI * 2f + 0.1f;
                 float r = 16f + (i % 3) * 1.5f;
+                float x = Mathf.Cos(ang) * r;
+                float z = 14f + Mathf.Sin(ang) * r;
+                if (Vector3.Distance(new Vector3(x, 0, z), guideClear) < guideClearR) continue;
                 var b = SpawnKenney("nat_plant_bushDetailed",
-                    new Vector3(Mathf.Cos(ang) * r, 0, 14f + Mathf.Sin(ang) * r),
+                    new Vector3(x, 0, z),
                     i * 20f, 1.8f);
                 if (b != null) b.transform.SetParent(parent, true);
             }

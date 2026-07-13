@@ -20,7 +20,10 @@ namespace Journey3D
         private Vector3 _hutPlayerPos;
         private Quaternion _hutPlayerRot;
         private Color _hutSky;
+        private Color _hutFogColor;
+        private Color _hutAmbient;
         private float _hutFog;
+        private bool _hutFogOn;
 
         private void Awake()
         {
@@ -55,6 +58,9 @@ namespace Journey3D
                 mainCam.farClipPlane = 220f;
             }
             _hutFog = RenderSettings.fogDensity;
+            _hutFogColor = RenderSettings.fogColor;
+            _hutAmbient = RenderSettings.ambientLight;
+            _hutFogOn = RenderSettings.fog;
 
             if (hutRoot != null) hutRoot.gameObject.SetActive(false);
 
@@ -63,6 +69,7 @@ namespace Journey3D
             SaveState.MarkDiscovered("dest_enter_" + destId);
             SaveState.Save();
 
+            AudioManager.I?.PlayPlaceMusic(destId);
             AudioManager.I?.PlaySuccess();
             ui?.OnDestinationEntered(def);
             ui?.RefreshObjective();
@@ -89,8 +96,12 @@ namespace Journey3D
                 mainCam.backgroundColor = _hutSky;
                 mainCam.farClipPlane = 150f;
             }
+            RenderSettings.fog = _hutFogOn;
             RenderSettings.fogDensity = _hutFog > 0 ? _hutFog : 0.0032f;
+            RenderSettings.fogColor = _hutFogColor;
+            RenderSettings.ambientLight = _hutAmbient;
 
+            AudioManager.I?.PlayPlaceMusic("hut");
             if (!silent)
             {
                 AudioManager.I?.PlayStationOpen();
@@ -138,6 +149,22 @@ namespace Journey3D
             var def = GameData.Data.destinations.Find(d => d.id == destId);
             if (def == null) return;
             ActiveRun?.OnGuideSpoken();
+
+            // First weapon of the journey is given by the Gardener in Eden
+            if (destId == "eden" && !SaveState.HasWeapon("wood_staff"))
+            {
+                SaveState.GrantWeapon("wood_staff", equip: true);
+                Object.FindFirstObjectByType<PlayerWeaponView>()?.Refresh();
+                var app = Object.FindFirstObjectByType<PlayerAppearance>();
+                if (app != null && app.Rig != null)
+                {
+                    if (app.Rig.Has("Interact")) app.Rig.PlayOnce("Interact");
+                    else if (app.Rig.Has("Wave")) app.Rig.PlayOnce("Wave");
+                }
+                AudioManager.I?.PlaySuccess();
+                ui?.ShowToast("The Gardener places a Wooden Staff in your hands.");
+            }
+
             ui?.ShowGuideDialogue(def);
             ui?.RefreshObjective();
         }

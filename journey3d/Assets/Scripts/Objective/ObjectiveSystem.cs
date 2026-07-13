@@ -9,7 +9,7 @@ namespace Journey3D
         public string id;
     }
 
-    /// Soft journey objectives from save state + active destination run.
+    /// Journey objectives — Eden-first until that road is complete.
     public static class ObjectiveSystem
     {
         public static Objective Current()
@@ -25,23 +25,10 @@ namespace Journey3D
                     return new Objective
                     {
                         id = "run_" + id,
-                        title = ShortName(id),
+                        title = "Eden",
                         detail = run.PhaseHint(),
                     };
                 }
-                if (!DestinationManager.HasRelic(id))
-                    return new Objective
-                    {
-                        id = "claim_" + id,
-                        title = "Claim the relic",
-                        detail = DestinationManager.RelicName(id),
-                    };
-                return new Objective
-                {
-                    id = "return",
-                    title = "Return to the Hut",
-                    detail = "South gate · glowing arch",
-                };
             }
 
             int truthDepth = c.discovered.Count(d => d.StartsWith("truth_qa_"));
@@ -53,50 +40,36 @@ namespace Journey3D
                     detail = "Walk the aisle · E at the north dais",
                 };
 
-            var dests = GameData.Data.destinations;
-            foreach (var d in dests)
+            if (!DestinationManager.HasRelic("eden"))
             {
-                if (!DestinationManager.Visited(d.id))
+                if (!DestinationManager.Visited("eden"))
                     return new Objective
                     {
-                        id = "travel_" + d.id,
-                        title = "Travel · " + ShortName(d.name),
-                        detail = "Wayfinder · " + d.guide + " · multi-beat road",
+                        id = "travel_eden",
+                        title = "Travel to Eden",
+                        detail = "Wayfinder · receive your first staff",
                     };
-                if (!DestinationManager.HasRelic(d.id))
+                if (!SaveState.HasWeapon("wood_staff"))
                     return new Objective
                     {
-                        id = "finish_" + d.id,
-                        title = "Finish · " + ShortName(d.name),
-                        detail = "Sites · guardian · relic",
+                        id = "staff",
+                        title = "Receive the Wooden Staff",
+                        detail = "Speak with the Gardener",
                     };
-            }
-
-            if (!c.sourceReturned)
                 return new Objective
                 {
-                    id = "epilogue",
-                    title = "Return to the Source",
-                    detail = "All relics · Epilogue on the Hub",
+                    id = "finish_eden",
+                    title = "Complete Eden",
+                    detail = "Sites · guardian · Seed of First Light",
                 };
+            }
 
             return new Objective
             {
-                id = "roam",
-                title = "The chamber is yours",
-                detail = "Roam, forge, gather in the Hall",
+                id = "eden_done",
+                title = "Eden is complete",
+                detail = "Further ages remain sealed · roam the hut",
             };
-        }
-
-        private static string ShortName(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "the road";
-            // id-style
-            if (name.IndexOf(' ') < 0 && name.IndexOf('-') < 0)
-                return char.ToUpper(name[0]) + name.Substring(1);
-            int i = name.IndexOf('-');
-            if (i < 0) i = name.IndexOf('—');
-            return i > 0 ? name.Substring(0, i).Trim() : name;
         }
     }
 }
