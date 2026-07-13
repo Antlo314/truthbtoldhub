@@ -51,10 +51,6 @@ export default function ImmersiveExperience() {
         supabase.auth.getSession().then(({ data }) => {
             if (data.session) {
                 setAuthOpen(false);
-                // Skip create if vessel already forged
-                if (character?.name?.trim() && character?.created !== false) {
-                    // GameCharacter uses initiated at store level
-                }
                 const initiated = useGameStore.getState().initiated;
                 setPhase(initiated ? 'room' : 'create');
             }
