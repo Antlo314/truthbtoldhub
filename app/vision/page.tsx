@@ -10,11 +10,12 @@ import {
     RELIC_BY_VISION,
     type VisionProgress,
 } from '@/lib/brand/visionProgress';
-import { DURATION, EASE, staggerContainer, staggerItem } from '@/lib/design/motion';
+import { staggerContainer, staggerItem } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { usePageMusic } from '@/lib/game/usePageMusic';
 import SacredButton from '@/components/sanctum/SacredButton';
+import VisionReliquary from '@/components/sanctum/VisionReliquary';
 
 export default function VisionsIndexPage() {
     usePageMusic('paths_crossroads');
@@ -64,49 +65,23 @@ export default function VisionsIndexPage() {
                     Look through. Claim the relic. Return home.
                 </p>
 
-                {/* Progress strip */}
-                <div className="mt-6 rounded-2xl border border-aether-gold/20 bg-black/50 backdrop-blur-md p-4">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                        <p className="text-[9px] uppercase tracking-[0.35em] text-aether-gold/70">Journey map</p>
-                        <p className="text-[11px] text-white/50 tabular-nums">
-                            {stats.seen}/{stats.total} seen · {stats.trials} trials · {stats.relics} relics
-                        </p>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                        <motion.div
-                            className="h-full rounded-full bg-gradient-to-r from-aether-gold/80 to-aether-gold"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${stats.total ? (stats.seen / stats.total) * 100 : 0}%` }}
-                            transition={{ duration: DURATION.ritual, ease: EASE.breath }}
-                        />
-                    </div>
-                    {stats.complete && (
-                        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                            <p className="text-[12px] text-aether-gold/80 flex-1">
-                                Every road opened. The Source waits.
-                            </p>
-                            <SacredButton
-                                size="sm"
-                                pulse
-                                onClick={() => {
-                                    sacredUi.access();
-                                    window.location.href = '/epilogue';
-                                }}
-                            >
-                                Epilogue →
-                            </SacredButton>
-                        </div>
-                    )}
-                    {!stats.complete && stats.seen > 0 && (
-                        <Link
-                            href="/epilogue"
-                            onClick={() => sacredUi.click()}
-                            className="mt-3 inline-block text-[10px] uppercase tracking-[0.25em] text-white/35 hover:text-aether-gold/70"
-                        >
-                            Roads so far →
-                        </Link>
-                    )}
+                <div className="mt-6">
+                    <VisionReliquary variant="compact" />
                 </div>
+                {stats.complete && (
+                    <div className="mt-3 flex justify-end">
+                        <SacredButton
+                            size="sm"
+                            pulse
+                            onClick={() => {
+                                sacredUi.access();
+                                window.location.href = '/epilogue';
+                            }}
+                        >
+                            Epilogue →
+                        </SacredButton>
+                    </div>
+                )}
 
                 <motion.ul
                     variants={staggerContainer}

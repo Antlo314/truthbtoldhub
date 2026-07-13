@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     BookOpen, Film, Library, ScrollText, Sparkles,
-    Home, User, Coins, Users, Globe, X, Menu,
+    Home, User, Coins, Users, Globe, X, Menu, Sun,
 } from 'lucide-react';
 import AmbientEmbers from '@/components/game/AmbientEmbers';
 import { DURATION, EASE } from '@/lib/design/motion';
@@ -28,6 +28,7 @@ type NavItem = { href: string; label: string; whisper: string; icon: typeof Home
 const CONSTELLATION: NavItem[] = [
     { href: '/world', label: 'Journey', whisper: 'Truth\'s hut', icon: Globe },
     { href: '/vision', label: 'Visions', whisper: 'Unsealed roads', icon: Sparkles },
+    { href: '/epilogue', label: 'Return', whisper: 'Source roads', icon: Sun },
     { href: '/archive', label: 'The Hall', whisper: 'Voices gather', icon: Users },
     { href: '/codex', label: 'Codex', whisper: 'Memory', icon: BookOpen },
     { href: '/library', label: 'Library', whisper: 'Scrolls', icon: Library },

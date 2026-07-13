@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 
-const KEY = 'tbth-journey-brief-v2';
+const KEY = 'tbth-journey-brief-v3';
 
 const STEPS = [
     { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },
     { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder. Each opens a real system.' },
-    { title: 'Open the visions', body: 'At the Wayfinder, five vision portals are unsealed — Eden, Giza, the Fair, Kolbrin, Emerald. Look through, then return.' },
-    { title: 'Cross the Hub', body: 'Hall, Cinema, Library, Codex, Offering — one constellation. The veil menu opens them anytime.' },
+    { title: 'Open the visions', body: 'At the Wayfinder, five vision portals are unsealed. Look through peace and trial, claim each road’s relic, then return.' },
+    { title: 'Return to the Source', body: 'When every portal is open, the Epilogue waits. Until then, the Wayfinder and Reliquary keep your map.' },
+    { title: 'Cross the Hub', body: 'Hall, Cinema, Library, Codex, Offering — one constellation. Use the bar above the hut or the veil menu anytime.' },
 ];
 
 /**

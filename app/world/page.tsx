@@ -8,6 +8,8 @@ import { DURATION, EASE } from '@/lib/design/motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 import JourneyBrief from '@/components/sanctum/JourneyBrief';
 import { BRAND } from '@/lib/brand/assets';
+import { visionStats } from '@/lib/brand/visionProgress';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 // =====================================================================
 //  THE JOURNEY 3D — Truth's Hut
@@ -51,8 +53,22 @@ export default function World3DPage() {
     const [error, setError] = useState<string | null>(null);
     const [isTouch, setIsTouch] = useState(false);
     const [veilLifted, setVeilLifted] = useState(false);
+    const [vStats, setVStats] = useState({ seen: 0, total: 5, relics: 0, complete: false });
 
     const whisper = useMemo(() => lineForProgress(progress), [progress]);
+
+    useEffect(() => {
+        try { setVStats(visionStats()); } catch { /* */ }
+        const onVis = () => {
+            try { setVStats(visionStats()); } catch { /* */ }
+        };
+        window.addEventListener('focus', onVis);
+        document.addEventListener('visibilitychange', onVis);
+        return () => {
+            window.removeEventListener('focus', onVis);
+            document.removeEventListener('visibilitychange', onVis);
+        };
+    }, []);
 
     const fitCanvas = () => {
         const c = canvasRef.current;
@@ -170,16 +186,57 @@ export default function World3DPage() {
 
     return (
         <div className="w-full h-[100dvh] bg-[#05060c] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 text-[9px] sm:text-[10px] uppercase tracking-[0.28em] text-zinc-500 border-b border-aether-gold/10 shrink-0 bg-black/55 backdrop-blur-md">
-                <Link href="/" className="hover:text-aether-gold transition-colors whitespace-nowrap">
+            <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-2 text-[8px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.28em] text-zinc-500 border-b border-aether-gold/10 shrink-0 bg-black/55 backdrop-blur-md">
+                <Link
+                    href="/"
+                    onClick={() => sacredUi.click()}
+                    className="hover:text-aether-gold transition-colors whitespace-nowrap shrink-0"
+                >
                     ← Sanctum
                 </Link>
-                <span className="text-aether-gold/85 font-black truncate px-2 tracking-[0.22em]">
-                    Truth&apos;s Hut
-                </span>
-                <Link href="/support" className="hover:text-white transition-colors whitespace-nowrap">
-                    Offering
-                </Link>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 justify-center flex-1">
+                    <span className="text-aether-gold/85 font-black truncate tracking-[0.18em] sm:tracking-[0.22em]">
+                        Truth&apos;s Hut
+                    </span>
+                    {(vStats.seen > 0 || vStats.relics > 0) && (
+                        <span className="hidden sm:inline text-[8px] normal-case tracking-normal text-white/30 tabular-nums shrink-0">
+                            {vStats.seen}/{vStats.total} · {vStats.relics} relics
+                        </span>
+                    )}
+                </div>
+                <nav className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <Link
+                        href="/vision"
+                        onClick={() => sacredUi.threshold()}
+                        className="hover:text-aether-gold transition-colors whitespace-nowrap"
+                    >
+                        Visions
+                    </Link>
+                    <Link
+                        href="/archive"
+                        onClick={() => sacredUi.click()}
+                        className="hidden xs:inline hover:text-white transition-colors whitespace-nowrap sm:inline"
+                    >
+                        Hall
+                    </Link>
+                    {vStats.complete ? (
+                        <Link
+                            href="/epilogue"
+                            onClick={() => sacredUi.access()}
+                            className="text-aether-gold hover:text-white transition-colors whitespace-nowrap"
+                        >
+                            Source
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/support"
+                            onClick={() => sacredUi.click()}
+                            className="hover:text-white transition-colors whitespace-nowrap"
+                        >
+                            Offer
+                        </Link>
+                    )}
+                </nav>
             </div>
 
             <div ref={stageRef} className="relative flex-1 min-h-0 bg-[#05060c]">

@@ -338,7 +338,8 @@ namespace Journey3D
                     var t = UIKit.Label(row, $"{(r.kind == "video" ? "[Vision]" : "[Still]")}  {r.title}", 18, UIKit.Body, TextAnchor.MiddleLeft);
                     UIKit.Fill(t.rectTransform, 10);
                 }
-                RowButton(list, "Watch the transmissions", s.accent, () => OpenWeb("/cinema"));
+                RowButton(list, "Open the Wayfinder portals", s.accent, () => OpenWeb("/vision"));
+                RowButton(list, "Watch the transmissions", UIKit.Faint, () => OpenWeb("/cinema"));
             });
         }
 
@@ -812,7 +813,8 @@ namespace Journey3D
         {
             var body = FreshBody("The Wayfinder  ·  Roads Beyond", s.accent);
             var list = UIKit.ScrollList(body);
-            Header(list, "Vision portals are open. Full 3D chambers are still being laid — look through the glass, then return to the hut.");
+            Header(list, "Vision portals are open. Look through peace and trial, claim each road's relic. Full 3D chambers are still being laid.");
+            RowButton(list, "Open the full Wayfinder map →", s.accent, () => OpenWeb("/vision"), 52);
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
@@ -831,6 +833,7 @@ namespace Journey3D
                 openBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
             }
             Header(list, "Also on the Hub");
+            RowButton(list, "Epilogue — roads so far / Source", UIKit.Amber, () => OpenWeb("/epilogue"));
             RowButton(list, "The Hall — gather with souls", s.accent, () => OpenWeb("/archive"));
             RowButton(list, "The Codex — memory & whispers", s.accent, () => OpenWeb("/codex"));
             RowButton(list, "The Cinema — transmissions", s.accent, () => OpenWeb("/cinema"));

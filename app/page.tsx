@@ -18,6 +18,7 @@ import { useTiltParallax } from '@/lib/game/useTiltParallax';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
+import { visionStats } from '@/lib/brand/visionProgress';
 
 function TitleCardInner() {
     const searchParams = useSearchParams();
@@ -27,6 +28,7 @@ function TitleCardInner() {
     const [founders, setFounders] = useState<number | null>(null);
     const [continueHref, setContinueHref] = useState<string | null>(null);
     const [soulName, setSoulName] = useState<string | null>(null);
+    const [roadNote, setRoadNote] = useState<string | null>(null);
 
     useEffect(() => {
         const cipher = searchParams.get('cipher');
@@ -47,6 +49,11 @@ function TitleCardInner() {
             setContinueHref('/world');
             const n = st?.character?.name?.trim();
             if (n) setSoulName(n);
+        } catch { /* ignore */ }
+        try {
+            const s = visionStats();
+            if (s.complete) setRoadNote('Every vision open — the Source remembers.');
+            else if (s.seen > 0) setRoadNote(`${s.seen}/${s.total} portals · ${s.relics} relics carried`);
         } catch { /* ignore */ }
     }, []);
 
@@ -234,6 +241,17 @@ function TitleCardInner() {
                     )}
                 </motion.div>
 
+                {roadNote && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.9, duration: 0.6 }}
+                        className="mt-5 text-[10px] uppercase tracking-[0.28em] text-aether-gold/50 pointer-events-none"
+                    >
+                        {roadNote}
+                    </motion.p>
+                )}
+
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -244,9 +262,11 @@ function TitleCardInner() {
                     <span className="text-white/15">·</span>
                     <button type="button" onClick={() => enter('/world')} className="hover:text-aether-gold/80 transition-colors">Hut</button>
                     <span className="text-white/15">·</span>
+                    <button type="button" onClick={() => router.push('/vision')} className="hover:text-aether-gold/80 transition-colors">Visions</button>
+                    <span className="text-white/15">·</span>
                     <button type="button" onClick={() => enter('/archive')} className="hover:text-aether-gold/80 transition-colors">Hall</button>
                     <span className="text-white/15">·</span>
-                    <button type="button" onClick={() => enter('/cinema')} className="hover:text-aether-gold/80 transition-colors">Cinema</button>
+                    <button type="button" onClick={() => router.push('/cinema')} className="hover:text-aether-gold/80 transition-colors">Cinema</button>
                 </motion.div>
 
                 {founders !== null && (

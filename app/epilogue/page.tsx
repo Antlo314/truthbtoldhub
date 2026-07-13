@@ -5,25 +5,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import SacredButton from '@/components/sanctum/SacredButton';
-import { visionStats, loadVisionProgress, RELIC_BY_VISION } from '@/lib/brand/visionProgress';
-import { VISIONS } from '@/lib/brand/visions';
+import { visionStats } from '@/lib/brand/visionProgress';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { gameMusic } from '@/lib/game/music';
 import { usePageMusic } from '@/lib/game/usePageMusic';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
+import VisionReliquary from '@/components/sanctum/VisionReliquary';
 
 export default function EpiloguePage() {
     const router = useRouter();
     const [stats, setStats] = useState(visionStats());
-    const [relics, setRelics] = useState<string[]>([]);
 
     usePageMusic('title_landing');
 
     useEffect(() => {
-        const p = loadVisionProgress();
         setStats(visionStats());
-        setRelics(p.relics);
         sacredUi.access();
         try { gameMusic.playSting('soul_recognized'); } catch { /* */ }
     }, []);
@@ -61,22 +58,9 @@ export default function EpiloguePage() {
                         : `You have opened ${stats.seen} of ${stats.total} vision portals and witnessed ${stats.trials} trials. The Wayfinder still holds unopened light.`}
                 </p>
 
-                {relics.length > 0 && (
-                    <div className="mb-6 rounded-2xl border border-aether-gold/20 bg-black/50 p-4">
-                        <p className="text-[9px] uppercase tracking-[0.35em] text-aether-gold/70 mb-3">Relics carried</p>
-                        <ul className="space-y-2">
-                            {VISIONS.filter((v) => relics.includes(RELIC_BY_VISION[v.id].id)).map((v) => {
-                                const r = RELIC_BY_VISION[v.id];
-                                return (
-                                    <li key={r.id} className="text-sm">
-                                        <span className="font-ritual text-white" style={{ color: v.accent }}>{r.name}</span>
-                                        <span className="text-white/40"> — {r.desc}</span>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                )}
+                <div className="mb-6">
+                    <VisionReliquary variant="full" showCtas={false} />
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <SacredButton size="md" pulse onClick={() => router.push('/world')}>

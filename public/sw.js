@@ -1,9 +1,11 @@
 /* Sacred Sanctum — lightweight offline shell (static brand + posters only) */
-const CACHE = 'sanctum-shell-v1';
+const CACHE = 'sanctum-shell-v2';
 const PRECACHE = [
   '/',
   '/favicon.png',
   '/manifest.webmanifest',
+  '/vision',
+  '/epilogue',
   '/brand/keyart-return-source.jpg',
   '/brand/bg-portal.jpg',
   '/brand/bg-hut-sanctuary.jpg',
