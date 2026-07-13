@@ -36,6 +36,12 @@ namespace Journey3D
             if (ExteriorEnabled) BuildExterior();
             BuildStations();
             var player = BuildPlayer();
+            // Truth (and any NPC ambients) need the player transform
+            foreach (var ambient in FindObjectsByType<NpcAmbient>(FindObjectsSortMode.None))
+            {
+                var rig = ambient.GetComponent<CharacterRig>();
+                if (rig != null) ambient.Bind(rig, player.transform);
+            }
             var cam = BuildCamera(player);
             BuildSystems(player, cam);
             BuildLights();
@@ -216,9 +222,10 @@ namespace Journey3D
             //  Furniture: Kenney CC0. Props: Blender hut set. Functions unchanged.
             // ============================================================
 
-            // Dual rugs — processional aisle + Truth circle
-            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -2.0f), 0, 3.8f, collide: false, flat: true);
-            SpawnKenney("fur_rugRound", new Vector3(0, 0.025f, 2.4f), 15f, 3.2f, collide: false, flat: true);
+            // Dual rugs — processional aisle + Truth circle (richer scale)
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.02f, -2.0f), 0, 4.2f, collide: false, flat: true);
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.025f, 2.4f), 15f, 3.6f, collide: false, flat: true);
+            SpawnKenney("fur_rugRound", new Vector3(0, 0.018f, -4.2f), 90f, 2.6f, collide: false, flat: true);
 
             // ---- WEST: Memory wall (archive / reading / rest) ----
             SpawnKenney("fur_bookcaseOpen", new Vector3(-6.15f, 0, 2.2f), 90f, 2.35f);
@@ -267,6 +274,16 @@ namespace Journey3D
             // Ceremonial floor wash along aisle (subtle gold)
             PropUtils.SoftQuad("aisle_wash", new Vector3(0, 0.028f, -0.5f),
                 new Vector3(2.4f, 9.5f, 1f), new Color(1f, 0.78f, 0.35f, 0.07f));
+            PropUtils.SoftQuad("truth_dais_wash", new Vector3(0, 0.03f, 2.85f),
+                new Vector3(3.2f, 3.2f, 1f), new Color(1f, 0.82f, 0.4f, 0.09f));
+
+            // Extra denseness: more books, lamps, greenery
+            SpawnKenney("fur_books", new Vector3(-5.4f, 1.4f, 1.1f), 25f, 0.32f, collide: false);
+            SpawnKenney("fur_books", new Vector3(4.4f, 0.95f, 1.7f), -20f, 0.28f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(-2.1f, 0, 5.9f), 60f, 1.25f, collide: false);
+            SpawnKenney("fur_pottedPlant", new Vector3(2.1f, 0, 5.9f), -50f, 1.3f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(0, 0.02f, 4.6f), 0, 0.5f, collide: false);
+            AddPoint("TruthSideLamp", new Vector3(0, 1.0f, 4.6f), new Color(1f, 0.85f, 0.5f), 0.55f, 4f);
         }
 
         // the clearing: everything the player can reach stays inside this radius
@@ -294,39 +311,47 @@ namespace Journey3D
             AddPoint("PathLanternL", new Vector3(-1.6f, 1.1f, -8.2f), new Color(1f, 0.8f, 0.4f), 0.85f, 5f);
             AddPoint("PathLanternR", new Vector3(1.6f, 1.1f, -8.2f), new Color(1f, 0.8f, 0.4f), 0.85f, 5f);
 
-            // Glade trees (clear trail corridor south)
+            // Glade trees (clear trail corridor south) — denser mid-yard ring
             string[] trees = { "nat_tree_default", "nat_tree_pineTallA", "nat_tree_detailed", "nat_tree_oak",
                                "nat_tree_fat", "nat_tree_thin", "nat_tree_pineRoundC", "nat_tree_small" };
-            float[] ang = { 8, 28, 48, 72, 95, 118, 145, 170, 200, 230, 255, 310, 335 };
+            float[] ang = { 5, 18, 28, 38, 48, 60, 72, 85, 95, 108, 118, 132, 145, 158, 170, 185, 200, 215, 230, 242, 255, 310, 322, 335, 348 };
             for (int i = 0; i < ang.Length; i++)
             {
                 if (InTrail(ang[i], 14f)) continue;
-                float r = 15.5f + (i % 4) * 1.35f;
+                float r = 14.2f + (i % 5) * 1.45f;
                 float rad = ang[i] * Mathf.Deg2Rad;
                 var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
-                SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.0f + (i % 5) * 0.55f);
+                SpawnKenney(trees[i % trees.Length], p, ang[i] * 2.3f, 3.2f + (i % 5) * 0.65f);
             }
-            // rocks + standing stones
+            // rocks + standing stones — more markers around the glade
             string[] rocks = { "nat_rock_largeA", "nat_stone_tallC", "nat_rock_largeC", "nat_stone_largeB", "nat_rock_tallA" };
-            float[] rang = { 20, 70, 120, 175, 205, 250, 300, 340 };
+            float[] rang = { 12, 35, 55, 70, 95, 120, 145, 175, 190, 205, 230, 250, 280, 300, 320, 340 };
             for (int i = 0; i < rang.Length; i++)
             {
                 if (InTrail(rang[i])) continue;
                 float rad = rang[i] * Mathf.Deg2Rad;
-                var p = new Vector3(Mathf.Cos(rad) * 20.5f, 0, Mathf.Sin(rad) * 20.5f);
-                SpawnKenney(rocks[i % rocks.Length], p, rang[i] * 1.7f, 1.2f + (i % 3) * 0.5f);
+                float rr = 18.5f + (i % 3) * 1.2f;
+                var p = new Vector3(Mathf.Cos(rad) * rr, 0, Mathf.Sin(rad) * rr);
+                SpawnKenney(rocks[i % rocks.Length], p, rang[i] * 1.7f, 1.35f + (i % 3) * 0.55f);
             }
             // bushes, flowers, mushrooms, logs across the mid-yard (non-blocking)
             string[] flora = { "nat_plant_bushLarge", "nat_flower_redA", "nat_plant_bushDetailed", "nat_flower_yellowB",
                                "nat_mushroom_redGroup", "nat_flower_purpleC", "nat_log_stack", "nat_grass_leafsLarge" };
-            float[] fang = { 15, 45, 80, 120, 150, 190, 225, 265, 300, 335 };
+            float[] fang = { 10, 22, 35, 45, 60, 80, 100, 120, 140, 150, 170, 190, 210, 225, 245, 265, 285, 300, 315, 335 };
             for (int i = 0; i < fang.Length; i++)
             {
                 float rad = fang[i] * Mathf.Deg2Rad;
-                float r = 10.5f + (i % 4) * 2.1f;
+                float r = 9.2f + (i % 5) * 2.0f;
                 var p = new Vector3(Mathf.Cos(rad) * r, 0, Mathf.Sin(rad) * r);
-                SpawnKenney(flora[i % flora.Length], p, fang[i] * 3f, 0.7f + (i % 3) * 0.4f, collide: false);
+                SpawnKenney(flora[i % flora.Length], p, fang[i] * 3f, 0.75f + (i % 3) * 0.45f, collide: false);
             }
+            // Path lanterns further out + soft glow markers
+            SpawnKenney("fur_lampRoundTable", new Vector3(-1.5f, 0, -12.5f), 0, 0.65f, collide: false);
+            SpawnKenney("fur_lampRoundTable", new Vector3(1.5f, 0, -12.5f), 0, 0.65f, collide: false);
+            AddPoint("PathDeepL", new Vector3(-1.5f, 1.0f, -12.5f), new Color(1f, 0.78f, 0.38f), 0.7f, 5.5f);
+            AddPoint("PathDeepR", new Vector3(1.5f, 1.0f, -12.5f), new Color(1f, 0.78f, 0.38f), 0.7f, 5.5f);
+            // Second path strip toward trailhead
+            Spawn("terrain_path", new Vector3(0, 0, -18.5f), 0, collide: false);
 
             BuildForestWall();
             BuildBoundary();
@@ -488,41 +513,56 @@ namespace Journey3D
         {
             // Same StationIds + labels — layout redesigned as a ceremonial plan.
 
-            // NORTH: Truth as abstract presence (no human mesh)
-            var truth = PropUtils.TruthPresence(new Vector3(0, 0, 2.85f));
-            AddStation(truth, StationId.Truth, "The Presence", "#f97316");
+            // NORTH: Truth (Quaternius sage) on the processional axis
+            var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
+                new Vector3(0, 0, 2.85f), 180f, 1.88f, collide: true);
+            AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
             truth.GetComponent<Station>().interactRadius = 3.0f;
+            if (truth.GetComponent<CharacterRig>() != null)
+                truth.AddComponent<NpcAmbient>();
+            PropUtils.GoldRing(truth.transform, 1.05f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.9f), 0.055f);
+            PropUtils.GoldRing(truth.transform, 0.72f, 0.04f, new Color(1f, 0.82f, 0.4f, 0.35f), 0.03f);
+            PropUtils.Pedestal(new Vector3(0, 0, 2.85f), 0.12f, 0.55f, new Color(0.22f, 0.16f, 0.1f));
 
-            // Far north wall: Ledger (left) · Sanctum door (center) · Seeing Glass (right)
+            // Far north wall: Ledger · Sanctum door · Seeing Glass
             var ledger = Spawn("ledger_lectern", new Vector3(-3.6f, 0, 5.85f), 160f);
             AddStation(ledger, StationId.Ledger, "The Ledger", "#fbbf24");
+            PropUtils.GoldRing(ledger.transform, 0.7f, 0.02f, new Color(0.98f, 0.75f, 0.22f, 0.55f), 0.04f);
 
             var door = Spawn("sanctum_door", new Vector3(0, 0, 6.78f), 180f);
             AddStation(door, StationId.Sanctum, "The Sanctum", "#7c5cff");
+            PropUtils.GoldRing(door.transform, 0.85f, 0.02f, new Color(0.49f, 0.36f, 1f, 0.45f), 0.04f);
 
             var glass = Spawn("seeing_glass", new Vector3(3.6f, 0, 5.85f), -160f);
             AddStation(glass, StationId.SeeingGlass, "The Seeing Glass", "#22d3ee");
+            PropUtils.GoldRing(glass.transform, 0.7f, 0.02f, new Color(0.13f, 0.83f, 0.93f, 0.5f), 0.04f);
 
-            // WEST wall: Archive + Soul (memory corridor)
+            // WEST: Archive + Soul
             var archive = Spawn("archive_shelf", new Vector3(-6.2f, 0, 3.4f), 90f);
             AddStation(archive, StationId.Archive, "The Archive", "#fcd34d");
+            PropUtils.GoldRing(archive.transform, 0.65f, 0.02f, new Color(0.99f, 0.83f, 0.3f, 0.45f), 0.04f);
 
             var mirror = Spawn("soul_mirror", new Vector3(-6.15f, 0, -2.6f), 90f);
             AddStation(mirror, StationId.Soul, "Your Soul", "#94a3b8");
+            PropUtils.GoldRing(mirror.transform, 0.65f, 0.02f, new Color(0.6f, 0.7f, 0.8f, 0.45f), 0.04f);
 
-            // EAST / SE workshop: Forge + Wayfinder
+            // EAST: Forge + Wayfinder
             var forge = Spawn("forge_station", new Vector3(5.25f, 0, -2.9f), -100f);
             AddStation(forge, StationId.Forge, "The Forge", "#f97316");
+            PropUtils.GoldRing(forge.transform, 0.7f, 0.02f, new Color(0.97f, 0.45f, 0.09f, 0.5f), 0.04f);
 
             var table = Spawn("wayfinder_table", new Vector3(5.55f, 0, -5.55f), -40f);
             AddStation(table, StationId.Wayfinder, "The Wayfinder", "#22c55e");
+            PropUtils.GoldRing(table.transform, 0.75f, 0.02f, new Color(0.13f, 0.77f, 0.37f, 0.5f), 0.04f);
 
-            // SOUTH entry: Offering (west of door) · Arcade (east of door) — clear of gap
+            // SOUTH: Offering · Arcade
             var offering = Spawn("offering_altar", new Vector3(-3.5f, 0, -5.35f), 15f);
             AddStation(offering, StationId.Offering, "The Offering", "#fbbf24");
+            PropUtils.GoldRing(offering.transform, 0.7f, 0.02f, new Color(0.98f, 0.75f, 0.22f, 0.5f), 0.04f);
 
             var arcade = Spawn("arcade_cabinet", new Vector3(3.15f, 0, -5.85f), 0f);
             AddStation(arcade, StationId.Arcade, "The Arcade", "#7c5cff");
+            PropUtils.GoldRing(arcade.transform, 0.65f, 0.02f, new Color(0.49f, 0.36f, 1f, 0.45f), 0.04f);
         }
 
         private PlayerController BuildPlayer()

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -29,7 +29,7 @@ namespace Journey3D
 
         // bump to send EVERY soul (even ones created before) through the new
         // creation scene once; it saves and won't ask again unless bumped again
-        public const int CURRENT_CREATOR_VERSION = 2;
+        public const int CURRENT_CREATOR_VERSION = 3;
 
         private static bool NeedsCreation()
         {
@@ -50,7 +50,7 @@ namespace Journey3D
                 MaybeShowHutWelcome();
         }
 
-        /// One-time in-hut welcome after soul exists — closes the "what now?" gap.
+        /// One-time in-hut welcome after soul exists · closes the "what now?" gap.
         private void MaybeShowHutWelcome()
         {
             if (PlayerPrefs.GetInt("tbth_hut_welcome_v2", 0) == 1) return;
@@ -63,12 +63,12 @@ namespace Journey3D
             var list = UIKit.ScrollList(body);
             BodyText(list,
                 "You stand in the chamber of return. Gold rings mark living stations. " +
-                "Walk the aisle to the Presence — a vessel of light, not a body. Touch the Ledger, Archive, Forge, Offering, Arcade, and Wayfinder. " +
+                "Walk the aisle to Truth. Touch the Ledger, Archive, Forge, Offering, Arcade, and Wayfinder. " +
                 "The Sanctum door opens the living Hall on the Hub.", 140, UIKit.Body);
             Header(list, "How to move");
             BodyText(list, "WASD or left stick to walk. Right-drag or right stick to look. E to interact. Esc to close panels.", 64, UIKit.Faint);
             Header(list, "The path");
-            BodyText(list, "1. Approach the Presence  ·  2. Check the Ledger  ·  3. Sanctum door for community  ·  4. Wayfinder for vision portals", 80, UIKit.Body);
+            BodyText(list, "1. Speak with Truth  ·  2. Check the Ledger  ·  3. Sanctum door for community  ·  4. Wayfinder for vision portals", 80, UIKit.Body);
             RowButton(list, "Begin", UIKit.Gold, () =>
             {
                 PlayerPrefs.SetInt("tbth_hut_welcome_v2", 1);
@@ -139,7 +139,7 @@ namespace Journey3D
             _dimImage = _panelRoot.GetComponent<Image>();
             UIKit.Fill(_panelRoot);
 
-            // Centered sacred card — wide on desktop, full with margins on phone
+            // Centered sacred card · wide on desktop, full with margins on phone
             var frame = UIKit.Panel(_panelRoot, "frame", UIKit.PanelBg);
             _panelFrame = frame;
             SetFrameWide();
@@ -168,7 +168,7 @@ namespace Journey3D
             trt.offsetMin = new Vector2(22, 8);
             trt.offsetMax = new Vector2(-64, -8);
 
-            _closeBtn = UIKit.TextButton(titleBar, "✕", UIKit.Gold, ClosePanel, 20);
+            _closeBtn = UIKit.TextButton(titleBar, "?", UIKit.Gold, ClosePanel, 20);
             var crt = _closeBtn.GetComponent<RectTransform>();
             crt.anchorMin = new Vector2(1, 0.5f);
             crt.anchorMax = new Vector2(1, 0.5f);
@@ -187,7 +187,7 @@ namespace Journey3D
 
         private void SetFrameWide()
         {
-            // letterboxed card — never edge-to-edge chaos
+            // letterboxed card · never edge-to-edge chaos
             _panelFrame.anchorMin = new Vector2(0.5f, 0.5f);
             _panelFrame.anchorMax = new Vector2(0.5f, 0.5f);
             _panelFrame.pivot = new Vector2(0.5f, 0.5f);
@@ -201,7 +201,7 @@ namespace Journey3D
 
         private void SetFrameSide()
         {
-            // creator: still a centered card (vessel has no human portrait)
+            // creator: side card so the live avatar stays visible
             SetFrameWide();
         }
 
@@ -396,16 +396,19 @@ namespace Journey3D
             OpenCreator(false);
         }
 
+                //  CHARACTER CREATOR (Soul Mirror + first-run)
         // =====================================================
-        //  SOUL VESSEL (no human body / garb / hair)
-        // =====================================================
+        private static readonly string[] CreatorTabs = { "Body", "Hair", "Garb", "Path" };
+
         public void OpenCreator(bool firstRun)
         {
             _creatorLock = firstRun && NeedsCreation();
             _creatorTab = 0;
-            SetFrameWide();
-            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.72f);
-            if (cameraRig != null) cameraRig.portraitMode = false;
+            // dock the card right + slow portrait orbit so you SEE your soul change;
+            // barely dim the world so the live avatar preview stays visible
+            SetFrameSide();
+            if (_dimImage != null) _dimImage.color = new Color(0, 0, 0, 0.12f);
+            if (cameraRig != null) cameraRig.portraitMode = true;
             RenderCreator();
         }
 
@@ -413,54 +416,181 @@ namespace Journey3D
         {
             var accent = UIKit.Amber;
             var c = SaveState.Character;
-            var body = FreshBody(_creatorLock ? "Bind Your Vessel" : "Your Vessel", accent);
+            var body = FreshBody(_creatorLock ? "Shape Your Soul  ·  Welcome, wanderer" : "Your Soul", accent);
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(!_creatorLock);
 
-            var list = UIKit.ScrollList(body);
-            BodyText(list,
-                "You walk as a vessel of light — no flesh form. Name yourself and choose a path; the orb in the hut carries your hue.",
-                88, UIKit.Body);
+            // tab bar
+            var tabBar = UIKit.Panel(body, "tabs", Color.clear);
+            tabBar.anchorMin = new Vector2(0, 1); tabBar.anchorMax = new Vector2(1, 1); tabBar.pivot = new Vector2(0.5f, 1);
+            tabBar.sizeDelta = new Vector2(0, 42);
+            var hl = tabBar.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hl.spacing = 6; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true; hl.childForceExpandHeight = true;
+            for (int i = 0; i < CreatorTabs.Length; i++)
+            {
+                int idx = i;
+                UIKit.TextButton(tabBar, CreatorTabs[i], i == _creatorTab ? accent : UIKit.Faint, () => { _creatorTab = idx; RenderCreator(); }, 17);
+            }
 
-            Header(list, "Name");
-            var input = UIKit.Input(list, "Speak your name…", string.IsNullOrWhiteSpace(c.name) || c.name == "Wandering Soul" ? "" : c.name);
-            var ile = input.gameObject.AddComponent<LayoutElement>();
-            ile.preferredHeight = 52;
-            ile.minHeight = 52;
+            // scroll content between tab bar and bottom bar
+            var host = UIKit.Panel(body, "host", Color.clear);
+            host.anchorMin = Vector2.zero; host.anchorMax = Vector2.one; host.offsetMin = new Vector2(0, 52); host.offsetMax = new Vector2(0, -50);
+            var list = UIKit.ScrollList(host);
+
+            PreviewChips(list);
+            switch (_creatorTab)
+            {
+                case 0: TabBody(list, c); break;
+                case 1: TabHair(list, c); break;
+                case 2: TabGarb(list, c); break;
+                default: TabPath(list, c); break;
+            }
+
+            // bottom bar
+            var bottom = UIKit.Panel(body, "bottom", Color.clear);
+            bottom.anchorMin = new Vector2(0, 0); bottom.anchorMax = new Vector2(1, 0); bottom.pivot = new Vector2(0.5f, 0);
+            bottom.sizeDelta = new Vector2(0, 44);
+            var bh = bottom.gameObject.AddComponent<HorizontalLayoutGroup>();
+            bh.spacing = 10; bh.childControlWidth = true; bh.childForceExpandWidth = true; bh.childControlHeight = true; bh.childForceExpandHeight = true;
+            UIKit.TextButton(bottom, "Randomize", UIKit.Faint, () => { RandomizeAppearance(); appearance?.Apply(); RenderCreator(); }, 18);
+            UIKit.TextButton(bottom, _creatorLock ? "Enter the Hut" : "Save", accent, SaveCreator, 20);
+        }
+
+        private void PreviewChips(Transform list)
+        {
+            var c = SaveState.Character;
+            var row = UIKit.Row(list, 58, new Color(1, 1, 1, 0.05f));
+            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 8; h.padding = new RectOffset(12, 12, 8, 8);
+            h.childControlWidth = true; h.childForceExpandWidth = true; h.childControlHeight = true; h.childForceExpandHeight = true;
+            Chip(row, "Skin", AvatarPalette.Skin(c.skin));
+            Chip(row, "Hair", AvatarPalette.Hair(c.hairColor));
+            Chip(row, "Top", AvatarPalette.Cloth(c.top));
+            Chip(row, "Legs", AvatarPalette.Cloth(c.bottom));
+            Chip(row, "Boots", AvatarPalette.Boot(c.boots));
+            Chip(row, "Eyes", AvatarPalette.Eye(c.eyes));
+        }
+
+        private void Chip(Transform parent, string label, Color col)
+        {
+            var chip = UIKit.Panel(parent, "chip", col);
+            var t = UIKit.Label(chip, label, 13, new Color(0, 0, 0, 0.75f), TextAnchor.LowerCenter, FontStyle.Bold);
+            UIKit.Fill(t.rectTransform, 3);
+        }
+
+        private void TabBody(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Frame", AvatarPalette.BUILDS, c.build, v => { c.build = v; if (!System.Array.Exists(AvatarPalette.OutfitsFor(v), o => o == c.outfit)) c.outfit = AvatarPalette.OutfitsFor(v)[0]; });
+            SwatchGrid(list, "Skin tone", AvatarPalette.SKIN_TONES, c.skin, i => c.skin = i);
+            SwatchGrid(list, "Eyes", AvatarPalette.EYE_COLORS, c.eyes, i => c.eyes = i);
+        }
+
+        private void TabHair(Transform list, CharacterState c)
+        {
+            SwatchGrid(list, "Hair color", AvatarPalette.HAIR_COLORS, c.hairColor, i => c.hairColor = i);
+            BodyText(list, "Hair style and face are woven at the 2D shrine on the Hub - here your soul wears the garb's own cut.", 50, UIKit.Faint);
+        }
+
+        private void TabGarb(Transform list, CharacterState c)
+        {
+            OptionGrid(list, "Garb  (changes your whole figure)", AvatarPalette.OutfitsFor(c.build), c.outfit, v => c.outfit = v);
+            SwatchGrid(list, "Top color", AvatarPalette.CLOTH_COLORS, c.top, i => c.top = i);
+            SwatchGrid(list, "Legs color", AvatarPalette.CLOTH_COLORS, c.bottom, i => c.bottom = i);
+            SwatchGrid(list, "Boots", AvatarPalette.BOOT_COLORS, c.boots, i => c.boots = i);
+        }
+
+        private void TabPath(Transform list, CharacterState c)
+        {
+            BodyText(list, "Name your soul", 28, UIKit.Faint);
+            var input = UIKit.Input(list, "Speak your name...", c.name);
+            input.gameObject.AddComponent<LayoutElement>().preferredHeight = 50;
             input.onValueChanged.AddListener(v => { if (!string.IsNullOrWhiteSpace(v)) c.name = v.Trim(); });
 
-            Header(list, "Path to the Source");
+            BodyText(list, "Choose your path to the Source", 28, UIKit.Faint);
             for (int i = 0; i < AvatarPalette.PATHS.Length; i++)
             {
                 string id = AvatarPalette.PATHS[i];
                 string nm = AvatarPalette.PATH_NAMES[i];
                 bool sel = c.path == id;
-                RowButton(list, (sel ? "✦  " : "") + nm + PathBlurb(id), sel ? UIKit.Amber : UIKit.Body, () =>
-                {
-                    c.path = id;
-                    appearance?.Apply();
-                    RenderCreator();
-                }, 54);
+                RowButton(list, (sel ? "? " : "") + nm + PathBlurb(id), sel ? UIKit.Amber : UIKit.Body, () => { c.path = id; RenderCreator(); }, 54);
             }
-
-            BodyText(list, "Your vessel color follows the path you choose.", 40, UIKit.Faint);
-            RowButton(list, _creatorLock ? "Enter the Hut →" : "Save vessel →", accent, SaveCreator, 56);
         }
 
         private static string PathBlurb(string id)
         {
-            return id switch
+            switch (id)
             {
-                "seer" => "  ·  vision & range",
-                "sentinel" => "  ·  defense & poise",
-                "scribe" => "  ·  crit & lifesteal",
-                _ => "  ·  regen & spirit",
-            };
+                case "seer": return "  ·  vision & range";
+                case "sentinel": return "  ·  defense & poise";
+                case "scribe": return "  ·  crit & lifesteal";
+                default: return "  ·  regen & spirit";
+            }
+        }
+
+        // ---- creator widgets ----
+        private void OptionGrid(Transform list, string label, string[] choices, string current, System.Action<string> set)
+        {
+            BodyText(list, label, 30, UIKit.Faint);
+            const int cols = 4;
+            int rows = Mathf.CeilToInt(choices.Length / (float)cols);
+            var row = UIKit.Row(list, rows * 46 + 14, Color.clear);
+            var grid = row.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(205, 40); grid.spacing = new Vector2(8, 6);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount; grid.constraintCount = cols;
+            foreach (var ch in choices)
+            {
+                string v = ch;
+                var col = v == current ? UIKit.Amber : UIKit.Faint;
+                UIKit.TextButton(row, v, col, () => { set(v); appearance?.Apply(); RenderCreator(); }, 16);
+            }
+        }
+
+        private void SwatchGrid(Transform list, string label, string[] hexes, int current, System.Action<int> set)
+        {
+            BodyText(list, label, 30, UIKit.Faint);
+            const int cols = 16;
+            int rows = Mathf.CeilToInt(hexes.Length / (float)cols);
+            var row = UIKit.Row(list, rows * 50 + 12, Color.clear);
+            var grid = row.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(44, 44); grid.spacing = new Vector2(6, 6);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount; grid.constraintCount = cols;
+            for (int i = 0; i < hexes.Length; i++)
+            {
+                int idx = i;
+                var go = new GameObject("sw");
+                var rt = UIKit.Rect(go, row);
+                go.AddComponent<Image>().color = UIKit.Hex(hexes[i]);
+                var btn = go.AddComponent<Button>();
+                btn.onClick.AddListener(() => { set(idx); appearance?.Apply(); RenderCreator(); });
+                if (i == current)
+                {
+                    var o = go.AddComponent<Outline>();
+                    o.effectColor = UIKit.Amber;
+                    o.effectDistance = new Vector2(3, -3);
+                }
+            }
+        }
+
+        private void RandomizeAppearance()
+        {
+            var c = SaveState.Character;
+            c.build = AvatarPalette.BUILDS[Random.Range(0, AvatarPalette.BUILDS.Length)];
+            c.skin = Random.Range(0, AvatarPalette.SKIN_TONES.Length);
+            c.hairStyle = AvatarPalette.HAIR_STYLES[Random.Range(0, AvatarPalette.HAIR_STYLES.Length)];
+            c.hairColor = Random.Range(0, AvatarPalette.HAIR_COLORS.Length);
+            c.face = AvatarPalette.FACES[Random.Range(0, AvatarPalette.FACES.Length)];
+            var outfits = AvatarPalette.OutfitsFor(c.build);
+            c.outfit = outfits[Random.Range(0, outfits.Length)];
+            c.top = Random.Range(0, AvatarPalette.CLOTH_COLORS.Length);
+            c.bottom = Random.Range(0, AvatarPalette.CLOTH_COLORS.Length);
+            c.boots = Random.Range(0, AvatarPalette.BOOT_COLORS.Length);
+            c.eyes = Random.Range(0, AvatarPalette.EYE_COLORS.Length);
+            c.extra = AvatarPalette.EXTRAS[Random.Range(0, AvatarPalette.EXTRAS.Length)];
         }
 
         private void SaveCreator()
         {
             var c = SaveState.Character;
-            if (string.IsNullOrWhiteSpace(c.name)) c.name = "Wandering Soul";
+            if (string.IsNullOrWhiteSpace(c.name) || c.name == "Wandering Soul") c.name = "Wandering Soul";
             if (string.IsNullOrEmpty(c.path)) c.path = "seer";
             c.created = true;
             c.creatorVersion = CURRENT_CREATOR_VERSION;
@@ -469,10 +599,14 @@ namespace Journey3D
             _creatorLock = false;
             if (_closeBtn != null) _closeBtn.gameObject.SetActive(true);
             ClosePanel();
+            // Fresh souls get the hut orientation right after creation
             if (PlayerPrefs.GetInt("tbth_hut_welcome_v2", 0) != 1)
                 OpenHutWelcome();
         }
 
+        // =====================================================
+
+        
         // =====================================================
         //  5. THE FORGE
         // =====================================================
@@ -487,12 +621,12 @@ namespace Journey3D
             {
                 c.iron += 3; c.copper += 2;
                 SaveState.MarkDiscovered("hut3d_starter_pouch");
-                BodyText(list, "The Presence leaves a small pouch of light-ore: \"Every smith starts with borrowed ore. Repay the road.\"  (+3 iron, +2 copper)", 70, UIKit.Amber);
+                BodyText(list, "Truth presses a small pouch into your hand: \"Every smith starts with borrowed ore. Repay the road, not me.\"  (+3 iron, +2 copper)", 70, UIKit.Amber);
             }
 
             Header(list, $"Your satchel:  Iron {c.iron}  ·  Copper {c.copper}  ·  Cosmic {c.cosmic}");
 
-            BodyText(list, "— THE WEAPON LADDER —", 30, s.accent);
+            BodyText(list, "· THE WEAPON LADDER ·", 30, s.accent);
             foreach (var w in GameData.Data.weapons)
             {
                 bool owned = c.ownedWeapons.Contains(w.id);
@@ -528,7 +662,7 @@ namespace Journey3D
                 }
             }
 
-            BodyText(list, "— TONICS FOR THE ROAD —  (drink before a fight; max 5 of each)", 34, s.accent);
+            BodyText(list, "· TONICS FOR THE ROAD ·  (drink before a fight; max 5 of each)", 34, s.accent);
             foreach (var t in GameData.Data.consumables)
             {
                 if (c.cleared.Count < t.minClears) continue;   // sealed recipes stay hidden, like the web hut
@@ -577,7 +711,7 @@ namespace Journey3D
                 "and the ground this chamber stands on. Every offering, one-time or monthly, is fuel.", 220);
             RowButton(list, "Make an offering", s.accent, () => OpenWeb("/support"), 58);
             RowButton(list, "Learn about the 400 Series", UIKit.Hex("#a855f7"), () => OpenWeb("/cinema"), 58);
-            BodyText(list, "\"When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire that cannot keep alone.\" — the Presence", 90, UIKit.Faint);
+            BodyText(list, "\"When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone.\" - Truth", 90, UIKit.Faint);
         }
 
         // =====================================================
@@ -699,7 +833,7 @@ namespace Journey3D
             var body = FreshBody("The Wayfinder  ·  Roads Beyond", s.accent);
             var list = UIKit.ScrollList(body);
             Header(list, "Vision portals are open. Look through peace and trial, claim each road's relic. Full 3D chambers are still being laid.");
-            RowButton(list, "Open the full Wayfinder map →", s.accent, () => OpenWeb("/vision"), 52);
+            RowButton(list, "Open the full Wayfinder map ?", s.accent, () => OpenWeb("/vision"), 52);
             foreach (var d in GameData.Data.destinations)
             {
                 var accent = UIKit.Hex(d.accent);
@@ -714,15 +848,15 @@ namespace Journey3D
                 var q = UIKit.Label(row, $"\"{d.quote}\"", 15, UIKit.Faint, TextAnchor.UpperLeft, FontStyle.Italic);
                 q.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
                 string destId = d.id;
-                var openBtn = UIKit.TextButton(row, "Open vision portal →", accent, () => OpenWeb("/vision/" + destId), 16);
+                var openBtn = UIKit.TextButton(row, "Open vision portal ?", accent, () => OpenWeb("/vision/" + destId), 16);
                 openBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
             }
             Header(list, "Also on the Hub");
-            RowButton(list, "Epilogue — roads so far / Source", UIKit.Amber, () => OpenWeb("/epilogue"));
-            RowButton(list, "The Hall — gather with souls", s.accent, () => OpenWeb("/archive"));
-            RowButton(list, "The Codex — memory & whispers", s.accent, () => OpenWeb("/codex"));
-            RowButton(list, "The Cinema — transmissions", s.accent, () => OpenWeb("/cinema"));
-            RowButton(list, "The Offering — fuel the vision", UIKit.Gold, () => OpenWeb("/support"));
+            RowButton(list, "Epilogue · roads so far / Source", UIKit.Amber, () => OpenWeb("/epilogue"));
+            RowButton(list, "The Hall · gather with souls", s.accent, () => OpenWeb("/archive"));
+            RowButton(list, "The Codex · memory & whispers", s.accent, () => OpenWeb("/codex"));
+            RowButton(list, "The Cinema · transmissions", s.accent, () => OpenWeb("/cinema"));
+            RowButton(list, "The Offering · fuel the vision", UIKit.Gold, () => OpenWeb("/support"));
         }
 
         // =====================================================
@@ -730,7 +864,7 @@ namespace Journey3D
         // =====================================================
         private void OpenTruth(Station s)
         {
-            var body = FreshBody("The Presence", s.accent);
+            var body = FreshBody("Ask Truth", s.accent);
             var list = UIKit.ScrollList(body);
             BodyText(list, TruthLore.Intro(), 90, UIKit.Body);
             Header(list, $"Standing: {TruthLore.TrustLabel()}  ·  Threads {TruthLore.Depth()}/{GameData.Lore.questions.Count}");
@@ -753,13 +887,13 @@ namespace Journey3D
         private void ShowTruthAnswer(Station s, TruthQuestionDef q)
         {
             SaveState.MarkDiscovered(TruthLore.DiscId(q.id));
-            var body = FreshBody("The Presence answers", s.accent);
+            var body = FreshBody("Truth speaks", s.accent);
             var list = UIKit.ScrollList(body);
             BodyText(list, q.prompt, 40, UIKit.Faint);
             BodyText(list, q.answer, 260, UIKit.Body);
             if (!string.IsNullOrEmpty(q.accountTitle))
             {
-                BodyText(list, "— CODEX PAGE UNLOCKED —", 34, UIKit.Amber);
+                BodyText(list, "· CODEX PAGE UNLOCKED ·", 34, UIKit.Amber);
                 BodyText(list, q.accountTitle, 30, UIKit.Amber);
                 BodyText(list, q.accountBody, 120, UIKit.Faint);
             }
@@ -768,7 +902,7 @@ namespace Journey3D
 
         private void ShowTruthDeflection(Station s, TruthQuestionDef q)
         {
-            var body = FreshBody("The thread holds", s.accent);
+            var body = FreshBody("Truth holds the thread", s.accent);
             var list = UIKit.ScrollList(body);
             BodyText(list, q.prompt, 40, UIKit.Faint);
             BodyText(list, TruthLore.Deflection(q), 140, UIKit.Body);
@@ -784,7 +918,7 @@ namespace Journey3D
             var list = UIKit.ScrollList(body);
             Header(list, "Beyond this door: chambers of voice.");
             BodyText(list,
-                "The Hall is where walking souls gather — live chambers, whispers soul-to-soul, " +
+                "The Hall is where walking souls gather · live chambers, whispers soul-to-soul, " +
                 "and the Architects who keep the peace. Real-time. Signed-in. Sacred.", 110);
             RowButton(list, "Enter the Hall", s.accent, () => OpenWeb("/archive"), 58);
             RowButton(list, "Your soul profile", UIKit.Body, () => OpenWeb("/self"), 48);
