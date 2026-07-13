@@ -12,16 +12,20 @@ import type { HousePeer } from '@/lib/truthos/housePresence';
 
 export default function HouseCanvas({
     locked,
+    mobile,
     peers,
     onHotspot,
     onPose,
     onInteractRequest,
+    onMoveActivity,
 }: {
     locked: boolean;
+    mobile: boolean;
     peers: HousePeer[];
     onHotspot: (h: Hotspot | null) => void;
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
     onInteractRequest?: () => void;
+    onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
     return (
         <div
@@ -79,9 +83,11 @@ export default function HouseCanvas({
                 <RemotePlayers peers={peers} />
                 <FirstPersonController
                     locked={locked}
+                    mobile={mobile}
                     onHotspot={onHotspot}
                     onPose={onPose}
                     onInteractRequest={onInteractRequest}
+                    onMoveActivity={onMoveActivity}
                 />
                 <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
             </Canvas>

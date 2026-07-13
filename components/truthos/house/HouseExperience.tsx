@@ -20,12 +20,12 @@ import { useTruthOs } from '../truthOsStore';
 import { useClientDevice } from '../engine/useClientDevice';
 import {
     useHouseUi,
-    shouldShowWalkthrough,
     type HousePanelId,
 } from './houseUiStore';
 import HouseWalkthrough from './HouseWalkthrough';
 import HousePanels from './HousePanels';
 import HouseMobileControls from './HouseMobileControls';
+import HouseHints from './HouseHints';
 
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
     ssr: false,
@@ -80,6 +80,7 @@ export default function HouseExperience() {
     const [peers, setPeers] = useState<HousePeer[]>([]);
     const [osOpen, setOsOpen] = useState(false);
     const [canvasError, setCanvasError] = useState<string | null>(null);
+    const [activity, setActivity] = useState<'move' | 'look' | 'jump' | 'idle' | null>(null);
     const presence = useRef<HousePresenceApi | null>(null);
     const selfId = useRef<string>('');
     const hotspotRef = useRef<Hotspot | null>(null);
@@ -117,13 +118,8 @@ export default function HouseExperience() {
         } catch {
             /* */
         }
-
-        // First visit walkthrough (skip if deep-linking into a station)
-        if (shouldShowWalkthrough() && !useHouseUi.getState().panel) {
-            const t = window.setTimeout(() => setWalkthrough(true, 0), 700);
-            return () => window.clearTimeout(t);
-        }
-    }, [setWalkthrough, openPanel]);
+        // No auto walkthrough — progressive hints guide players in-world
+    }, [openPanel]);
 
     useEffect(() => {
         let cancelled = false;
@@ -236,6 +232,10 @@ export default function HouseExperience() {
         if (h && !uiLocked) activateHotspot(h);
     }, [activateHotspot, uiLocked]);
 
+    const onMoveActivity = useCallback((kind: 'move' | 'look' | 'jump' | 'idle') => {
+        setActivity(kind);
+    }, []);
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.code === 'KeyE' && hotspot && !uiLocked) activateHotspot(hotspot);
@@ -298,10 +298,12 @@ export default function HouseExperience() {
                     <ErrorBoundary onError={(m) => setCanvasError(m)}>
                         <HouseCanvas
                             locked={uiLocked}
+                            mobile={isMobile}
                             peers={peers}
                             onHotspot={setHotspot}
                             onPose={onPose}
                             onInteractRequest={tryInteract}
+                            onMoveActivity={onMoveActivity}
                         />
                     </ErrorBoundary>
                 </div>
@@ -348,7 +350,7 @@ export default function HouseExperience() {
                 <>
                     <div
                         className={[
-                            'fixed z-30 pointer-events-none space-y-1',
+                            'fixed z-[45] pointer-events-none space-y-1',
                             isMobile ? 'top-3 left-3' : 'top-4 left-4',
                         ].join(' ')}
                         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -368,7 +370,7 @@ export default function HouseExperience() {
 
                     <div
                         className={[
-                            'fixed z-30 flex items-center gap-2 pointer-events-auto',
+                            'fixed z-[45] flex items-center gap-2 pointer-events-auto',
                             isMobile ? 'top-3 right-3' : 'top-4 right-4',
                         ].join(' ')}
                         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -407,48 +409,30 @@ export default function HouseExperience() {
                         </div>
                     )}
 
-                    {/* Desktop interact strip */}
-                    {!isMobile && (
-                        <div className="fixed bottom-6 inset-x-0 z-30 flex flex-col items-center gap-2 pointer-events-none">
-                            {hotspot ? (
-                                <button
-                                    type="button"
-                                    className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
-                                    onClick={() => activateHotspot(hotspot)}
-                                >
-                                    E · {hotspot.hint}
-                                </button>
-                            ) : (
-                                <p className="text-[11px] text-white/70 font-mono bg-black/55 px-3 py-1.5 rounded-full border border-white/10">
-                                    WASD move · drag look · Space jump · E interact
-                                </p>
-                            )}
+                    {/* Desktop interact — only when near something (no permanent cheat sheet) */}
+                    {!isMobile && hotspot && (
+                        <div className="fixed bottom-8 inset-x-0 z-30 flex justify-center pointer-events-none">
+                            <button
+                                type="button"
+                                className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
+                                onClick={() => activateHotspot(hotspot)}
+                            >
+                                E · {hotspot.hint}
+                            </button>
                         </div>
                     )}
 
-                    {/* Mobile floating interact chip above pads */}
-                    {isMobile && hotspot && (
-                        <div
-                            className="fixed inset-x-0 z-30 flex justify-center pointer-events-none px-4"
-                            style={{ bottom: 'calc(min(42dvh, 280px) + 0.25rem)' }}
-                        >
-                            <p className="text-[11px] text-amber-100/95 font-medium bg-black/65 border border-amber-400/35 px-3 py-1.5 rounded-full backdrop-blur-md max-w-[90vw] text-center">
-                                Near · {hotspot.hint}
-                            </p>
-                        </div>
-                    )}
-
+                    {/* Desktop only guide widget — mobile keeps chrome clean */}
                     {!isMobile && <TruthGuideWidget placement="desktop" />}
-                    {isMobile && (
-                        <div
-                            className="fixed z-30 left-3"
-                            style={{ bottom: 'calc(min(42dvh, 280px) + 0.5rem)' }}
-                        >
-                            <TruthGuideWidget placement="mobile" />
-                        </div>
-                    )}
                 </>
             )}
+
+            <HouseHints
+                visible={showHud}
+                isMobile={isMobile}
+                hotspot={hotspot}
+                activity={activity}
+            />
 
             <HouseMobileControls
                 hotspot={hotspot}
@@ -456,6 +440,7 @@ export default function HouseExperience() {
                 visible={showHud && isMobile}
             />
 
+            {/* Optional full tour — never auto-opens */}
             <HouseWalkthrough />
             <HousePanels />
 
