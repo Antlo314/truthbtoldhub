@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * First-person locomotion — always enabled when not in a panel.
- * Keyboard (WASD) + mobile stick share the same wish-velocity path.
+ * First-person locomotion — keyboard + mobile stick.
+ * Hard input reset on blur/lock so movement never runs away on its own.
  */
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -26,7 +26,10 @@ import {
     damp,
 } from './houseFeel';
 
-const keys = new Set<string>();
+/** Per-instance keys — never shared across remounts in a sticky way */
+function createKeyState() {
+    return new Set<string>();
+}
 
 export default function FirstPersonController({
     locked,
@@ -47,6 +50,7 @@ export default function FirstPersonController({
     const lockedRef = useRef(locked);
     lockedRef.current = locked;
 
+    const keys = useRef(createKeyState());
     const yaw = useRef(Math.PI);
     const pitch = useRef(0);
     const yawS = useRef(Math.PI);
@@ -62,8 +66,8 @@ export default function FirstPersonController({
     const lastKind = useRef<'move' | 'look' | 'jump' | 'idle'>('idle');
     const activityCb = useRef(onMoveActivity);
     activityCb.current = onMoveActivity;
+    const lastKeyAt = useRef(0);
 
-    // Spawn once — unstick if colliders ever overlap
     useEffect(() => {
         const free = resolveStuck(SPAWN[0], SPAWN[2]);
         pos.current.set(free.x, EYE_HEIGHT, free.z);
@@ -78,23 +82,45 @@ export default function FirstPersonController({
         camera.rotation.order = 'YXZ';
         camera.rotation.y = Math.PI;
         camera.rotation.x = 0;
+        houseInput.clearAll();
+        keys.current.clear();
     }, [camera]);
 
-    // Input — stable listeners (use lockedRef, not rebind on locked)
+    // When UI locks, kill all motion input immediately
+    useEffect(() => {
+        if (locked) {
+            houseInput.clearAll();
+            keys.current.clear();
+            vel.current = { x: 0, z: 0 };
+        }
+    }, [locked]);
+
     useEffect(() => {
         const el = gl.domElement;
+        const k = keys.current;
+
+        const hardStop = () => {
+            k.clear();
+            houseInput.clearAll();
+            vel.current = { x: 0, z: 0 };
+        };
 
         const down = (e: KeyboardEvent) => {
             const tag = (e.target as HTMLElement)?.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-            keys.add(e.code);
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable)
+                return;
+            if (lockedRef.current) return;
+            k.add(e.code);
+            lastKeyAt.current = performance.now();
+            houseInput.touchInput();
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (!lockedRef.current) houseInput.queueJump();
+                houseInput.queueJump();
             }
         };
-        const up = (e: KeyboardEvent) => keys.delete(e.code);
-        const blur = () => keys.clear();
+        const up = (e: KeyboardEvent) => {
+            k.delete(e.code);
+        };
 
         let dragging = false;
         let lx = 0;
@@ -124,19 +150,19 @@ export default function FirstPersonController({
             pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
             emit('look');
         };
-        const onPointerUp = (e: PointerEvent) => {
+        const onPointerUp = () => {
             dragging = false;
-            try {
-                el.releasePointerCapture(e.pointerId);
-            } catch {
-                /* */
-            }
         };
         const ctx = (e: Event) => e.preventDefault();
 
+        const onVis = () => {
+            if (document.hidden) hardStop();
+        };
+
         window.addEventListener('keydown', down, { passive: false });
         window.addEventListener('keyup', up);
-        window.addEventListener('blur', blur);
+        window.addEventListener('blur', hardStop);
+        document.addEventListener('visibilitychange', onVis);
         el.addEventListener('pointerdown', onPointerDown);
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerup', onPointerUp);
@@ -144,15 +170,16 @@ export default function FirstPersonController({
         el.addEventListener('contextmenu', ctx);
 
         return () => {
+            hardStop();
             window.removeEventListener('keydown', down);
             window.removeEventListener('keyup', up);
-            window.removeEventListener('blur', blur);
+            window.removeEventListener('blur', hardStop);
+            document.removeEventListener('visibilitychange', onVis);
             el.removeEventListener('pointerdown', onPointerDown);
             el.removeEventListener('pointermove', onPointerMove);
             el.removeEventListener('pointerup', onPointerUp);
             el.removeEventListener('pointercancel', onPointerUp);
             el.removeEventListener('contextmenu', ctx);
-            keys.clear();
         };
     }, [gl, mobile]);
 
@@ -161,8 +188,21 @@ export default function FirstPersonController({
         const lockedNow = lockedRef.current;
         camera.rotation.order = 'YXZ';
         const lookSens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
+        const k = keys.current;
 
-        // ── Look ──
+        // Safety: if keys claim held but no key event for 3s, clear (stuck key)
+        if (k.size > 0 && performance.now() - lastKeyAt.current > 3000) {
+            k.clear();
+        }
+        // Safety: stick input without recent touch → clear (stuck stick)
+        if (
+            !houseInput.movingTouch &&
+            (Math.abs(houseInput.axisX) > 0.01 || Math.abs(houseInput.axisFwd) > 0.01) &&
+            performance.now() - houseInput.lastInputAt > 400
+        ) {
+            houseInput.clearMove();
+        }
+
         if (!lockedNow) {
             const pix = houseInput.consumeLookPixels();
             if (pix.dx || pix.dy) {
@@ -179,20 +219,15 @@ export default function FirstPersonController({
             houseInput.clearLook();
         }
 
-        // Smooth look slightly
-        yawS.current = damp(yawS.current, yaw.current, LOOK_SMOOTH, d);
-        // Unwrap yaw for smooth interp
         let err = yaw.current - yawS.current;
         while (err > Math.PI) err -= Math.PI * 2;
         while (err < -Math.PI) err += Math.PI * 2;
         yawS.current = yaw.current - err;
         yawS.current = damp(yawS.current, yaw.current, LOOK_SMOOTH, d);
         pitchS.current = damp(pitchS.current, pitch.current, LOOK_SMOOTH, d);
-
         camera.rotation.y = yawS.current;
         camera.rotation.x = pitchS.current;
 
-        // ── Move ──
         if (!lockedNow) {
             const yawUse = yawS.current;
             const fx = -Math.sin(yawUse);
@@ -202,59 +237,62 @@ export default function FirstPersonController({
 
             let wishX = 0;
             let wishZ = 0;
+            let hasInput = false;
 
-            // Keyboard — always live
-            if (keys.has('KeyW') || keys.has('ArrowUp')) {
+            if (k.has('KeyW') || k.has('ArrowUp')) {
                 wishX += fx;
                 wishZ += fz;
+                hasInput = true;
             }
-            if (keys.has('KeyS') || keys.has('ArrowDown')) {
+            if (k.has('KeyS') || k.has('ArrowDown')) {
                 wishX -= fx;
                 wishZ -= fz;
+                hasInput = true;
             }
-            if (keys.has('KeyA') || keys.has('ArrowLeft')) {
+            if (k.has('KeyA') || k.has('ArrowLeft')) {
                 wishX -= rx;
                 wishZ -= rz;
+                hasInput = true;
             }
-            if (keys.has('KeyD') || keys.has('ArrowRight')) {
+            if (k.has('KeyD') || k.has('ArrowRight')) {
                 wishX += rx;
                 wishZ += rz;
+                hasInput = true;
             }
 
-            // Mobile stick: axisFwd = +1 forward, axisX = strafe
             const jx = houseInput.axisX;
             const jf = houseInput.axisFwd;
-            if (Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001) {
+            if (Math.abs(jx) > 0.02 || Math.abs(jf) > 0.02) {
                 wishX += fx * jf + rx * jx;
                 wishZ += fz * jf + rz * jx;
+                hasInput = true;
+            }
+
+            // No intentional input → hard zero wish (prevents ghost drift)
+            if (!hasInput) {
+                wishX = 0;
+                wishZ = 0;
             }
 
             let speed = WALK_SPEED;
-            if (keys.has('ShiftLeft') || keys.has('ShiftRight')) speed *= SPRINT_MULT;
+            if (k.has('ShiftLeft') || k.has('ShiftRight')) speed *= SPRINT_MULT;
 
             const wLen = Math.hypot(wishX, wishZ);
             let tx = 0;
             let tz = 0;
             if (wLen > 1e-4) {
                 const inv = 1 / wLen;
-                // Stick magnitude scales speed (keyboard is full speed)
-                const stickMag =
-                    Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001
-                        ? Math.min(1, Math.hypot(jx, jf))
-                        : 1;
-                const useStick = Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001;
-                const mag = useStick ? stickMag : 1;
-                // If both keys + stick, prefer full
+                const stickMag = Math.min(1, Math.hypot(jx, jf) || 1);
                 const keyMove =
-                    keys.has('KeyW') ||
-                    keys.has('KeyA') ||
-                    keys.has('KeyS') ||
-                    keys.has('KeyD') ||
-                    keys.has('ArrowUp') ||
-                    keys.has('ArrowDown') ||
-                    keys.has('ArrowLeft') ||
-                    keys.has('ArrowRight');
-                const m = keyMove ? 1 : mag;
+                    k.has('KeyW') ||
+                    k.has('KeyA') ||
+                    k.has('KeyS') ||
+                    k.has('KeyD') ||
+                    k.has('ArrowUp') ||
+                    k.has('ArrowDown') ||
+                    k.has('ArrowLeft') ||
+                    k.has('ArrowRight');
+                const m = keyMove ? 1 : stickMag;
                 tx = wishX * inv * speed * m;
                 tz = wishZ * inv * speed * m;
                 emit('move');
@@ -264,7 +302,7 @@ export default function FirstPersonController({
             vel.current.x = damp(vel.current.x, tx, lambda, d);
             vel.current.z = damp(vel.current.z, tz, lambda, d);
 
-            if (Math.hypot(vel.current.x, vel.current.z) < 0.015 && wLen < 1e-4) {
+            if (!hasInput && Math.hypot(vel.current.x, vel.current.z) < 0.08) {
                 vel.current.x = 0;
                 vel.current.z = 0;
             }
@@ -276,16 +314,10 @@ export default function FirstPersonController({
                     vel.current.x * d,
                     vel.current.z * d,
                 );
-                // Soft stop against walls without freezing forever
-                if (Math.abs(next.x - pos.current.x) < 1e-5) vel.current.x *= 0.15;
-                if (Math.abs(next.z - pos.current.z) < 1e-5) vel.current.z *= 0.15;
+                if (Math.abs(next.x - pos.current.x) < 1e-5) vel.current.x *= 0.1;
+                if (Math.abs(next.z - pos.current.z) < 1e-5) vel.current.z *= 0.1;
                 pos.current.x = next.x;
                 pos.current.z = next.z;
-            } else {
-                // Idle unstick pass (escape bad embeds)
-                const free = resolveStuck(pos.current.x, pos.current.z);
-                pos.current.x = free.x;
-                pos.current.z = free.z;
             }
 
             if (houseInput.consumeJump() && grounded.current) {
@@ -302,7 +334,7 @@ export default function FirstPersonController({
             }
 
             const spd = Math.hypot(vel.current.x, vel.current.z);
-            if (grounded.current && spd > 0.35) {
+            if (grounded.current && spd > 0.4) {
                 bobT.current += d * BOB_FREQ * (spd / WALK_SPEED);
             } else {
                 bobT.current *= 1 - Math.min(1, d * 8);
@@ -329,7 +361,7 @@ export default function FirstPersonController({
         }
 
         activityT.current += d;
-        if (activityT.current > 1.4 && lastKind.current !== 'idle') {
+        if (activityT.current > 1.5 && lastKind.current !== 'idle') {
             lastKind.current = 'idle';
             activityCb.current?.('idle');
         }

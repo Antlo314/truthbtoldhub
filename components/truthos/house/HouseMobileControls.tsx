@@ -57,6 +57,7 @@ export default function HouseMobileControls({
         if (!visible) {
             endMove();
             endLook();
+            houseInput.clearAll();
         }
     }, [visible, endMove, endLook]);
 
@@ -64,9 +65,15 @@ export default function HouseMobileControls({
         const up = () => {
             endMove();
             endLook();
+            houseInput.clearAll();
         };
         window.addEventListener('blur', up);
-        return () => window.removeEventListener('blur', up);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) up();
+        });
+        return () => {
+            window.removeEventListener('blur', up);
+        };
     }, [endMove, endLook]);
 
     const applyStick = (cx: number, cy: number) => {

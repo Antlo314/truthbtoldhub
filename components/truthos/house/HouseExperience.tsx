@@ -20,12 +20,14 @@ import { useTruthOs } from '../truthOsStore';
 import { useClientDevice } from '../engine/useClientDevice';
 import {
     useHouseUi,
+    shouldShowWalkthrough,
     type HousePanelId,
 } from './houseUiStore';
 import HouseWalkthrough from './HouseWalkthrough';
 import HousePanels from './HousePanels';
 import HouseMobileControls from './HouseMobileControls';
 import HouseHints from './HouseHints';
+import { markVisited } from './stationProgress';
 
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
     ssr: false,
@@ -121,17 +123,23 @@ export default function HouseExperience() {
         setReady(true);
 
         // Deep-link from /world or other redirects
+        let pendingPanel: string | null = null;
         try {
-            const pending = sessionStorage.getItem('tbth-open-panel');
-            if (pending) {
+            pendingPanel = sessionStorage.getItem('tbth-open-panel');
+            if (pendingPanel) {
                 sessionStorage.removeItem('tbth-open-panel');
-                openPanel(pending as HousePanelId);
+                openPanel(pendingPanel as HousePanelId);
             }
         } catch {
             /* */
         }
-        // No auto walkthrough — progressive hints guide players in-world
-    }, [openPanel]);
+
+        // New members get a short house/Hut tour (skip if deep-linking into a station)
+        if (!pendingPanel && shouldShowWalkthrough()) {
+            const t = window.setTimeout(() => setWalkthrough(true, 0), 900);
+            return () => window.clearTimeout(t);
+        }
+    }, [openPanel, setWalkthrough]);
 
     useEffect(() => {
         let cancelled = false;
@@ -233,7 +241,9 @@ export default function HouseExperience() {
     const activateHotspot = useCallback(
         (h: Hotspot) => {
             sacredUi.click();
+            markVisited(h.id);
             if (h.action.type === 'os') {
+                markVisited('computer');
                 setOsOpen(true);
                 enterOs();
                 return;

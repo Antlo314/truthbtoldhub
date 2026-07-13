@@ -69,7 +69,7 @@ function TruthDais({ low }: { low?: boolean }) {
                     side={THREE.DoubleSide}
                 />
             </mesh>
-            {/* Hooded African American Truth — solid presence in the room */}
+            {/* Hooded African American Truth — Hut station (not multiplayer) */}
             <TruthMesh position={[0, 0.22, 0]} low={low} />
             {!low && (
                 <pointLight position={[0, 1.6, 0.3]} intensity={1.4} color="#f97316" distance={5} decay={2} />
@@ -78,27 +78,36 @@ function TruthDais({ low }: { low?: boolean }) {
     );
 }
 
+/**
+ * Soul Mirror reflection — intentionally translucent so it never reads as an NPC.
+ */
 function MirrorVessel({ low }: { low?: boolean }) {
     const avatar = useGameStore((s) => s.character.avatar);
-    // Skip heavy vessel on mobile — silhouette block instead
     if (low) {
         return (
             <group position={[2.35, 0, 6.35]}>
                 <mesh position={[0, 0.9, 0]}>
-                    <capsuleGeometry args={[0.18, 0.7, 4, 8]} />
-                    <meshStandardMaterial color="#4a3a2a" roughness={0.8} />
+                    <capsuleGeometry args={[0.16, 0.65, 4, 6]} />
+                    <meshStandardMaterial color="#6b7c94" roughness={0.5} transparent opacity={0.35} depthWrite={false} />
                 </mesh>
-                <mesh position={[0, 1.5, 0]}>
-                    <sphereGeometry args={[0.14, 8, 8]} />
-                    <meshStandardMaterial color="#5c4030" roughness={0.75} />
+                <mesh position={[0, 1.45, 0]}>
+                    <sphereGeometry args={[0.12, 8, 8]} />
+                    <meshStandardMaterial color="#7a8ca3" roughness={0.5} transparent opacity={0.35} depthWrite={false} />
                 </mesh>
             </group>
         );
     }
     return (
         <group position={[2.35, 0, 6.35]} rotation={[0, Math.PI / 2, 0]}>
-            <VesselModel avatar={avatar} scale={0.92} />
-            <pointLight position={[0, 1.4, 0.4]} intensity={0.9} color="#c4d0ff" distance={4} decay={2} />
+            <group scale={0.92}>
+                <VesselModel avatar={avatar} scale={1} />
+            </group>
+            {/* Glass wash so it reads as reflection, not a second player */}
+            <mesh position={[0, 0.95, 0.15]}>
+                <planeGeometry args={[0.7, 1.7]} />
+                <meshStandardMaterial color="#8ab4d4" transparent opacity={0.12} depthWrite={false} metalness={0.6} roughness={0.2} />
+            </mesh>
+            <pointLight position={[0, 1.4, 0.4]} intensity={0.7} color="#c4d0ff" distance={4} decay={2} />
         </group>
     );
 }

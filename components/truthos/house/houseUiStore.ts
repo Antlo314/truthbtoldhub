@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-/** In-house stations / overlays — never leave the house build */
+/** In-house stations — Hut features staged as house rooms */
 export type HousePanelId =
     | 'truth'
     | 'soul'
@@ -26,7 +26,7 @@ type HouseUiState = {
     nextWalkthrough: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v1';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v2';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -61,35 +61,38 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     },
 }));
 
+/**
+ * New-member tour — maps classic Hut stations into the house layout.
+ */
 export const WALKTHROUGH_STEPS = [
     {
-        title: 'Welcome home',
-        body: 'This is Truth.OS House — one continuous build. Every room maps to a feature of the sanctum. Nothing here leaves for an old runtime.',
-        tip: 'Tap Continue when ready',
+        title: 'Welcome to the House',
+        body: 'This is Truth.OS House — the Hut, rebuilt as a home you walk. Every station from the old sanctum lives in a room here.',
+        tip: 'Continue when you’re ready',
     },
     {
-        title: 'Move',
-        body: 'Desktop: WASD or arrow keys. Mobile: use the left joystick.',
-        tip: 'Walk toward the gold rings on the floor',
+        title: 'How to move',
+        body: 'Desktop: WASD or arrows. Mobile: hold the left half of the screen and slide. Drag the right side to look around.',
+        tip: 'You’re free to explore anytime',
     },
     {
-        title: 'Look around',
-        body: 'Desktop: click-drag the view. Mobile: drag anywhere on the world (not on the pads).',
-        tip: 'Find the glowing monitor in the bedroom',
+        title: 'Hut stations = gold rings',
+        body: 'Truth (dais), Soul Mirror, Wayfinder, Ledger, and the Sanctum door are the core Hut. Library, Hall, Cinema, and Offering expand the house.',
+        tip: 'Walk onto a ring · E or Use',
     },
     {
-        title: 'Jump',
-        body: 'Desktop: Space. Mobile: the Jump button on the right.',
-        tip: 'Hop once — just for the joy of it',
+        title: 'Truth.OS computer',
+        body: 'The bedroom monitor boots Truth.OS — apps for every station without leaving this build.',
+        tip: 'Green screen in the bedroom',
     },
     {
-        title: 'Interact',
-        body: 'Gold rings mark stations. Desktop: press E. Mobile: tap Interact when near. Computer boots Truth.OS; other stations open in-house panels (Truth, Library, Chamber…).',
-        tip: 'Try the computer or the envelope on the table',
+        title: 'Souls you’ll see',
+        body: 'LIVE labels are people here right now. Faint “echo” figures are footprints of souls who visited before — not fake NPCs.',
+        tip: 'Truth on the dais is a station, not a multiplayer ghost',
     },
     {
-        title: 'You are free',
-        body: 'Explore the house. Multiplayer souls appear as glowing vessels. Truth stays a small guide — never the whole system.',
-        tip: 'Replay this tour anytime from the ? button',
+        title: 'You’re home',
+        body: 'Explore at your pace. A quiet Hut counter tracks stations you’ve opened. Replay this tour with ? anytime.',
+        tip: 'Enter the house',
     },
 ] as const;

@@ -1,27 +1,24 @@
 /**
- * Shared mutable input for the house (keyboard + mobile pads).
- * Written by mobile HUD; read every frame by FirstPersonController.
+ * Shared mutable input — keyboard + mobile.
+ * clearAll() must run on lock / blur / visibility so movement never runs away.
  */
 export const houseInput = {
-    /** Strafe −1…1 (A/D + shaped joystick X) */
     axisX: 0,
-    /** Forward contribution −1…1 — stick Y up is negative in raw UI; we store shaped forward as +forward intent in axisFwd */
     axisFwd: 0,
-    /** Continuous look velocity (rad/s-ish via sens) from touch look pad — applied each frame */
     lookVX: 0,
     lookVY: 0,
-    /** One-shot pixel look deltas (desktop path / residual) */
     lookDX: 0,
     lookDY: 0,
     jumpQueued: false,
     interactQueued: false,
-    /** True while any locomotion touch is active */
     movingTouch: false,
-    /** True while look touch is active */
     lookingTouch: false,
+    /** Last time any intentional move input was received */
+    lastInputAt: 0,
 
     queueJump() {
         this.jumpQueued = true;
+        this.touchInput();
     },
     queueInteract() {
         this.interactQueued = true;
@@ -43,10 +40,12 @@ export const houseInput = {
         this.lookDY = 0;
         return { dx, dy };
     },
-    /** Shaped move: x = strafe, fwd = walk forward (+1 forward) */
     setMove(strafe: number, forward: number) {
         this.axisX = strafe;
         this.axisFwd = forward;
+        if (Math.abs(strafe) > 0.01 || Math.abs(forward) > 0.01) {
+            this.touchInput();
+        }
     },
     clearMove() {
         this.axisX = 0;
@@ -60,6 +59,18 @@ export const houseInput = {
     clearLook() {
         this.lookVX = 0;
         this.lookVY = 0;
+        this.lookDX = 0;
+        this.lookDY = 0;
         this.lookingTouch = false;
+    },
+    touchInput() {
+        this.lastInputAt = performance.now();
+    },
+    /** Hard stop everything — call on blur, lock, tab hide */
+    clearAll() {
+        this.clearMove();
+        this.clearLook();
+        this.jumpQueued = false;
+        this.interactQueued = false;
     },
 };
