@@ -45,7 +45,8 @@ export default function TruthOSShell({
                 clearInterval(t);
                 setTimeout(() => {
                     setBootDone(true);
-                    openApp('truth');
+                    // Truth is a guide widget in the house — OS opens empty home
+                    // (user can open Truth.sys from dock if needed)
                     sacredUi.access();
                 }, 400);
             }
