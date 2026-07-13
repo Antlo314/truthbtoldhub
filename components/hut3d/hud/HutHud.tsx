@@ -104,9 +104,10 @@ export default function HutHud({
 
                 <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] text-white/40">
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">WASD move</span>
+                    <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">RMB / drag right · look</span>
+                    <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">Q E orbit</span>
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">Space jump</span>
                     <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">E interact</span>
-                    <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10">Esc close</span>
                     <Link href="/" className="px-2 py-1 rounded-md bg-black/40 border border-white/10 hover:text-aether-gold">
                         Leave hut
                     </Link>

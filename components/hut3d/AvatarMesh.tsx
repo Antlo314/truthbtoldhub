@@ -9,9 +9,7 @@ import {
 } from '@/lib/game/avatar';
 
 export type AvatarHandle = {
-    /** 0 = idle, 1 = full run gait */
     setGait: (speed: number) => void;
-    /** 0 = grounded, 1 = full jump pose (in air) */
     setJump: (amount: number) => void;
 };
 
@@ -24,15 +22,26 @@ type LimbRefs = {
     hips: THREE.Group;
 };
 
-// Compact proportions — shorter torso, natural head/body ratio
-const HIP_Y = 0.52;
-const TORSO_Y = 0.68;
-const TORSO_MESH_Y = 0.14;
-const TORSO_LEN = 0.22;
-const SHOULDER_Y = 0.28;
-const HEAD_Y = 0.48;
+/**
+ * ~7.5-head adult proportions (see public/references/characters/NOTES.md)
+ * Total height ≈ 1.72
+ * Legs ≈ 50% · compact torso · normal head
+ *
+ * y layout (soles at 0):
+ *   foot sole 0 → hip ~0.90 → shoulder ~1.38 → crown ~1.72
+ */
+const TOTAL_H = 1.72;
+const HIP_Y = 0.90;          // crotch / hip joint
+const LEG_LEN = 0.52;        // hip pivot down to mid-boot
+const BOOT_DROP = 0.78;      // hip pivot to sole-ish boot center
+const TORSO_BASE = 0.98;     // bottom of torso group (above hips)
+const TORSO_CAPSULE_H = 0.28; // short torso volume (was too tall)
+const TORSO_CAPSULE_Y = 0.18;
+const SHOULDER_Y = 0.36;     // relative to torso group
+const HEAD_Y = 0.58;         // relative to torso group
+const HEAD_R = 0.15;
 
-/** Stylized low-poly vessel with walk + jump cycles. */
+/** Stylized vessel — long legs, short torso, full adult height. */
 export const AvatarMesh = forwardRef<AvatarHandle, {
     avatar: AvatarConfig;
     position?: [number, number, number];
@@ -66,16 +75,17 @@ export const AvatarMesh = forwardRef<AvatarHandle, {
     }), [avatar]);
 
     const isFem = avatar.build === 'fem';
-    const bodyW = isFem ? 0.36 : 0.42;
-    const hipW = isFem ? 0.38 : 0.4;
+    const bodyW = isFem ? 0.34 : 0.40;
+    const hipW = isFem ? 0.38 : 0.40;
+    const legSpread = isFem ? 0.10 : 0.12;
 
     useFrame((_, dt) => {
         const g = gait.current;
         const j = jump.current;
-        const groundGait = g * (1 - j); // freeze stride in air, blend to jump pose
+        const groundGait = g * (1 - j);
 
-        const targetRate = THREE.MathUtils.lerp(0, 9.5, groundGait);
-        phase.current += dt * (targetRate || (j > 0.1 ? 2 : 0.4));
+        const targetRate = THREE.MathUtils.lerp(0, 9.2, groundGait);
+        phase.current += dt * (targetRate || (j > 0.1 ? 2 : 0.35));
 
         const swing = Math.sin(phase.current) * groundGait;
         const swingOpp = -swing;
@@ -84,148 +94,138 @@ export const AvatarMesh = forwardRef<AvatarHandle, {
 
         const { leftLeg, rightLeg, leftArm, rightArm, torso, hips } = limbs.current;
 
-        // Jump pose targets (tuck legs, open arms slightly, lean)
-        const jumpLeg = -0.55 * j;       // pull knees up (negative X rotates thigh forward/up)
+        const jumpLeg = -0.55 * j;
         const jumpLegSpread = 0.12 * j;
-        const jumpArm = -0.85 * j;       // arms raise forward/up
-        const jumpArmOut = 0.35 * j;
-        const jumpTorsoX = -0.12 * j;    // slight lean back on takeoff feel
+        const jumpArm = -0.85 * j;
+        const jumpArmOut = 0.32 * j;
+        const jumpTorsoX = -0.1 * j;
 
         if (leftLeg) {
-            const walkRx = swing * 0.72;
-            leftLeg.rotation.x = THREE.MathUtils.damp(leftLeg.rotation.x, walkRx + jumpLeg, 14, dt);
+            leftLeg.rotation.x = THREE.MathUtils.damp(leftLeg.rotation.x, swing * 0.7 + jumpLeg, 14, dt);
             leftLeg.rotation.z = THREE.MathUtils.damp(leftLeg.rotation.z, -jumpLegSpread, 12, dt);
-            leftLeg.position.y = THREE.MathUtils.damp(
-                leftLeg.position.y,
-                HIP_Y - lift * 0.035 + j * 0.04,
-                14,
-                dt,
-            );
+            leftLeg.position.y = THREE.MathUtils.damp(leftLeg.position.y, HIP_Y - lift * 0.03 + j * 0.03, 14, dt);
         }
         if (rightLeg) {
-            const walkRx = swingOpp * 0.72;
-            rightLeg.rotation.x = THREE.MathUtils.damp(rightLeg.rotation.x, walkRx + jumpLeg * 0.92, 14, dt);
+            rightLeg.rotation.x = THREE.MathUtils.damp(rightLeg.rotation.x, swingOpp * 0.7 + jumpLeg * 0.92, 14, dt);
             rightLeg.rotation.z = THREE.MathUtils.damp(rightLeg.rotation.z, jumpLegSpread, 12, dt);
-            rightLeg.position.y = THREE.MathUtils.damp(
-                rightLeg.position.y,
-                HIP_Y - liftOpp * 0.035 + j * 0.04,
-                14,
-                dt,
-            );
+            rightLeg.position.y = THREE.MathUtils.damp(rightLeg.position.y, HIP_Y - liftOpp * 0.03 + j * 0.03, 14, dt);
         }
         if (leftArm) {
-            leftArm.rotation.x = THREE.MathUtils.damp(leftArm.rotation.x, swingOpp * 0.55 + jumpArm, 14, dt);
-            leftArm.rotation.z = THREE.MathUtils.damp(leftArm.rotation.z, 0.12 + jumpArmOut, 12, dt);
+            leftArm.rotation.x = THREE.MathUtils.damp(leftArm.rotation.x, swingOpp * 0.5 + jumpArm, 14, dt);
+            leftArm.rotation.z = THREE.MathUtils.damp(leftArm.rotation.z, 0.1 + jumpArmOut, 12, dt);
         }
         if (rightArm) {
-            rightArm.rotation.x = THREE.MathUtils.damp(rightArm.rotation.x, swing * 0.55 + jumpArm * 0.95, 14, dt);
-            rightArm.rotation.z = THREE.MathUtils.damp(rightArm.rotation.z, -0.12 - jumpArmOut, 12, dt);
+            rightArm.rotation.x = THREE.MathUtils.damp(rightArm.rotation.x, swing * 0.5 + jumpArm * 0.95, 14, dt);
+            rightArm.rotation.z = THREE.MathUtils.damp(rightArm.rotation.z, -0.1 - jumpArmOut, 12, dt);
         }
         if (torso) {
             const breath = (groundGait < 0.08 && j < 0.05)
-                ? Math.sin(performance.now() * 0.0018) * 0.01
+                ? Math.sin(performance.now() * 0.0018) * 0.008
                 : 0;
-            torso.rotation.y = THREE.MathUtils.damp(torso.rotation.y, swing * 0.06, 10, dt);
-            torso.rotation.z = THREE.MathUtils.damp(torso.rotation.z, swing * 0.04, 10, dt);
+            torso.rotation.y = THREE.MathUtils.damp(torso.rotation.y, swing * 0.05, 10, dt);
+            torso.rotation.z = THREE.MathUtils.damp(torso.rotation.z, swing * 0.035, 10, dt);
             torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, jumpTorsoX, 12, dt);
             torso.position.y = THREE.MathUtils.damp(
                 torso.position.y,
-                TORSO_Y + Math.abs(swing) * 0.015 + breath + j * 0.03,
+                TORSO_BASE + Math.abs(swing) * 0.012 + breath + j * 0.025,
                 12,
                 dt,
             );
         }
         if (hips) {
-            hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, -swing * 0.05, 10, dt);
+            hips.rotation.y = THREE.MathUtils.damp(hips.rotation.y, -swing * 0.04, 10, dt);
             hips.position.y = THREE.MathUtils.damp(
                 hips.position.y,
-                HIP_Y * 0.95 + Math.abs(Math.sin(phase.current * 2)) * 0.01 * groundGait,
+                HIP_Y - 0.02 + Math.abs(Math.sin(phase.current * 2)) * 0.008 * groundGait,
                 12,
                 dt,
             );
         }
     });
 
+    // silence unused total height constant for tree-shaking clarity
+    void TOTAL_H;
+
     return (
         <group position={position} rotation={rotation} scale={scale}>
-            {/* legs — pivot at hip */}
+            {/* —— long legs (≈ half height) —— */}
             <group
                 ref={(n) => { if (n) limbs.current.leftLeg = n; }}
-                position={[-0.11, HIP_Y, 0]}
+                position={[-legSpread, HIP_Y, 0]}
             >
-                <mesh position={[0, -0.26, 0]} castShadow>
-                    <capsuleGeometry args={[0.08, 0.24, 4, 8]} />
+                <mesh position={[0, -LEG_LEN * 0.55, 0]} castShadow>
+                    <capsuleGeometry args={[0.075, LEG_LEN * 0.55, 4, 8]} />
                     <meshStandardMaterial color={colors.bottom} roughness={0.85} />
                 </mesh>
-                <mesh position={[0, -0.48, 0.03]} castShadow>
-                    <boxGeometry args={[0.12, 0.08, 0.18]} />
+                <mesh position={[0, -BOOT_DROP + 0.06, 0.04]} castShadow>
+                    <boxGeometry args={[0.12, 0.09, 0.2]} />
                     <meshStandardMaterial color={colors.boots} roughness={0.9} />
                 </mesh>
             </group>
             <group
                 ref={(n) => { if (n) limbs.current.rightLeg = n; }}
-                position={[0.11, HIP_Y, 0]}
+                position={[legSpread, HIP_Y, 0]}
             >
-                <mesh position={[0, -0.26, 0]} castShadow>
-                    <capsuleGeometry args={[0.08, 0.24, 4, 8]} />
+                <mesh position={[0, -LEG_LEN * 0.55, 0]} castShadow>
+                    <capsuleGeometry args={[0.075, LEG_LEN * 0.55, 4, 8]} />
                     <meshStandardMaterial color={colors.bottom} roughness={0.85} />
                 </mesh>
-                <mesh position={[0, -0.48, 0.03]} castShadow>
-                    <boxGeometry args={[0.12, 0.08, 0.18]} />
+                <mesh position={[0, -BOOT_DROP + 0.06, 0.04]} castShadow>
+                    <boxGeometry args={[0.12, 0.09, 0.2]} />
                     <meshStandardMaterial color={colors.boots} roughness={0.9} />
                 </mesh>
             </group>
 
             {/* hips */}
-            <group ref={(n) => { if (n) limbs.current.hips = n; }} position={[0, HIP_Y * 0.95, 0]}>
+            <group ref={(n) => { if (n) limbs.current.hips = n; }} position={[0, HIP_Y - 0.02, 0]}>
                 <mesh castShadow>
                     <capsuleGeometry args={[hipW * 0.42, 0.1, 4, 8]} />
                     <meshStandardMaterial color={colors.bottom} roughness={0.85} />
                 </mesh>
             </group>
 
-            {/* compact torso + head + arms */}
-            <group ref={(n) => { if (n) limbs.current.torso = n; }} position={[0, TORSO_Y, 0]}>
-                <mesh position={[0, TORSO_MESH_Y, 0]} castShadow>
-                    <capsuleGeometry args={[bodyW * 0.48, TORSO_LEN, 4, 10]} />
+            {/* short torso + arms + head */}
+            <group ref={(n) => { if (n) limbs.current.torso = n; }} position={[0, TORSO_BASE, 0]}>
+                <mesh position={[0, TORSO_CAPSULE_Y, 0]} castShadow>
+                    <capsuleGeometry args={[bodyW * 0.48, TORSO_CAPSULE_H, 4, 10]} />
                     <meshStandardMaterial color={colors.top} roughness={0.75} />
                 </mesh>
 
                 <group
                     ref={(n) => { if (n) limbs.current.leftArm = n; }}
                     position={[-bodyW * 0.58, SHOULDER_Y, 0]}
-                    rotation={[0, 0, 0.12]}
+                    rotation={[0, 0, 0.1]}
                 >
-                    <mesh position={[0, -0.18, 0]} castShadow>
-                        <capsuleGeometry args={[0.058, 0.22, 4, 8]} />
+                    <mesh position={[0, -0.2, 0]} castShadow>
+                        <capsuleGeometry args={[0.055, 0.26, 4, 8]} />
                         <meshStandardMaterial color={colors.skin} roughness={0.7} />
                     </mesh>
                 </group>
                 <group
                     ref={(n) => { if (n) limbs.current.rightArm = n; }}
                     position={[bodyW * 0.58, SHOULDER_Y, 0]}
-                    rotation={[0, 0, -0.12]}
+                    rotation={[0, 0, -0.1]}
                 >
-                    <mesh position={[0, -0.18, 0]} castShadow>
-                        <capsuleGeometry args={[0.058, 0.22, 4, 8]} />
+                    <mesh position={[0, -0.2, 0]} castShadow>
+                        <capsuleGeometry args={[0.055, 0.26, 4, 8]} />
                         <meshStandardMaterial color={colors.skin} roughness={0.7} />
                     </mesh>
                 </group>
 
                 <mesh position={[0, HEAD_Y, 0]} castShadow>
-                    <sphereGeometry args={[0.175, 16, 16]} />
+                    <sphereGeometry args={[HEAD_R, 16, 16]} />
                     <meshStandardMaterial color={colors.skin} roughness={0.65} />
                 </mesh>
-                <mesh position={[0, HEAD_Y + 0.08, -0.015]} castShadow>
-                    <sphereGeometry args={[0.18, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+                <mesh position={[0, HEAD_Y + 0.07, -0.012]} castShadow>
+                    <sphereGeometry args={[HEAD_R + 0.01, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
                     <meshStandardMaterial color={colors.hair} roughness={0.9} />
                 </mesh>
-                <mesh position={[-0.055, HEAD_Y + 0.015, 0.14]}>
-                    <sphereGeometry args={[0.025, 8, 8]} />
+                <mesh position={[-0.05, HEAD_Y + 0.01, HEAD_R * 0.88]}>
+                    <sphereGeometry args={[0.022, 8, 8]} />
                     <meshStandardMaterial color={colors.eyes} roughness={0.3} metalness={0.2} />
                 </mesh>
-                <mesh position={[0.055, HEAD_Y + 0.015, 0.14]}>
-                    <sphereGeometry args={[0.025, 8, 8]} />
+                <mesh position={[0.05, HEAD_Y + 0.01, HEAD_R * 0.88]}>
+                    <sphereGeometry args={[0.022, 8, 8]} />
                     <meshStandardMaterial color={colors.eyes} roughness={0.3} metalness={0.2} />
                 </mesh>
             </group>
@@ -233,7 +233,7 @@ export const AvatarMesh = forwardRef<AvatarHandle, {
     );
 });
 
-/** Hooded Truth — slightly more compact silhouette */
+/** Hooded Truth — adult proportions, slightly taller presence */
 export function TruthMesh({ position = [0, 0, 0] as [number, number, number] }) {
     const robe = '#1e2a4a';
     const hood = '#151c30';
@@ -242,23 +242,25 @@ export function TruthMesh({ position = [0, 0, 0] as [number, number, number] }) 
 
     return (
         <group position={position}>
-            <mesh position={[0, 0.32, 0]} castShadow>
-                <cylinderGeometry args={[0.2, 0.3, 0.62, 10]} />
+            {/* long robe lower */}
+            <mesh position={[0, 0.45, 0]} castShadow>
+                <cylinderGeometry args={[0.2, 0.32, 0.9, 10]} />
                 <meshStandardMaterial color={robe} roughness={0.9} />
             </mesh>
-            <mesh position={[0, 0.85, 0]} castShadow>
-                <cylinderGeometry args={[0.26, 0.24, 0.55, 10]} />
+            {/* short upper body */}
+            <mesh position={[0, 1.05, 0]} castShadow>
+                <cylinderGeometry args={[0.26, 0.24, 0.45, 10]} />
                 <meshStandardMaterial color={robe} roughness={0.88} />
             </mesh>
-            <mesh position={[0, 1.28, -0.02]} castShadow>
-                <sphereGeometry args={[0.26, 14, 14]} />
+            <mesh position={[0, 1.42, -0.02]} castShadow>
+                <sphereGeometry args={[0.24, 14, 14]} />
                 <meshStandardMaterial color={hood} roughness={0.95} />
             </mesh>
-            <mesh position={[0, 1.22, 0.11]}>
-                <sphereGeometry args={[0.13, 12, 12]} />
+            <mesh position={[0, 1.36, 0.1]}>
+                <sphereGeometry args={[0.12, 12, 12]} />
                 <meshStandardMaterial color={skin} roughness={0.7} />
             </mesh>
-            <mesh position={[0, 0.66, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh position={[0, 0.88, 0]} rotation={[Math.PI / 2, 0, 0]}>
                 <torusGeometry args={[0.28, 0.022, 8, 20]} />
                 <meshStandardMaterial color={gold} emissive={gold} emissiveIntensity={0.35} metalness={0.6} roughness={0.35} />
             </mesh>

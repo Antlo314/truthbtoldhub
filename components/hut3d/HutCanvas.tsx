@@ -31,7 +31,7 @@ export default function HutCanvas({
                 toneMapping: THREE.ACESFilmicToneMapping,
                 toneMappingExposure: 1.05,
             }}
-            camera={{ position: [0, 3.5, -8], fov: 48, near: 0.1, far: 60 }}
+            camera={{ position: [0, 3.2, -7.5], fov: 50, near: 0.1, far: 60 }}
             onCreated={({ gl }) => {
                 gl.setClearColor('#0a0c14');
             }}
