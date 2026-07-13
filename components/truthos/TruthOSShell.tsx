@@ -36,8 +36,11 @@ export default function TruthOSShell({
 
     useEffect(() => {
         enterOs();
-        const lines = 6;
+        // Fast boot on phone — less friction, less battery heat
+        const fast = mode === 'phone';
+        const lines = fast ? 3 : 5;
         let i = 0;
+        const step = fast ? 120 : 200;
         const t = setInterval(() => {
             i += 1;
             setBootLine(i);
@@ -45,24 +48,24 @@ export default function TruthOSShell({
                 clearInterval(t);
                 setTimeout(() => {
                     setBootDone(true);
-                    // Truth is a guide widget in the house — OS opens empty home
-                    // (user can open Truth.sys from dock if needed)
                     sacredUi.access();
-                }, 400);
+                }, fast ? 120 : 280);
             }
-        }, 280);
+        }, step);
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [mode]);
 
-    const bootMessages = [
-        'POST · memory check…',
-        'loading identity_module…',
-        'mounting soul_fs…',
-        'network · encrypted channel…',
-        'TRUTH.OS 0.9.1',
-        'wake up.',
-    ];
+    const bootMessages =
+        mode === 'phone'
+            ? ['mounting house…', 'identity_module · ok', 'Truth.OS ready.']
+            : [
+                  'POST · memory check…',
+                  'loading identity_module…',
+                  'mounting soul_fs…',
+                  'presence · live filter on',
+                  'Truth.OS · wake up.',
+              ];
 
     if (!bootDone) {
         return (

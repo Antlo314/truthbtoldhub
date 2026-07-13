@@ -47,40 +47,72 @@ export default function HouseCanvas({
                     display: 'block',
                     touchAction: 'none',
                 }}
-                shadows
-                dpr={[1, 1.75]}
+                shadows={!mobile}
+                dpr={mobile ? [1, 1.25] : [1, 1.75]}
+                performance={{ min: mobile ? 0.5 : 0.85 }}
                 gl={{
-                    antialias: true,
+                    antialias: !mobile,
                     alpha: false,
-                    powerPreference: 'high-performance',
+                    powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: 1.35,
+                    toneMappingExposure: mobile ? 1.2 : 1.35,
+                    stencil: false,
+                    depth: true,
                 }}
-                camera={{ fov: 72, near: 0.08, far: 60, position: [0, 1.62, 5.5] }}
-                onCreated={({ gl, camera, size }) => {
+                camera={{ fov: mobile ? 75 : 72, near: 0.1, far: mobile ? 40 : 60, position: [0, 1.62, 5.5] }}
+                onCreated={({ gl, camera }) => {
                     gl.setClearColor('#2a2440', 1);
-                    gl.setSize(size.width, size.height);
+                    // Cap pixel ratio hard on mobile GPUs
+                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
                     camera.position.set(0, 1.62, 5.5);
                     camera.lookAt(0, 1.35, 0);
                 }}
             >
                 <color attach="background" args={['#2a2440']} />
-                <fog attach="fog" args={['#2a2440', 14, 36]} />
+                {!mobile && <fog attach="fog" args={['#2a2440', 14, 36]} />}
+                {mobile && <fog attach="fog" args={['#2a2440', 10, 26]} />}
 
-                <hemisphereLight args={['#c8d4ff', '#3a3048', 0.85]} />
-                <ambientLight intensity={0.7} color="#ddd5f0" />
-                <directionalLight position={[5, 8, 4]} intensity={1.15} color="#e8ecff" castShadow />
-                <directionalLight position={[-3, 4, -2]} intensity={0.45} color="#b8a0ff" />
-                <pointLight position={[3.2, 1.4, 4.3]} intensity={2.8} color="#4ade80" distance={10} decay={2} />
-                <pointLight position={[-1.5, 1.4, -1]} intensity={1.8} color="#fbbf24" distance={9} decay={2} />
-                <pointLight position={[0, 2.2, -7]} intensity={2.2} color="#a78bfa" distance={12} decay={2} />
-                <pointLight position={[-6, 2.2, -4]} intensity={1.3} color="#f0e0c0" distance={10} decay={2} />
-                <pointLight position={[0, 2.5, 5]} intensity={1.2} color="#ffffff" distance={12} decay={2} />
-                <pointLight position={[0, 2.0, 0]} intensity={0.9} color="#e0d4ff" distance={14} decay={2} />
+                {/* Lighting — trimmed set on mobile */}
+                <hemisphereLight args={['#c8d4ff', '#3a3048', mobile ? 0.95 : 0.85]} />
+                <ambientLight intensity={mobile ? 0.85 : 0.7} color="#ddd5f0" />
+                <directionalLight
+                    position={[5, 8, 4]}
+                    intensity={mobile ? 0.9 : 1.15}
+                    color="#e8ecff"
+                    castShadow={!mobile}
+                />
+                {!mobile && (
+                    <directionalLight position={[-3, 4, -2]} intensity={0.45} color="#b8a0ff" />
+                )}
+                <pointLight
+                    position={[3.2, 1.4, 4.3]}
+                    intensity={mobile ? 1.8 : 2.8}
+                    color="#4ade80"
+                    distance={mobile ? 7 : 10}
+                    decay={2}
+                />
+                <pointLight
+                    position={[0.2, 1.8, -0.2]}
+                    intensity={mobile ? 1.4 : 1.8}
+                    color="#f97316"
+                    distance={6}
+                    decay={2}
+                />
+                {!mobile && (
+                    <>
+                        <pointLight position={[-1.5, 1.4, -1]} intensity={1.8} color="#fbbf24" distance={9} decay={2} />
+                        <pointLight position={[0, 2.2, -7]} intensity={2.2} color="#a78bfa" distance={12} decay={2} />
+                        <pointLight position={[-6, 2.2, -4]} intensity={1.3} color="#f0e0c0" distance={10} decay={2} />
+                        <pointLight position={[0, 2.5, 5]} intensity={1.2} color="#ffffff" distance={12} decay={2} />
+                    </>
+                )}
+                {mobile && (
+                    <pointLight position={[0, 2.4, 0]} intensity={1.1} color="#e0d4ff" distance={14} decay={2} />
+                )}
 
-                <HouseGeometry />
-                <HouseDecor />
-                <RemotePlayers peers={peers} />
+                <HouseGeometry low={mobile} />
+                <HouseDecor low={mobile} />
+                <RemotePlayers peers={peers} mobile={mobile} />
                 <FirstPersonController
                     locked={locked}
                     mobile={mobile}
@@ -89,7 +121,9 @@ export default function HouseCanvas({
                     onInteractRequest={onInteractRequest}
                     onMoveActivity={onMoveActivity}
                 />
-                <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
+                {!mobile && (
+                    <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
+                )}
             </Canvas>
         </div>
     );

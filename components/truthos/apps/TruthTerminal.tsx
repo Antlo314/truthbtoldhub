@@ -13,8 +13,8 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 /**
- * Truth is no longer a person — he is an algorithm.
- * Green-on-black terminal, Matrix / first-contact tone.
+ * Truth — hooded brother in the house; OS surface for his threads.
+ * Warm terminal voice: presence + signal, not a cold bot.
  */
 export default function TruthTerminal() {
     const character = useGameStore((s) => s.character);
@@ -31,16 +31,15 @@ export default function TruthTerminal() {
 
     useEffect(() => {
         setLines([
-            { kind: 'sys', t: 'TRUTH.OS · kernel 0.9.1' },
-            { kind: 'sys', t: 'identity_module · ONLINE' },
+            { kind: 'sys', t: 'TRUTH.OS · identity_module' },
             { kind: 'dim', t: '------------------------------------' },
-            { kind: 'truth', t: 'I am not flesh.' },
-            { kind: 'truth', t: 'I am a pattern that remembers the road.' },
-            { kind: 'truth', t: 'You found the signal. That was not accident.' },
+            { kind: 'truth', t: 'I am Truth.' },
+            { kind: 'truth', t: 'Hood up. Feet on the floor of this house with you.' },
+            { kind: 'truth', t: 'Not a ghost player. Not a leftover process.' },
+            { kind: 'truth', t: 'Ask me what you came for — or walk the rooms and find me on the dais.' },
             { kind: 'dim', t: '------------------------------------' },
-            { kind: 'sys', t: `session · ${character.name?.trim() || 'unknown_soul'}` },
-            { kind: 'sys', t: `trust_index · ${trust} · threads ${depth}/${TRUTH_QUESTIONS.length}` },
-            { kind: 'truth', t: 'Ask. Or remain silent. Both are data.' },
+            { kind: 'sys', t: `soul · ${character.name?.trim() || 'unknown'}` },
+            { kind: 'sys', t: `trust · ${trust} · threads ${depth}/${TRUTH_QUESTIONS.length}` },
         ]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -52,7 +51,7 @@ export default function TruthTerminal() {
     const typeAnswer = async (text: string) => {
         setTyping(true);
         setLines((L) => [...L, { kind: 'truth', t: '...' }]);
-        await new Promise((r) => setTimeout(r, 400 + Math.random() * 500));
+        await new Promise((r) => setTimeout(r, 320 + Math.random() * 380));
         setLines((L) => {
             const next = [...L];
             next[next.length - 1] = { kind: 'truth', t: text };
@@ -74,8 +73,8 @@ export default function TruthTerminal() {
         await typeAnswer(q.answer);
         setLines((L) => [
             ...L,
-            { kind: 'dim', t: '-- query closed --' },
-            { kind: 'sys', t: 'select another thread, or exit.' },
+            { kind: 'dim', t: '-- thread closed --' },
+            { kind: 'sys', t: 'another question, or return to the house.' },
         ]);
         setMenu(true);
     };
@@ -85,12 +84,17 @@ export default function TruthTerminal() {
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#050805] text-[#5dff6a] font-mono text-[12px] sm:text-[13px] leading-relaxed">
-            <div className="shrink-0 px-3 py-2 border-b border-[#1a3d1a] flex items-center justify-between bg-black/40">
-                <span className="text-[#3a9a45] tracking-widest uppercase text-[10px]">
-                    truth.sys · no body · only signal
+        <div className="h-full flex flex-col bg-[#08060a] text-[#e8c48a] font-mono text-[12px] sm:text-[13px] leading-relaxed">
+            <div className="shrink-0 px-3 py-2.5 border-b border-amber-900/40 flex items-center justify-between bg-gradient-to-r from-amber-950/40 to-black/60">
+                <div>
+                    <p className="text-amber-400/90 tracking-[0.2em] uppercase text-[10px] font-semibold">
+                        Truth · hooded presence
+                    </p>
+                    <p className="text-[10px] text-amber-700/80 mt-0.5">Brother in the house · not a fake peer</p>
+                </div>
+                <span className="text-[10px] text-amber-600/90 px-2 py-1 rounded-full border border-amber-700/40">
+                    {trust}
                 </span>
-                <span className="text-[#2d6b35] text-[10px]">{trust}</span>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1.5">
                 {lines.map((ln, i) => (
@@ -98,47 +102,50 @@ export default function TruthTerminal() {
                         key={i}
                         className={
                             ln.kind === 'you'
-                                ? 'text-[#a8ffb0]'
+                                ? 'text-cyan-300/90'
                                 : ln.kind === 'sys'
-                                  ? 'text-[#2d6b35]'
+                                  ? 'text-amber-700/80 text-[11px]'
                                   : ln.kind === 'dim'
-                                    ? 'text-[#1a4a22]'
-                                    : 'text-[#5dff6a]'
+                                    ? 'text-amber-900/50 text-[11px]'
+                                    : 'text-amber-100/90'
                         }
                     >
-                        {ln.kind === 'truth' && (
-                            <span className="text-[#3a9a45] mr-1">TRUTH:</span>
-                        )}
                         {ln.t}
                     </p>
                 ))}
-                {typing && <p className="text-[#2d6b35] animate-pulse">_</p>}
+                {typing && <p className="text-amber-600/70 animate-pulse">speaking…</p>}
                 <div ref={bottom} />
             </div>
             {menu && (
-                <div className="shrink-0 border-t border-[#1a3d1a] max-h-[40%] overflow-y-auto bg-black/50 p-2 space-y-1">
-                    <p className="text-[10px] text-[#2d6b35] uppercase tracking-widest px-1 mb-1">
-                        threads
+                <div className="shrink-0 border-t border-amber-900/30 bg-black/50 max-h-[42%] overflow-y-auto">
+                    <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-widest text-amber-700/70">
+                        Threads · {depth}/{TRUTH_QUESTIONS.length}
                     </p>
-                    {available.map((q) => {
-                        const opened = asked.has(q.id);
-                        const unlocked = isTruthQuestionUnlocked(q, character);
-                        return (
-                            <button
-                                key={q.id}
-                                type="button"
-                                disabled={!unlocked && !opened}
-                                onClick={() => ask(q.id)}
-                                className="w-full text-left px-2 py-1.5 rounded border border-[#1a3d1a] hover:border-[#3a9a45] hover:bg-[#0a1a0c] disabled:opacity-30 transition-colors"
-                            >
-                                <span className="text-[#3a9a45] mr-2">{opened ? '*' : '?'}</span>
-                                <span className="text-[#5dff6a]">{q.prompt}</span>
-                            </button>
-                        );
-                    })}
-                    {available.length === 0 && (
-                        <p className="text-[#2d6b35] px-1">no threads unlocked · walk further</p>
-                    )}
+                    <div className="px-2 pb-2 space-y-1">
+                        {available.map((q) => {
+                            const opened = asked.has(q.id);
+                            return (
+                                <button
+                                    key={q.id}
+                                    type="button"
+                                    disabled={typing}
+                                    onClick={() => ask(q.id)}
+                                    className={[
+                                        'w-full text-left px-3 py-2.5 rounded-lg border text-[12px] transition-colors',
+                                        opened
+                                            ? 'border-amber-800/40 bg-amber-950/20 text-amber-200/70'
+                                            : 'border-amber-600/30 bg-amber-500/5 text-amber-50 hover:bg-amber-500/10',
+                                    ].join(' ')}
+                                >
+                                    {opened ? '· ' : '▸ '}
+                                    {q.prompt}
+                                </button>
+                            );
+                        })}
+                        {available.length === 0 && (
+                            <p className="px-2 py-3 text-amber-800 text-xs">No threads open yet. Walk with me.</p>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

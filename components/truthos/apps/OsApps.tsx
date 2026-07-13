@@ -8,6 +8,8 @@ import TruthTerminal from './TruthTerminal';
 import type { OsAppId } from '../truthOsStore';
 import { useHouseUi, type HousePanelId } from '../house/houseUiStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { loadSettings, applyMusicSetting, saveSettings } from '@/lib/game/settings';
+import { useState } from 'react';
 
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
@@ -22,32 +24,76 @@ function openHouse(panel: HousePanelId) {
     useHouseUi.getState().openPanel(panel);
 }
 
+function AppHeader({ title, sub, accent }: { title: string; sub: string; accent: string }) {
+    return (
+        <div className="mb-4">
+            <p className={`text-[10px] uppercase tracking-[0.32em] font-mono ${accent}`}>{title}</p>
+            <h3 className="text-white font-semibold text-lg mt-1 leading-tight">{sub}</h3>
+        </div>
+    );
+}
+
+function PrimaryBtn({
+    children,
+    onClick,
+    tone = 'emerald',
+}: {
+    children: React.ReactNode;
+    onClick: () => void;
+    tone?: 'emerald' | 'violet' | 'amber' | 'cyan' | 'rose' | 'sky';
+}) {
+    const tones: Record<string, string> = {
+        emerald: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/25',
+        violet: 'bg-violet-500/15 border-violet-400/40 text-violet-100 hover:bg-violet-500/25',
+        amber: 'bg-amber-500/15 border-amber-400/40 text-amber-100 hover:bg-amber-500/25',
+        cyan: 'bg-cyan-500/15 border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/25',
+        rose: 'bg-rose-500/15 border-rose-400/40 text-rose-100 hover:bg-rose-500/25',
+        sky: 'bg-sky-500/15 border-sky-400/40 text-sky-100 hover:bg-sky-500/25',
+    };
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`w-full text-center py-3.5 rounded-xl border text-xs uppercase tracking-[0.18em] font-semibold transition-colors ${tones[tone]}`}
+        >
+            {children}
+        </button>
+    );
+}
+
+function StatChip({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+            <p className="text-[9px] uppercase tracking-widest text-white/35">{label}</p>
+            <p className="text-sm text-white/90 mt-0.5 font-medium">{value}</p>
+        </div>
+    );
+}
+
 export function SoulApp() {
     const character = useGameStore((s) => s.character);
     return (
         <Panel className="flex flex-col items-center gap-4 bg-zinc-950">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-400/80 w-full">Vessel.exe</p>
-            <div className="rounded-xl border border-white/10 bg-black/50 p-3">
+            <AppHeader title="Vessel.exe" sub="Your body in the house" accent="text-cyan-400/80" />
+            <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-b from-cyan-500/10 to-black/50 p-4 shadow-[0_0_40px_rgba(34,211,238,0.08)]">
                 <AvatarCanvas config={character.avatar} scale={7} />
             </div>
-            <p className="font-semibold text-lg text-white">{character.name?.trim() || 'Unnamed process'}</p>
-            <p className="text-xs text-zinc-500 text-center">
-                Shape identity in the forge — stays inside this house build.
-            </p>
-            <button
-                type="button"
-                onClick={() => openHouse('forge')}
-                className="w-full text-center py-3 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-xs uppercase tracking-[0.2em] hover:bg-cyan-500/30"
-            >
-                Open character forge
-            </button>
-            <button
-                type="button"
-                onClick={() => openHouse('soul')}
-                className="w-full text-center py-2.5 rounded-lg border border-white/15 text-xs uppercase tracking-[0.2em] text-zinc-300"
-            >
-                Soul mirror
-            </button>
+            <div className="text-center w-full">
+                <p className="font-semibold text-xl text-white">{character.name?.trim() || 'Unnamed process'}</p>
+                <p className="text-[11px] text-zinc-500 mt-1 uppercase tracking-[0.2em]">
+                    {character.path ? `Path · ${character.path}` : 'Path unchosen'}
+                </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full">
+                <StatChip label="Aura" value={character.appearance?.aura ? 'Set' : 'Default'} />
+                <StatChip label="Build" value={character.avatar?.build === 'fem' ? 'Fem' : 'Masc'} />
+            </div>
+            <PrimaryBtn onClick={() => openHouse('forge')} tone="cyan">
+                Open vessel forge
+            </PrimaryBtn>
+            <PrimaryBtn onClick={() => openHouse('soul')} tone="cyan">
+                Soul mirror · house
+            </PrimaryBtn>
         </Panel>
     );
 }
@@ -57,34 +103,32 @@ export function WayfinderApp() {
     const next = suggestNextRoad();
     return (
         <Panel className="bg-zinc-950 space-y-4">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-400/80">Wayfinder.exe</p>
-            <h3 className="text-white font-semibold text-lg">Roads beyond the room</h3>
+            <AppHeader title="Wayfinder.exe" sub="Roads from the house" accent="text-emerald-400/80" />
             <p className="text-zinc-400 text-sm leading-relaxed">
-                Only Eden is open while the garden is completed. Other ages remain sealed.
+                Eden is the open road. Other ages stay sealed until the garden is complete. Navigate without leaving
+                Truth.OS House.
             </p>
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-2">
-                <p className="text-emerald-300 font-medium">Eden · first road</p>
+            <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <p className="text-emerald-300 font-semibold">Eden · first road</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                        OPEN
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <StatChip label="Visions" value={`${stats.seen}/${stats.total}`} />
+                    <StatChip label="Relics" value={String(stats.relics)} />
+                </div>
                 <p className="text-xs text-zinc-500">
-                    Visions {stats.seen}/{stats.total} · relics {stats.relics}
-                </p>
-                <p className="text-xs text-zinc-500">
-                    Next: <span className="text-zinc-300">{next.label}</span>
+                    Next signal: <span className="text-zinc-300">{next.label}</span>
                 </p>
             </div>
-            <button
-                type="button"
-                onClick={() => openHouse('wayfinder')}
-                className="w-full text-center py-3 rounded-lg border border-emerald-400/35 text-xs uppercase tracking-[0.2em] text-emerald-100 hover:bg-emerald-500/10"
-            >
-                Open wayfinder · house
-            </button>
-            <button
-                type="button"
-                onClick={() => openHouse('chamber')}
-                className="w-full text-center py-3 rounded-lg border border-violet-400/35 text-xs uppercase tracking-[0.2em] text-violet-100 hover:bg-violet-500/10"
-            >
-                3D Chamber (Hut) · this build
-            </button>
+            <PrimaryBtn onClick={() => openHouse('cinema')} tone="emerald">
+                Eden vision · cinema
+            </PrimaryBtn>
+            <PrimaryBtn onClick={() => openHouse('chamber')} tone="violet">
+                Enter 3D chamber
+            </PrimaryBtn>
         </Panel>
     );
 }
@@ -92,69 +136,105 @@ export function WayfinderApp() {
 export function ChamberApp() {
     return (
         <Panel className="bg-zinc-950 flex flex-col gap-4">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-violet-400/80">Chamber.exe</p>
-            <p className="text-white font-semibold">3D Sanctum · Truth&apos;s Hut</p>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-                Walkable hut, stations, vessel, free look — staged in this same house build. No legacy runtime.
-            </p>
-            <button
-                type="button"
-                onClick={() => openHouse('chamber')}
-                className="text-center py-3.5 rounded-lg bg-violet-500/20 border border-violet-400/40 text-violet-100 text-xs uppercase tracking-[0.2em] hover:bg-violet-500/30"
-            >
+            <AppHeader title="Chamber.exe" sub="Truth’s Hut · walkable sanctum" accent="text-violet-400/80" />
+            <div className="rounded-2xl border border-violet-400/25 bg-violet-500/5 p-4 space-y-2">
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                    Full hut runtime on this build: stations, Truth, vessel, free look. Exit returns you to the
+                    first-person house — no legacy shell.
+                </p>
+                <ul className="text-xs text-zinc-500 space-y-1.5 pt-1">
+                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Ask Truth on the dais</li>
+                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Soul mirror · forge appearance</li>
+                    <li className="flex gap-2"><span className="text-violet-400">⬡</span> Wayfinder & ledger stations</li>
+                </ul>
+            </div>
+            <PrimaryBtn onClick={() => openHouse('chamber')} tone="violet">
                 Enter chamber →
-            </button>
-            <p className="text-[11px] text-zinc-600">
-                Tip: exit returns you to the first-person house.
-            </p>
+            </PrimaryBtn>
         </Panel>
     );
 }
 
 export function StationApp({
     title,
+    sub,
     body,
     panel,
     accent,
+    tone,
+    bullets,
 }: {
     title: string;
+    sub: string;
     body: string;
     panel: HousePanelId;
     accent: string;
+    tone: 'emerald' | 'violet' | 'amber' | 'cyan' | 'rose' | 'sky';
+    bullets?: string[];
 }) {
     return (
         <Panel className="bg-zinc-950 flex flex-col gap-4">
-            <p className={`text-[10px] uppercase tracking-[0.3em] ${accent}`}>{title}</p>
+            <AppHeader title={title} sub={sub} accent={accent} />
             <p className="text-zinc-400 text-sm leading-relaxed">{body}</p>
-            <button
-                type="button"
-                onClick={() => openHouse(panel)}
-                className="text-center py-3 rounded-lg border border-white/15 text-xs uppercase tracking-[0.2em] text-zinc-200 hover:border-white/30"
-            >
+            {bullets && bullets.length > 0 && (
+                <ul className="space-y-1.5 text-xs text-zinc-500">
+                    {bullets.map((b) => (
+                        <li key={b} className="flex gap-2">
+                            <span className="text-white/30">·</span>
+                            {b}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <PrimaryBtn onClick={() => openHouse(panel)} tone={tone}>
                 Open in house →
-            </button>
+            </PrimaryBtn>
         </Panel>
     );
 }
 
 export function SettingsApp({ onLogout, onExit }: { onLogout: () => void; onExit: () => void }) {
+    const [music, setMusic] = useState(() => loadSettings().music);
+
+    const toggleMusic = () => {
+        const next = !music;
+        setMusic(next);
+        saveSettings({ music: next });
+        applyMusicSetting(next);
+        sacredUi.click();
+    };
+
     return (
         <Panel className="bg-zinc-950 space-y-3">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500">Settings</p>
+            <AppHeader title="Settings" sub="System · house" accent="text-zinc-500" />
+            <button
+                type="button"
+                onClick={toggleMusic}
+                className="w-full py-3 rounded-xl border border-white/10 text-left px-4 text-sm text-zinc-200 hover:bg-white/5 flex justify-between items-center"
+            >
+                <span>Music</span>
+                <span className={music ? 'text-emerald-400 text-xs uppercase tracking-widest' : 'text-zinc-600 text-xs uppercase tracking-widest'}>
+                    {music ? 'On' : 'Off'}
+                </span>
+            </button>
             <button
                 type="button"
                 onClick={onExit}
-                className="w-full py-2.5 rounded-lg border border-white/10 text-left px-3 text-sm text-zinc-300 hover:bg-white/5"
+                className="w-full py-3 rounded-xl border border-white/10 text-left px-4 text-sm text-zinc-300 hover:bg-white/5"
             >
                 Sleep display · return to room
             </button>
             <button
                 type="button"
                 onClick={onLogout}
-                className="w-full py-2.5 rounded-lg border border-red-500/30 text-left px-3 text-sm text-red-300/90 hover:bg-red-500/10"
+                className="w-full py-3 rounded-xl border border-red-500/30 text-left px-4 text-sm text-red-300/90 hover:bg-red-500/10"
             >
                 Sign out of Truth.OS
             </button>
+            <p className="text-[10px] text-zinc-600 pt-2 leading-relaxed">
+                Multiplayer only shows living sessions with a fresh heartbeat. Ghosts are filtered server-side and
+                client-side.
+            </p>
         </Panel>
     );
 }
@@ -176,45 +256,60 @@ export function renderOsApp(
             return (
                 <StationApp
                     title="Ledger.exe"
-                    body="Daily word and hut dispatches on the sanctum ledger."
+                    sub="Daily word & dispatches"
+                    body="The hut ledger lives on the house spine — same build, no detour."
                     panel="ledger"
                     accent="text-amber-400/80"
+                    tone="amber"
+                    bullets={['Community word', 'Sanctum dispatches', 'Keep the fire lit']}
                 />
             );
         case 'hall':
             return (
                 <StationApp
                     title="Hall.exe"
-                    body="Voices gather. Community lives on the house spine."
+                    sub="Voices gather"
+                    body="The living community — chat, presence, and shared roads — opens in-house."
                     panel="hall"
                     accent="text-sky-400/80"
+                    tone="sky"
+                    bullets={['Archive channels', 'Soul profiles', 'Shared signal']}
                 />
             );
         case 'codex':
             return (
                 <StationApp
                     title="Codex.exe"
-                    body="Memory, whispers, and threads opened with the algorithm."
+                    sub="Memory & whispers"
+                    body="Threads you open with Truth and the algorithm are kept here."
                     panel="codex"
                     accent="text-fuchsia-400/80"
+                    tone="violet"
+                    bullets={['Whispers', 'Discoveries', 'Path memory']}
                 />
             );
         case 'cinema':
             return (
                 <StationApp
                     title="Cinema.exe"
-                    body="Transmissions and film. Opened in-house — same build."
+                    sub="Transmissions & film"
+                    body="The 400 Series and vision roads — play without leaving the house OS."
                     panel="cinema"
                     accent="text-rose-400/80"
+                    tone="rose"
+                    bullets={['Films', 'Eden vision', 'Prophetic cinema']}
                 />
             );
         case 'offering':
             return (
                 <StationApp
                     title="Offering.exe"
-                    body="Fuel the work. Sustain the vision that keeps this OS online."
+                    sub="Sustain the work"
+                    body="Fuel the vision that keeps Truth.OS House online for every soul."
                     panel="offering"
                     accent="text-yellow-400/80"
+                    tone="amber"
+                    bullets={['Tiers of support', 'Envelope on the table', 'Keep the lights on']}
                 />
             );
         case 'settings':

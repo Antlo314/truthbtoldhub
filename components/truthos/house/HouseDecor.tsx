@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * Stage Hut assets into the house: Truth figure, vessel near mirror,
- * station rings, wayfinder map, ledger pedestal, hearth glow.
+ * Stage Hut assets: Truth (hooded AA figure), vessel, stations, hearth.
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -29,17 +28,19 @@ const ACCENT: Record<string, string> = {
 function SpinRing({
     accent,
     radius = 0.42,
+    low,
 }: {
     accent: string;
     radius?: number;
+    low?: boolean;
 }) {
     const ref = useRef<THREE.Mesh>(null);
     useFrame((_, dt) => {
-        if (ref.current) ref.current.rotation.z += dt * 0.35;
+        if (ref.current) ref.current.rotation.z += dt * (low ? 0.2 : 0.35);
     });
     return (
         <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-            <ringGeometry args={[radius, radius + 0.1, 28]} />
+            <ringGeometry args={[radius, radius + 0.1, low ? 16 : 28]} />
             <meshStandardMaterial
                 color={accent}
                 emissive={accent}
@@ -52,15 +53,15 @@ function SpinRing({
     );
 }
 
-function TruthDais() {
+function TruthDais({ low }: { low?: boolean }) {
     return (
         <group position={[0.2, 0, -0.2]}>
-            <mesh position={[0, 0.1, 0]} receiveShadow>
-                <cylinderGeometry args={[0.85, 0.95, 0.2, 24]} />
+            <mesh position={[0, 0.1, 0]} receiveShadow={!low}>
+                <cylinderGeometry args={[0.85, 0.95, 0.2, low ? 12 : 24]} />
                 <meshStandardMaterial color="#2c2118" roughness={0.9} />
             </mesh>
             <mesh position={[0, 0.22, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.7, 0.85, 32]} />
+                <ringGeometry args={[0.7, 0.85, low ? 16 : 32]} />
                 <meshStandardMaterial
                     color="#fbbf24"
                     emissive="#fbbf24"
@@ -68,14 +69,32 @@ function TruthDais() {
                     side={THREE.DoubleSide}
                 />
             </mesh>
-            <TruthMesh position={[0, 0.22, 0]} />
-            <pointLight position={[0, 1.6, 0.3]} intensity={1.4} color="#f97316" distance={5} decay={2} />
+            {/* Hooded African American Truth — solid presence in the room */}
+            <TruthMesh position={[0, 0.22, 0]} low={low} />
+            {!low && (
+                <pointLight position={[0, 1.6, 0.3]} intensity={1.4} color="#f97316" distance={5} decay={2} />
+            )}
         </group>
     );
 }
 
-function MirrorVessel() {
+function MirrorVessel({ low }: { low?: boolean }) {
     const avatar = useGameStore((s) => s.character.avatar);
+    // Skip heavy vessel on mobile — silhouette block instead
+    if (low) {
+        return (
+            <group position={[2.35, 0, 6.35]}>
+                <mesh position={[0, 0.9, 0]}>
+                    <capsuleGeometry args={[0.18, 0.7, 4, 8]} />
+                    <meshStandardMaterial color="#4a3a2a" roughness={0.8} />
+                </mesh>
+                <mesh position={[0, 1.5, 0]}>
+                    <sphereGeometry args={[0.14, 8, 8]} />
+                    <meshStandardMaterial color="#5c4030" roughness={0.75} />
+                </mesh>
+            </group>
+        );
+    }
     return (
         <group position={[2.35, 0, 6.35]} rotation={[0, Math.PI / 2, 0]}>
             <VesselModel avatar={avatar} scale={0.92} />
@@ -87,11 +106,11 @@ function MirrorVessel() {
 function LedgerPedestal() {
     return (
         <group position={[-4.2, 0, 1.2]}>
-            <mesh position={[0, 0.45, 0]} castShadow>
+            <mesh position={[0, 0.45, 0]}>
                 <boxGeometry args={[0.55, 0.9, 0.55]} />
                 <meshStandardMaterial color="#2c241c" roughness={0.85} />
             </mesh>
-            <mesh position={[0, 0.95, 0]} castShadow rotation={[-0.15, 0.2, 0]}>
+            <mesh position={[0, 0.95, 0]} rotation={[-0.15, 0.2, 0]}>
                 <boxGeometry args={[0.38, 0.06, 0.28]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.8} />
             </mesh>
@@ -106,7 +125,7 @@ function LedgerPedestal() {
 function WayfinderMap() {
     return (
         <group position={[0, 1.5, -5.4]}>
-            <mesh castShadow>
+            <mesh>
                 <boxGeometry args={[1.4, 1.0, 0.08]} />
                 <meshStandardMaterial color="#1a1520" roughness={0.7} />
             </mesh>
@@ -119,63 +138,59 @@ function WayfinderMap() {
                     toneMapped={false}
                 />
             </mesh>
-            {/* Simple path marks */}
             <mesh position={[0, -0.1, 0.06]}>
-                <circleGeometry args={[0.08, 12]} />
+                <circleGeometry args={[0.08, 10]} />
                 <meshBasicMaterial color="#fbbf24" />
             </mesh>
             <mesh position={[0.25, 0.15, 0.06]}>
-                <circleGeometry args={[0.06, 12]} />
+                <circleGeometry args={[0.06, 10]} />
                 <meshBasicMaterial color="#a78bfa" />
             </mesh>
         </group>
     );
 }
 
-function HearthWest() {
+function HearthWest({ low }: { low?: boolean }) {
     const flame = useRef<THREE.Mesh>(null);
     useFrame(({ clock }) => {
-        if (flame.current) {
-            const t = clock.elapsedTime;
-            flame.current.scale.y = 1 + Math.sin(t * 8) * 0.12;
-            flame.current.position.y = 0.55 + Math.sin(t * 6) * 0.03;
-        }
+        if (!flame.current || low) return;
+        const t = clock.elapsedTime;
+        flame.current.scale.y = 1 + Math.sin(t * 8) * 0.12;
+        flame.current.position.y = 0.55 + Math.sin(t * 6) * 0.03;
     });
     return (
         <group position={[-6.8, 0, 3.2]}>
-            <mesh position={[0, 0.4, 0]} castShadow>
+            <mesh position={[0, 0.4, 0]}>
                 <boxGeometry args={[1.2, 0.8, 0.7]} />
                 <meshStandardMaterial color="#1a1410" roughness={0.95} />
             </mesh>
             <mesh ref={flame} position={[0, 0.55, 0.15]}>
-                <coneGeometry args={[0.18, 0.45, 8]} />
+                <coneGeometry args={[0.18, 0.45, 6]} />
                 <meshStandardMaterial
                     color="#ff6b2c"
                     emissive="#ff6b2c"
-                    emissiveIntensity={1.2}
+                    emissiveIntensity={1.1}
                     toneMapped={false}
                 />
             </mesh>
-            <pointLight position={[0, 0.9, 0.2]} intensity={1.6} color="#ff8a3d" distance={6} decay={2} />
+            {!low && (
+                <pointLight position={[0, 0.9, 0.2]} intensity={1.6} color="#ff8a3d" distance={6} decay={2} />
+            )}
         </group>
     );
 }
 
-/**
- * Decorative Hut staging + animated rings on every hotspot.
- */
-export default function HouseDecor() {
+export default function HouseDecor({ low = false }: { low?: boolean }) {
     return (
         <group>
-            <TruthDais />
-            <MirrorVessel />
+            <TruthDais low={low} />
+            <MirrorVessel low={low} />
             <LedgerPedestal />
             <WayfinderMap />
-            <HearthWest />
-
+            <HearthWest low={low} />
             {HOTSPOTS.map((h) => (
                 <group key={h.id} position={[h.position[0], 0, h.position[2]]}>
-                    <SpinRing accent={ACCENT[h.id] || '#fbbf24'} />
+                    <SpinRing accent={ACCENT[h.id] || '#fbbf24'} low={low} />
                 </group>
             ))}
         </group>

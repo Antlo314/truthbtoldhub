@@ -233,45 +233,147 @@ export const AvatarMesh = forwardRef<AvatarHandle, {
     );
 });
 
-/** Hooded Truth — adult proportions, slightly taller presence */
-export function TruthMesh({ position = [0, 0, 0] as [number, number, number] }) {
-    const robe = '#1e2a4a';
-    const hood = '#151c30';
+/**
+ * Truth — hooded African American man in the house.
+ * Deep brown skin, full hood, gold accent — presence, not a generic NPC.
+ */
+export function TruthMesh({
+    position = [0, 0, 0] as [number, number, number],
+    low = false,
+}: {
+    position?: [number, number, number];
+    /** Mobile: fewer segments */
+    low?: boolean;
+}) {
+    const robe = '#12182a';
+    const robeDeep = '#0a0e18';
+    const hood = '#0d121f';
     const gold = '#fbbf24';
-    const skin = '#c68642';
+    // Deep brown / Black skin tones
+    const skin = '#3d2416';
+    const skinDeep = '#2a1810';
+    const skinWarm = '#5c3a24';
+    const segs = low ? 8 : 14;
+    const segsHi = low ? 10 : 16;
 
     return (
         <group position={position}>
-            {/* long robe lower */}
-            <mesh position={[0, 0.45, 0]} castShadow>
-                <cylinderGeometry args={[0.2, 0.32, 0.9, 10]} />
+            {/* Boots under robe */}
+            <mesh position={[-0.1, 0.08, 0.04]} castShadow>
+                <boxGeometry args={[0.12, 0.14, 0.22]} />
+                <meshStandardMaterial color="#1a1210" roughness={0.9} />
+            </mesh>
+            <mesh position={[0.1, 0.08, 0.04]} castShadow>
+                <boxGeometry args={[0.12, 0.14, 0.22]} />
+                <meshStandardMaterial color="#1a1210" roughness={0.9} />
+            </mesh>
+
+            {/* Long robe — broad Black man silhouette */}
+            <mesh position={[0, 0.48, 0]} castShadow>
+                <cylinderGeometry args={[0.22, 0.36, 0.95, segs]} />
+                <meshStandardMaterial color={robe} roughness={0.92} />
+            </mesh>
+            {/* Outer cloak layer */}
+            <mesh position={[0, 0.55, -0.02]} castShadow>
+                <cylinderGeometry args={[0.28, 0.4, 1.0, segs]} />
+                <meshStandardMaterial color={robeDeep} roughness={0.94} transparent opacity={0.92} />
+            </mesh>
+
+            {/* Broad shoulders / upper torso */}
+            <mesh position={[0, 1.12, 0]} castShadow>
+                <capsuleGeometry args={[0.2, 0.28, 4, segs]} />
                 <meshStandardMaterial color={robe} roughness={0.9} />
             </mesh>
-            {/* short upper body */}
-            <mesh position={[0, 1.05, 0]} castShadow>
-                <cylinderGeometry args={[0.26, 0.24, 0.45, 10]} />
-                <meshStandardMaterial color={robe} roughness={0.88} />
+            <mesh position={[-0.28, 1.18, 0]} castShadow rotation={[0, 0, 0.35]}>
+                <capsuleGeometry args={[0.07, 0.28, 3, 6]} />
+                <meshStandardMaterial color={robe} roughness={0.9} />
             </mesh>
-            <mesh position={[0, 1.42, -0.02]} castShadow>
-                <sphereGeometry args={[0.24, 14, 14]} />
+            <mesh position={[0.28, 1.18, 0]} castShadow rotation={[0, 0, -0.35]}>
+                <capsuleGeometry args={[0.07, 0.28, 3, 6]} />
+                <meshStandardMaterial color={robe} roughness={0.9} />
+            </mesh>
+
+            {/* Hands — visible brown skin */}
+            <mesh position={[-0.34, 0.92, 0.12]} castShadow>
+                <sphereGeometry args={[0.055, segs, segs]} />
+                <meshStandardMaterial color={skinWarm} roughness={0.65} />
+            </mesh>
+            <mesh position={[0.34, 0.92, 0.12]} castShadow>
+                <sphereGeometry args={[0.055, segs, segs]} />
+                <meshStandardMaterial color={skinWarm} roughness={0.65} />
+            </mesh>
+
+            {/* Hood volume */}
+            <mesh position={[0, 1.48, -0.04]} castShadow>
+                <sphereGeometry args={[0.26, segsHi, segsHi]} />
+                <meshStandardMaterial color={hood} roughness={0.96} />
+            </mesh>
+            {/* Hood rim / cowl forward */}
+            <mesh position={[0, 1.42, 0.1]} castShadow rotation={[0.4, 0, 0]}>
+                <torusGeometry args={[0.17, 0.04, 6, segs]} />
                 <meshStandardMaterial color={hood} roughness={0.95} />
             </mesh>
-            <mesh position={[0, 1.36, 0.1]}>
-                <sphereGeometry args={[0.12, 12, 12]} />
-                <meshStandardMaterial color={skin} roughness={0.7} />
+
+            {/* Face in hood — African American features */}
+            <mesh position={[0, 1.38, 0.12]} castShadow>
+                <sphereGeometry args={[0.13, segsHi, segsHi]} />
+                <meshStandardMaterial color={skin} roughness={0.62} />
             </mesh>
-            <mesh position={[0, 0.88, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <torusGeometry args={[0.28, 0.022, 8, 20]} />
-                <meshStandardMaterial color={gold} emissive={gold} emissiveIntensity={0.35} metalness={0.6} roughness={0.35} />
+            {/* Brow / cheek depth */}
+            <mesh position={[0, 1.42, 0.18]}>
+                <boxGeometry args={[0.16, 0.04, 0.06]} />
+                <meshStandardMaterial color={skinDeep} roughness={0.7} />
             </mesh>
-            <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.55, 0.72, 32]} />
+            {/* Nose bridge */}
+            <mesh position={[0, 1.36, 0.22]}>
+                <boxGeometry args={[0.035, 0.07, 0.05]} />
+                <meshStandardMaterial color={skinWarm} roughness={0.6} />
+            </mesh>
+            {/* Lips */}
+            <mesh position={[0, 1.30, 0.21]}>
+                <boxGeometry args={[0.07, 0.025, 0.03]} />
+                <meshStandardMaterial color="#4a2820" roughness={0.55} />
+            </mesh>
+            {/* Eyes — calm, deep */}
+            <mesh position={[-0.045, 1.40, 0.225]}>
+                <sphereGeometry args={[0.018, 8, 8]} />
+                <meshStandardMaterial color="#1a1008" roughness={0.3} />
+            </mesh>
+            <mesh position={[0.045, 1.40, 0.225]}>
+                <sphereGeometry args={[0.018, 8, 8]} />
+                <meshStandardMaterial color="#1a1008" roughness={0.3} />
+            </mesh>
+            {/* Soft sclera glint */}
+            <mesh position={[-0.04, 1.405, 0.235]}>
+                <sphereGeometry args={[0.006, 6, 6]} />
+                <meshBasicMaterial color="#e8d5c0" />
+            </mesh>
+            <mesh position={[0.05, 1.405, 0.235]}>
+                <sphereGeometry args={[0.006, 6, 6]} />
+                <meshBasicMaterial color="#e8d5c0" />
+            </mesh>
+
+            {/* Gold cord / chain of office */}
+            <mesh position={[0, 0.95, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.26, 0.018, 6, segs]} />
                 <meshStandardMaterial
                     color={gold}
                     emissive={gold}
-                    emissiveIntensity={0.45}
+                    emissiveIntensity={0.4}
+                    metalness={0.65}
+                    roughness={0.35}
+                />
+            </mesh>
+
+            {/* Floor ring — marks him as station, not a remote player */}
+            <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.5, 0.68, low ? 20 : 32]} />
+                <meshStandardMaterial
+                    color={gold}
+                    emissive={gold}
+                    emissiveIntensity={0.5}
                     transparent
-                    opacity={0.85}
+                    opacity={0.88}
                     side={THREE.DoubleSide}
                 />
             </mesh>

@@ -52,14 +52,23 @@ function isGuestSession(): boolean {
 }
 
 function ensureGuestId(): string {
+    // Stable across reloads so presence doesn't spawn ghost keys every visit
     try {
-        const existing = sessionStorage.getItem('tbth-house-guest-id');
+        const existing = localStorage.getItem('tbth-house-guest-id');
         if (existing) return existing;
         const id = 'guest-' + Math.random().toString(36).slice(2, 10);
-        sessionStorage.setItem('tbth-house-guest-id', id);
+        localStorage.setItem('tbth-house-guest-id', id);
         return id;
     } catch {
-        return 'guest-' + Math.random().toString(36).slice(2, 10);
+        try {
+            const s = sessionStorage.getItem('tbth-house-guest-id');
+            if (s) return s;
+            const id = 'guest-' + Math.random().toString(36).slice(2, 10);
+            sessionStorage.setItem('tbth-house-guest-id', id);
+            return id;
+        } catch {
+            return 'guest-' + Math.random().toString(36).slice(2, 10);
+        }
     }
 }
 
@@ -83,6 +92,7 @@ export default function HouseExperience() {
     const [activity, setActivity] = useState<'move' | 'look' | 'jump' | 'idle' | null>(null);
     const presence = useRef<HousePresenceApi | null>(null);
     const selfId = useRef<string>('');
+    const [presenceKey, setPresenceKey] = useState('');
     const hotspotRef = useRef<Hotspot | null>(null);
 
     const isMobile = device === 'mobile';
@@ -103,7 +113,9 @@ export default function HouseExperience() {
         } catch {
             /* */
         }
-        selfId.current = ensureGuestId();
+        const gid = ensureGuestId();
+        selfId.current = gid;
+        setPresenceKey(gid);
         setGuest(true);
         setAuthed(true);
         setReady(true);
@@ -131,6 +143,7 @@ export default function HouseExperience() {
                     setGuest(false);
                     setAuthed(true);
                     selfId.current = data.session.user.id;
+                    setPresenceKey(data.session.user.id);
                     try {
                         localStorage.removeItem('tbth-house-guest');
                     } catch {
@@ -148,8 +161,11 @@ export default function HouseExperience() {
                 setGuest(false);
                 setAuthOpen(false);
                 selfId.current = session.user.id;
+                setPresenceKey(session.user.id);
             } else {
-                selfId.current = ensureGuestId();
+                const gid = ensureGuestId();
+                selfId.current = gid;
+                setPresenceKey(gid);
                 setGuest(true);
                 setAuthed(true);
                 try {
@@ -166,15 +182,15 @@ export default function HouseExperience() {
         };
     }, []);
 
+    // Join once per presence identity — not on every avatar field tick (that spawned ghosts)
     useEffect(() => {
-        if (!authed || !selfId.current) return;
+        if (!authed || !presenceKey) return;
         let dead = false;
-        const aura = character.appearance?.aura || '#a78bfa';
         joinHousePresence(
-            selfId.current,
+            presenceKey,
             {
                 name: character.name?.trim() || (guest ? 'Guest' : 'Soul'),
-                aura,
+                aura: character.appearance?.aura || '#a78bfa',
                 skin: character.avatar?.skin ?? 6,
                 build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
                 x: 0,
@@ -196,8 +212,10 @@ export default function HouseExperience() {
             dead = true;
             void presence.current?.leave();
             presence.current = null;
+            setPeers([]);
         };
-    }, [authed, guest, character.name, character.appearance?.aura, character.avatar?.skin, character.avatar?.build]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authed, presenceKey]);
 
     const onPose = useCallback(
         (p: { x: number; y: number; z: number; yaw: number }) => {
@@ -275,7 +293,9 @@ export default function HouseExperience() {
         } catch {
             /* */
         }
-        selfId.current = ensureGuestId();
+        const gid = ensureGuestId();
+        selfId.current = gid;
+        setPresenceKey(gid);
         setGuest(true);
         setAuthed(true);
         setOsOpen(false);
