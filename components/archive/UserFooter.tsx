@@ -3,13 +3,25 @@
 import { useRouter } from 'next/navigation';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { isArchitect, DEFAULT_AVATAR } from '@/lib/archive/access';
-import { Settings, LogOut, Crown } from 'lucide-react';
+import { Settings, LogOut, Crown, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { visionStats } from '@/lib/brand/visionProgress';
 
 // The current soul's mini-card pinned to the bottom of the channel rail.
 export default function UserFooter() {
     const router = useRouter();
     const { profile, user } = useSoulStore();
     const architect = isArchitect(user?.email);
+    const [roadHint, setRoadHint] = useState<string | null>(null);
+
+    useEffect(() => {
+        try {
+            const s = visionStats();
+            if (s.complete) setRoadHint('Source');
+            else if (s.relics > 0) setRoadHint(`${s.relics}r`);
+            else if (s.seen > 0) setRoadHint(`${s.seen}/${s.total}`);
+        } catch { /* */ }
+    }, []);
 
     return (
         <div className="h-[56px] bg-black/60 backdrop-blur-md flex items-center justify-between px-3 border-t border-white/5 mt-auto relative z-30">
@@ -29,6 +41,18 @@ export default function UserFooter() {
                 </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+                <button
+                    onClick={() => router.push(roadHint === 'Source' ? '/epilogue' : '/vision')}
+                    title={roadHint === 'Source' ? 'Epilogue — Return to the Source' : 'Vision portals'}
+                    className="relative p-1.5 text-zinc-500 hover:text-aether-gold hover:bg-white/5 rounded-md transition-all"
+                >
+                    <Sparkles className="w-4 h-4" />
+                    {roadHint && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-aether-gold/90 text-[7px] font-black text-black flex items-center justify-center tabular-nums">
+                            {roadHint === 'Source' ? '✦' : roadHint}
+                        </span>
+                    )}
+                </button>
                 <button onClick={() => router.push('/self')} title="Identity Core" className="p-1.5 text-zinc-500 hover:text-aether-gold hover:bg-white/5 rounded-md transition-all">
                     <Settings className="w-4 h-4" />
                 </button>

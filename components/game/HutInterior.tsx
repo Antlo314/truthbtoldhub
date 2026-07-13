@@ -454,7 +454,22 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                                 <p className="text-[10px] tracking-[0.4em] uppercase text-aether-gold/70 mb-1">{active === 'visions' ? 'The Seeing Glass' : 'The Archive'}</p>
                                 <h2 className="font-ritual text-2xl gold-shimmer mb-4">{active === 'visions' ? 'Visions & Films' : 'Scrolls & Frequencies'}</h2>
                                 {active === 'visions' ? (
-                                    <MediaList items={visions} />
+                                    <>
+                                        <a
+                                            href="/vision"
+                                            className="mb-4 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black"
+                                            style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                        >
+                                            Open vision portals →
+                                        </a>
+                                        <MediaList items={visions} emptyLabel="No hut films yet — the portals still hold the unsealed roads." />
+                                        <a
+                                            href="/cinema"
+                                            className="mt-3 block text-center text-[10px] uppercase tracking-[0.25em] text-white/40 hover:text-aether-gold/80"
+                                        >
+                                            Cinema transmissions →
+                                        </a>
+                                    </>
                                 ) : (
                                     <div className="space-y-6">
                                         <section>
@@ -516,6 +531,13 @@ export default function HutInterior({ character, bulletins, media, isArchitect, 
                                     <p className="font-ritual text-base text-white mb-1">{worldEvent.hutHeadline}</p>
                                     <p className="text-sm text-zinc-300 leading-relaxed">{worldEvent.hutBody}</p>
                                 </div>
+                                <a
+                                    href="/vision"
+                                    className="mb-4 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] text-black"
+                                    style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)' }}
+                                >
+                                    Open vision portals →
+                                </a>
                                 <HutPortalBoard character={character} />
                                 <div className="mt-4">
                                     <HutLedger characterName={character.name} />

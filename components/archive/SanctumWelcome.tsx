@@ -1,9 +1,14 @@
 'use client';
 
-import { ScrollText, Heart, Shield, EyeOff, ShieldAlert, Crown, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ScrollText, Heart, Shield, EyeOff, ShieldAlert, Crown, Sparkles, Gem, Map } from 'lucide-react';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { motion } from 'framer-motion';
 import { DURATION, EASE } from '@/lib/design/motion';
+import { visionStats, loadVisionProgress, RELIC_BY_VISION } from '@/lib/brand/visionProgress';
+import { VISIONS } from '@/lib/brand/visions';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 interface SanctumWelcomeProps {
     onClose: () => void;
@@ -18,7 +23,38 @@ const RULES: { icon: typeof Heart; title: string; body: string }[] = [
     { icon: Crown, title: 'The Architects keep the peace', body: 'Moderation guidance stands. Disagree? Raise it calmly in a Whisper, not a brawl.' },
 ];
 
+function roadWhisper(stats: ReturnType<typeof visionStats>, relics: string[]): string {
+    if (stats.complete) {
+        return 'Every vision portal stands open. When the Hall stills, walk the Epilogue — the Source remembers.';
+    }
+    if (stats.relics > 0) {
+        const names = VISIONS
+            .filter((v) => relics.includes(RELIC_BY_VISION[v.id].id))
+            .map((v) => RELIC_BY_VISION[v.id].name);
+        const sample = names.slice(0, 2).join(' · ');
+        return `You carry ${stats.relics} vision relic${stats.relics === 1 ? '' : 's'}${sample ? ` — ${sample}` : ''}. The Wayfinder still holds light.`;
+    }
+    if (stats.seen > 0) {
+        return `${stats.seen} of ${stats.total} vision portals opened. Claim their relics on the road beyond the hut.`;
+    }
+    return 'Beyond the hut, five vision portals wait — peace, trial, and a relic on each road.';
+}
+
 export default function SanctumWelcome({ onClose }: SanctumWelcomeProps) {
+    const [whisper, setWhisper] = useState<string | null>(null);
+    const [stats, setStats] = useState({ seen: 0, total: 5, relics: 0, complete: false });
+
+    useEffect(() => {
+        try {
+            const s = visionStats();
+            const p = loadVisionProgress();
+            setStats(s);
+            setWhisper(roadWhisper(s, p.relics));
+        } catch {
+            setWhisper(roadWhisper({ seen: 0, trials: 0, total: 5, relics: 0, complete: false, completedAt: undefined }, []));
+        }
+    }, []);
+
     return (
         <div
             className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
@@ -45,6 +81,46 @@ export default function SanctumWelcome({ onClose }: SanctumWelcomeProps) {
                         </p>
                     </div>
                 </div>
+
+                {whisper && (
+                    <div className="px-6 pb-4">
+                        <div className="rounded-2xl border border-aether-gold/20 bg-aether-gold/[0.06] p-3.5 text-left">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Gem className="w-3.5 h-3.5 text-aether-gold/80" />
+                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-aether-gold/75">
+                                    Road whisper
+                                </p>
+                            </div>
+                            <p className="text-[12px] text-zinc-300 leading-relaxed">{whisper}</p>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.22em]">
+                                <Link
+                                    href="/vision"
+                                    onClick={() => sacredUi.threshold()}
+                                    className="inline-flex items-center gap-1.5 text-aether-gold/85 hover:text-aether-gold"
+                                >
+                                    <Map className="w-3 h-3" /> Wayfinder
+                                </Link>
+                                {stats.complete ? (
+                                    <Link
+                                        href="/epilogue"
+                                        onClick={() => sacredUi.access()}
+                                        className="text-white/50 hover:text-aether-gold/80"
+                                    >
+                                        Epilogue →
+                                    </Link>
+                                ) : stats.seen > 0 ? (
+                                    <Link
+                                        href="/world"
+                                        onClick={() => sacredUi.click()}
+                                        className="text-white/40 hover:text-aether-gold/70"
+                                    >
+                                        Return to hut
+                                    </Link>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="px-6 pb-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-3">
