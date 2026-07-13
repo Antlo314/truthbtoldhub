@@ -31,7 +31,6 @@ namespace Journey3D
                 return;
             }
 
-            // Destination mode takes priority for dest interactables
             Nearest = null;
             NearestDest = null;
             float best = float.MaxValue;
@@ -40,7 +39,7 @@ namespace Journey3D
             {
                 foreach (var d in _dests)
                 {
-                    if (d == null) continue;
+                    if (d == null || !d.gameObject.activeInHierarchy) continue;
                     float dist = Vector3.Distance(player.position, d.transform.position);
                     if (dist <= d.interactRadius && dist < best)
                     {
@@ -93,6 +92,13 @@ namespace Journey3D
 
         private void HandleDest(DestInteractable d)
         {
+            if (d.completed && d.action != DestAction.ReturnHut && d.action != DestAction.SpeakGuide
+                && d.action != DestAction.Challenge && d.action != DestAction.ClaimRelic)
+            {
+                ui?.ShowToast("Already complete.");
+                return;
+            }
+
             AudioManager.I?.PlayClick();
             switch (d.action)
             {
@@ -101,12 +107,20 @@ namespace Journey3D
                     break;
                 case DestAction.ClaimRelic:
                     DestinationManager.I?.ClaimRelic(d.destId);
-                    // refresh label
-                    d.label = DestinationManager.HasRelic(d.destId) ? "Relic claimed" : d.label;
+                    if (DestinationManager.HasRelic(d.destId))
+                        d.MarkDone("Relic claimed");
                     Refresh();
                     break;
                 case DestAction.SpeakGuide:
                     DestinationManager.I?.SpeakGuide(d.destId);
+                    break;
+                case DestAction.SiteTask:
+                    DestinationManager.I?.SiteTask(d.destId, d.siteId, d);
+                    Refresh();
+                    break;
+                case DestAction.Challenge:
+                    DestinationManager.I?.Challenge(d.destId, d);
+                    Refresh();
                     break;
             }
         }

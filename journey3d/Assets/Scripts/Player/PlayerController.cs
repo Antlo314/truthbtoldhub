@@ -24,11 +24,14 @@ namespace Journey3D
         private void Update()
         {
             // absolute safety net: if physics ever lets the soul slip below
-            // the world, place them back at the hearth instead of the void
+            // the world, place them back (hut hearth or destination spawn)
             if (transform.position.y < -3f)
             {
                 _cc.enabled = false;
-                transform.position = new Vector3(0, 0.1f, -2.2f);
+                bool inDest = DestinationManager.I != null && DestinationManager.I.InDestination;
+                transform.position = inDest
+                    ? new Vector3(0, 0.15f, -6f)
+                    : new Vector3(0, 0.1f, -2.2f);
                 _cc.enabled = true;
             }
 

@@ -100,41 +100,56 @@ namespace Journey3D
             Object.FindFirstObjectByType<InteractionSystem>()?.Refresh();
         }
 
+        public DestinationRun ActiveRun =>
+            _zone != null ? _zone.GetComponent<DestinationRun>() : null;
+
         public void ClaimRelic(string destId)
         {
             string relicId = "relic_" + destId;
             var c = SaveState.Character;
-            if (!c.inventory.Contains(relicId))
-            {
-                c.inventory.Add(relicId);
-                // soft material reward
-                switch (destId)
-                {
-                    case "giza": c.iron += 2; break;
-                    case "fair": c.copper += 2; break;
-                    case "emerald": c.cosmic += 1; break;
-                    default: c.iron += 1; c.copper += 1; break;
-                }
-                SaveState.MarkDiscovered("relic_" + destId);
-                SaveState.Save();
-                AudioManager.I?.PlaySuccess();
-                ui?.ShowToast($"Relic claimed · {RelicName(destId)}");
-                ui?.RefreshObjective();
-            }
-            else
+            if (c.inventory.Contains(relicId))
             {
                 ui?.ShowToast("You already carry this relic.");
+                return;
             }
+            var run = ActiveRun;
+            if (run != null && !run.RelicUnlocked)
+            {
+                ui?.ShowToast(run.PhaseHint());
+                return;
+            }
+            c.inventory.Add(relicId);
+            switch (destId)
+            {
+                case "giza": c.iron += 2; break;
+                case "fair": c.copper += 2; break;
+                case "emerald": c.cosmic += 1; break;
+                default: c.iron += 1; c.copper += 1; break;
+            }
+            SaveState.MarkDiscovered("relic_" + destId);
+            SaveState.Save();
+            AudioManager.I?.PlaySuccess();
+            ui?.ShowToast($"Relic claimed · {RelicName(destId)}");
+            ui?.RefreshObjective();
         }
 
         public void SpeakGuide(string destId)
         {
             var def = GameData.Data.destinations.Find(d => d.id == destId);
             if (def == null) return;
+            ActiveRun?.OnGuideSpoken();
             ui?.ShowGuideDialogue(def);
-            SaveState.MarkDiscovered("guide_" + destId);
-            SaveState.Save();
             ui?.RefreshObjective();
+        }
+
+        public void SiteTask(string destId, string siteId, DestInteractable node)
+        {
+            ActiveRun?.OnSiteTask(siteId, node);
+        }
+
+        public void Challenge(string destId, DestInteractable node)
+        {
+            ActiveRun?.OnGuardianStrike(node);
         }
 
         public static string RelicName(string destId) => destId switch

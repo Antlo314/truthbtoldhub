@@ -234,12 +234,17 @@ namespace Journey3D
         public void ShowGuideDialogue(DestinationDef def)
         {
             if (def == null) return;
-            var list = OpenShell(def.guide, def.name, UIKit.Hex(def.accent));
-            UIKit.HeroCard(list, "Guide", "\"" + def.quote + "\"", UIKit.Hex(def.accent));
+            var accent = UIKit.Hex(def.accent);
+            var list = OpenShell(def.guide, def.name, accent);
+            UIKit.HeroCard(list, "Guide", "\"" + def.quote + "\"", accent);
             BodyText(list,
-                "You stand on living ground — not a vision, but a road. Walk the path, claim the relic, and return through the south gate when you are ready.",
-                100, UIKit.Body);
-            PrimaryCta(list, "Continue →", UIKit.Hex(def.accent), ClosePanel);
+                "This is a living road — not a film. Walk the path north. Complete the three sites. Face the guardian. Claim the relic. Return south when the work is done.",
+                110, UIKit.Body);
+            Header(list, "The work");
+            UIKit.ListRow(list, "1 · Tend three sites", "Marked along the path — press E at each", accent, null, "1", "", 60, true);
+            UIKit.ListRow(list, "2 · Challenge the guardian", "When sites are done — strike with E three times", accent, null, "2", "", 60, true);
+            UIKit.ListRow(list, "3 · Claim the relic", "North dais opens after the guardian falls", accent, null, "3", "", 60, true);
+            PrimaryCta(list, "I will walk the road →", accent, ClosePanel);
             AudioManager.I?.PlayStationOpen();
         }
 
@@ -944,7 +949,7 @@ namespace Journey3D
         {
             var list = OpenShell("The Wayfinder", "Roads Beyond", s.accent);
             UIKit.HeroCard(list, "Real places",
-                "Step through and walk Eden, Giza, the Fair, the Vault, the Emerald Halls. Claim relics. Return by the south gate.",
+                "Multi-beat roads: guide · three sites · guardian · relic · return gate. Not cinema — walk them.",
                 s.accent);
             Header(list, "Travel");
             foreach (var d in GameData.Data.destinations)
@@ -953,8 +958,10 @@ namespace Journey3D
                 string destId = d.id;
                 bool visited = DestinationManager.Visited(destId);
                 bool relic = DestinationManager.HasRelic(destId);
-                string status = relic ? "Relic claimed" : visited ? "Visited" : "Unopened";
-                string sub = d.guide + "  ·  " + status + "  ·  \"" + Truncate(d.quote, 36) + "\"";
+                bool guardian = SaveState.Character.cleared.Contains(destId)
+                    || SaveState.Character.discovered.Contains("guardian_" + destId);
+                string status = relic ? "Complete" : guardian ? "Guardian down" : visited ? "In progress" : "Unopened";
+                string sub = d.guide + "  ·  " + status;
                 UIKit.ListRow(list, d.name, sub, accent, () =>
                 {
                     ClosePanel();
