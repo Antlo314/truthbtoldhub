@@ -78,6 +78,8 @@ namespace Journey3D
             if (Proc != null && Rig != null)
                 Proc.Active = !Rig.ClipsBound;
 
+            CharacterFactory.ForceVisible(_model, truthKing: false);
+
             _mats.Clear();
             foreach (var r in _model.GetComponentsInChildren<Renderer>())
                 _mats.AddRange(r.materials);   // instanced copies, safe to tint

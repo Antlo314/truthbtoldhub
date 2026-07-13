@@ -516,16 +516,19 @@ namespace Journey3D
         {
             // Same StationIds + labels — layout redesigned as a ceremonial plan.
 
-            // NORTH: Truth (Quaternius sage) on the processional axis
+            // NORTH: Truth (Quaternius King) — force-visible, no procedural ghosting
             var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
-                new Vector3(0, 0, 2.85f), 180f, 1.88f, collide: true);
+                new Vector3(0, 0.02f, 2.85f), 180f, 1.95f, collide: true);
+            CharacterFactory.ForceVisible(truth, truthKing: true);
             AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
-            truth.GetComponent<Station>().interactRadius = 3.0f;
-            if (truth.GetComponent<CharacterRig>() != null)
-                truth.AddComponent<NpcAmbient>();
-            PropUtils.GoldRing(truth.transform, 1.05f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.9f), 0.055f);
-            PropUtils.GoldRing(truth.transform, 0.72f, 0.04f, new Color(1f, 0.82f, 0.4f, 0.35f), 0.03f);
-            PropUtils.Pedestal(new Vector3(0, 0, 2.85f), 0.12f, 0.55f, new Color(0.22f, 0.16f, 0.1f));
+            truth.GetComponent<Station>().interactRadius = 3.2f;
+            // Static King — NpcAmbient wave needs clips; skip if unbound
+            PropUtils.GoldRing(truth.transform, 1.15f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.95f), 0.06f);
+            PropUtils.GoldRing(truth.transform, 0.8f, 0.05f, new Color(1f, 0.82f, 0.4f, 0.45f), 0.035f);
+            PropUtils.Pedestal(new Vector3(0, 0, 2.85f), 0.14f, 0.65f, new Color(0.28f, 0.2f, 0.12f));
+            // Bright key light on his face so he never reads as a silhouette ghost
+            PropUtils.PointGlow(truth.transform, new Vector3(0, 1.6f, 0.55f), new Color(1f, 0.9f, 0.7f), 2.2f, 4.5f);
+            PropUtils.PointGlow(truth.transform, new Vector3(-0.4f, 1.4f, -0.3f), new Color(1f, 0.75f, 0.4f), 1.1f, 3.5f);
 
             // Far north wall: Ledger · Sanctum door · Seeing Glass
             var ledger = Spawn("ledger_lectern", new Vector3(-3.6f, 0, 5.85f), 160f);

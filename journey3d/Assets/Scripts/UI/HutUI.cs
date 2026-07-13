@@ -948,8 +948,8 @@ namespace Journey3D
         private void OpenWayfinder(Station s)
         {
             var list = OpenShell("The Wayfinder", "Roads Beyond", s.accent);
-            UIKit.HeroCard(list, "Real places",
-                "Multi-beat roads: guide · three sites · guardian · relic · return gate. Not cinema — walk them.",
+            UIKit.HeroCard(list, "Playable roads",
+                "Eden is a full low-poly garden. Walk the path, tend the sites, face the guardian, claim the Seed under the Tree of Life.",
                 s.accent);
             Header(list, "Travel");
             foreach (var d in GameData.Data.destinations)

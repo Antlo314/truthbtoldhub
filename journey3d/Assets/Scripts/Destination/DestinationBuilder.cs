@@ -7,6 +7,10 @@ namespace Journey3D
     {
         public static GameObject Build(DestinationDef def, Transform player)
         {
+            // Eden gets a full low-poly garden level (not sparse text markers)
+            if (def != null && def.id == "eden")
+                return EdenLevel.Build(def, player);
+
             var root = new GameObject("Dest_" + def.id);
             var accent = UIKit.Hex(def.accent);
             var run = root.AddComponent<DestinationRun>();
@@ -67,19 +71,7 @@ namespace Journey3D
             relic.transform.SetParent(root.transform, true);
             var relicDi = relic.GetComponent<DestInteractable>();
 
-            // Title
-            var title = new GameObject("dest_title");
-            title.transform.SetParent(root.transform, false);
-            title.transform.position = new Vector3(0, 3.6f, 2f);
-            var tm = title.AddComponent<TextMesh>();
-            tm.text = def.name;
-            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            tm.fontSize = 48;
-            tm.characterSize = 0.048f;
-            tm.anchor = TextAnchor.MiddleCenter;
-            tm.color = accent;
-            tm.fontStyle = FontStyle.Bold;
-            title.GetComponent<MeshRenderer>().material = tm.font.material;
+            // No floating world-space title text — place is told by geometry + HUD
 
             // Key light
             var light = new GameObject("dest_key");
@@ -357,6 +349,7 @@ namespace Journey3D
             };
             string anim = model.StartsWith("char_fem") ? "anims_fem" : "anims_masc";
             var go = CharacterFactory.Spawn(model, anim, pos, 180f, 1.78f, collide: true);
+            CharacterFactory.ForceVisible(go, truthKing: false);
             var rig = go.GetComponent<CharacterRig>();
             if (rig != null)
             {

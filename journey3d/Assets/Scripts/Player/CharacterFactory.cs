@@ -29,16 +29,24 @@ namespace Journey3D
                 smr.updateWhenOffscreen = true;
 
             var rig = wrapper.AddComponent<CharacterRig>();
-            bool clipsOk = rig.Bind(inst, donor);
+            bool isTruth = model != null && model.Contains("truth");
+            // King (char_truth) bone paths do NOT match modular masc/fem donors —
+            // retargeted clips + procedural locomotion turn him into an invisible ghost.
+            bool clipsOk = false;
+            if (!isTruth)
+                clipsOk = rig.Bind(inst, donor);
+            else
+                Debug.Log("J3D Truth: static King pose (no masc retarget — keeps mesh visible)");
 
-            // Always attach procedural; disable it when skeletal clips own the bones
-            var proc = wrapper.AddComponent<ProceduralLocomotion>();
-            proc.Bind(inst.transform);
-            proc.Active = !clipsOk; // clips win when bound
+            if (!isTruth)
+            {
+                var proc = wrapper.AddComponent<ProceduralLocomotion>();
+                proc.Bind(inst.transform);
+                proc.Active = !clipsOk;
 
-            // Feet under Root must stay glued to shin ends (stops stretched feet)
-            var feet = wrapper.AddComponent<FootAttachFix>();
-            feet.Bind(inst.transform);
+                var feet = wrapper.AddComponent<FootAttachFix>();
+                feet.Bind(inst.transform);
+            }
 
             if (collide)
             {
@@ -47,7 +55,75 @@ namespace Journey3D
                 col.transform.localPosition = new Vector3(0, height * 0.5f, 0);
                 col.AddComponent<BoxCollider>().size = new Vector3(0.55f, height, 0.45f);
             }
+
+            ForceVisible(wrapper, truthKing: isTruth);
             return wrapper;
+        }
+
+        /// Makes skinned characters reliably visible on WebGL (opaque unlit tints).
+        public static void ForceVisible(GameObject root, bool truthKing = false)
+        {
+            if (root == null) return;
+            // King armature does not match modular masc bone paths — procedural
+            // locomotion turns him into an invisible / exploded ghost.
+            if (truthKing)
+            {
+                var proc = root.GetComponent<ProceduralLocomotion>();
+                if (proc != null)
+                {
+                    proc.Active = false;
+                    Object.Destroy(proc);
+                }
+                var feet = root.GetComponent<FootAttachFix>();
+                if (feet != null) Object.Destroy(feet);
+            }
+
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                r.enabled = true;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                if (r is SkinnedMeshRenderer smr)
+                {
+                    smr.updateWhenOffscreen = true;
+                    smr.skinnedMotionVectors = false;
+                    // Expand bounds so frustum never culls him at rest
+                    smr.localBounds = new Bounds(new Vector3(0, 0.9f, 0), new Vector3(1.2f, 2.2f, 1.2f));
+                }
+                var mats = r.materials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var src = mats[i];
+                    if (src == null) continue;
+                    string n = src.name.ToLowerInvariant();
+                    Color c = Color.white;
+                    if (src.HasProperty("_Color")) c = src.color;
+                    else if (src.HasProperty("_BaseColor")) c = src.GetColor("_BaseColor");
+                    // transparent / near-black materials read as ghosts
+                    if (c.a < 0.9f) c.a = 1f;
+                    if (c.maxColorComponent < 0.08f) c = new Color(0.55f, 0.45f, 0.35f, 1f);
+
+                    if (truthKing)
+                    {
+                        if (n.Contains("skin")) c = new Color(0.92f, 0.78f, 0.65f, 1f);
+                        else if (n.Contains("hair") || n.Contains("beard") || n.Contains("white"))
+                            c = new Color(0.92f, 0.92f, 0.95f, 1f);
+                        else if (n.Contains("gold") || n.Contains("metal"))
+                            c = new Color(0.95f, 0.78f, 0.25f, 1f);
+                        else if (n.Contains("blue"))
+                            c = new Color(0.25f, 0.35f, 0.75f, 1f);
+                        else if (n.Contains("eye"))
+                            c = new Color(0.15f, 0.35f, 0.55f, 1f);
+                        else if (n.Contains("beige") || n.Contains("brown"))
+                            c = new Color(0.55f, 0.4f, 0.28f, 1f);
+                        else
+                            c = new Color(0.35f, 0.4f, 0.7f, 1f); // robe default
+                    }
+
+                    mats[i] = PropUtils.UnlitMat(c);
+                }
+                r.materials = mats;
+            }
         }
 
         private static void Normalize(Transform wrapper, Transform inst, float height)
