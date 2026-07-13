@@ -128,20 +128,34 @@ export default function FirstPersonController({
 
         const onPointerDown = (e: PointerEvent) => {
             if (lockedRef.current || mobile) return;
-            if (e.button === 0 || e.button === 2) {
+            // Prefer pointer lock for cinematic PC look (no OS cursor fight)
+            if (e.button === 0) {
+                if (!document.pointerLockElement) {
+                    try {
+                        void el.requestPointerLock();
+                    } catch {
+                        /* */
+                    }
+                }
                 dragging = true;
                 lx = e.clientX;
                 ly = e.clientY;
-                try {
-                    el.setPointerCapture(e.pointerId);
-                } catch {
-                    /* */
-                }
             }
         };
         const onPointerMove = (e: PointerEvent) => {
-            if (!dragging || lockedRef.current) return;
+            if (lockedRef.current || mobile) return;
             const sens = LOOK_SENS_DESKTOP;
+            // Pointer lock: movementX/Y is the only reliable delta
+            if (document.pointerLockElement === el) {
+                const dx = e.movementX || 0;
+                const dy = e.movementY || 0;
+                if (dx === 0 && dy === 0) return;
+                yaw.current -= dx * sens;
+                pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
+                emit('look');
+                return;
+            }
+            if (!dragging) return;
             const dx = e.clientX - lx;
             const dy = e.clientY - ly;
             lx = e.clientX;
@@ -154,6 +168,9 @@ export default function FirstPersonController({
             dragging = false;
         };
         const ctx = (e: Event) => e.preventDefault();
+        const onLockChange = () => {
+            if (!document.pointerLockElement) dragging = false;
+        };
 
         const onVis = () => {
             if (document.hidden) hardStop();
@@ -163,6 +180,7 @@ export default function FirstPersonController({
         window.addEventListener('keyup', up);
         window.addEventListener('blur', hardStop);
         document.addEventListener('visibilitychange', onVis);
+        document.addEventListener('pointerlockchange', onLockChange);
         el.addEventListener('pointerdown', onPointerDown);
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerup', onPointerUp);
@@ -175,11 +193,17 @@ export default function FirstPersonController({
             window.removeEventListener('keyup', up);
             window.removeEventListener('blur', hardStop);
             document.removeEventListener('visibilitychange', onVis);
+            document.removeEventListener('pointerlockchange', onLockChange);
             el.removeEventListener('pointerdown', onPointerDown);
             el.removeEventListener('pointermove', onPointerMove);
             el.removeEventListener('pointerup', onPointerUp);
             el.removeEventListener('pointercancel', onPointerUp);
             el.removeEventListener('contextmenu', ctx);
+            try {
+                if (document.pointerLockElement === el) document.exitPointerLock();
+            } catch {
+                /* */
+            }
         };
     }, [gl, mobile]);
 

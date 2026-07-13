@@ -27,6 +27,8 @@ import HouseWalkthrough from './HouseWalkthrough';
 import HousePanels from './HousePanels';
 import HouseMobileControls from './HouseMobileControls';
 import HouseHints from './HouseHints';
+import HouseCinematicChrome from './HouseCinematicChrome';
+import { useHouseImmersion } from './useHouseImmersion';
 import { markVisited } from './stationProgress';
 
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
@@ -99,6 +101,17 @@ export default function HouseExperience() {
 
     const isMobile = device === 'mobile';
     const uiLocked = osOpen || authOpen || !!panel || walkthroughOpen;
+    const {
+        shellRef,
+        pointerLocked,
+        fullscreen,
+        requestPointerLock,
+        toggleFullscreen,
+    } = useHouseImmersion({
+        enabled: ready && authed,
+        mobile: isMobile,
+        uiLocked,
+    });
 
     usePageMusic('world_cavern');
 
@@ -314,11 +327,21 @@ export default function HouseExperience() {
     };
 
     const showHud = ready && authed && !osOpen && !authOpen && !panel && !walkthroughOpen;
+    const liveCount = peers.filter((p) => p.kind === 'live').length;
 
     return (
         <div
-            className="relative w-full overflow-hidden bg-[#1a1528]"
-            style={{ height: '100dvh', minHeight: '100vh', width: '100%' }}
+            ref={shellRef}
+            className="relative w-full overflow-hidden bg-black select-none"
+            style={{
+                height: '100dvh',
+                minHeight: '100vh',
+                width: '100%',
+                touchAction: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+            }}
+            onContextMenu={(e) => e.preventDefault()}
         >
             {ready && authed && (
                 <div
@@ -341,7 +364,7 @@ export default function HouseExperience() {
 
             {canvasError && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black p-6 text-center">
-                    <div className="max-w-md space-y-3">
+                    <div className="max-w-md space-y-3" data-allow-select>
                         <p className="text-red-400 font-mono text-sm">3D failed to start</p>
                         <p className="text-white/50 text-xs break-all">{canvasError}</p>
                         <button
@@ -357,7 +380,7 @@ export default function HouseExperience() {
 
             {authOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
-                    <div className="w-full max-w-md space-y-3">
+                    <div className="w-full max-w-md space-y-3" data-allow-select>
                         <AuthModal
                             isOpen
                             isGated={false}
@@ -375,90 +398,28 @@ export default function HouseExperience() {
                 </div>
             )}
 
-            {/* Desktop + shared HUD */}
             {showHud && (
                 <>
-                    <div
-                        className={[
-                            'fixed z-[45] pointer-events-none space-y-1',
-                            isMobile ? 'top-3 left-3' : 'top-4 left-4',
-                        ].join(' ')}
-                        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-                    >
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-mono drop-shadow">
-                            Truth.OS House
-                        </p>
-                        <p className="text-sm text-white font-medium drop-shadow-md">
-                            {character.name?.trim() || (guest ? 'Guest' : 'Soul')}
-                            {peers.length > 0 && (
-                                <span className="text-emerald-400 text-xs ml-2">
-                                    · {peers.length} other{peers.length === 1 ? '' : 's'}
-                                </span>
-                            )}
-                        </p>
-                    </div>
-
-                    <div
-                        className={[
-                            'fixed z-[45] flex items-center gap-2 pointer-events-auto',
-                            isMobile ? 'top-3 right-3' : 'top-4 right-4',
-                        ].join(' ')}
-                        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => {
-                                sacredUi.click();
-                                setWalkthrough(true, 0);
-                            }}
-                            className="w-9 h-9 rounded-full border border-white/20 bg-black/55 text-white/80 text-sm font-semibold backdrop-blur-md hover:border-emerald-400/40"
-                            aria-label="House tour"
-                            title="House tour"
-                        >
-                            ?
-                        </button>
-                        {guest && (
-                            <button
-                                type="button"
-                                onClick={() => setAuthOpen(true)}
-                                className="px-3 py-1.5 rounded-full border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/70 hover:text-white backdrop-blur-md"
-                            >
-                                Sign in
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Crosshair — desktop only (mobile uses thumb UI) */}
-                    {!isMobile && (
-                        <div
-                            className="fixed left-1/2 top-1/2 z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2 w-3 h-3"
-                            aria-hidden
-                        >
-                            <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/40" />
-                            <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/40" />
-                        </div>
-                    )}
-
-                    {/* Desktop interact prompt */}
-                    {!isMobile && (
-                        <div className="fixed bottom-8 inset-x-0 z-30 flex justify-center pointer-events-none">
-                            {hotspot ? (
-                                <button
-                                    type="button"
-                                    className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
-                                    onClick={() => activateHotspot(hotspot)}
-                                >
-                                    E · {hotspot.hint}
-                                </button>
-                            ) : (
-                                <p className="text-[11px] text-white/45 font-mono bg-black/40 px-3 py-1.5 rounded-full border border-white/8">
-                                    WASD move · drag look · Space jump
-                                </p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Desktop only guide widget — mobile keeps chrome clean */}
+                    <HouseCinematicChrome
+                        mobile={isMobile}
+                        characterName={character.name?.trim() || (guest ? 'Guest' : 'Soul')}
+                        peerLiveCount={liveCount}
+                        hotspot={hotspot}
+                        pointerLocked={pointerLocked}
+                        fullscreen={fullscreen}
+                        onInteract={tryInteract}
+                        onTour={() => {
+                            sacredUi.click();
+                            setWalkthrough(true, 0);
+                        }}
+                        onFullscreen={() => {
+                            sacredUi.click();
+                            void toggleFullscreen();
+                        }}
+                        onRequestLock={requestPointerLock}
+                        guest={guest}
+                        onSignIn={() => setAuthOpen(true)}
+                    />
                     {!isMobile && <TruthGuideWidget placement="desktop" />}
                 </>
             )}
@@ -476,7 +437,6 @@ export default function HouseExperience() {
                 visible={showHud && isMobile}
             />
 
-            {/* Optional full tour — never auto-opens */}
             <HouseWalkthrough />
             <HousePanels />
 
@@ -487,6 +447,7 @@ export default function HouseExperience() {
                             ? 'fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100vw-12px,400px)] h-[min(100dvh-16px,800px)] rounded-[1.75rem] overflow-hidden border-[3px] border-zinc-800'
                             : 'fixed z-50 inset-[2%] rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-black'
                     }
+                    data-allow-select
                 >
                     <button
                         type="button"

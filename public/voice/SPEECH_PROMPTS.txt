@@ -1,0 +1,214 @@
+TRUTH.OS HOUSE — VOICE PROMPTS FOR ELEVENLABS
+Speak clearly. One file per block. Pause at periods.
+Suggested voice: warm Black male, mid-baritone, intimate, sincere, not theatrical.
+
+────────────────────────────────
+FILE: 01_welcome.mp3
+TITLE: Welcome (House enter)
+SCRIPT:
+Welcome home. You are inside Truth.OS House — a living 3D sanctum. Look around. Walk the rooms. Gold rings mark every station of the Hut.
+
+────────────────────────────────
+FILE: 02_truth_intro.mp3
+TITLE: Truth · first meet
+SCRIPT:
+I am Truth. Hood up. Feet on the floor of this house with you. Not a ghost player. Not a leftover process. Ask me what you came for — or walk the rooms and find me on the dais.
+
+────────────────────────────────
+FILE: 03_move_pc.mp3
+TITLE: Hint · PC move
+SCRIPT:
+WASD to walk. Click the scene to capture your look. Space to jump. E to use what is near. F for fullscreen. Escape to release the mouse.
+
+────────────────────────────────
+FILE: 04_move_mobile.mp3
+TITLE: Hint · Mobile move
+SCRIPT:
+Hold the left side of the screen to walk. Drag the right side to look. Tap Use when a gold ring glows. Jump is on the right.
+
+────────────────────────────────
+FILE: 05_live_echo.mp3
+TITLE: Presence explained
+SCRIPT:
+LIVE means a soul is here right now. Echo means someone stood here before. Neither is an invented NPC. I am a station — the brother on the dais.
+
+────────────────────────────────
+FILE: 06_station_truth.mp3
+TITLE: Station · Truth
+SCRIPT:
+This is the Ask Truth dais. Speak. Listen. The threads open as you walk in sincerity.
+
+────────────────────────────────
+FILE: 07_station_soul.mp3
+TITLE: Station · Soul Mirror
+SCRIPT:
+The Soul Mirror. Shape the vessel you walk in. What you forge here walks with you through the house.
+
+────────────────────────────────
+FILE: 08_station_wayfinder.mp3
+TITLE: Station · Wayfinder
+SCRIPT:
+The Wayfinder. Eden is the open road. Other ages stay sealed until the garden is complete.
+
+────────────────────────────────
+FILE: 09_station_ledger.mp3
+TITLE: Station · Ledger
+SCRIPT:
+The Ledger. Daily word and dispatches. The hut keeps account of what is spoken and what is sustained.
+
+────────────────────────────────
+FILE: 10_station_chamber.mp3
+TITLE: Station · Sanctum
+SCRIPT:
+The Sanctum door. Beyond this threshold is the walkable Hut chamber — stations, vessel, free look. Return when you are ready.
+
+────────────────────────────────
+FILE: 11_station_os.mp3
+TITLE: Station · Computer
+SCRIPT:
+Truth.OS. Boot the system. Every station lives as an app without leaving this house.
+
+────────────────────────────────
+FILE: 12_closing.mp3
+TITLE: Closing (last run)
+SCRIPT:
+This is the last run. Walk sincere. Patron if you can. Tell another soul. Do not let failure be wasted — let it become warning and mercy. Go all the way.
+
+────────────────────────────────
+FILE: 13_who.mp3
+TITLE: Truth answer · Who are you — really?
+SCRIPT:
+They call me Truth. I am a brother tasked to carry light, not perfection. I walk beside you because the chamber is wide, and no soul should roam it alone. What you see is a hooded man — what you hear is a man still learning to listen.
+
+────────────────────────────────
+FILE: 14_source.mp3
+TITLE: Truth answer · What is the Source?
+SCRIPT:
+The Source is the Most High — the beginning and the end of all true things. Every portal, every relic, every word in this hut flows from that river. Life without the Source is death indefinite. I have tasted both sides of that sentence.
+
+────────────────────────────────
+FILE: 15_why_walk.mp3
+TITLE: Truth answer · Why do you follow me?
+SCRIPT:
+Because someone must meet you at the threshold. I was sent back to the road I abandoned — and in walking it again, I am not your judge. I am your witness. When you strike a shade or forge a weapon, you fuel more than your own soul.
+
+────────────────────────────────
+FILE: 16_human_name.mp3
+TITLE: Truth answer · What was your name before "Truth"?
+SCRIPT:
+Anthony. Forty years in the earth, eternal in the spirit — that is how the books count me. The name still belongs to me. Truth is the office I accepted when I stopped hiding from what I was called to carry.
+
+────────────────────────────────
+FILE: 17_last_run.mp3
+TITLE: Truth answer · What do you mean — your last run?
+SCRIPT:
+This is the final lap. I have made too many detours to pretend I have another circuit left. On this run I need the world — and more importantly the Source — to see us as givers of light, not takers of breath. There is no rehearsal after this.
+
+────────────────────────────────
+FILE: 18_family.mp3
+TITLE: Truth answer · Tell me about your family.
+SCRIPT:
+My true joy, my true love — my children, my family. That is the hearth I fight for. But my disobedience to the Source planted contention in those circles. Grief is a long room, and I have walked its length many nights. I hope this work mends what my hands once cracked.
+
+────────────────────────────────
+FILE: 19_mistakes.mp3
+TITLE: Truth answer · What mistakes haunt you?
+SCRIPT:
+Too many to number without shame. Choices made in weakness. Seasons when I heard the mission and walked the other way. To whom much is given, much is required — and I spent years spending what I was given on fear instead of faith.
+
+────────────────────────────────
+FILE: 20_drinking.mp3
+TITLE: Truth answer · Did sorrow ever break you?
+SCRIPT:
+Heartache opened a door I should have barred. For a season I drank — not because spirit Truth had grown weak, but because sorrow was loud and the bottle seemed quiet. I did not see, swallow by swallow, how fragments of my being were demolished. The Source was still powerful in me; I was the one pouring myself out. That thorn in my side kept me grounded and humble — and it blurred my vision. I know now: you cannot drink your thirst away. Only the waters of the Source wash sorrow clean. We must go back to the Source. That is not a slogan on my lips. It is how I stay alive on this last run.
+
+────────────────────────────────
+FILE: 21_fasting.mp3
+TITLE: Truth answer · How did you stop drinking?
+SCRIPT:
+Fasting. At first it was uneven — some days I held, some days I broke. But continual fasting, forgiveness, and prayer gave me strength to fight. Every day we must fight. There is no coasting past the flesh. Emptying it out is the key to defeat any monster — shades on the road, appetite in the chest, bitterness in the jaw. You will learn that on this journey. Not in one sermon. In the walking, the forging, the standing when a shade finds you.
+
+────────────────────────────────
+FILE: 22_fasting_cost.mp3
+TITLE: Truth answer · What does fasting cost you?
+SCRIPT:
+Physical anguish — hunger, weakness, the body protesting what the spirit demands. But spiritual light. It is a blessing when I can complete a fast, and a wound when I cannot. Sometimes my circumstances get the best of me and I fail. This current wilderness is so heavy… and I feel I am fighting alone. That is why we need power from the Source. Fasting does not make me strong by myself. It empties me enough for Him to enter.
+
+────────────────────────────────
+FILE: 23_walked_away.mp3
+TITLE: Truth answer · Why did you walk away from the mission?
+SCRIPT:
+I was weak. The burden was heavy and I told myself the world could wait. Nothing prospers in that season — not work, not peace, not love. The Source gave me a charge and I treated it like a suggestion. That is why I am in the wilderness now.
+
+────────────────────────────────
+FILE: 24_wilderness.mp3
+TITLE: Truth answer · What is the wilderness?
+SCRIPT:
+The place between the call and the obedience. I am there now. No action prospers for me until I return fully to what I was told to build. Financial anguish. Mental weight. The spark the Source placed in me dimmed — and only the interest of others, souls like yours, helps fuel what remains.
+
+────────────────────────────────
+FILE: 25_spark.mp3
+TITLE: Truth answer · How do we help fuel your purpose?
+SCRIPT:
+Walk. Ask. Forge. Return to the hut. Let your interest be sincere — not flattery. When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone. I was not made to carry this in isolation.
+
+────────────────────────────────
+FILE: 26_need_from_you.mp3
+TITLE: Truth answer · What do you need from us?
+SCRIPT:
+Three things — and the third is the weightiest. Share the vision. Help me fuel the vision. And find the Source, learning from my mishaps so you do not repeat my detours. That last one matters most. I have paid for shortcuts with years I cannot buy back. Walk sincere. Patron if you can. Tell another soul. Do not let my failures be wasted — let them become your warning and your mercy.
+
+────────────────────────────────
+FILE: 27_vision.mp3
+TITLE: Truth answer · Where did this journey begin?
+SCRIPT:
+In a cell. A vision while I was incarcerated — seven long years for a crime I did not commit. The world called it punishment. I now call it commitment to the Most High. In that silence the mission was etched, though I would spend years running from it.
+
+────────────────────────────────
+FILE: 28_innocence.mp3
+TITLE: Truth answer · You did not commit the crime?
+SCRIPT:
+I did not. Yet I do not waste my breath on bitterness. The time was stolen — the calling was not. I learned there that transparency is a kind of freedom the walls cannot take. What they meant for harm, the Source meant for sharpening.
+
+────────────────────────────────
+FILE: 29_imperfect.mp3
+TITLE: Truth answer · Why should anyone listen to you?
+SCRIPT:
+How will they listen if I am imperfect? I ask myself that every dawn. Why am I a messenger when I failed to listen? I do not have a clean answer — only this: the Source does not choose vessels because they are flawless. He chooses them because they finally stop running.
+
+────────────────────────────────
+FILE: 30_burden.mp3
+TITLE: Truth answer · Why were you given this burden?
+SCRIPT:
+I still do not know the full why. I only know the weight is real. Perhaps it is because I have seen the bottom — prison, loss, a dimmed spark — and lived to tell the road what waits there. Perhaps someone must say: weakness acknowledged is where strength begins.
+
+────────────────────────────────
+FILE: 31_transparency.mp3
+TITLE: Truth answer · What is freedom to you?
+SCRIPT:
+Transparency. No more masks. A world where every soul can strive, confess weakness, and know they will be made strong when they give it all back to the Source. That is the chamber we are building — not a game for escape, but a proving ground for return.
+
+────────────────────────────────
+FILE: 32_by_any_means.mp3
+TITLE: Truth answer · What must you accomplish?
+SCRIPT:
+What I was called to do — by any means the Source permits. Not by crooked shortcuts. Not by silence. The 400 Series, this sanctum, the hut where you stand — all of it must live long enough for the world to see light again. I must go all the way. There is no half-obedience left in me.
+
+────────────────────────────────
+FILE: 33_series_400.mp3
+TITLE: Truth answer · What is the 400 Series?
+SCRIPT:
+A cinematic telling of Israelite history — and deeper knowledge drawn from the old scrolls. Much hidden wisdom still needs to be recovered, and recovery is not free. To spread this message and build those masterpieces takes currency, support, labor, prayer. I did not choose an easy charge. The 400 Series is part of why I must go all the way — so what was buried can breathe again in the sight of the world.
+
+────────────────────────────────
+FILE: 34_children.mp3
+TITLE: Truth answer · What happened to your children?
+SCRIPT:
+He is still a long moment before he answers. Certain circumstances forced separation from my babies. It became dangerous — I could not risk their livelihood being tainted the way mine was. Months since I have seen them. I am dying every day inside. I am lost — a foreign land, no support, trying to do this alone when I cannot anymore. The Source will not let me prosper at anything else; everything collapses when I try. I know it is hard to see. It is reality for some. I want to reach them. I cannot support them the way a father should — not yet. I am hurting. I do not know what else to do but chase the Source the way He asked.
+
+────────────────────────────────
+FILE: 35_give_back.mp3
+TITLE: Truth answer · What does "give it all back" mean?
+SCRIPT:
+Your gifts, your grief, your time, your coin — laid on the altar without clutching. When we stop hoarding what was lent to us, the Source returns strength in the very places we were ashamed. I am learning this in public so you will not have to learn it alone in the dark.
+

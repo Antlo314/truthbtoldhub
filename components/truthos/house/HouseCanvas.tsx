@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows } from '@react-three/drei';
+import { ContactShadows, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
 import HouseDecor from './HouseDecor';
@@ -10,6 +10,11 @@ import RemotePlayers from './RemotePlayers';
 import type { Hotspot } from './houseMap';
 import type { HousePeer } from '@/lib/truthos/housePresence';
 
+/**
+ * Two cinematic paths:
+ *  PC  — high fidelity, film grain fog, shadows, wider world
+ *  Mobile — punchier contrast, fewer lights, tighter draw distance
+ */
 export default function HouseCanvas({
     locked,
     mobile,
@@ -27,6 +32,8 @@ export default function HouseCanvas({
     onInteractRequest?: () => void;
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
+    const bg = mobile ? '#1c1630' : '#120e1c';
+
     return (
         <div
             style={{
@@ -35,7 +42,7 @@ export default function HouseCanvas({
                 width: '100%',
                 height: '100%',
                 minHeight: '100dvh',
-                background: '#1a1528',
+                background: bg,
             }}
         >
             <Canvas
@@ -46,71 +53,99 @@ export default function HouseCanvas({
                     height: '100%',
                     display: 'block',
                     touchAction: 'none',
+                    cursor: mobile ? 'default' : 'crosshair',
                 }}
                 shadows={!mobile}
-                dpr={mobile ? [1, 1.25] : [1, 1.75]}
-                performance={{ min: mobile ? 0.5 : 0.85 }}
+                dpr={mobile ? [1, 1.35] : [1, 2]}
+                performance={{ min: mobile ? 0.45 : 0.8 }}
                 gl={{
                     antialias: !mobile,
                     alpha: false,
                     powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: mobile ? 1.2 : 1.35,
+                    toneMappingExposure: mobile ? 1.28 : 1.42,
                     stencil: false,
                     depth: true,
                 }}
-                camera={{ fov: mobile ? 75 : 72, near: 0.1, far: mobile ? 40 : 60, position: [0, 1.62, 5.5] }}
+                // PC: cinematic FOV · Mobile: wider for presence on small screens
+                camera={{
+                    fov: mobile ? 78 : 68,
+                    near: 0.08,
+                    far: mobile ? 36 : 70,
+                    position: [0, 1.62, 4.0],
+                }}
                 onCreated={({ gl, camera }) => {
-                    gl.setClearColor('#2a2440', 1);
-                    // Cap pixel ratio hard on mobile GPUs
-                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-                    camera.position.set(0, 1.62, 5.5);
-                    camera.lookAt(0, 1.35, 0);
+                    gl.setClearColor(bg, 1);
+                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
+                    camera.position.set(0, 1.62, 4.0);
+                    camera.lookAt(0, 1.3, 0);
                 }}
             >
-                <color attach="background" args={['#2a2440']} />
-                {!mobile && <fog attach="fog" args={['#2a2440', 14, 36]} />}
-                {mobile && <fog attach="fog" args={['#2a2440', 10, 26]} />}
+                <color attach="background" args={[bg]} />
+                {!mobile && <fog attach="fog" args={[bg, 11, 38]} />}
+                {mobile && <fog attach="fog" args={[bg, 8, 24]} />}
 
-                {/* Lighting — trimmed set on mobile */}
-                <hemisphereLight args={['#c8d4ff', '#3a3048', mobile ? 0.95 : 0.85]} />
-                <ambientLight intensity={mobile ? 0.85 : 0.7} color="#ddd5f0" />
+                {/* PC: night sky peek through windows */}
+                {!mobile && (
+                    <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
+                )}
+
+                <hemisphereLight args={[mobile ? '#b8c4ff' : '#a8b8f0', '#2a2038', mobile ? 0.9 : 0.55]} />
+                <ambientLight intensity={mobile ? 0.75 : 0.42} color="#d8d0ea" />
+
+                {/* Key light — cinematic rim */}
                 <directionalLight
-                    position={[5, 8, 4]}
-                    intensity={mobile ? 0.9 : 1.15}
+                    position={[6, 9, 4]}
+                    intensity={mobile ? 0.95 : 1.35}
                     color="#e8ecff"
                     castShadow={!mobile}
+                    shadow-mapSize-width={mobile ? 512 : 1024}
+                    shadow-mapSize-height={mobile ? 512 : 1024}
                 />
                 {!mobile && (
-                    <directionalLight position={[-3, 4, -2]} intensity={0.45} color="#b8a0ff" />
+                    <>
+                        <directionalLight position={[-5, 5, -3]} intensity={0.35} color="#9b7cff" />
+                        <directionalLight position={[0, 3, 8]} intensity={0.25} color="#ffc9a0" />
+                    </>
                 )}
+
+                {/* Practicals */}
                 <pointLight
                     position={[3.2, 1.4, 4.3]}
-                    intensity={mobile ? 1.8 : 2.8}
+                    intensity={mobile ? 2.0 : 3.2}
                     color="#4ade80"
-                    distance={mobile ? 7 : 10}
+                    distance={mobile ? 7 : 11}
                     decay={2}
                 />
                 <pointLight
-                    position={[0.2, 1.8, -0.2]}
-                    intensity={mobile ? 1.4 : 1.8}
+                    position={[0.2, 1.85, -0.2]}
+                    intensity={mobile ? 1.6 : 2.2}
                     color="#f97316"
-                    distance={6}
+                    distance={7}
                     decay={2}
                 />
                 {!mobile && (
                     <>
-                        <pointLight position={[-1.5, 1.4, -1]} intensity={1.8} color="#fbbf24" distance={9} decay={2} />
-                        <pointLight position={[0, 2.2, -7]} intensity={2.2} color="#a78bfa" distance={12} decay={2} />
-                        <pointLight position={[-6, 2.2, -4]} intensity={1.3} color="#f0e0c0" distance={10} decay={2} />
-                        <pointLight position={[0, 2.5, 5]} intensity={1.2} color="#ffffff" distance={12} decay={2} />
+                        <pointLight position={[-1.5, 1.5, -1]} intensity={2.0} color="#fbbf24" distance={10} decay={2} />
+                        <pointLight position={[0, 2.4, -7]} intensity={2.6} color="#a78bfa" distance={14} decay={2} />
+                        <pointLight position={[-6.5, 2.0, -4]} intensity={1.4} color="#e8d5b0" distance={10} decay={2} />
+                        <pointLight position={[0, 2.6, 5]} intensity={1.0} color="#ffffff" distance={12} decay={2} />
+                        <pointLight position={[6, 2.0, 1.5]} intensity={1.5} color="#c084fc" distance={8} decay={2} />
+                        <spotLight
+                            position={[0, 2.9, 0]}
+                            angle={0.85}
+                            penumbra={0.6}
+                            intensity={0.55}
+                            color="#c4b5fd"
+                            castShadow
+                        />
                     </>
                 )}
                 {mobile && (
-                    <pointLight position={[0, 2.4, 0]} intensity={1.1} color="#e0d4ff" distance={14} decay={2} />
+                    <pointLight position={[0, 2.5, 0]} intensity={1.25} color="#e0d4ff" distance={14} decay={2} />
                 )}
 
-                <HouseGeometry low={mobile} />
+                <HouseGeometry low={mobile} cinematic={!mobile} />
                 <HouseDecor low={mobile} />
                 <RemotePlayers peers={peers} mobile={mobile} />
                 <FirstPersonController
@@ -122,7 +157,7 @@ export default function HouseCanvas({
                     onMoveActivity={onMoveActivity}
                 />
                 {!mobile && (
-                    <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
+                    <ContactShadows position={[0, 0.02, 0]} opacity={0.32} scale={22} blur={2.4} far={10} />
                 )}
             </Canvas>
         </div>

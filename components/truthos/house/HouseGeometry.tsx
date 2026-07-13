@@ -36,9 +36,17 @@ function Box({
 
 /**
  * Full house staging — rooms map to Hut features.
+ * cinematic: PC-only beams, moldings, window glow, richer props.
  */
-export default function HouseGeometry({ low = false }: { low?: boolean }) {
+export default function HouseGeometry({
+    low = false,
+    cinematic = false,
+}: {
+    low?: boolean;
+    cinematic?: boolean;
+}) {
     const sh = !low;
+    const rich = cinematic && !low;
     return (
         <group>
             {/* Floor */}
@@ -52,12 +60,34 @@ export default function HouseGeometry({ low = false }: { low?: boolean }) {
                     <meshBasicMaterial color="#3a3250" transparent opacity={0.12} />
                 </mesh>
             )}
+            {/* Living aisle runner */}
+            {rich && (
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} receiveShadow>
+                    <planeGeometry args={[1.6, 12]} />
+                    <meshStandardMaterial color="#4a2840" roughness={0.95} />
+                </mesh>
+            )}
 
             {/* Outer walls */}
             <Box pos={[0, 1.5, -8.5]} size={[18, 3, 0.3]} color={WALL} shadows={sh} />
             <Box pos={[0, 1.5, 8.5]} size={[18, 3, 0.3]} color={WALL} shadows={sh} />
             <Box pos={[-8.5, 1.5, 0]} size={[0.3, 3, 18]} color={WALL} shadows={sh} />
             <Box pos={[8.5, 1.5, 0]} size={[0.3, 3, 18]} color={WALL} shadows={sh} />
+
+            {/* Ceiling beams (PC cinematic) */}
+            {rich &&
+                [-6, -3, 0, 3, 6].map((z) => (
+                    <Box key={`beam-${z}`} pos={[0, 2.85, z]} size={[17.2, 0.14, 0.22]} color={WOOD} shadows={false} />
+                ))}
+            {/* Baseboards */}
+            {rich && (
+                <>
+                    <Box pos={[0, 0.08, -8.32]} size={[17.5, 0.16, 0.08]} color="#1a1520" shadows={false} />
+                    <Box pos={[0, 0.08, 8.32]} size={[17.5, 0.16, 0.08]} color="#1a1520" shadows={false} />
+                    <Box pos={[-8.32, 0.08, 0]} size={[0.08, 0.16, 17.5]} color="#1a1520" shadows={false} />
+                    <Box pos={[8.32, 0.08, 0]} size={[0.08, 0.16, 17.5]} color="#1a1520" shadows={false} />
+                </>
+            )}
 
             {/* ── BEDROOM (south / +Z) ── */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, 0.01, 5]} receiveShadow={sh}>
@@ -89,8 +119,19 @@ export default function HouseGeometry({ low = false }: { low?: boolean }) {
             {/* window bedroom */}
             <mesh position={[5.5, 1.8, 8.3]}>
                 <planeGeometry args={[1.4, 1.1]} />
-                <meshStandardMaterial color="#1e1b4b" emissive="#6366f1" emissiveIntensity={0.4} />
+                <meshStandardMaterial color="#1e1b4b" emissive="#6366f1" emissiveIntensity={rich ? 0.65 : 0.4} />
             </mesh>
+            {rich && (
+                <>
+                    <Box pos={[-0.5, 0.85, 6.9]} size={[0.5, 0.35, 0.35]} color="#2a2038" shadows={sh} />
+                    <Box pos={[3.2, 0.95, 4.85]} size={[0.35, 0.12, 0.25]} color="#1a1a1e" shadows={false} />
+                    {/* Nightstand lamp */}
+                    <mesh position={[-0.5, 1.15, 6.9]}>
+                        <sphereGeometry args={[0.1, 10, 10]} />
+                        <meshStandardMaterial color="#fde68a" emissive="#fbbf24" emissiveIntensity={0.8} />
+                    </mesh>
+                </>
+            )}
 
             {/* ── LIVING ROOM (center) ── */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -0.5]} receiveShadow={sh}>
@@ -172,6 +213,28 @@ export default function HouseGeometry({ low = false }: { low?: boolean }) {
                 <planeGeometry args={[18, 18]} />
                 <meshStandardMaterial color="#0c0a10" roughness={1} />
             </mesh>
+
+            {/* Extra windows + pendant (PC cinematic) */}
+            {rich && (
+                <>
+                    <mesh position={[-8.32, 1.8, -4]} rotation={[0, Math.PI / 2, 0]}>
+                        <planeGeometry args={[1.1, 1.0]} />
+                        <meshStandardMaterial color="#0f172a" emissive="#4c1d95" emissiveIntensity={0.35} />
+                    </mesh>
+                    <mesh position={[8.32, 1.9, -2]} rotation={[0, -Math.PI / 2, 0]}>
+                        <planeGeometry args={[1.0, 0.9]} />
+                        <meshStandardMaterial color="#0f172a" emissive="#1e3a5f" emissiveIntensity={0.4} />
+                    </mesh>
+                    <mesh position={[-1.5, 2.4, -1]}>
+                        <cylinderGeometry args={[0.02, 0.02, 0.5, 6]} />
+                        <meshStandardMaterial color="#1a1520" />
+                    </mesh>
+                    <mesh position={[-1.5, 2.1, -1]}>
+                        <coneGeometry args={[0.22, 0.18, 8]} />
+                        <meshStandardMaterial color="#2a2030" emissive="#fbbf24" emissiveIntensity={0.25} />
+                    </mesh>
+                </>
+            )}
         </group>
     );
 }
