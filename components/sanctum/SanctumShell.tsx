@@ -44,7 +44,7 @@ function matchAny(path: string, patterns: RegExp[]) {
 
 /**
  * Persistent sanctum atmosphere + veil navigation.
- * Unity / full-immersion routes hide chrome; ritual routes get denser atmosphere.
+ * Full-immersion routes (hut 3D) hide chrome; ritual routes get denser atmosphere.
  */
 export default function SanctumShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() || '/';
@@ -78,7 +78,7 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
 
     return (
         <div className="relative min-h-[100dvh] flex flex-col">
-            {/* Living atmosphere — never on Unity (perf + focus) */}
+            {/* Living atmosphere — never on immersive 3D (perf + focus) */}
             {!immersive && (
                 <div
                     className="pointer-events-none fixed inset-0 z-[1]"
@@ -98,7 +98,7 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
 
             <div className="relative z-[2] flex-1 flex flex-col min-h-0">{children}</div>
 
-            {/* Veil trigger — hidden inside Unity world */}
+            {/* Veil trigger — hidden inside the hut */}
             {!immersive && (
                 <>
                     <button
