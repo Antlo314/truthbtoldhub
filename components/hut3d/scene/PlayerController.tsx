@@ -3,11 +3,11 @@
 import { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { AvatarMesh } from '../AvatarMesh';
+import { AvatarMesh, type AvatarHandle } from '../AvatarMesh';
 import { useHutUi } from '../hutUiStore';
 import type { AvatarConfig } from '@/lib/game/avatar';
 
-const SPEED = 4.2;
+const SPEED = 4.0;
 const BOUNDS = { minX: -8.2, maxX: 8.2, minZ: -6.6, maxZ: 6.4 };
 
 const keys = new Set<string>();
@@ -32,6 +32,13 @@ function bindKeys() {
     };
 }
 
+/**
+ * Third-person walk:
+ * - W / ↑ = into the scene (camera forward)
+ * - S / ↓ = toward camera
+ * - A/D = strafe left/right from camera view
+ * Camera sits behind the soul looking toward Truth (+Z).
+ */
 export default function PlayerController({
     avatar,
     onPosition,
@@ -40,10 +47,11 @@ export default function PlayerController({
     onPosition?: (p: THREE.Vector3) => void;
 }) {
     const group = useRef<THREE.Group>(null);
+    const avatarRef = useRef<AvatarHandle>(null);
     const vel = useRef(new THREE.Vector3());
+    const facing = useRef(0);
     const { camera } = useThree();
     const inputLocked = useHutUi((s) => s.inputLocked);
-    const bob = useRef(0);
 
     useEffect(() => bindKeys(), []);
 
@@ -51,24 +59,45 @@ export default function PlayerController({
         const g = group.current;
         if (!g) return;
 
-        // World axes: +Z toward Truth (north), −Z toward wayfinder
-        const wish = new THREE.Vector3();
+        // Camera planar basis (third-person standard)
+        const camFwd = new THREE.Vector3();
+        camera.getWorldDirection(camFwd);
+        camFwd.y = 0;
+        if (camFwd.lengthSq() < 1e-6) camFwd.set(0, 0, 1);
+        else camFwd.normalize();
+        // Right = forward × up
+        const camRight = new THREE.Vector3().crossVectors(camFwd, new THREE.Vector3(0, 1, 0)).normalize();
+
+        // Input: forward along camera look, strafe on camera right
+        // (Previous world-axis mapping felt inverted relative to the follow cam.)
+        let fwd = 0;
+        let strafe = 0;
         if (!inputLocked) {
-            if (keys.has('KeyW') || keys.has('ArrowUp')) wish.z += 1;
-            if (keys.has('KeyS') || keys.has('ArrowDown')) wish.z -= 1;
-            if (keys.has('KeyA') || keys.has('ArrowLeft')) wish.x -= 1;
-            if (keys.has('KeyD') || keys.has('ArrowRight')) wish.x += 1;
+            if (keys.has('KeyW') || keys.has('ArrowUp')) fwd += 1;
+            if (keys.has('KeyS') || keys.has('ArrowDown')) fwd -= 1;
+            if (keys.has('KeyA') || keys.has('ArrowLeft')) strafe -= 1;
+            if (keys.has('KeyD') || keys.has('ArrowRight')) strafe += 1;
         }
 
-        if (wish.lengthSq() > 0) {
+        const wish = new THREE.Vector3()
+            .addScaledVector(camFwd, fwd)
+            .addScaledVector(camRight, strafe);
+
+        if (wish.lengthSq() > 1e-6) {
             wish.normalize();
-            vel.current.lerp(wish.multiplyScalar(SPEED), 1 - Math.exp(-12 * dt));
-            const face = Math.atan2(wish.x, wish.z);
-            g.rotation.y = THREE.MathUtils.damp(g.rotation.y, face, 12, dt);
-            bob.current += dt * 10;
+            const targetVel = wish.multiplyScalar(SPEED);
+            vel.current.lerp(targetVel, 1 - Math.exp(-14 * dt));
+
+            // Face movement direction (+Z is character front)
+            const targetFace = Math.atan2(vel.current.x, vel.current.z);
+            // shortest-path damp on angle
+            let delta = targetFace - facing.current;
+            while (delta > Math.PI) delta -= Math.PI * 2;
+            while (delta < -Math.PI) delta += Math.PI * 2;
+            facing.current += delta * (1 - Math.exp(-14 * dt));
+            g.rotation.y = facing.current;
         } else {
-            vel.current.lerp(new THREE.Vector3(), 1 - Math.exp(-14 * dt));
-            bob.current = THREE.MathUtils.damp(bob.current, 0, 8, dt);
+            vel.current.lerp(new THREE.Vector3(), 1 - Math.exp(-16 * dt));
         }
 
         g.position.x = THREE.MathUtils.clamp(
@@ -81,19 +110,24 @@ export default function PlayerController({
             BOUNDS.minZ,
             BOUNDS.maxZ,
         );
-        g.position.y = Math.abs(Math.sin(bob.current)) * 0.03;
+        // Keep feet planted — gait handles vertical micro-motion
+        g.position.y = 0;
 
-        const target = new THREE.Vector3(g.position.x, 1.45, g.position.z);
-        const ideal = new THREE.Vector3(g.position.x, 3.5, g.position.z - 5.4);
-        camera.position.lerp(ideal, 1 - Math.exp(-4 * dt));
-        camera.lookAt(target);
+        const planar = Math.hypot(vel.current.x, vel.current.z);
+        const gait = THREE.MathUtils.clamp(planar / SPEED, 0, 1);
+        avatarRef.current?.setGait(gait);
+
+        // Follow cam: stay south of player, look at chest
+        const ideal = new THREE.Vector3(g.position.x, 3.45, g.position.z - 5.5);
+        camera.position.lerp(ideal, 1 - Math.exp(-5 * dt));
+        camera.lookAt(g.position.x, 1.35, g.position.z);
 
         onPosition?.(g.position.clone());
     });
 
     return (
         <group ref={group} position={[0, 0, -2.5]}>
-            <AvatarMesh avatar={avatar} />
+            <AvatarMesh ref={avatarRef} avatar={avatar} />
         </group>
     );
 }
