@@ -82,5 +82,94 @@ namespace Journey3D
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             return go;
         }
+
+        /// Abstract sacred presence — no human mesh. Floating crystal core + rings + glow.
+        public static GameObject TruthPresence(Vector3 worldPos)
+        {
+            var root = new GameObject("TruthPresence");
+            root.transform.position = worldPos;
+
+            // stone dais
+            var dais = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            dais.name = "dais";
+            dais.transform.SetParent(root.transform, false);
+            dais.transform.localPosition = new Vector3(0, 0.08f, 0);
+            dais.transform.localScale = new Vector3(1.35f, 0.08f, 1.35f);
+            Object.Destroy(dais.GetComponent<Collider>());
+            dais.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(new Color(0.18f, 0.14f, 0.1f));
+
+            GoldRing(root.transform, 1.05f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.9f), 0.055f);
+            GoldRing(root.transform, 0.55f, 0.95f, new Color(0.99f, 0.83f, 0.35f, 0.55f), 0.03f);
+
+            // core — octahedron-like diamond (scaled cube)
+            var core = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            core.name = "core";
+            core.transform.SetParent(root.transform, false);
+            core.transform.localPosition = new Vector3(0, 1.15f, 0);
+            core.transform.localScale = new Vector3(0.55f, 0.75f, 0.55f);
+            Object.Destroy(core.GetComponent<Collider>());
+            core.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(new Color(1f, 0.88f, 0.45f));
+            core.AddComponent<SlowSpin>().degreesPerSecond = 22f;
+
+            // inner flame lens
+            var flame = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            flame.name = "flame";
+            flame.transform.SetParent(core.transform, false);
+            flame.transform.localPosition = Vector3.zero;
+            flame.transform.localScale = new Vector3(0.55f, 0.7f, 0.55f);
+            Object.Destroy(flame.GetComponent<Collider>());
+            flame.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(new Color(0.35f, 0.75f, 1f, 1f));
+
+            // outer halo disc
+            var halo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            halo.name = "halo";
+            halo.transform.SetParent(root.transform, false);
+            halo.transform.localPosition = new Vector3(0, 1.55f, 0);
+            halo.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            halo.transform.localScale = new Vector3(0.9f, 0.02f, 0.9f);
+            Object.Destroy(halo.GetComponent<Collider>());
+            halo.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(new Color(1f, 0.8f, 0.3f, 0.35f));
+            halo.AddComponent<SlowSpin>().degreesPerSecond = -14f;
+
+            PointGlow(root.transform, new Vector3(0, 1.3f, 0), new Color(1f, 0.84f, 0.42f), 1.85f, 6.5f);
+            PointGlow(root.transform, new Vector3(0, 1.1f, 0), new Color(0.4f, 0.75f, 1f), 0.9f, 3.5f);
+
+            // interaction collider (no human mesh)
+            var col = root.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0, 1.0f, 0);
+            col.radius = 0.55f;
+            col.height = 2.2f;
+            col.isTrigger = true;
+
+            return root;
+        }
+
+        /// Player as abstract soul vessel — orb + ring, no human body.
+        public static GameObject SoulVessel(Transform parent, Color accent)
+        {
+            var root = new GameObject("SoulVessel");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(0, 0.95f, 0);
+
+            var core = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            core.name = "core";
+            core.transform.SetParent(root.transform, false);
+            core.transform.localScale = new Vector3(0.42f, 0.55f, 0.42f);
+            Object.Destroy(core.GetComponent<Collider>());
+            core.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(accent);
+
+            var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ring.name = "ring";
+            ring.transform.SetParent(root.transform, false);
+            ring.transform.localPosition = Vector3.zero;
+            ring.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            ring.transform.localScale = new Vector3(0.72f, 0.015f, 0.72f);
+            Object.Destroy(ring.GetComponent<Collider>());
+            ring.GetComponent<MeshRenderer>().sharedMaterial = UnlitMat(new Color(1f, 0.85f, 0.4f));
+            ring.AddComponent<SlowSpin>().degreesPerSecond = 40f;
+
+            PointGlow(root.transform, Vector3.zero, accent, 1.1f, 3.2f);
+            return root;
+        }
     }
 }

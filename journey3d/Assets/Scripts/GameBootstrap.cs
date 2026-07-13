@@ -36,9 +36,6 @@ namespace Journey3D
             if (ExteriorEnabled) BuildExterior();
             BuildStations();
             var player = BuildPlayer();
-            // Truth (and any other NPC ambients) need the player transform
-            foreach (var ambient in FindObjectsByType<NpcAmbient>(FindObjectsSortMode.None))
-                ambient.Bind(ambient.GetComponent<CharacterRig>(), player.transform);
             var cam = BuildCamera(player);
             BuildSystems(player, cam);
             BuildLights();
@@ -491,16 +488,10 @@ namespace Journey3D
         {
             // Same StationIds + labels — layout redesigned as a ceremonial plan.
 
-            // NORTH: Truth on the processional axis (facing the door)
-            var truth = CharacterFactory.Spawn("char_truth", "anims_masc",
-                new Vector3(0, 0, 2.85f), 180f, 1.88f, collide: true);
-            AddStation(truth, StationId.Truth, "Ask Truth", "#f97316");
+            // NORTH: Truth as abstract presence (no human mesh)
+            var truth = PropUtils.TruthPresence(new Vector3(0, 0, 2.85f));
+            AddStation(truth, StationId.Truth, "The Presence", "#f97316");
             truth.GetComponent<Station>().interactRadius = 3.0f;
-            if (truth.GetComponent<CharacterRig>() != null)
-                truth.AddComponent<NpcAmbient>();
-
-            // Truth dais ring (visual only)
-            PropUtils.GoldRing(truth.transform, 1.05f, 0.02f, new Color(1f, 0.75f, 0.3f, 0.9f), 0.055f);
 
             // Far north wall: Ledger (left) · Sanctum door (center) · Seeing Glass (right)
             var ledger = Spawn("ledger_lectern", new Vector3(-3.6f, 0, 5.85f), 160f);

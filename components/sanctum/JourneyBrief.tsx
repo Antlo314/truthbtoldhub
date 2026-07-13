@@ -8,7 +8,7 @@ import { DURATION, EASE } from '@/lib/design/motion';
 const KEY = 'tbth-journey-brief-v3';
 
 const STEPS = [
-    { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },
+    { title: 'Walk the aisle', body: 'The Presence — a vessel of light — waits at the north end of the chamber. Approach and press E. No kings, no flesh forms.' },
     { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder. Each opens a real system.' },
     { title: 'Open the visions', body: 'At the Wayfinder, five vision portals are unsealed. Look through peace and trial, claim each road’s relic, then return.' },
     { title: 'Return to the Source', body: 'When every portal is open, the Epilogue waits. Until then, the Wayfinder and Reliquary keep your map.' },
