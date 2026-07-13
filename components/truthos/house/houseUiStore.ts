@@ -86,9 +86,9 @@ export const WALKTHROUGH_STEPS = [
         tip: 'Green screen in the bedroom',
     },
     {
-        title: 'Souls you’ll see',
-        body: 'LIVE labels are people here right now. Faint “echo” figures are footprints of souls who visited before — not fake NPCs.',
-        tip: 'Truth on the dais is a station, not a multiplayer ghost',
+        title: 'Who you will see',
+        body: 'Only LIVE players who are in the house with you right now appear as people. Truth is a totem on the dais — not a person, not a bot.',
+        tip: 'If no one else is online, you walk alone',
     },
     {
         title: 'You’re home',

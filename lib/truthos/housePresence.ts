@@ -129,8 +129,8 @@ export async function joinHousePresence(
                 });
             }
 
-            const ghosts = getGhostEchoes(liveIds);
-            onSync([...live, ...ghosts]);
+            // Only LIVE peers in the world — no ghost NPCs, no echoes as bodies
+            onSync(live);
         };
 
         channel
@@ -150,8 +150,7 @@ export async function joinHousePresence(
                     resolve();
                 }
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    // Offline / failed realtime — still show local ghosts only
-                    onSync(getGhostEchoes(new Set([selfId])));
+                    onSync([]);
                     resolve();
                 }
             });
@@ -182,12 +181,12 @@ export async function joinHousePresence(
                 } catch {
                     /* */
                 }
-                onSync(getGhostEchoes(new Set([selfId])));
+                onSync([]);
             },
         };
     } catch (e) {
         console.warn('[housePresence] join failed', e);
-        onSync(getGhostEchoes(new Set([selfId])));
+        onSync([]);
         return null;
     }
 }

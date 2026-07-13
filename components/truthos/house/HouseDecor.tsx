@@ -1,14 +1,13 @@
 'use client';
 
 /**
- * Stage Hut assets: Truth (hooded AA figure), vessel, stations, hearth.
+ * House staging: Truth totem (not a person), stations, hearth.
+ * No fake NPCs / no mirror vessel body.
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TruthMesh } from '@/components/hut3d/AvatarMesh';
-import { VesselModel } from '@/components/hut3d/VesselModel';
-import { useGameStore } from '@/lib/store/useGameStore';
+import { TruthTotem } from '@/components/hut3d/TruthTotem';
 import { HOTSPOTS } from './houseMap';
 
 const ACCENT: Record<string, string> = {
@@ -69,45 +68,30 @@ function TruthDais({ low }: { low?: boolean }) {
                     side={THREE.DoubleSide}
                 />
             </mesh>
-            {/* Hooded African American Truth — Hut station (not multiplayer) */}
-            <TruthMesh position={[0, 0.22, 0]} low={low} />
-            {!low && (
-                <pointLight position={[0, 1.6, 0.3]} intensity={1.4} color="#f97316" distance={5} decay={2} />
-            )}
+            {/* Totem — never a person */}
+            <TruthTotem position={[0, 0.22, 0]} low={low} scale={0.95} />
         </group>
     );
 }
 
-/**
- * Soul Mirror reflection — intentionally translucent so it never reads as an NPC.
- */
-function MirrorVessel({ low }: { low?: boolean }) {
-    const avatar = useGameStore((s) => s.character.avatar);
-    if (low) {
-        return (
-            <group position={[2.35, 0, 6.35]}>
-                <mesh position={[0, 0.9, 0]}>
-                    <capsuleGeometry args={[0.16, 0.65, 4, 6]} />
-                    <meshStandardMaterial color="#6b7c94" roughness={0.5} transparent opacity={0.35} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 1.45, 0]}>
-                    <sphereGeometry args={[0.12, 8, 8]} />
-                    <meshStandardMaterial color="#7a8ca3" roughness={0.5} transparent opacity={0.35} depthWrite={false} />
-                </mesh>
-            </group>
-        );
-    }
+/** Soul mirror — glass only, no second body */
+function SoulMirrorOnly({ low }: { low?: boolean }) {
     return (
-        <group position={[2.35, 0, 6.35]} rotation={[0, Math.PI / 2, 0]}>
-            <group scale={0.92}>
-                <VesselModel avatar={avatar} scale={1} />
-            </group>
-            {/* Glass wash so it reads as reflection, not a second player */}
-            <mesh position={[0, 0.95, 0.15]}>
-                <planeGeometry args={[0.7, 1.7]} />
-                <meshStandardMaterial color="#8ab4d4" transparent opacity={0.12} depthWrite={false} metalness={0.6} roughness={0.2} />
+        <group position={[2.75, 0, 6.8]}>
+            <mesh position={[0, 1.3, 0]} castShadow={!low}>
+                <boxGeometry args={[0.1, 1.4, 0.75]} />
+                <meshStandardMaterial color="#1a1a22" roughness={0.6} metalness={0.3} />
             </mesh>
-            <pointLight position={[0, 1.4, 0.4]} intensity={0.7} color="#c4d0ff" distance={4} decay={2} />
+            <mesh position={[-0.06, 1.3, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                <planeGeometry args={[0.6, 1.15]} />
+                <meshStandardMaterial
+                    color="#4a6a8a"
+                    metalness={0.85}
+                    roughness={0.12}
+                    emissive="#1a3048"
+                    emissiveIntensity={0.3}
+                />
+            </mesh>
         </group>
     );
 }
@@ -147,14 +131,6 @@ function WayfinderMap() {
                     toneMapped={false}
                 />
             </mesh>
-            <mesh position={[0, -0.1, 0.06]}>
-                <circleGeometry args={[0.08, 10]} />
-                <meshBasicMaterial color="#fbbf24" />
-            </mesh>
-            <mesh position={[0.25, 0.15, 0.06]}>
-                <circleGeometry args={[0.06, 10]} />
-                <meshBasicMaterial color="#a78bfa" />
-            </mesh>
         </group>
     );
 }
@@ -193,7 +169,7 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
     return (
         <group>
             <TruthDais low={low} />
-            <MirrorVessel low={low} />
+            <SoulMirrorOnly low={low} />
             <LedgerPedestal />
             <WayfinderMap />
             <HearthWest low={low} />

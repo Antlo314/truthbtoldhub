@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TruthMesh } from '../AvatarMesh';
+import { TruthTotem } from '../TruthTotem';
 import { useHutUi, type HutStationId } from '../hutUiStore';
 
 export type StationDef = {
@@ -65,7 +65,8 @@ export function StationMarkers({ playerPos }: { playerPos: THREE.Vector3 | null 
 
     return (
         <group>
-            <TruthMesh position={[0, 0.28, 5.2]} />
+            {/* Totem on the Truth dais — never a person / NPC */}
+            <TruthTotem position={[0, 0.28, 5.2]} />
             {STATIONS.map((s) => {
                 const near =
                     playerPos != null &&
