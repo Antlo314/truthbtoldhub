@@ -50,7 +50,7 @@ export default function JourneyBrief({ ready }: { ready: boolean }) {
                     exit={{ opacity: 0 }}
                     transition={{ duration: DURATION.settle }}
                     className="absolute inset-0 z-30 flex items-end sm:items-center justify-center p-4 sm:p-8 pointer-events-auto"
-                    style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.78) 100%)' }}
+                    style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.78) 100%)' } as React.CSSProperties}
                 >
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

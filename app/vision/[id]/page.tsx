@@ -3,9 +3,16 @@
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Volume2, VolumeX, Swords, Flower2 } from 'lucide-react';
-import { visionById, VISIONS } from '@/lib/brand/visions';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Volume2, VolumeX, Swords, Flower2, Gem } from 'lucide-react';
+import { visionById, VISIONS, type VisionId } from '@/lib/brand/visions';
+import {
+    markVisionSeen,
+    markTrialSeen,
+    claimRelic,
+    visionStats,
+    RELIC_BY_VISION,
+} from '@/lib/brand/visionProgress';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
@@ -23,6 +30,9 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
     const [muted, setMuted] = useState(true);
     const [ready, setReady] = useState(false);
     const [mode, setMode] = useState<Mode>('peace');
+    const [relicOwned, setRelicOwned] = useState(false);
+    const [relicJustClaimed, setRelicJustClaimed] = useState(false);
+    const [allComplete, setAllComplete] = useState(false);
 
     const bgm: BgmId = mode === 'trial' ? 'combat_skirmish' : (vision?.music ?? 'eden_garden');
     usePageMusic(bgm);
@@ -31,6 +41,13 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
         sacredUi.threshold();
         setMode('peace');
         setReady(false);
+        setRelicJustClaimed(false);
+        const v = visionById(id);
+        if (v) {
+            const p = markVisionSeen(v.id);
+            setRelicOwned(p.relics.includes(RELIC_BY_VISION[v.id].id));
+            setAllComplete(p.seen.length >= VISIONS.length);
+        }
     }, [id]);
 
     useEffect(() => {
@@ -50,6 +67,7 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
         );
     }
 
+    const relic = RELIC_BY_VISION[vision.id as VisionId];
     const src = mode === 'trial' ? vision.combatVideo : vision.video;
     const poster = mode === 'trial' ? vision.combatPoster : vision.poster;
     const siblings = VISIONS.filter((v) => v.id !== vision.id);
@@ -59,8 +77,19 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
         sacredUi.click();
         if (m === 'trial') {
             try { gameMusic.playCue('river_attune'); } catch { /* */ }
+            markTrialSeen(vision.id);
         }
         setMode(m);
+    };
+
+    const onClaimRelic = () => {
+        if (relicOwned || !relic) return;
+        sacredUi.access();
+        try { gameMusic.playSting('relic_claim'); } catch { /* */ }
+        claimRelic(relic.id);
+        setRelicOwned(true);
+        setRelicJustClaimed(true);
+        setAllComplete(visionStats().complete);
     };
 
     return (
@@ -96,11 +125,11 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
                 style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
             >
                 <Link
-                    href="/world"
+                    href="/vision"
                     onClick={() => sacredUi.click()}
                     className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-white/50 hover:text-aether-gold transition-colors min-h-[44px]"
                 >
-                    <ArrowLeft className="w-4 h-4" /> Hut
+                    <ArrowLeft className="w-4 h-4" /> Roads
                 </Link>
 
                 <div className="flex items-center gap-1 p-1 rounded-full border border-white/10 bg-black/50 backdrop-blur-md">
@@ -142,8 +171,8 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: DURATION.threshold, ease: EASE.breath }}
-                className="relative z-10 mt-auto px-5 sm:px-8 pb-6 max-w-xl"
-                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+                className="relative z-10 mt-auto px-5 sm:px-8 max-w-xl"
+                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' } as React.CSSProperties}
             >
                 <p className="text-[9px] uppercase tracking-[0.45em] mb-2" style={{ color: vision.accent }}>
                     {mode === 'trial' ? 'Trial vision' : 'Vision portal'} · Unsealed
@@ -158,14 +187,57 @@ export default function VisionPage({ params }: { params: Promise<{ id: string }>
                 <p className="font-ritual text-lg text-white/80 italic mb-3 leading-relaxed">
                     “{mode === 'trial' ? vision.combatLine : vision.quote}”
                 </p>
-                <p className="text-sm text-white/50 leading-relaxed mb-5 max-w-md">
+                <p className="text-sm text-white/50 leading-relaxed mb-4 max-w-md">
                     {mode === 'trial'
                         ? 'This is a vision of the trial that waits when the chamber is fully cut. Feel the tension — then return to train in the hut.'
                         : vision.body}
                 </p>
+
+                {/* Relic claim */}
+                {relic && (
+                    <div className="mb-5 rounded-2xl border border-aether-gold/20 bg-black/55 backdrop-blur-md p-3.5">
+                        <div className="flex items-start gap-3">
+                            <div
+                                className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center border"
+                                style={{ borderColor: `${vision.accent}55`, background: `${vision.accent}18` }}
+                            >
+                                <Gem className="w-4 h-4" style={{ color: vision.accent }} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-aether-gold/70 mb-0.5">
+                                    {relicOwned ? 'Relic carried' : 'Relic of this road'}
+                                </p>
+                                <p className="font-ritual text-sm text-white">{relic.name}</p>
+                                <p className="text-[12px] text-white/40 mt-0.5 leading-relaxed">{relic.desc}</p>
+                                {!relicOwned ? (
+                                    <button
+                                        type="button"
+                                        onClick={onClaimRelic}
+                                        className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-aether-gold hover:text-white transition-colors min-h-[40px]"
+                                    >
+                                        Claim relic →
+                                    </button>
+                                ) : (
+                                    <AnimatePresence>
+                                        {relicJustClaimed && (
+                                            <motion.p
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="mt-2 text-[10px] uppercase tracking-[0.2em] text-aether-gold/80"
+                                            >
+                                                Bound to your journey
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                    <SacredButton size="md" pulse onClick={() => router.push('/world')}>
-                        Return to the Hut →
+                    <SacredButton size="md" pulse onClick={() => router.push(allComplete ? '/epilogue' : '/world')}>
+                        {allComplete ? 'Return to the Source →' : 'Return to the Hut →'}
                     </SacredButton>
                     <SacredButton
                         size="md"
