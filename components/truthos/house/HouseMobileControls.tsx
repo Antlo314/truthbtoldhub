@@ -1,10 +1,8 @@
 'use client';
 
 /**
- * Industry-standard dual-zone mobile FP controls.
- * Left ~48% — dynamic virtual joystick (spawn under thumb).
- * Right — free look drag.
- * Fixed Jump + Interact on the right bottom (thumb zone).
+ * Mobile dual-zone controls — pointer + touch (tablets / hybrid PCs too).
+ * Left half: move stick · Right half: look · Bottom-right: Use / Jump
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { houseInput } from './houseInput';
@@ -38,20 +36,19 @@ export default function HouseMobileControls({
     });
     const [looking, setLooking] = useState(false);
 
-    const moveId = useRef<number | null>(null);
-    const lookId = useRef<number | null>(null);
+    const movePtr = useRef<number | null>(null);
+    const lookPtr = useRef<number | null>(null);
     const lookLast = useRef({ x: 0, y: 0 });
     const origin = useRef({ x: 0, y: 0 });
-    const rootRef = useRef<HTMLDivElement>(null);
 
     const endMove = useCallback(() => {
-        moveId.current = null;
+        movePtr.current = null;
         houseInput.clearMove();
         setStick((s) => ({ ...s, active: false, knobX: 0, knobY: 0 }));
     }, []);
 
     const endLook = useCallback(() => {
-        lookId.current = null;
+        lookPtr.current = null;
         houseInput.clearLook();
         setLooking(false);
     }, []);
@@ -63,18 +60,13 @@ export default function HouseMobileControls({
         }
     }, [visible, endMove, endLook]);
 
-    // Safety: OS gestures / calls
     useEffect(() => {
         const up = () => {
             endMove();
             endLook();
         };
-        window.addEventListener('touchcancel', up);
         window.addEventListener('blur', up);
-        return () => {
-            window.removeEventListener('touchcancel', up);
-            window.removeEventListener('blur', up);
-        };
+        return () => window.removeEventListener('blur', up);
     }, [endMove, endLook]);
 
     const applyStick = (cx: number, cy: number) => {
@@ -84,12 +76,10 @@ export default function HouseMobileControls({
         const capped = Math.min(len, MOBILE.stickR);
         const kx = (dx / len) * capped;
         const ky = (dy / len) * capped;
-        // Normalize to −1…1 then shape
         const nx = kx / MOBILE.stickR;
         const ny = ky / MOBILE.stickR;
         const shaped = shapeStick(nx, ny);
-        // ny up (negative screen Y when pulling up) → forward
-        // Screen: up = smaller Y → ny negative when thumb up → forward = -ny
+        // Thumb up (screen −Y) → forward
         houseInput.setMove(shaped.x, -shaped.y);
         houseInput.movingTouch = true;
         setStick({
@@ -101,108 +91,105 @@ export default function HouseMobileControls({
         });
     };
 
-    const onTouchStart = (e: React.TouchEvent) => {
-        if (!visible) return;
+    const isActionTarget = (t: EventTarget | null) =>
+        t instanceof Element && !!t.closest('[data-house-action]');
+
+    const onPointerDown = (e: React.PointerEvent) => {
+        if (!visible || isActionTarget(e.target)) return;
         unlockAudio();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const t = e.changedTouches[i];
-            const w = window.innerWidth;
-            const isLeft = t.clientX < w * MOBILE.moveZone;
 
-            // Don't steal touches on action buttons
-            const target = e.target as HTMLElement;
-            if (target.closest('[data-house-action]')) continue;
+        const topGuard = 56;
+        if (e.clientY < topGuard) return;
 
-            // Leave top chrome (sign-in / tour) alone
-            const topGuard = 56 + (typeof window !== 'undefined'
-                ? parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0', 10) || 0
-                : 0);
-            if (t.clientY < topGuard) continue;
+        const w = window.innerWidth;
+        const isLeft = e.clientX < w * MOBILE.moveZone;
 
-            if (isLeft && moveId.current === null) {
-                moveId.current = t.identifier;
-                origin.current = { x: t.clientX, y: t.clientY };
-                applyStick(t.clientX, t.clientY);
-            } else if (!isLeft && lookId.current === null) {
-                lookId.current = t.identifier;
-                lookLast.current = { x: t.clientX, y: t.clientY };
-                houseInput.lookingTouch = true;
-                setLooking(true);
+        if (isLeft && movePtr.current === null) {
+            e.preventDefault();
+            movePtr.current = e.pointerId;
+            origin.current = { x: e.clientX, y: e.clientY };
+            applyStick(e.clientX, e.clientY);
+            try {
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            } catch {
+                /* */
+            }
+        } else if (!isLeft && lookPtr.current === null) {
+            e.preventDefault();
+            lookPtr.current = e.pointerId;
+            lookLast.current = { x: e.clientX, y: e.clientY };
+            houseInput.lookingTouch = true;
+            setLooking(true);
+            try {
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            } catch {
+                /* */
             }
         }
     };
 
-    const onTouchMove = (e: React.TouchEvent) => {
+    const onPointerMove = (e: React.PointerEvent) => {
         if (!visible) return;
-        let used = false;
-        for (let i = 0; i < e.touches.length; i++) {
-            const t = e.touches[i];
-            if (t.identifier === moveId.current) {
-                applyStick(t.clientX, t.clientY);
-                used = true;
-            } else if (t.identifier === lookId.current) {
-                const dx = t.clientX - lookLast.current.x;
-                const dy = t.clientY - lookLast.current.y;
-                lookLast.current = { x: t.clientX, y: t.clientY };
-                // Pixel look — controller consumes each frame (1:1, no double-apply)
-                houseInput.lookDX += dx;
-                houseInput.lookDY += dy;
-                used = true;
-            }
+        if (e.pointerId === movePtr.current) {
+            e.preventDefault();
+            applyStick(e.clientX, e.clientY);
+        } else if (e.pointerId === lookPtr.current) {
+            e.preventDefault();
+            const dx = e.clientX - lookLast.current.x;
+            const dy = e.clientY - lookLast.current.y;
+            lookLast.current = { x: e.clientX, y: e.clientY };
+            houseInput.lookDX += dx;
+            houseInput.lookDY += dy;
         }
-        if (used) e.preventDefault();
     };
 
-    const onTouchEnd = (e: React.TouchEvent) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const t = e.changedTouches[i];
-            if (t.identifier === moveId.current) endMove();
-            if (t.identifier === lookId.current) endLook();
+    const onPointerUp = (e: React.PointerEvent) => {
+        if (e.pointerId === movePtr.current) endMove();
+        if (e.pointerId === lookPtr.current) endLook();
+        try {
+            (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        } catch {
+            /* */
         }
     };
 
     if (!visible) return null;
 
     const safeBottom = 'calc(1rem + env(safe-area-inset-bottom))';
-    // Ghost stick resting position (lower-left thumb zone)
-    const ghostLeft = 28;
-    const ghostBottom = 28;
 
     return (
         <div
-            ref={rootRef}
             className="fixed inset-0 z-40 select-none"
             style={{ touchAction: 'none' }}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={onTouchEnd}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
             aria-label="Touch controls"
         >
-            {/* Soft vignette only at bottom corners — doesn't wash the scene */}
             <div
                 className="pointer-events-none absolute inset-x-0 bottom-0 h-36"
                 style={{
                     background:
-                        'linear-gradient(to top, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.12) 55%, transparent 100%)',
+                        'linear-gradient(to top, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.1) 55%, transparent 100%)',
                 }}
             />
 
-            {/* Resting ghost stick (when inactive) */}
+            {/* Ghost stick */}
             {!stick.active && (
                 <div
-                    className="pointer-events-none absolute rounded-full border border-white/20 bg-black/25 backdrop-blur-sm"
+                    className="pointer-events-none absolute rounded-full border border-white/25 bg-black/30 backdrop-blur-sm"
                     style={{
                         width: MOBILE.stickR * 2,
                         height: MOBILE.stickR * 2,
-                        left: ghostLeft,
-                        bottom: `calc(${ghostBottom}px + env(safe-area-inset-bottom))`,
+                        left: 24,
+                        bottom: `calc(28px + env(safe-area-inset-bottom))`,
                         opacity: MOBILE.idleOpacity,
                         boxShadow: 'inset 0 0 24px rgba(0,0,0,0.35)',
                     }}
                 >
                     <div
-                        className="absolute rounded-full bg-white/25 border border-white/30"
+                        className="absolute rounded-full bg-white/30 border border-white/35"
                         style={{
                             width: MOBILE.knobR * 2,
                             height: MOBILE.knobR * 2,
@@ -210,20 +197,22 @@ export default function HouseMobileControls({
                             top: MOBILE.stickR - MOBILE.knobR,
                         }}
                     />
+                    <span className="absolute -bottom-5 inset-x-0 text-center text-[9px] uppercase tracking-widest text-white/35">
+                        Move
+                    </span>
                 </div>
             )}
 
-            {/* Active dynamic stick under thumb */}
             {stick.active && (
                 <div
-                    className="pointer-events-none fixed rounded-full border border-white/30 bg-black/35 backdrop-blur-md"
+                    className="pointer-events-none fixed rounded-full border border-white/35 bg-black/40 backdrop-blur-md"
                     style={{
                         width: MOBILE.stickR * 2,
                         height: MOBILE.stickR * 2,
                         left: stick.originX - MOBILE.stickR,
                         top: stick.originY - MOBILE.stickR,
                         opacity: MOBILE.activeOpacity,
-                        boxShadow: '0 0 28px rgba(167,139,250,0.25), inset 0 0 20px rgba(0,0,0,0.4)',
+                        boxShadow: '0 0 28px rgba(167,139,250,0.3), inset 0 0 20px rgba(0,0,0,0.4)',
                     }}
                 >
                     <div
@@ -234,22 +223,20 @@ export default function HouseMobileControls({
                             left: MOBILE.stickR - MOBILE.knobR + stick.knobX,
                             top: MOBILE.stickR - MOBILE.knobR + stick.knobY,
                             background: 'radial-gradient(circle at 35% 30%, #c4b5fd, #7c3aed)',
-                            border: '1px solid rgba(255,255,255,0.45)',
+                            border: '1px solid rgba(255,255,255,0.5)',
                             boxShadow: '0 0 16px rgba(167,139,250,0.55)',
                         }}
                     />
                 </div>
             )}
 
-            {/* Look-active whisper */}
             {looking && (
                 <div
-                    className="pointer-events-none absolute top-1/2 right-6 -translate-y-1/2 w-1.5 h-12 rounded-full bg-white/25"
+                    className="pointer-events-none absolute top-1/2 right-5 -translate-y-1/2 w-1 h-14 rounded-full bg-white/30"
                     aria-hidden
                 />
             )}
 
-            {/* Action cluster — right thumb */}
             <div
                 className="absolute right-3 flex flex-col items-center gap-3"
                 style={{ bottom: safeBottom }}
@@ -259,14 +246,10 @@ export default function HouseMobileControls({
                     type="button"
                     data-house-action
                     disabled={!hotspot}
-                    onTouchStart={(e) => {
-                        e.stopPropagation();
-                        unlockAudio();
-                        if (hotspot) onInteract();
-                    }}
                     onPointerDown={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        unlockAudio();
                         if (hotspot) onInteract();
                     }}
                     className={[
@@ -276,11 +259,7 @@ export default function HouseMobileControls({
                             ? 'border-amber-300/70 bg-gradient-to-br from-amber-200 to-amber-600 text-black scale-105'
                             : 'border-white/18 bg-black/40 text-white/30',
                     ].join(' ')}
-                    style={{
-                        width: MOBILE.action,
-                        height: MOBILE.action,
-                        touchAction: 'none',
-                    }}
+                    style={{ width: MOBILE.action, height: MOBILE.action, touchAction: 'none' }}
                     aria-label={hotspot ? `Use ${hotspot.label}` : 'Interact'}
                 >
                     <span className="text-[10px] font-black uppercase tracking-wider leading-none opacity-80">
@@ -300,14 +279,10 @@ export default function HouseMobileControls({
                 <button
                     type="button"
                     data-house-action
-                    onTouchStart={(e) => {
-                        e.stopPropagation();
-                        unlockAudio();
-                        houseInput.queueJump();
-                    }}
                     onPointerDown={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        unlockAudio();
                         houseInput.queueJump();
                     }}
                     className="rounded-full border border-white/22 bg-black/45 text-white backdrop-blur-md shadow-md active:scale-95 flex flex-col items-center justify-center"

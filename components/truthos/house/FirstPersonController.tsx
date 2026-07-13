@@ -1,9 +1,13 @@
 'use client';
 
+/**
+ * First-person locomotion — always enabled when not in a panel.
+ * Keyboard (WASD) + mobile stick share the same wish-velocity path.
+ */
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { collideMove, SPAWN, nearestHotspot, type Hotspot } from './houseMap';
+import { collideMove, resolveStuck, SPAWN, nearestHotspot, type Hotspot } from './houseMap';
 import { houseInput } from './houseInput';
 import {
     WALK_SPEED,
@@ -37,16 +41,18 @@ export default function FirstPersonController({
     onHotspot: (h: Hotspot | null) => void;
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
     onInteractRequest?: () => void;
-    /** Fires when player is actively moving / looking — for progressive hints */
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
     const { camera, gl } = useThree();
+    const lockedRef = useRef(locked);
+    lockedRef.current = locked;
+
     const yaw = useRef(Math.PI);
     const pitch = useRef(0);
-    const yawSmooth = useRef(Math.PI);
-    const pitchSmooth = useRef(0);
+    const yawS = useRef(Math.PI);
+    const pitchS = useRef(0);
     const pos = useRef(new THREE.Vector3(SPAWN[0], EYE_HEIGHT, SPAWN[2]));
-    const vel = useRef(new THREE.Vector3(0, 0, 0));
+    const vel = useRef({ x: 0, z: 0 });
     const vy = useRef(0);
     const grounded = useRef(true);
     const poseT = useRef(0);
@@ -54,30 +60,37 @@ export default function FirstPersonController({
     const interactLatch = useRef(false);
     const activityT = useRef(0);
     const lastKind = useRef<'move' | 'look' | 'jump' | 'idle'>('idle');
+    const activityCb = useRef(onMoveActivity);
+    activityCb.current = onMoveActivity;
 
+    // Spawn once — unstick if colliders ever overlap
     useEffect(() => {
-        pos.current.set(SPAWN[0], EYE_HEIGHT, SPAWN[2]);
-        vel.current.set(0, 0, 0);
+        const free = resolveStuck(SPAWN[0], SPAWN[2]);
+        pos.current.set(free.x, EYE_HEIGHT, free.z);
+        vel.current = { x: 0, z: 0 };
         vy.current = 0;
         grounded.current = true;
-        camera.position.copy(pos.current);
-        camera.rotation.order = 'YXZ';
         yaw.current = Math.PI;
         pitch.current = 0;
-        yawSmooth.current = Math.PI;
-        pitchSmooth.current = 0;
+        yawS.current = Math.PI;
+        pitchS.current = 0;
+        camera.position.copy(pos.current);
+        camera.rotation.order = 'YXZ';
         camera.rotation.y = Math.PI;
         camera.rotation.x = 0;
     }, [camera]);
 
+    // Input — stable listeners (use lockedRef, not rebind on locked)
     useEffect(() => {
         const el = gl.domElement;
+
         const down = (e: KeyboardEvent) => {
-            if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             keys.add(e.code);
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (!locked) houseInput.queueJump();
+                if (!lockedRef.current) houseInput.queueJump();
             }
         };
         const up = (e: KeyboardEvent) => keys.delete(e.code);
@@ -86,10 +99,9 @@ export default function FirstPersonController({
         let dragging = false;
         let lx = 0;
         let ly = 0;
-        const sens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
 
         const onPointerDown = (e: PointerEvent) => {
-            if (locked || mobile) return; // mobile look is on the HUD zones
+            if (lockedRef.current || mobile) return;
             if (e.button === 0 || e.button === 2) {
                 dragging = true;
                 lx = e.clientX;
@@ -102,14 +114,15 @@ export default function FirstPersonController({
             }
         };
         const onPointerMove = (e: PointerEvent) => {
-            if (!dragging || locked) return;
+            if (!dragging || lockedRef.current) return;
+            const sens = LOOK_SENS_DESKTOP;
             const dx = e.clientX - lx;
             const dy = e.clientY - ly;
             lx = e.clientX;
             ly = e.clientY;
             yaw.current -= dx * sens;
             pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
-            onMoveActivity?.('look');
+            emit('look');
         };
         const onPointerUp = (e: PointerEvent) => {
             dragging = false;
@@ -121,12 +134,13 @@ export default function FirstPersonController({
         };
         const ctx = (e: Event) => e.preventDefault();
 
-        window.addEventListener('keydown', down);
+        window.addEventListener('keydown', down, { passive: false });
         window.addEventListener('keyup', up);
         window.addEventListener('blur', blur);
         el.addEventListener('pointerdown', onPointerDown);
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerup', onPointerUp);
+        el.addEventListener('pointercancel', onPointerUp);
         el.addEventListener('contextmenu', ctx);
 
         return () => {
@@ -136,107 +150,121 @@ export default function FirstPersonController({
             el.removeEventListener('pointerdown', onPointerDown);
             el.removeEventListener('pointermove', onPointerMove);
             el.removeEventListener('pointerup', onPointerUp);
+            el.removeEventListener('pointercancel', onPointerUp);
             el.removeEventListener('contextmenu', ctx);
+            keys.clear();
         };
-    }, [gl, locked, mobile, onMoveActivity]);
+    }, [gl, mobile]);
 
-    useFrame((_, dt) => {
-        const d = Math.min(dt, 0.05);
+    useFrame((_, dtRaw) => {
+        const d = Math.min(Math.max(dtRaw, 0), 0.05) || 0.016;
+        const lockedNow = lockedRef.current;
         camera.rotation.order = 'YXZ';
         const lookSens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
 
-        if (!locked) {
-            // Touch / residual look: prefer pixel deltas (authoritative), then soft velocity
+        // ── Look ──
+        if (!lockedNow) {
             const pix = houseInput.consumeLookPixels();
-            let ldx = pix.dx;
-            let ldy = pix.dy;
-            if (!ldx && !ldy) {
-                ldx = houseInput.lookVX;
-                ldy = houseInput.lookVY;
-            } else {
-                // pixels already applied this frame — clear soft velocity to avoid double look
-                houseInput.lookVX = 0;
-                houseInput.lookVY = 0;
-            }
-            if (ldx || ldy) {
-                yaw.current -= ldx * lookSens;
+            if (pix.dx || pix.dy) {
+                yaw.current -= pix.dx * lookSens;
                 pitch.current = THREE.MathUtils.clamp(
-                    pitch.current - ldy * lookSens,
+                    pitch.current - pix.dy * lookSens,
                     -PITCH_MAX,
                     PITCH_MAX,
                 );
-                if (Math.abs(ldx) + Math.abs(ldy) > 0.35) emitActivity('look');
+                if (Math.abs(pix.dx) + Math.abs(pix.dy) > 0.4) emit('look');
             }
         } else {
             houseInput.consumeLookPixels();
             houseInput.clearLook();
         }
 
-        // Smooth camera rotation (fluid feel)
-        yawSmooth.current = damp(yawSmooth.current, yaw.current, LOOK_SMOOTH, d);
-        pitchSmooth.current = damp(pitchSmooth.current, pitch.current, LOOK_SMOOTH, d);
-        // Keep smooth within 2π of target for yaw wrap
-        let yawErr = yaw.current - yawSmooth.current;
-        while (yawErr > Math.PI) yawErr -= Math.PI * 2;
-        while (yawErr < -Math.PI) yawErr += Math.PI * 2;
-        yawSmooth.current = yaw.current - yawErr;
-        yawSmooth.current = damp(yawSmooth.current, yaw.current, LOOK_SMOOTH, d);
+        // Smooth look slightly
+        yawS.current = damp(yawS.current, yaw.current, LOOK_SMOOTH, d);
+        // Unwrap yaw for smooth interp
+        let err = yaw.current - yawS.current;
+        while (err > Math.PI) err -= Math.PI * 2;
+        while (err < -Math.PI) err += Math.PI * 2;
+        yawS.current = yaw.current - err;
+        yawS.current = damp(yawS.current, yaw.current, LOOK_SMOOTH, d);
+        pitchS.current = damp(pitchS.current, pitch.current, LOOK_SMOOTH, d);
 
-        camera.rotation.y = yawSmooth.current;
-        camera.rotation.x = pitchSmooth.current;
+        camera.rotation.y = yawS.current;
+        camera.rotation.x = pitchS.current;
 
-        if (!locked) {
-            const yawUse = yawSmooth.current;
-            const forward = new THREE.Vector3(-Math.sin(yawUse), 0, -Math.cos(yawUse));
-            const right = new THREE.Vector3(Math.cos(yawUse), 0, -Math.sin(yawUse));
+        // ── Move ──
+        if (!lockedNow) {
+            const yawUse = yawS.current;
+            const fx = -Math.sin(yawUse);
+            const fz = -Math.cos(yawUse);
+            const rx = Math.cos(yawUse);
+            const rz = -Math.sin(yawUse);
 
             let wishX = 0;
             let wishZ = 0;
 
-            // Keyboard
+            // Keyboard — always live
             if (keys.has('KeyW') || keys.has('ArrowUp')) {
-                wishX += forward.x;
-                wishZ += forward.z;
+                wishX += fx;
+                wishZ += fz;
             }
             if (keys.has('KeyS') || keys.has('ArrowDown')) {
-                wishX -= forward.x;
-                wishZ -= forward.z;
+                wishX -= fx;
+                wishZ -= fz;
             }
             if (keys.has('KeyA') || keys.has('ArrowLeft')) {
-                wishX -= right.x;
-                wishZ -= right.z;
+                wishX -= rx;
+                wishZ -= rz;
             }
             if (keys.has('KeyD') || keys.has('ArrowRight')) {
-                wishX += right.x;
-                wishZ += right.z;
+                wishX += rx;
+                wishZ += rz;
             }
 
-            // Mobile stick (already deadzoned + curved): axisFwd +1 = forward
+            // Mobile stick: axisFwd = +1 forward, axisX = strafe
             const jx = houseInput.axisX;
             const jf = houseInput.axisFwd;
             if (Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001) {
-                wishX += forward.x * jf + right.x * jx;
-                wishZ += forward.z * jf + right.z * jx;
+                wishX += fx * jf + rx * jx;
+                wishZ += fz * jf + rz * jx;
             }
 
             let speed = WALK_SPEED;
             if (keys.has('ShiftLeft') || keys.has('ShiftRight')) speed *= SPRINT_MULT;
 
+            const wLen = Math.hypot(wishX, wishZ);
             let tx = 0;
             let tz = 0;
-            const wLen = Math.hypot(wishX, wishZ);
             if (wLen > 1e-4) {
-                tx = (wishX / wLen) * speed;
-                tz = (wishZ / wLen) * speed;
-                emitActivity('move');
+                const inv = 1 / wLen;
+                // Stick magnitude scales speed (keyboard is full speed)
+                const stickMag =
+                    Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001
+                        ? Math.min(1, Math.hypot(jx, jf))
+                        : 1;
+                const useStick = Math.abs(jx) > 0.001 || Math.abs(jf) > 0.001;
+                const mag = useStick ? stickMag : 1;
+                // If both keys + stick, prefer full
+                const keyMove =
+                    keys.has('KeyW') ||
+                    keys.has('KeyA') ||
+                    keys.has('KeyS') ||
+                    keys.has('KeyD') ||
+                    keys.has('ArrowUp') ||
+                    keys.has('ArrowDown') ||
+                    keys.has('ArrowLeft') ||
+                    keys.has('ArrowRight');
+                const m = keyMove ? 1 : mag;
+                tx = wishX * inv * speed * m;
+                tz = wishZ * inv * speed * m;
+                emit('move');
             }
 
             const lambda = wLen > 1e-4 ? MOVE_ACCEL : MOVE_FRICTION;
             vel.current.x = damp(vel.current.x, tx, lambda, d);
             vel.current.z = damp(vel.current.z, tz, lambda, d);
 
-            // Kill micro-velocity
-            if (Math.hypot(vel.current.x, vel.current.z) < 0.02 && wLen < 1e-4) {
+            if (Math.hypot(vel.current.x, vel.current.z) < 0.015 && wLen < 1e-4) {
                 vel.current.x = 0;
                 vel.current.z = 0;
             }
@@ -248,22 +276,22 @@ export default function FirstPersonController({
                     vel.current.x * d,
                     vel.current.z * d,
                 );
-                // If blocked on an axis, zero that velocity for less sticky feel
-                if (Math.abs(next.x - pos.current.x) < 1e-6 && Math.abs(vel.current.x) > 0.01) {
-                    vel.current.x *= 0.2;
-                }
-                if (Math.abs(next.z - pos.current.z) < 1e-6 && Math.abs(vel.current.z) > 0.01) {
-                    vel.current.z *= 0.2;
-                }
+                // Soft stop against walls without freezing forever
+                if (Math.abs(next.x - pos.current.x) < 1e-5) vel.current.x *= 0.15;
+                if (Math.abs(next.z - pos.current.z) < 1e-5) vel.current.z *= 0.15;
                 pos.current.x = next.x;
                 pos.current.z = next.z;
+            } else {
+                // Idle unstick pass (escape bad embeds)
+                const free = resolveStuck(pos.current.x, pos.current.z);
+                pos.current.x = free.x;
+                pos.current.z = free.z;
             }
 
-            // Jump + gravity
             if (houseInput.consumeJump() && grounded.current) {
                 vy.current = JUMP_V;
                 grounded.current = false;
-                emitActivity('jump');
+                emit('jump');
             }
             vy.current -= GRAVITY * d;
             pos.current.y += vy.current * d;
@@ -273,39 +301,37 @@ export default function FirstPersonController({
                 grounded.current = true;
             }
 
-            // Head bob
             const spd = Math.hypot(vel.current.x, vel.current.z);
-            if (grounded.current && spd > 0.4) {
+            if (grounded.current && spd > 0.35) {
                 bobT.current += d * BOB_FREQ * (spd / WALK_SPEED);
             } else {
-                bobT.current *= 1 - Math.min(1, d * 6);
+                bobT.current *= 1 - Math.min(1, d * 8);
             }
             const bob = Math.sin(bobT.current) * BOB_AMP * Math.min(1, spd / WALK_SPEED);
             camera.position.set(pos.current.x, pos.current.y + bob, pos.current.z);
         } else {
             houseInput.consumeJump();
-            vel.current.set(0, 0, 0);
+            vel.current = { x: 0, z: 0 };
             camera.position.set(pos.current.x, pos.current.y, pos.current.z);
         }
 
         const hs = nearestHotspot(pos.current.x, pos.current.z);
         onHotspot(hs);
 
-        if (!locked && houseInput.consumeInteract()) {
+        if (!lockedNow && houseInput.consumeInteract()) {
             if (hs && onInteractRequest && !interactLatch.current) {
                 interactLatch.current = true;
                 onInteractRequest();
-                setTimeout(() => {
+                window.setTimeout(() => {
                     interactLatch.current = false;
-                }, 350);
+                }, 300);
             }
         }
 
-        // Idle signal for hints
         activityT.current += d;
-        if (activityT.current > 1.2 && lastKind.current !== 'idle') {
+        if (activityT.current > 1.4 && lastKind.current !== 'idle') {
             lastKind.current = 'idle';
-            onMoveActivity?.('idle');
+            activityCb.current?.('idle');
         }
 
         poseT.current += d;
@@ -315,16 +341,16 @@ export default function FirstPersonController({
                 x: pos.current.x,
                 y: 0,
                 z: pos.current.z,
-                yaw: yawSmooth.current,
+                yaw: yawS.current,
             });
         }
     });
 
-    function emitActivity(kind: 'move' | 'look' | 'jump' | 'idle') {
+    function emit(kind: 'move' | 'look' | 'jump' | 'idle') {
         activityT.current = 0;
         if (lastKind.current === kind && kind !== 'jump') return;
         lastKind.current = kind;
-        onMoveActivity?.(kind);
+        activityCb.current?.(kind);
     }
 
     return null;

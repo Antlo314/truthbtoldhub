@@ -429,16 +429,22 @@ export default function HouseExperience() {
                         </div>
                     )}
 
-                    {/* Desktop interact — only when near something (no permanent cheat sheet) */}
-                    {!isMobile && hotspot && (
+                    {/* Desktop interact prompt */}
+                    {!isMobile && (
                         <div className="fixed bottom-8 inset-x-0 z-30 flex justify-center pointer-events-none">
-                            <button
-                                type="button"
-                                className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
-                                onClick={() => activateHotspot(hotspot)}
-                            >
-                                E · {hotspot.hint}
-                            </button>
+                            {hotspot ? (
+                                <button
+                                    type="button"
+                                    className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
+                                    onClick={() => activateHotspot(hotspot)}
+                                >
+                                    E · {hotspot.hint}
+                                </button>
+                            ) : (
+                                <p className="text-[11px] text-white/45 font-mono bg-black/40 px-3 py-1.5 rounded-full border border-white/8">
+                                    WASD move · drag look · Space jump
+                                </p>
+                            )}
                         </div>
                     )}
 
