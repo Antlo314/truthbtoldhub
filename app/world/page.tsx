@@ -9,6 +9,7 @@ import SacredButton from '@/components/sanctum/SacredButton';
 import JourneyBrief from '@/components/sanctum/JourneyBrief';
 import { BRAND } from '@/lib/brand/assets';
 import { visionStats } from '@/lib/brand/visionProgress';
+import { suggestNextRoad } from '@/lib/brand/nextRoad';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 // =====================================================================
@@ -54,19 +55,24 @@ export default function World3DPage() {
     const [isTouch, setIsTouch] = useState(false);
     const [veilLifted, setVeilLifted] = useState(false);
     const [vStats, setVStats] = useState({ seen: 0, total: 5, relics: 0, complete: false });
+    const [nextHint, setNextHint] = useState<{ href: string; label: string } | null>(null);
 
     const whisper = useMemo(() => lineForProgress(progress), [progress]);
 
     useEffect(() => {
-        try { setVStats(visionStats()); } catch { /* */ }
-        const onVis = () => {
-            try { setVStats(visionStats()); } catch { /* */ }
+        const refresh = () => {
+            try {
+                setVStats(visionStats());
+                const n = suggestNextRoad();
+                setNextHint({ href: n.href, label: n.label });
+            } catch { /* */ }
         };
-        window.addEventListener('focus', onVis);
-        document.addEventListener('visibilitychange', onVis);
+        refresh();
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', refresh);
         return () => {
-            window.removeEventListener('focus', onVis);
-            document.removeEventListener('visibilitychange', onVis);
+            window.removeEventListener('focus', refresh);
+            document.removeEventListener('visibilitychange', refresh);
         };
     }, []);
 
@@ -260,10 +266,19 @@ export default function World3DPage() {
 
                 {ready && veilLifted && !error && (
                     <div
-                        className="absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4"
+                        className="absolute left-1/2 -translate-x-1/2 z-10 px-4 flex flex-col items-center gap-2 pointer-events-none"
                         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
                     >
-                        <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] text-white/40 text-center bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+                        {nextHint && (
+                            <Link
+                                href={nextHint.href}
+                                onClick={() => sacredUi.threshold()}
+                                className="pointer-events-auto text-[8px] sm:text-[9px] uppercase tracking-[0.22em] text-aether-gold/85 text-center bg-black/65 backdrop-blur-sm rounded-full px-4 py-2 border border-aether-gold/30 hover:border-aether-gold/55 transition-colors max-w-[min(92vw,20rem)] truncate"
+                            >
+                                Next · {nextHint.label} →
+                            </Link>
+                        )}
+                        <p className="text-[8px] sm:text-[9px] uppercase tracking-[0.28em] text-white/40 text-center bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10 pointer-events-none">
                             {isTouch
                                 ? 'Left stick walk · drag right look · E interact'
                                 : 'WASD walk · right-drag look · E interact'}

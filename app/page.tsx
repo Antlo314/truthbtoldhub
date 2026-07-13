@@ -19,6 +19,7 @@ import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
 import { visionStats } from '@/lib/brand/visionProgress';
+import NextRoadCard from '@/components/sanctum/NextRoadCard';
 
 function TitleCardInner() {
     const searchParams = useSearchParams();
@@ -250,6 +251,17 @@ function TitleCardInner() {
                     >
                         {roadNote}
                     </motion.p>
+                )}
+
+                {roadNote && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.0, duration: 0.5 }}
+                        className="mt-4 w-full max-w-sm pointer-events-auto text-left"
+                    >
+                        <NextRoadCard compact />
+                    </motion.div>
                 )}
 
                 <motion.div

@@ -7,6 +7,7 @@ import { useSoulStore } from '@/lib/store/useSoulStore';
 import SentinelGuide, { GuideStep } from '@/components/guide/SentinelGuide';
 import { ArrowLeft, User, ShieldAlert, Key, Settings, Zap, Database, CheckSquare, Layers, Clapperboard, LogOut, Upload, Share2, Link, Trophy, History, ArrowUpRight, ArrowDownLeft, Search, X, Loader2 } from 'lucide-react';
 import VisionReliquary from '@/components/sanctum/VisionReliquary';
+import NextRoadCard from '@/components/sanctum/NextRoadCard';
 import { Howl } from 'howler';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -463,7 +464,10 @@ export default function PowerSelf() {
                                     [SYS_HINT]: The Identity Core is your master control terminal. Configure your public aesthetics, manage security ciphers, and monitor your Global Rank. Distribute your Cipher Link below to recruit new Initiates—each successful referral automatically synthesizes <strong className="text-orange-400">+100 SP</strong> into your ledger.
                                 </p>
                             </div>
-                            <VisionReliquary variant="full" />
+                            <div className="space-y-3">
+                                <NextRoadCard />
+                                <VisionReliquary variant="full" />
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="glass bg-white/5 border border-white/10 p-6 rounded-2xl relative" id="self-security-form">
                                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6 flex items-center gap-2">

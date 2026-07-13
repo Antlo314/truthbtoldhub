@@ -12,6 +12,7 @@ import { usePageMusic } from '@/lib/game/usePageMusic';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { BRAND } from '@/lib/brand/assets';
 import VisionReliquary from '@/components/sanctum/VisionReliquary';
+import NextRoadCard from '@/components/sanctum/NextRoadCard';
 
 export default function EpiloguePage() {
     const router = useRouter();
@@ -58,7 +59,8 @@ export default function EpiloguePage() {
                         : `You have opened ${stats.seen} of ${stats.total} vision portals and witnessed ${stats.trials} trials. The Wayfinder still holds unopened light.`}
                 </p>
 
-                <div className="mb-6">
+                <div className="mb-6 space-y-3">
+                    {!complete && <NextRoadCard compact />}
                     <VisionReliquary variant="full" showCtas={false} />
                 </div>
 

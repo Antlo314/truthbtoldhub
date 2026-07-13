@@ -16,6 +16,7 @@ import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { usePageMusic } from '@/lib/game/usePageMusic';
 import SacredButton from '@/components/sanctum/SacredButton';
 import VisionReliquary from '@/components/sanctum/VisionReliquary';
+import NextRoadCard from '@/components/sanctum/NextRoadCard';
 
 export default function VisionsIndexPage() {
     usePageMusic('paths_crossroads');
@@ -65,7 +66,8 @@ export default function VisionsIndexPage() {
                     Look through. Claim the relic. Return home.
                 </p>
 
-                <div className="mt-6">
+                <div className="mt-6 space-y-3">
+                    <NextRoadCard compact />
                     <VisionReliquary variant="compact" />
                 </div>
                 {stats.complete && (

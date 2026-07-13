@@ -136,16 +136,22 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
             {showEnterWorld && (
                 <div className="px-5 py-4 border-t border-white/10 shrink-0 space-y-2">
                     <p className="text-center text-[10px] text-white/40 leading-relaxed">
-                        Your path is set. Cross the threshold into Truth&apos;s Hut — stations, lore, and the living Hall await.
+                        Your path is set. Enter Truth&apos;s Hut — or open the vision portals and claim the roads beyond.
                     </p>
                     <Link
                         href="/world"
-                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black cta-pulse"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-[11px] font-black uppercase tracking-[0.3em] text-black cta-pulse min-h-[48px]"
                         style={{ background: 'linear-gradient(135deg,#fcd34d 0%,#b45309 100%)', boxShadow: '0 0 32px rgba(251,191,36,0.25)' }}
                     >
                         Enter Truth&apos;s Hut →
                     </Link>
-                    <div className="flex justify-center gap-4 pt-1">
+                    <Link
+                        href="/vision"
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.28em] text-aether-gold border border-aether-gold/35 bg-aether-gold/10 hover:bg-aether-gold/15 transition-colors min-h-[44px]"
+                    >
+                        Open vision portals →
+                    </Link>
+                    <div className="flex justify-center flex-wrap gap-x-4 gap-y-1 pt-1">
                         <Link href="/codex" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">Codex</Link>
                         <Link href="/archive" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">The Hall</Link>
                         <Link href="/support" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">Offering</Link>

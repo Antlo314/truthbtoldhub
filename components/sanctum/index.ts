@@ -8,5 +8,6 @@ export { default as HubChrome } from './HubChrome';
 export { default as JourneyBrief } from './JourneyBrief';
 export { default as AmbientBackdrop } from './AmbientBackdrop';
 export { default as VisionReliquary } from './VisionReliquary';
+export { default as NextRoadCard } from './NextRoadCard';
 export { default as InstallPrompt } from './InstallPrompt';
 export { default as ServiceWorkerRegister } from './ServiceWorkerRegister';

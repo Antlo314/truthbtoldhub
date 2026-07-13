@@ -8,6 +8,7 @@ import { useSoulStore } from '@/lib/store/useSoulStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Howl } from 'howler';
 import { fundingProgressLabel, fundingProgressPercent, PRODUCTION_RESUME_AT, formatFunding, STRIPE_URL } from '@/lib/supportFunding';
+import NextRoadCard from '@/components/sanctum/NextRoadCard';
 
 let uiHoverSfx: Howl | null = null;
 let uiClickSfx: Howl | null = null;
@@ -65,6 +66,10 @@ export default function CinemaClient() {
             </header>
 
             <main className="relative z-10 p-4 md:p-12 pb-32 max-w-7xl mx-auto space-y-16">
+                <div className="max-w-md">
+                    <p className="text-[9px] uppercase tracking-[0.35em] text-aether-gold/60 mb-2">While the series rests</p>
+                    <NextRoadCard />
+                </div>
                 <section className="relative aspect-video rounded-[2.5rem] md:rounded-[4rem] overflow-hidden border border-orange-500/20 shadow-[0_0_100px_rgba(0,0,0,0.5)] group">
                     <img 
                         src="/viralcartel/400_manga_logo.jpg" 
