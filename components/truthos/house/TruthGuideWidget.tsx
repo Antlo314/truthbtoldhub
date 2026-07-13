@@ -3,20 +3,36 @@
 import { useState } from 'react';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { truthDepth, truthTrustLabel, TRUTH_QUESTIONS } from '@/lib/game/truthLore';
+import { useHouseUi } from './houseUiStore';
 
 /**
  * Truth as a small guide widget — never takes over the experience.
  */
-export default function TruthGuideWidget() {
+export default function TruthGuideWidget({
+    placement = 'desktop',
+}: {
+    placement?: 'desktop' | 'mobile';
+}) {
     const [open, setOpen] = useState(false);
     const character = useGameStore((s) => s.character);
     const depth = truthDepth(character);
     const trust = truthTrustLabel(character);
+    const openPanel = useHouseUi((s) => s.openPanel);
+
+    const wrapClass =
+        placement === 'mobile'
+            ? 'relative z-40 flex flex-col items-start gap-2 pointer-events-auto'
+            : 'fixed z-40 bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end gap-2 pointer-events-auto';
 
     return (
-        <div className="fixed z-40 bottom-4 right-4 sm:bottom-6 sm:right-6 flex flex-col items-end gap-2 pointer-events-auto">
+        <div className={wrapClass}>
             {open && (
-                <div className="w-[min(100vw-2rem,300px)] rounded-xl border border-emerald-500/30 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden font-mono text-[11px]">
+                <div
+                    className={[
+                        'w-[min(100vw-2rem,300px)] rounded-xl border border-emerald-500/30 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden font-mono text-[11px]',
+                        placement === 'mobile' ? 'order-first' : '',
+                    ].join(' ')}
+                >
                     <div className="px-3 py-2 border-b border-emerald-500/20 flex justify-between items-center">
                         <span className="text-emerald-400/90 tracking-widest">TRUTH.GUIDE</span>
                         <button type="button" className="text-white/40 hover:text-white" onClick={() => setOpen(false)}>
@@ -26,14 +42,21 @@ export default function TruthGuideWidget() {
                     <div className="p-3 space-y-2 text-emerald-400/85 leading-relaxed">
                         <p>I am a guide process — not the whole system.</p>
                         <p className="text-emerald-600">
-                            Walk the house. Objects open the Hub: library, offering, chamber, hall…
+                            Walk the house. Gold rings open stations in-house: Truth, library, chamber, hall…
                         </p>
                         <p className="text-[10px] text-emerald-700">
                             {trust} · threads {depth}/{TRUTH_QUESTIONS.length}
                         </p>
-                        <p className="text-emerald-500/70">
-                            Tip: gold rings mark interactables. Press E when near.
-                        </p>
+                        <button
+                            type="button"
+                            className="w-full mt-1 py-2 rounded-lg border border-emerald-500/30 text-emerald-300 uppercase tracking-wider text-[10px] hover:bg-emerald-500/10"
+                            onClick={() => {
+                                setOpen(false);
+                                openPanel('truth');
+                            }}
+                        >
+                            Open Ask Truth
+                        </button>
                     </div>
                 </div>
             )}

@@ -1,9 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import TruthPanel from './TruthPanel';
 import SoulPanel from './SoulPanel';
 import type { HutStationId } from '../hutUiStore';
+import { useHouseUi, type HousePanelId } from '@/components/truthos/house/houseUiStore';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
+
+function goHouse(panel: HousePanelId) {
+    sacredUi.click();
+    useHouseUi.getState().openPanel(panel);
+}
 
 export default function StationPanel({
     station,
@@ -24,20 +30,21 @@ export default function StationPanel({
                 onClose={onClose}
             >
                 <p className="text-sm text-white/70 leading-relaxed">
-                    Other ages stay sealed until Eden is complete. The garden journey is being rebuilt in this new Three.js chamber —
-                    for now, walk with Truth and shape your vessel.
+                    Other ages stay sealed until Eden is complete. Garden journeys stay on this Three.js build —
+                    walk with Truth and shape your vessel.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm text-white/55">
                     <li className="flex gap-2"><span className="text-emerald-400">◈</span> Speak with Truth at the north dais</li>
                     <li className="flex gap-2"><span className="text-emerald-400">◈</span> Visit the Soul Mirror to forge appearance</li>
                     <li className="flex gap-2"><span className="text-emerald-400">◈</span> Eden expedition returns next</li>
                 </ul>
-                <Link
-                    href="/vision/eden"
+                <button
+                    type="button"
+                    onClick={() => goHouse('cinema')}
                     className="mt-6 inline-flex w-full justify-center py-3 rounded-xl border border-emerald-400/30 text-emerald-200 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
                 >
-                    Eden vision (cinema)
-                </Link>
+                    Eden vision · in-house
+                </button>
             </SimplePanel>
         );
     }
@@ -51,14 +58,15 @@ export default function StationPanel({
                 onClose={onClose}
             >
                 <p className="text-sm text-white/70 leading-relaxed">
-                    The hut ledger and community word live on the web spine of the sanctum.
+                    The hut ledger and community word live on the house spine of the sanctum.
                 </p>
-                <Link
-                    href="/archive"
+                <button
+                    type="button"
+                    onClick={() => goHouse('ledger')}
                     className="mt-6 inline-flex w-full justify-center py-3 rounded-xl bg-aether-gold/15 border border-aether-gold/35 text-aether-gold text-sm uppercase tracking-[0.18em] hover:bg-aether-gold/25"
                 >
-                    Open the Hall
-                </Link>
+                    Open ledger · house
+                </button>
             </SimplePanel>
         );
     }
@@ -72,21 +80,24 @@ export default function StationPanel({
             onClose={onClose}
         >
             <p className="text-sm text-white/70 leading-relaxed">
-                Beyond this door: the Hall, the Codex, and souls who walk the same road.
+                Beyond this door: the Hall, the Codex, and souls who walk the same road — all staged in-house.
             </p>
             <div className="mt-5 grid gap-2">
-                {[
-                    { href: '/archive', label: 'The Hall' },
-                    { href: '/codex', label: 'The Codex' },
-                    { href: '/support', label: 'The Offering' },
-                ].map((l) => (
-                    <Link
-                        key={l.href}
-                        href={l.href}
-                        className="block text-center py-3 px-4 rounded-xl border border-white/12 bg-white/[0.04] text-[0.8rem] uppercase tracking-[0.18em] text-white/75 hover:border-violet-400/45 hover:text-violet-200"
+                {(
+                    [
+                        { panel: 'hall' as const, label: 'The Hall' },
+                        { panel: 'codex' as const, label: 'The Codex' },
+                        { panel: 'offering' as const, label: 'The Offering' },
+                    ] as const
+                ).map((l) => (
+                    <button
+                        key={l.panel}
+                        type="button"
+                        onClick={() => goHouse(l.panel)}
+                        className="block w-full text-center py-3 px-4 rounded-xl border border-white/12 bg-white/[0.04] text-[0.8rem] uppercase tracking-[0.18em] text-white/75 hover:border-violet-400/45 hover:text-violet-200"
                     >
                         {l.label}
-                    </Link>
+                    </button>
                 ))}
             </div>
         </SimplePanel>

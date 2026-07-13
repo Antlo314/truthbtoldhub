@@ -1,11 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import AvatarCanvas from '@/components/game/AvatarCanvas';
 import { useGameStore } from '@/lib/store/useGameStore';
+import { useHouseUi } from '@/components/truthos/house/houseUiStore';
+import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 export default function SoulPanel({ onClose }: { onClose: () => void }) {
     const character = useGameStore((s) => s.character);
+    const openPanel = useHouseUi((s) => s.openPanel);
 
     return (
         <div className="flex flex-col h-full min-h-0">
@@ -13,7 +15,7 @@ export default function SoulPanel({ onClose }: { onClose: () => void }) {
                 <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400 font-bold">Soul Mirror</p>
                 <h2 className="font-ritual text-2xl text-white mt-1">Your Vessel</h2>
                 <p className="mt-2 text-sm text-white/55 leading-relaxed">
-                    Character creation stays on the forging path. Shape your vessel there — it walks with you here.
+                    Shape your vessel in the forge — staged inside this house build. It walks with you here.
                 </p>
             </header>
 
@@ -29,14 +31,18 @@ export default function SoulPanel({ onClose }: { onClose: () => void }) {
                         {character.path ? `Path · ${character.path}` : 'Path not yet chosen'}
                     </p>
                 </div>
-                <Link
-                    href="/awakening/create"
+                <button
+                    type="button"
+                    onClick={() => {
+                        sacredUi.click();
+                        openPanel('forge');
+                    }}
                     className="w-full max-w-sm text-center py-3.5 rounded-xl bg-aether-gold text-black font-semibold text-sm uppercase tracking-[0.18em] hover:bg-aether-gold-soft transition-colors"
                 >
-                    Open character creator
-                </Link>
+                    Open character forge
+                </button>
                 <p className="text-[12px] text-white/40 text-center max-w-xs leading-relaxed">
-                    The full forging chamber — body, hair, face, outfit, aura — remains intact at this path.
+                    Full forge — body, hair, face, outfit, aura — without leaving Truth.OS House.
                 </p>
             </div>
 

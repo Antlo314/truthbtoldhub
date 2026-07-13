@@ -1,25 +1,30 @@
 /**
- * House layout + Hut feature mapping.
+ * House layout + Hut feature mapping — all in-house (no legacy routes).
  *
- * Bedroom  → Truth.OS (computer / phone)
- * Living   → Offering (envelope on table)
- * Library  → Library section
+ * Bedroom  → Truth.OS (computer)
+ * Living   → Offering + Ask Truth
+ * Library  → Library panel
  * Study    → Codex / Ledger
- * Sanctum  → 3D Chamber (/world)
- * Gallery  → Cinema / Visions
+ * Sanctum  → Chamber (Hut 3D overlay)
+ * Gallery  → Cinema
  * Hallway  → Hall (community)
+ * Mirror   → Vessel / Soul
  */
+
+import type { HousePanelId } from './houseUiStore';
 
 export type HotspotId =
     | 'computer'
-    | 'phone'
+    | 'truth'
     | 'envelope'
     | 'library'
     | 'codex'
+    | 'ledger'
     | 'chamber'
     | 'cinema'
     | 'hall'
-    | 'soul_mirror';
+    | 'soul_mirror'
+    | 'wayfinder';
 
 export type Hotspot = {
     id: HotspotId;
@@ -27,11 +32,9 @@ export type Hotspot = {
     hint: string;
     position: [number, number, number];
     radius: number;
-    /** App open inside OS, external route, or os boot */
     action:
         | { type: 'os' }
-        | { type: 'app'; app: string }
-        | { type: 'route'; href: string };
+        | { type: 'panel'; panel: HousePanelId };
 };
 
 /** World bounds (floor plane, y=0). Walls use collision slabs. */
@@ -54,12 +57,20 @@ export const HOTSPOTS: Hotspot[] = [
         action: { type: 'os' },
     },
     {
+        id: 'truth',
+        label: 'Truth',
+        hint: 'Ask Truth · guide threads',
+        position: [0.2, 1.0, -0.2],
+        radius: 1.7,
+        action: { type: 'panel', panel: 'truth' },
+    },
+    {
         id: 'envelope',
         label: 'Envelope',
         hint: 'The Offering · sustain the work',
         position: [-1.5, 0.85, -1.0],
         radius: 1.5,
-        action: { type: 'route', href: '/support' },
+        action: { type: 'panel', panel: 'offering' },
     },
     {
         id: 'library',
@@ -67,7 +78,7 @@ export const HOTSPOTS: Hotspot[] = [
         hint: 'Open the Library',
         position: [-5.5, 1.2, -4.5],
         radius: 2.2,
-        action: { type: 'route', href: '/library' },
+        action: { type: 'panel', panel: 'library' },
     },
     {
         id: 'codex',
@@ -75,15 +86,31 @@ export const HOTSPOTS: Hotspot[] = [
         hint: 'Codex · memory & whispers',
         position: [5.0, 1.0, -4.0],
         radius: 1.8,
-        action: { type: 'route', href: '/codex' },
+        action: { type: 'panel', panel: 'codex' },
+    },
+    {
+        id: 'ledger',
+        label: 'Ledger pedestal',
+        hint: 'Ledger · daily word',
+        position: [-4.2, 1.0, 1.2],
+        radius: 1.5,
+        action: { type: 'panel', panel: 'ledger' },
     },
     {
         id: 'chamber',
         label: 'Sanctum door',
-        hint: '3D Chamber · walkable hut',
+        hint: '3D Chamber · Truth’s Hut',
         position: [0, 1.2, -7.2],
-        radius: 1.8,
-        action: { type: 'route', href: '/world' },
+        radius: 1.9,
+        action: { type: 'panel', panel: 'chamber' },
+    },
+    {
+        id: 'wayfinder',
+        label: 'Wayfinder map',
+        hint: 'Wayfinder · Eden road',
+        position: [0, 1.2, -5.2],
+        radius: 1.5,
+        action: { type: 'panel', panel: 'wayfinder' },
     },
     {
         id: 'cinema',
@@ -91,7 +118,7 @@ export const HOTSPOTS: Hotspot[] = [
         hint: 'Cinema · transmissions',
         position: [5.5, 1.4, 1.5],
         radius: 1.8,
-        action: { type: 'route', href: '/cinema' },
+        action: { type: 'panel', panel: 'cinema' },
     },
     {
         id: 'hall',
@@ -99,7 +126,7 @@ export const HOTSPOTS: Hotspot[] = [
         hint: 'The Hall · voices gather',
         position: [-5.5, 1.2, 1.5],
         radius: 1.8,
-        action: { type: 'route', href: '/archive' },
+        action: { type: 'panel', panel: 'hall' },
     },
     {
         id: 'soul_mirror',
@@ -107,7 +134,7 @@ export const HOTSPOTS: Hotspot[] = [
         hint: 'Vessel · shape identity',
         position: [2.8, 1.3, 6.2],
         radius: 1.4,
-        action: { type: 'route', href: '/awakening/create' },
+        action: { type: 'panel', panel: 'soul' },
     },
 ];
 
@@ -115,28 +142,22 @@ export const HOTSPOTS: Hotspot[] = [
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
 export const COLLIDERS: Collider[] = [
-    // Outer walls (thick slabs just outside walkable)
     { x: 0, z: -8.7, hx: 9, hz: 0.25 },
     { x: 0, z: 8.7, hx: 9, hz: 0.25 },
     { x: -8.7, z: 0, hx: 0.25, hz: 9 },
     { x: 8.7, z: 0, hx: 0.25, hz: 9 },
-    // Interior: bedroom / living split
     { x: 0, z: 2.5, hx: 2.2, hz: 0.15 },
     { x: -3.5, z: 2.5, hx: 1.5, hz: 0.15 },
     { x: 3.5, z: 2.5, hx: 1.5, hz: 0.15 },
-    // Library divider
     { x: -3.2, z: -3.0, hx: 0.15, hz: 2.0 },
-    // Study divider
     { x: 3.2, z: -3.0, hx: 0.15, hz: 2.0 },
-    // Desk block bedroom
     { x: 3.2, z: 4.5, hx: 0.9, hz: 0.45 },
-    // Living table
     { x: -1.5, z: -1.0, hx: 0.7, hz: 0.45 },
-    // Library shelves
     { x: -6.2, z: -5.0, hx: 0.4, hz: 2.2 },
-    // Sanctum door frame (sides only)
     { x: -1.4, z: -7.0, hx: 0.25, hz: 0.4 },
     { x: 1.4, z: -7.0, hx: 0.25, hz: 0.4 },
+    // Truth dais
+    { x: 0.2, z: -0.2, hx: 0.55, hz: 0.55 },
 ];
 
 export function collideMove(
@@ -153,7 +174,6 @@ export function collideMove(
         const maxX = c.x + c.hx + radius;
         const minZ = c.z - c.hz - radius;
         const maxZ = c.z + c.hz + radius;
-        // separate axes for sliding
         if (nx > minX && nx < maxX && z > minZ && z < maxZ) nx = x;
         if (x > minX && x < maxX && nz > minZ && nz < maxZ) nz = z;
         if (nx > minX && nx < maxX && nz > minZ && nz < maxZ) {

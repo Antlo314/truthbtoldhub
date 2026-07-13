@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
+import HouseDecor from './HouseDecor';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
 import type { Hotspot } from './houseMap';
@@ -14,11 +15,13 @@ export default function HouseCanvas({
     peers,
     onHotspot,
     onPose,
+    onInteractRequest,
 }: {
     locked: boolean;
     peers: HousePeer[];
     onHotspot: (h: Hotspot | null) => void;
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
+    onInteractRequest?: () => void;
 }) {
     return (
         <div
@@ -60,7 +63,6 @@ export default function HouseCanvas({
                 <color attach="background" args={['#2a2440']} />
                 <fog attach="fog" args={['#2a2440', 14, 36]} />
 
-                {/* Bright, readable lighting so the house never reads as black */}
                 <hemisphereLight args={['#c8d4ff', '#3a3048', 0.85]} />
                 <ambientLight intensity={0.7} color="#ddd5f0" />
                 <directionalLight position={[5, 8, 4]} intensity={1.15} color="#e8ecff" castShadow />
@@ -73,8 +75,14 @@ export default function HouseCanvas({
                 <pointLight position={[0, 2.0, 0]} intensity={0.9} color="#e0d4ff" distance={14} decay={2} />
 
                 <HouseGeometry />
+                <HouseDecor />
                 <RemotePlayers peers={peers} />
-                <FirstPersonController locked={locked} onHotspot={onHotspot} onPose={onPose} />
+                <FirstPersonController
+                    locked={locked}
+                    onHotspot={onHotspot}
+                    onPose={onPose}
+                    onInteractRequest={onInteractRequest}
+                />
                 <ContactShadows position={[0, 0.02, 0]} opacity={0.28} scale={20} blur={2.2} far={8} />
             </Canvas>
         </div>

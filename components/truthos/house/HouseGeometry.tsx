@@ -1,7 +1,5 @@
 'use client';
 
-import { HOTSPOTS } from './houseMap';
-
 const WALL = '#3d3550';
 const FLOOR = '#2a2438';
 const WOOD = '#4a3c2e';
@@ -178,24 +176,7 @@ export default function HouseGeometry() {
                 <meshStandardMaterial color="#0c0a10" roughness={1} />
             </mesh>
 
-            {/* Hotspot markers (subtle rings) */}
-            {HOTSPOTS.map((h) => (
-                <mesh
-                    key={h.id}
-                    position={[h.position[0], 0.04, h.position[2]]}
-                    rotation={[-Math.PI / 2, 0, 0]}
-                >
-                    <ringGeometry args={[0.35, 0.48, 24]} />
-                    <meshStandardMaterial
-                        color={GOLD}
-                        emissive={GOLD}
-                        emissiveIntensity={0.35}
-                        transparent
-                        opacity={0.55}
-                        side={2}
-                    />
-                </mesh>
-            ))}
+            {/* Hotspot rings live in HouseDecor (animated, accent-colored) */}
         </group>
     );
 }

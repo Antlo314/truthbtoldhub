@@ -2,11 +2,10 @@
 
 /**
  * First-person multiplayer house.
- * 3D house loads immediately (guest by default). Login is optional for identity / MP name.
+ * Auto-guest · in-house stations · jump · mobile controls · walkthrough.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import { useGameStore } from '@/lib/store/useGameStore';
@@ -19,6 +18,14 @@ import TruthGuideWidget from './TruthGuideWidget';
 import TruthOSShell from '../TruthOSShell';
 import { useTruthOs } from '../truthOsStore';
 import { useClientDevice } from '../engine/useClientDevice';
+import {
+    useHouseUi,
+    shouldShowWalkthrough,
+    type HousePanelId,
+} from './houseUiStore';
+import HouseWalkthrough from './HouseWalkthrough';
+import HousePanels from './HousePanels';
+import HouseMobileControls from './HouseMobileControls';
 
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
     ssr: false,
@@ -39,7 +46,7 @@ function isGuestSession(): boolean {
         if (document.cookie.includes('sb-access-token=demo-token')) return true;
         if (localStorage.getItem('tbth-house-guest') === '1') return true;
     } catch {
-        /* private mode */
+        /* */
     }
     return false;
 }
@@ -57,12 +64,14 @@ function ensureGuestId(): string {
 }
 
 export default function HouseExperience() {
-    const router = useRouter();
     const character = useGameStore((s) => s.character);
     const { device } = useClientDevice();
     const { enterOs, closeToRoom } = useTruthOs();
+    const openPanel = useHouseUi((s) => s.openPanel);
+    const panel = useHouseUi((s) => s.panel);
+    const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
+    const walkthroughOpen = useHouseUi((s) => s.walkthroughOpen);
 
-    // Start ready + in-house immediately so the game is never a black auth wall
     const [ready, setReady] = useState(true);
     const [authed, setAuthed] = useState(true);
     const [guest, setGuest] = useState(true);
@@ -73,13 +82,19 @@ export default function HouseExperience() {
     const [canvasError, setCanvasError] = useState<string | null>(null);
     const presence = useRef<HousePresenceApi | null>(null);
     const selfId = useRef<string>('');
+    const hotspotRef = useRef<Hotspot | null>(null);
+
+    const isMobile = device === 'mobile';
+    const uiLocked = osOpen || authOpen || !!panel || walkthroughOpen;
 
     usePageMusic('world_cavern');
 
     useEffect(() => {
-        applyMusicSetting(loadSettings().music);
+        hotspotRef.current = hotspot;
+    }, [hotspot]);
 
-        // Persist guest so reloads stay in the house without a gate
+    useEffect(() => {
+        applyMusicSetting(loadSettings().music);
         try {
             if (!localStorage.getItem('tbth-house-guest') && !isGuestSession()) {
                 localStorage.setItem('tbth-house-guest', '1');
@@ -92,8 +107,26 @@ export default function HouseExperience() {
         setAuthed(true);
         setReady(true);
 
-        let cancelled = false;
+        // Deep-link from /world or other redirects
+        try {
+            const pending = sessionStorage.getItem('tbth-open-panel');
+            if (pending) {
+                sessionStorage.removeItem('tbth-open-panel');
+                openPanel(pending as HousePanelId);
+            }
+        } catch {
+            /* */
+        }
 
+        // First visit walkthrough (skip if deep-linking into a station)
+        if (shouldShowWalkthrough() && !useHouseUi.getState().panel) {
+            const t = window.setTimeout(() => setWalkthrough(true, 0), 700);
+            return () => window.clearTimeout(t);
+        }
+    }, [setWalkthrough, openPanel]);
+
+    useEffect(() => {
+        let cancelled = false;
         supabase.auth
             .getSession()
             .then(({ data }) => {
@@ -110,7 +143,7 @@ export default function HouseExperience() {
                 }
             })
             .catch(() => {
-                /* stay guest — house still plays */
+                /* stay guest */
             });
 
         const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -120,7 +153,6 @@ export default function HouseExperience() {
                 setAuthOpen(false);
                 selfId.current = session.user.id;
             } else {
-                // Signed out → stay in house as guest
                 selfId.current = ensureGuestId();
                 setGuest(true);
                 setAuthed(true);
@@ -138,7 +170,6 @@ export default function HouseExperience() {
         };
     }, []);
 
-    // Multiplayer presence
     useEffect(() => {
         if (!authed || !selfId.current) return;
         let dead = false;
@@ -193,24 +224,31 @@ export default function HouseExperience() {
                 enterOs();
                 return;
             }
-            if (h.action.type === 'route') {
-                router.push(h.action.href);
+            if (h.action.type === 'panel') {
+                openPanel(h.action.panel as HousePanelId);
             }
         },
-        [enterOs, router],
+        [enterOs, openPanel],
     );
+
+    const tryInteract = useCallback(() => {
+        const h = hotspotRef.current;
+        if (h && !uiLocked) activateHotspot(h);
+    }, [activateHotspot, uiLocked]);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.code === 'KeyE' && hotspot && !osOpen) activateHotspot(hotspot);
-            if (e.code === 'Escape' && osOpen) {
-                setOsOpen(false);
-                closeToRoom();
+            if (e.code === 'KeyE' && hotspot && !uiLocked) activateHotspot(hotspot);
+            if (e.code === 'Escape') {
+                if (osOpen) {
+                    setOsOpen(false);
+                    closeToRoom();
+                }
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, osOpen, activateHotspot, closeToRoom]);
+    }, [hotspot, uiLocked, osOpen, activateHotspot, closeToRoom]);
 
     const onAuthSuccess = () => {
         try {
@@ -245,12 +283,13 @@ export default function HouseExperience() {
         setAuthOpen(false);
     };
 
+    const showHud = ready && authed && !osOpen && !authOpen && !panel && !walkthroughOpen;
+
     return (
         <div
             className="relative w-full overflow-hidden bg-[#1a1528]"
             style={{ height: '100dvh', minHeight: '100vh', width: '100%' }}
         >
-            {/* 3D — fixed to viewport so flex parents never collapse the canvas */}
             {ready && authed && (
                 <div
                     className="fixed inset-0 z-0"
@@ -258,10 +297,11 @@ export default function HouseExperience() {
                 >
                     <ErrorBoundary onError={(m) => setCanvasError(m)}>
                         <HouseCanvas
-                            locked={osOpen || authOpen}
+                            locked={uiLocked}
                             peers={peers}
                             onHotspot={setHotspot}
                             onPose={onPose}
+                            onInteractRequest={tryInteract}
                         />
                     </ErrorBoundary>
                 </div>
@@ -272,9 +312,6 @@ export default function HouseExperience() {
                     <div className="max-w-md space-y-3">
                         <p className="text-red-400 font-mono text-sm">3D failed to start</p>
                         <p className="text-white/50 text-xs break-all">{canvasError}</p>
-                        <p className="text-white/40 text-[11px]">
-                            Try Chrome/Edge, enable hardware acceleration, or reload.
-                        </p>
                         <button
                             type="button"
                             className="px-4 py-2 rounded-lg border border-white/20 text-white text-sm"
@@ -286,7 +323,6 @@ export default function HouseExperience() {
                 </div>
             )}
 
-            {/* Optional sign-in (does not block the house) */}
             {authOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
                     <div className="w-full max-w-md space-y-3">
@@ -307,10 +343,16 @@ export default function HouseExperience() {
                 </div>
             )}
 
-            {/* HUD */}
-            {ready && authed && !osOpen && !authOpen && (
+            {/* Desktop + shared HUD */}
+            {showHud && (
                 <>
-                    <div className="fixed top-4 left-4 z-30 pointer-events-none space-y-1">
+                    <div
+                        className={[
+                            'fixed z-30 pointer-events-none space-y-1',
+                            isMobile ? 'top-3 left-3' : 'top-4 left-4',
+                        ].join(' ')}
+                        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+                    >
                         <p className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-mono drop-shadow">
                             Truth.OS House
                         </p>
@@ -318,55 +360,109 @@ export default function HouseExperience() {
                             {character.name?.trim() || (guest ? 'Guest' : 'Soul')}
                             {peers.length > 0 && (
                                 <span className="text-emerald-400 text-xs ml-2">
-                                    · {peers.length} other{peers.length === 1 ? '' : 's'} here
+                                    · {peers.length} other{peers.length === 1 ? '' : 's'}
                                 </span>
                             )}
                         </p>
                     </div>
 
-                    {guest && (
+                    <div
+                        className={[
+                            'fixed z-30 flex items-center gap-2 pointer-events-auto',
+                            isMobile ? 'top-3 right-3' : 'top-4 right-4',
+                        ].join(' ')}
+                        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+                    >
                         <button
                             type="button"
-                            onClick={() => setAuthOpen(true)}
-                            className="fixed top-4 right-4 z-30 px-3 py-1.5 rounded-full border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/70 hover:text-white hover:border-white/40 backdrop-blur-md"
+                            onClick={() => {
+                                sacredUi.click();
+                                setWalkthrough(true, 0);
+                            }}
+                            className="w-9 h-9 rounded-full border border-white/20 bg-black/55 text-white/80 text-sm font-semibold backdrop-blur-md hover:border-emerald-400/40"
+                            aria-label="House tour"
+                            title="House tour"
                         >
-                            Sign in
+                            ?
                         </button>
-                    )}
-
-                    {/* Center crosshair so empty-looking views still feel interactive */}
-                    <div
-                        className="fixed left-1/2 top-1/2 z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2 w-3 h-3"
-                        aria-hidden
-                    >
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/40" />
-                        <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/40" />
-                    </div>
-
-                    <div className="fixed bottom-6 inset-x-0 z-30 flex flex-col items-center gap-2 pointer-events-none">
-                        {hotspot ? (
+                        {guest && (
                             <button
                                 type="button"
-                                className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
-                                onClick={() => activateHotspot(hotspot)}
+                                onClick={() => setAuthOpen(true)}
+                                className="px-3 py-1.5 rounded-full border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/70 hover:text-white backdrop-blur-md"
                             >
-                                E · {hotspot.hint}
+                                Sign in
                             </button>
-                        ) : (
-                            <p className="text-[11px] text-white/70 font-mono bg-black/55 px-3 py-1.5 rounded-full border border-white/10">
-                                WASD move · drag to look · E interact
-                            </p>
                         )}
                     </div>
 
-                    <TruthGuideWidget />
+                    {/* Crosshair — desktop only (mobile uses thumb UI) */}
+                    {!isMobile && (
+                        <div
+                            className="fixed left-1/2 top-1/2 z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2 w-3 h-3"
+                            aria-hidden
+                        >
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/40" />
+                            <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/40" />
+                        </div>
+                    )}
+
+                    {/* Desktop interact strip */}
+                    {!isMobile && (
+                        <div className="fixed bottom-6 inset-x-0 z-30 flex flex-col items-center gap-2 pointer-events-none">
+                            {hotspot ? (
+                                <button
+                                    type="button"
+                                    className="pointer-events-auto px-5 py-2.5 rounded-full border border-amber-400/50 bg-black/80 text-amber-100 text-sm font-semibold backdrop-blur-md shadow-lg"
+                                    onClick={() => activateHotspot(hotspot)}
+                                >
+                                    E · {hotspot.hint}
+                                </button>
+                            ) : (
+                                <p className="text-[11px] text-white/70 font-mono bg-black/55 px-3 py-1.5 rounded-full border border-white/10">
+                                    WASD move · drag look · Space jump · E interact
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Mobile floating interact chip above pads */}
+                    {isMobile && hotspot && (
+                        <div
+                            className="fixed inset-x-0 z-30 flex justify-center pointer-events-none px-4"
+                            style={{ bottom: 'calc(min(42dvh, 280px) + 0.25rem)' }}
+                        >
+                            <p className="text-[11px] text-amber-100/95 font-medium bg-black/65 border border-amber-400/35 px-3 py-1.5 rounded-full backdrop-blur-md max-w-[90vw] text-center">
+                                Near · {hotspot.hint}
+                            </p>
+                        </div>
+                    )}
+
+                    {!isMobile && <TruthGuideWidget placement="desktop" />}
+                    {isMobile && (
+                        <div
+                            className="fixed z-30 left-3"
+                            style={{ bottom: 'calc(min(42dvh, 280px) + 0.5rem)' }}
+                        >
+                            <TruthGuideWidget placement="mobile" />
+                        </div>
+                    )}
                 </>
             )}
+
+            <HouseMobileControls
+                hotspot={hotspot}
+                onInteract={tryInteract}
+                visible={showHud && isMobile}
+            />
+
+            <HouseWalkthrough />
+            <HousePanels />
 
             {osOpen && (
                 <div
                     className={
-                        device === 'mobile'
+                        isMobile
                             ? 'fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100vw-12px,400px)] h-[min(100dvh-16px,800px)] rounded-[1.75rem] overflow-hidden border-[3px] border-zinc-800'
                             : 'fixed z-50 inset-[2%] rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-black'
                     }
@@ -382,7 +478,7 @@ export default function HouseExperience() {
                         Exit OS · house
                     </button>
                     <TruthOSShell
-                        mode={device === 'mobile' ? 'phone' : 'desktop'}
+                        mode={isMobile ? 'phone' : 'desktop'}
                         onLogout={onLogout}
                     />
                 </div>
