@@ -15,18 +15,20 @@ import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 /** Routes that are pure immersion — no constellation chrome */
 const FULL_IMMERSIVE = [
+    /^\/$/, // bedroom + Truth.OS
     /^\/world(\/|$)/,
     /^\/world2d(\/|$)/,
-    /^\/awakening(\/|$)/, // full awakening arc — no chrome break
+    /^\/awakening(\/|$)/,
 ];
 
 /** Routes where atmosphere is cinematic (embers + soft grain intensity) */
-const RITUAL_ROUTES = [/^\/$/, /^\/awakening/, /^\/trial/];
+const RITUAL_ROUTES = [/^\/awakening/, /^\/trial/];
 
 type NavItem = { href: string; label: string; whisper: string; icon: typeof Home };
 
 const CONSTELLATION: NavItem[] = [
-    { href: '/world', label: 'Journey', whisper: 'Truth\'s hut', icon: Globe },
+    { href: '/', label: 'Room', whisper: 'Truth.OS', icon: Home },
+    { href: '/world', label: 'Chamber', whisper: '3D sanctum', icon: Globe },
     { href: '/vision', label: 'Visions', whisper: 'Unsealed roads', icon: Sparkles },
     { href: '/epilogue', label: 'Return', whisper: 'Source roads', icon: Sun },
     { href: '/archive', label: 'The Hall', whisper: 'Voices gather', icon: Users },
