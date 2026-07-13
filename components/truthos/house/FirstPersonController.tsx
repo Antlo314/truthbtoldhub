@@ -21,14 +21,21 @@ export default function FirstPersonController({
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
 }) {
     const { camera, gl } = useThree();
-    const yaw = useRef(Math.PI); // face into house (-Z from spawn)
+    // Face toward house center (from spawn +Z looking roughly -Z)
+    const yaw = useRef(0);
     const pitch = useRef(0);
     const pos = useRef(new THREE.Vector3(...SPAWN));
     const poseT = useRef(0);
 
     useEffect(() => {
+        pos.current.set(SPAWN[0], SPAWN[1], SPAWN[2]);
         camera.position.copy(pos.current);
         camera.rotation.order = 'YXZ';
+        camera.rotation.y = yaw.current;
+        camera.rotation.x = 0;
+        // Look into the house (-Z)
+        yaw.current = Math.PI;
+        camera.rotation.y = Math.PI;
     }, [camera]);
 
     useEffect(() => {
