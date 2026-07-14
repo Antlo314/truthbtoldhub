@@ -2,8 +2,10 @@
 
 /**
  * Staged house — furniture on walls, conversation distance, low poly form pass.
- * Sharper corners (crisp boxes) + slightly higher-seg cylinders for smooth edges.
+ * Mirror + hall arch are separate components (wall-mounted, not floating).
  */
+import HallArch from './HallArch';
+import SoulMirrorMesh from './SoulMirrorMesh';
 
 const WALL = '#3d3550';
 const FLOOR = '#2a2438';
@@ -262,49 +264,6 @@ function StagedShelf({
     );
 }
 
-/** Wall-mounted soul mirror (flush to east wall) */
-function WallMirror({ sh, rich }: { sh: boolean; rich: boolean }) {
-    // East bedroom wall ≈ x=4.2 interior
-    const x = 4.12;
-    const z = 7.55;
-    return (
-        <group>
-            {/* wall plate / recess */}
-            <Box pos={[x, 1.45, z]} size={[0.08, 1.65, 0.95]} color="#1a1520" shadows={sh} />
-            {/* outer frame */}
-            <Box pos={[x - 0.02, 1.45, z]} size={[0.06, 1.55, 0.85]} color={WOOD_DK} shadows={sh} />
-            {/* gold trim */}
-            <Box
-                pos={[x - 0.04, 1.45, z]}
-                size={[0.03, 1.48, 0.78]}
-                color={GOLD}
-                eInt={rich ? 0.18 : 0.1}
-                emissive={GOLD}
-                shadows={false}
-                metalness={0.55}
-                roughness={0.35}
-            />
-            {/* glass plane faces into room (−X) */}
-            <mesh position={[x - 0.08, 1.45, z]} rotation={[0, Math.PI / 2, 0]}>
-                <planeGeometry args={[0.68, 1.32]} />
-                <meshStandardMaterial
-                    color="#6a8aaa"
-                    metalness={0.82}
-                    roughness={0.12}
-                    emissive="#1a3048"
-                    emissiveIntensity={0.35}
-                />
-            </mesh>
-            {rich && (
-                <mesh position={[x - 0.09, 1.45, z]} rotation={[0, Math.PI / 2, 0]}>
-                    <planeGeometry args={[0.55, 0.9]} />
-                    <meshBasicMaterial color="#a8c4e0" transparent opacity={0.08} />
-                </mesh>
-            )}
-        </group>
-    );
-}
-
 /** West wall front door — exterior later */
 function FrontDoor({ sh, rich }: { sh: boolean; rich: boolean }) {
     const x = -10.22;
@@ -400,9 +359,13 @@ function Plant({ pos, low }: { pos: [number, number, number]; low?: boolean }) {
 export default function HouseGeometry({
     low = false,
     cinematic = false,
+    mirrorAvatar,
+    mirrorPose,
 }: {
     low?: boolean;
     cinematic?: boolean;
+    mirrorAvatar?: import('@/lib/game/avatar').AvatarConfig;
+    mirrorPose?: import('./LocalPlayerBody').PlayerPose | null;
 }) {
     const sh = !low;
     const rich = cinematic && !low;
@@ -440,7 +403,8 @@ export default function HouseGeometry({
             </mesh>
             <StagedBed sh={sh} rich={rich} />
             <StagedDesk pos={[3.7, 0, 5.15]} sh={sh} rich={rich} monitor />
-            <WallMirror sh={sh} rich={rich} />
+            {/* Soul Mirror — south wall + real reflection of you */}
+            <SoulMirrorMesh low={low} rich={rich} avatar={mirrorAvatar} pose={mirrorPose} />
             <mesh position={[6.2, 1.85, 9.32]}>
                 <planeGeometry args={[1.55, 1.15]} />
                 <meshStandardMaterial color="#1e1b4b" emissive="#6366f1" emissiveIntensity={rich ? 0.7 : 0.4} />
@@ -516,14 +480,8 @@ export default function HouseGeometry({
                 <meshStandardMaterial color="#0a0a12" emissive="#7c3aed" emissiveIntensity={rich ? 0.62 : 0.45} toneMapped={false} />
             </mesh>
 
-            {/* ── HALL ── */}
-            <Box pos={[-7.7, 1.25, 2.0]} size={[0.34, 2.5, 0.2]} color={WALL} shadows={sh} />
-            <Box pos={[-6.5, 1.25, 2.0]} size={[0.34, 2.5, 0.2]} color={WALL} shadows={sh} />
-            <Box pos={[-7.1, 2.48, 2.0]} size={[1.3, 0.18, 0.22]} color={WALL} shadows={sh} />
-            <mesh position={[-7.1, 2.38, 2.12]}>
-                <torusGeometry args={[0.4, 0.045, 6, low ? 12 : 20]} />
-                <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.38} />
-            </mesh>
+            {/* ── HALL ARCH — built into partition wall ── */}
+            <HallArch low={low} rich={rich} />
 
             {/* ── LEDGER + HEARTH ── */}
             <Box pos={[-5.1, 0.48, 2.1]} size={[0.55, 0.92, 0.55]} color={WOOD_DK} shadows={sh} />

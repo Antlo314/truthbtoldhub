@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Only LIVE souls currently heartbeating in the house.
- * No ghosts · no bots · no invented NPCs.
+ * Only OTHER live players currently heartbeating in the house.
+ * Never show self · no ghosts · no bots.
  */
 import { useMemo } from 'react';
 import { Html } from '@react-three/drei';
@@ -59,17 +59,24 @@ function PeerMesh({
 
 export default function RemotePlayers({
     peers,
+    selfId,
     mobile = false,
 }: {
     peers: HousePeer[];
+    /** Local presence key — exclude from world (only other live viewers) */
+    selfId?: string;
     mobile?: boolean;
 }) {
     const list = useMemo(() => {
         const now = Date.now();
-        return peers.filter(
-            (p) => p.kind === 'live' && p.at && now - p.at < 10000,
-        );
-    }, [peers]);
+        const me = selfId ? String(selfId) : '';
+        return peers.filter((p) => {
+            if (p.kind !== 'live') return false;
+            if (!p.at || now - p.at >= 10000) return false;
+            if (me && (p.id === me || String(p.id) === me)) return false;
+            return true;
+        });
+    }, [peers, selfId]);
 
     if (list.length === 0) return null;
 

@@ -234,7 +234,10 @@ export default function HouseExperience() {
                 yaw: Math.PI,
             },
             (list) => {
-                if (!dead) setPeers(list);
+                if (dead) return;
+                // Belt-and-suspenders: never show local presence as a remote body
+                const me = presenceKey;
+                setPeers(list.filter((p) => p.id !== me && String(p.id) !== me));
             },
         ).then((api) => {
             if (dead) {
@@ -384,6 +387,8 @@ export default function HouseExperience() {
                             locked={uiLocked}
                             mobile={isMobile}
                             peers={peers}
+                            selfId={presenceKey}
+                            avatar={character.avatar}
                             onHotspot={setHotspot}
                             onPose={onPose}
                             onInteractRequest={tryInteract}

@@ -62,9 +62,9 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'soul_mirror',
         label: 'Soul Mirror',
         hint: 'Vessel · shape your form',
-        // In front of wall mirror (east bedroom wall)
-        position: [3.15, 1.25, 7.45],
-        radius: 1.0,
+        // Stand in front of south-wall mirror
+        position: [3.15, 1.25, 8.35],
+        radius: 1.05,
         action: { type: 'panel', panel: 'soul' },
     },
     {
@@ -128,8 +128,9 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'hall',
         label: 'Hall arch',
         hint: 'The Hall · community',
-        position: [-6.9, 1.15, 2.0],
-        radius: 1.15,
+        // Center of partition arch opening
+        position: [-5.4, 1.15, 2.05],
+        radius: 1.1,
         action: { type: 'panel', panel: 'hall' },
     },
     {
@@ -178,8 +179,8 @@ export const COLLIDERS: Collider[] = [
     // Desk against east bedroom wall
     { x: 3.7, z: 5.15, hx: 0.9, hz: 0.4 },
     { x: 3.55, z: 4.4, hx: 0.3, hz: 0.3 },
-    // Wall mirror (flush east wall)
-    { x: 4.15, z: 7.55, hx: 0.12, hz: 0.45 },
+    // Wall mirror (south bedroom wall)
+    { x: 3.15, z: 9.25, hx: 0.55, hz: 0.14 },
 
     // Living — sofa further from TV (conversation distance)
     { x: 0.4, z: 0.15, hx: 1.35, hz: 0.55 },
@@ -196,9 +197,11 @@ export const COLLIDERS: Collider[] = [
     { x: -5.1, z: 2.1, hx: 0.38, hz: 0.38 },
     // Hearth
     { x: -7.55, z: 3.7, hx: 0.7, hz: 0.48 },
-    // Hall pillars
-    { x: -7.7, z: 2.0, hx: 0.22, hz: 0.18 },
-    { x: -6.5, z: 2.0, hx: 0.22, hz: 0.18 },
+    // Hall partition wall (arch opening clear at z≈2.05 ± 0.78)
+    { x: -5.85, z: 0.55, hx: 0.16, hz: 0.72 },
+    { x: -5.85, z: 3.45, hx: 0.16, hz: 1.15 },
+    { x: -5.85, z: 1.27, hx: 0.16, hz: 0.1 },
+    { x: -5.85, z: 2.83, hx: 0.16, hz: 0.1 },
 
     // Library shelves (wall-hug west)
     { x: -8.75, z: -4.5, hx: 0.4, hz: 2.15 },

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,8 +8,10 @@ import HouseGeometry from './HouseGeometry';
 import HouseDecor from './HouseDecor';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
+import type { PlayerPose } from './LocalPlayerBody';
 import type { Hotspot } from './houseMap';
 import type { HousePeer } from '@/lib/truthos/housePresence';
+import type { AvatarConfig } from '@/lib/game/avatar';
 
 /**
  * Two cinematic paths:
@@ -19,6 +22,8 @@ export default function HouseCanvas({
     locked,
     mobile,
     peers,
+    selfId,
+    avatar,
     onHotspot,
     onPose,
     onInteractRequest,
@@ -27,12 +32,22 @@ export default function HouseCanvas({
     locked: boolean;
     mobile: boolean;
     peers: HousePeer[];
+    selfId?: string;
+    avatar: AvatarConfig;
     onHotspot: (h: Hotspot | null) => void;
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
     onInteractRequest?: () => void;
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
     const bg = mobile ? '#1c1630' : '#120e1c';
+    const [localPose, setLocalPose] = useState<PlayerPose | null>(null);
+    const poseCb = useRef(onPose);
+    poseCb.current = onPose;
+
+    const handlePose = useCallback((p: PlayerPose) => {
+        setLocalPose(p);
+        poseCb.current(p);
+    }, []);
 
     return (
         <div
@@ -67,7 +82,6 @@ export default function HouseCanvas({
                     stencil: false,
                     depth: true,
                 }}
-                // PC: cinematic FOV · Mobile: wider for presence on small screens
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
@@ -85,7 +99,6 @@ export default function HouseCanvas({
                 {!mobile && <fog attach="fog" args={[bg, 11, 38]} />}
                 {mobile && <fog attach="fog" args={[bg, 8, 24]} />}
 
-                {/* PC: night sky peek through windows */}
                 {!mobile && (
                     <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
                 )}
@@ -93,7 +106,6 @@ export default function HouseCanvas({
                 <hemisphereLight args={[mobile ? '#b8c4ff' : '#a8b8f0', '#2a2038', mobile ? 0.9 : 0.55]} />
                 <ambientLight intensity={mobile ? 0.75 : 0.42} color="#d8d0ea" />
 
-                {/* Key light — cinematic rim */}
                 <directionalLight
                     position={[6, 9, 4]}
                     intensity={mobile ? 0.95 : 1.35}
@@ -109,7 +121,6 @@ export default function HouseCanvas({
                     </>
                 )}
 
-                {/* Practicals — desk, media wall, studio, mirror, door */}
                 <pointLight
                     position={[3.55, 1.4, 4.9]}
                     intensity={mobile ? 2.1 : 3.3}
@@ -124,6 +135,14 @@ export default function HouseCanvas({
                     distance={8}
                     decay={2}
                 />
+                {/* Mirror wall practical */}
+                <pointLight
+                    position={[3.15, 1.7, 8.6]}
+                    intensity={mobile ? 1.1 : 1.6}
+                    color="#a8c4e0"
+                    distance={6}
+                    decay={2}
+                />
                 {!mobile && (
                     <>
                         <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.6} color="#fbbf24" distance={8} decay={2} />
@@ -133,7 +152,7 @@ export default function HouseCanvas({
                         <pointLight position={[8.2, 1.9, 1.25]} intensity={1.65} color="#c084fc" distance={9} decay={2} />
                         <pointLight position={[-7.4, 1.25, 3.6]} intensity={1.5} color="#ff8a3d" distance={7} decay={2} />
                         <pointLight position={[7.6, 1.55, -7.0]} intensity={1.4} color="#fb923c" distance={6} decay={2} />
-                        <pointLight position={[3.9, 1.5, 7.4]} intensity={0.9} color="#94a3b8" distance={5} decay={2} />
+                        <pointLight position={[-5.5, 1.8, 2.05]} intensity={1.0} color="#38bdf8" distance={5} decay={2} />
                         <pointLight position={[-9.2, 1.6, 0.15]} intensity={0.8} color="#e8d5b0" distance={5} decay={2} />
                         <spotLight
                             position={[0.2, 2.9, -1.2]}
@@ -149,14 +168,19 @@ export default function HouseCanvas({
                     <pointLight position={[0, 2.5, 0]} intensity={1.3} color="#e0d4ff" distance={14} decay={2} />
                 )}
 
-                <HouseGeometry low={mobile} cinematic={!mobile} />
+                <HouseGeometry
+                    low={mobile}
+                    cinematic={!mobile}
+                    mirrorAvatar={avatar}
+                    mirrorPose={localPose}
+                />
                 <HouseDecor low={mobile} />
-                <RemotePlayers peers={peers} mobile={mobile} />
+                <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
                 <FirstPersonController
                     locked={locked}
                     mobile={mobile}
                     onHotspot={onHotspot}
-                    onPose={onPose}
+                    onPose={handlePose}
                     onInteractRequest={onInteractRequest}
                     onMoveActivity={onMoveActivity}
                 />

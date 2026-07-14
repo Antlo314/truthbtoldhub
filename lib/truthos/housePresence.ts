@@ -27,7 +27,8 @@ export type HousePresenceApi = {
     leave: () => Promise<void>;
 };
 
-const CHANNEL = 'truthos-house-v4';
+/** Bump channel when presence identity rules change (clears stale self ghosts) */
+const CHANNEL = 'truthos-house-v5';
 const STALE_MS = 8000;
 const HEARTBEAT_MS = 2200;
 const ECHO_KEY = 'tbth-house-echoes-v1';
@@ -88,7 +89,8 @@ export async function joinHousePresence(
             const liveIds = new Set<string>();
 
             for (const [key, metas] of Object.entries(state)) {
-                if (key === selfId) continue;
+                // Never render yourself — only other live viewers
+                if (key === selfId || key === String(selfId)) continue;
                 let best: (Omit<HousePeer, 'id' | 'kind'> & { at?: number }) | null = null;
                 for (const m of metas) {
                     if (!best || (m.at ?? 0) > (best.at ?? 0)) best = m;
