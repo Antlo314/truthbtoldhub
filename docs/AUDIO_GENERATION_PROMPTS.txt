@@ -1,0 +1,668 @@
+================================================================================
+TRUTH B TOLD HUB / SACRED SANCTUM — AUDIO GENERATION PROMPTS
+================================================================================
+Created: 2026-07-14
+Purpose: Generate all house / Truth.OS / arcade music & SFX for Supabase storage
+Tools:
+  • Music  → Suno (or equivalent long-form generative music)
+  • SFX    → ElevenLabs Sound Effects (or equivalent short SFX)
+
+After generation, we will upload assets to Supabase Storage (bucket plan below)
+and wire paths in the app. Do NOT rename keys in the FILENAME column — those
+are the stable IDs the code will expect.
+
+================================================================================
+PART A — SUNO MUSIC PROMPTS
+================================================================================
+Settings guidance (adjust per Suno version):
+  • Instrumental preferred unless noted
+  • Loop-friendly: avoid big cold endings; fade or soft landings
+  • Length: 2:00–3:30 for beds; 0:45–1:30 for short loops if tool allows
+  • Style tags: cinematic · modern spiritual · not cheesy church · not trap flex
+  • Brand tone: Truth B Told — African American spiritual depth, modern city
+    night, sacred tech, warm bass, minor keys, restrained hope
+
+--------------------------------------------------------------------------------
+A1. HOUSE AMBIENT BEDS (Truth.OS House first-person hub)
+--------------------------------------------------------------------------------
+
+[ID] house_ambient_main
+[FILENAME] house_ambient_main.mp3
+[USE] Default walkable house loop (HouseExperience)
+[DURATION] 2:30–3:30 instrumental, seamless loop feel
+[SUNO PROMPT]
+Instrumental cinematic ambient for a modern sacred house at night. Warm low
+sub bass, soft Rhodes or electric piano, distant vinyl crackle, subtle choir
+pads without lyrics, occasional soft kick like a heartbeat. Minor key, 70–85
+BPM, intimate, not sad, not epic trailer. Think late-night studio loft meets
+quiet prayer room. No vocals. Loopable ending.
+
+[NEGATIVE / AVOID]
+Aggressive drums, trap hi-hats, church organ pomp, horror drones, EDM drops,
+lyrics, children's music, stock corporate tech.
+
+---
+
+[ID] house_bedroom_night
+[FILENAME] house_bedroom_night.mp3
+[USE] Near bedroom / Soul Mirror / desk
+[DURATION] 2:00–3:00
+[SUNO PROMPT]
+Soft bedroom night ambient. Gentle analog synth pads, sparse guitar harmonics,
+very quiet night rain optional far away, warm mid tones, 60–75 BPM. Sense of
+reflection and identity. Instrumental only. Intimate stereo width. Loop-friendly.
+
+[NEGATIVE / AVOID]
+Loud percussion, horror, romantic R&B vocals, bright major pop.
+
+---
+
+[ID] house_living_arcade_glow
+[FILENAME] house_living_arcade_glow.mp3
+[USE] Living room near TV / controller (under arcade bed)
+[DURATION] 2:00–2:45
+[SUNO PROMPT]
+Modern living-room ambient with a subtle retro-arcade neon underglow. Soft
+synthwave pads, muted bass, tiny 8-bit sparkles very low in the mix, 90–100
+BPM half-time feel. Cozy night apartment, not full chiptune song. Instrumental.
+
+[NEGATIVE / AVOID]
+Full chip-tune lead melody, loud game music, rock guitar.
+
+---
+
+[ID] house_library_dust
+[FILENAME] house_library_dust.mp3
+[USE] Library / wall bookshelves
+[DURATION] 2:00–3:00
+[SUNO PROMPT]
+Quiet library ambient. Soft wooden resonance, muted strings, page-like soft
+textures, dusty sunlight in sound form, 55–70 BPM. Scholarly, warm, modern
+spiritual. Instrumental. No choir lyrics.
+
+[NEGATIVE / AVOID]
+Gregorian chant vocals, horror strings, fantasy RPG tavern.
+
+---
+
+[ID] house_studio_pulse
+[FILENAME] house_studio_pulse.mp3
+[USE] Signal Studio desk
+[DURATION] 2:00–2:45
+[SUNO PROMPT]
+Modern brand studio pulse. Clean deep house-adjacent ambient, soft sidechain
+pad, subtle tech clicks very low, warm 808 sub, 95–105 BPM. Creative focus,
+night producer energy without hype. Instrumental.
+
+[NEGATIVE / AVOID]
+Club drops, vocal chops, aggressive trap.
+
+---
+
+[ID] house_hearth_warm
+[FILENAME] house_hearth_warm.mp3
+[USE] Near fireplace / hall wing
+[DURATION] 2:00–3:00
+[SUNO PROMPT]
+Warm hearth ambient. Soft crackle texture blended into music, low cello or
+warm pad, gentle major-minor hybrid, 60 BPM. Safety and home. Instrumental.
+
+[NEGATIVE / AVOID]
+Horror fire, metal, loud percussion.
+
+---
+
+[ID] truthos_boot_theme
+[FILENAME] truthos_boot_theme.mp3
+[USE] Truth.OS boot sequence (short bed under boot lines)
+[DURATION] 0:45–1:15
+[SUNO PROMPT]
+Short OS boot theme. Digital awaken: soft rising synth, clean arpeggio, warm
+bass resolve, futuristic but soulful, 100–110 BPM. Ends on a held chord ready
+to loop or cut. Instrumental, no voice.
+
+[NEGATIVE / AVOID]
+Windows startup clone, comedy computers, harsh glitch noise.
+
+---
+
+[ID] truthos_desktop_idle
+[FILENAME] truthos_desktop_idle.mp3
+[USE] Truth.OS desktop idle music (quieter than house)
+[DURATION] 2:00–3:00
+[SUNO PROMPT]
+Minimal OS desktop ambient. Soft sine pads, tiny UI-like blips very sparse,
+deep clean low end, 80 BPM. Productive, calm, modern sacred tech. Instrumental.
+
+[NEGATIVE / AVOID]
+Busy arps, vaporwave meme, loud beats.
+
+---
+
+[ID] arcade_lobby
+[FILENAME] arcade_lobby.mp3
+[USE] Arcade lobby select screen
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+Stylish arcade lobby music. Retro-modern synth, confident bass, 110–118 BPM,
+clean and cool, not childish. Slight neon soul. Instrumental, loopable.
+
+[NEGATIVE / AVOID]
+Cartoon kids music, hardstyle, metal.
+
+---
+
+[ID] arcade_serpent
+[FILENAME] arcade_serpent.mp3
+[USE] Serpent (Snake) gameplay bed
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+Tense playful snake-game electronic bed. Sliding bass, ticking percussion,
+rising tension layers, 120 BPM. Instrumental, loopable, not stressful noise.
+
+[NEGATIVE / AVOID]
+Horror, breakcore, vocals.
+
+---
+
+[ID] arcade_tetra
+[FILENAME] arcade_tetra.mp3
+[USE] Tetra (Tetris-like) gameplay bed
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+Puzzle stacking electronic music. Geometric synth stabs, steady 128 BPM house
+pulse, bright but focused. Instrumental loop. Classic puzzle energy without
+copyrighted melodies.
+
+[NEGATIVE / AVOID]
+Actual Korobeiniki / Tetris theme, lyrics.
+
+---
+
+[ID] arcade_veil
+[FILENAME] arcade_veil.mp3
+[USE] Veil (rhythm runner) gameplay bed
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+High-energy rhythm runner electronic, 140 BPM, driving bass, syncopated hats,
+neon spiritual edge, instrumental. Feels like running through light.
+
+[NEGATIVE / AVOID]
+Phonks with slurred vocals, pure noise, slow ambient.
+
+---
+
+[ID] soul_mirror_reflect
+[FILENAME] soul_mirror_reflect.mp3
+[USE] Soul Mirror panel open
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+Identity forge ambient. Soft vocal pads WITHOUT words (ahhs only optional),
+crystalline bells very soft, warm bass, 70 BPM. Looking at yourself and
+becoming. Instrumental preferred.
+
+[NEGATIVE / AVOID]
+Horror mirror, gothic scream, pop vocals.
+
+---
+
+[ID] offering_sustain
+[FILENAME] offering_sustain.mp3
+[USE] Offering / support panel
+[DURATION] 1:30–2:30
+[SUNO PROMPT]
+Grateful warm ambient. Gentle piano, soft strings, hopeful minor-to-major lift,
+75 BPM. Community sustain energy. Instrumental.
+
+[NEGATIVE / AVOID]
+Televangelist style, sad piano meme, heavy drums.
+
+================================================================================
+PART B — ELEVENLABS SOUND EFFECTS PROMPTS
+================================================================================
+Guidance:
+  • Keep most SFX under 2 seconds unless noted
+  • Dry / clean preferred (we can reverb in engine if needed)
+  • Mono OK for UI; stereo OK for spatial world
+  • Export WAV 48kHz or 44.1kHz, then we compress to mp3/ogg for web
+
+--------------------------------------------------------------------------------
+B1. UI / TRUTH.OS
+--------------------------------------------------------------------------------
+
+[ID] ui_click
+[FILENAME] sfx_ui_click.wav
+[DURATION] 0.05–0.15s
+[ELEVENLABS PROMPT]
+Short clean digital UI click, soft, modern, not harsh plastic, mid-high tick
+with tiny body. Single hit.
+
+---
+
+[ID] ui_hover
+[FILENAME] sfx_ui_hover.wav
+[DURATION] 0.05–0.12s
+[ELEVENLABS PROMPT]
+Very soft UI hover tick, quieter than click, smooth digital, single.
+
+---
+
+[ID] ui_open
+[FILENAME] sfx_ui_open.wav
+[DURATION] 0.2–0.45s
+[ELEVENLABS PROMPT]
+Soft whoosh open panel, modern UI, slight airy rise, clean, not cartoon.
+
+---
+
+[ID] ui_close
+[FILENAME] sfx_ui_close.wav
+[DURATION] 0.15–0.4s
+[ELEVENLABS PROMPT]
+Soft whoosh close panel, downward air, clean modern UI.
+
+---
+
+[ID] ui_success
+[FILENAME] sfx_ui_success.wav
+[DURATION] 0.3–0.6s
+[ELEVENLABS PROMPT]
+Pleasant confirmation chime, two soft tones ascending, warm digital, no fanfare.
+
+---
+
+[ID] ui_error
+[FILENAME] sfx_ui_error.wav
+[DURATION] 0.25–0.5s
+[ELEVENLABS PROMPT]
+Soft error buzz, low mid, not alarming alarm, modern OS deny sound.
+
+---
+
+[ID] ui_type
+[FILENAME] sfx_ui_type.wav
+[DURATION] 0.04–0.1s
+[ELEVENLABS PROMPT]
+Single soft keyboard key for terminal typing, muted mechanical, not loud clack.
+
+---
+
+[ID] os_boot_blip
+[FILENAME] sfx_os_boot_blip.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Single computer boot blip, retro-modern, clean sine-ish digital, one hit.
+
+---
+
+[ID] os_boot_ready
+[FILENAME] sfx_os_boot_ready.wav
+[DURATION] 0.4–0.8s
+[ELEVENLABS PROMPT]
+OS ready chime, soft resolve chord, futuristic and warm, short.
+
+---
+
+[ID] os_window_open
+[FILENAME] sfx_os_window_open.wav
+[DURATION] 0.15–0.35s
+[ELEVENLABS PROMPT]
+Desktop window open, soft digital, slight glass, modern OS.
+
+---
+
+[ID] os_window_close
+[FILENAME] sfx_os_window_close.wav
+[DURATION] 0.12–0.3s
+[ELEVENLABS PROMPT]
+Desktop window close, soft digital settle.
+
+---
+
+[ID] os_start_menu
+[FILENAME] sfx_os_start_menu.wav
+[DURATION] 0.12–0.3s
+[ELEVENLABS PROMPT]
+Start menu open, soft pop with tiny whoosh, modern OS.
+
+--------------------------------------------------------------------------------
+B2. HOUSE 3D INTERACTION
+--------------------------------------------------------------------------------
+
+[ID] house_footstep_wood
+[FILENAME] sfx_footstep_wood.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Single footstep on wooden floor, soft indoor shoe, natural, not heavy boot.
+
+---
+
+[ID] house_footstep_rug
+[FILENAME] sfx_footstep_rug.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Single soft footstep on thick rug carpet, muted, indoor.
+
+---
+
+[ID] house_jump_land
+[FILENAME] sfx_jump_land.wav
+[DURATION] 0.15–0.35s
+[ELEVENLABS PROMPT]
+Soft body land after small jump on wood floor, light thud, indoor.
+
+---
+
+[ID] house_interact_ring
+[FILENAME] sfx_interact_ring.wav
+[DURATION] 0.25–0.5s
+[ELEVENLABS PROMPT]
+Magical but modern interact chime when near gold ring hotspot, soft crystal,
+warm, single.
+
+---
+
+[ID] house_use_e
+[FILENAME] sfx_use_interact.wav
+[DURATION] 0.2–0.4s
+[ELEVENLABS PROMPT]
+Confirm use / E interact, soft access beep with tiny whoosh.
+
+---
+
+[ID] door_front_touch
+[FILENAME] sfx_door_touch.wav
+[DURATION] 0.3–0.6s
+[ELEVENLABS PROMPT]
+Wooden front door handle rattle softly, locked or not opening yet, realistic.
+
+---
+
+[ID] door_soon
+[FILENAME] sfx_door_soon.wav
+[DURATION] 0.4–0.8s
+[ELEVENLABS PROMPT]
+Soft denied access tone mixed with wooden door creak short, polite "not yet".
+
+---
+
+[ID] mirror_approach
+[FILENAME] sfx_mirror_approach.wav
+[DURATION] 0.4–0.9s
+[ELEVENLABS PROMPT]
+Subtle glass shimmer when approaching soul mirror, airy crystalline, soft.
+
+---
+
+[ID] mirror_open
+[FILENAME] sfx_mirror_open.wav
+[DURATION] 0.4–0.8s
+[ELEVENLABS PROMPT]
+Soul mirror open, soft reverse glass and warm tone, identity awaken, short.
+
+---
+
+[ID] computer_boot
+[FILENAME] sfx_computer_boot.wav
+[DURATION] 0.5–1.2s
+[ELEVENLABS PROMPT]
+Desktop PC power on, soft fan spin up and single beep, modern quiet machine.
+
+---
+
+[ID] computer_hum_loop
+[FILENAME] sfx_computer_hum_loop.wav
+[DURATION] 3–6s seamless loop
+[ELEVENLABS PROMPT]
+Quiet modern PC idle hum, soft coil whine very low, loopable room tone for desk.
+
+---
+
+[ID] tv_static_soft
+[FILENAME] sfx_tv_static_soft.wav
+[DURATION] 2–4s loopable
+[ELEVENLABS PROMPT]
+Very soft television static ambient, low volume texture for living room TV glow.
+
+---
+
+[ID] arcade_controller_pickup
+[FILENAME] sfx_controller_pickup.wav
+[DURATION] 0.2–0.45s
+[ELEVENLABS PROMPT]
+Plastic game controller pick up from wood table, soft clack and lift.
+
+---
+
+[ID] arcade_start
+[FILENAME] sfx_arcade_start.wav
+[DURATION] 0.4–0.9s
+[ELEVENLABS PROMPT]
+Arcade game start jingle, short retro-modern, three notes max, clean.
+
+---
+
+[ID] book_pull
+[FILENAME] sfx_book_pull.wav
+[DURATION] 0.25–0.5s
+[ELEVENLABS PROMPT]
+Book sliding off wooden shelf, paper and wood friction, realistic library.
+
+---
+
+[ID] book_place
+[FILENAME] sfx_book_place.wav
+[DURATION] 0.2–0.4s
+[ELEVENLABS PROMPT]
+Book placed on wooden shelf, soft thud, library.
+
+---
+
+[ID] library_open
+[FILENAME] sfx_library_open.wav
+[DURATION] 0.4–0.8s
+[ELEVENLABS PROMPT]
+Library panel open, soft page flutter and wood, warm.
+
+---
+
+[ID] fire_crackle_loop
+[FILENAME] sfx_fire_crackle_loop.wav
+[DURATION] 4–8s loopable
+[ELEVENLABS PROMPT]
+Small indoor fireplace crackle loop, cozy not roaring wildfire, seamless feel.
+
+---
+
+[ID] forge_to_studio_click
+[FILENAME] sfx_studio_key.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Soft mechanical keyboard key for studio desk, modern producer desk feel.
+
+---
+
+[ID] hall_arch_pass
+[FILENAME] sfx_hall_pass.wav
+[DURATION] 0.3–0.6s
+[ELEVENLABS PROMPT]
+Soft air whoosh passing through stone or wood arch doorway, indoor.
+
+---
+
+[ID] map_offline
+[FILENAME] sfx_map_offline.wav
+[DURATION] 0.4–0.8s
+[ELEVENLABS PROMPT]
+Soft power-down or offline tone for wall map roads unavailable, polite, short.
+
+--------------------------------------------------------------------------------
+B3. ARCADE GAME HITS
+--------------------------------------------------------------------------------
+
+[ID] arcade_eat
+[FILENAME] sfx_arcade_eat.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Soft arcade pickup blip, bright, friendly, single (snake food).
+
+---
+
+[ID] arcade_die
+[FILENAME] sfx_arcade_die.wav
+[DURATION] 0.3–0.7s
+[ELEVENLABS PROMPT]
+Arcade fail / death, descending soft tones, not harsh, short game over sting.
+
+---
+
+[ID] arcade_line_clear
+[FILENAME] sfx_arcade_line_clear.wav
+[DURATION] 0.25–0.55s
+[ELEVENLABS PROMPT]
+Puzzle line clear sparkle, satisfying digital cascade, short.
+
+---
+
+[ID] arcade_hard_drop
+[FILENAME] sfx_arcade_hard_drop.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Hard drop thud for puzzle blocks, solid short hit.
+
+---
+
+[ID] arcade_rotate
+[FILENAME] sfx_arcade_rotate.wav
+[DURATION] 0.05–0.15s
+[ELEVENLABS PROMPT]
+Soft rotate click for puzzle piece.
+
+---
+
+[ID] arcade_jump
+[FILENAME] sfx_arcade_jump.wav
+[DURATION] 0.1–0.25s
+[ELEVENLABS PROMPT]
+Rhythm runner jump blip, springy digital, short.
+
+---
+
+[ID] arcade_coin
+[FILENAME] sfx_arcade_coin.wav
+[DURATION] 0.15–0.35s
+[ELEVENLABS PROMPT]
+Bright coin collect chime, modern arcade, single.
+
+---
+
+[ID] arcade_pause
+[FILENAME] sfx_arcade_pause.wav
+[DURATION] 0.15–0.35s
+[ELEVENLABS PROMPT]
+Soft pause tone, two soft notes or single dampened beep.
+
+--------------------------------------------------------------------------------
+B4. MULTIPLAYER / PRESENCE
+--------------------------------------------------------------------------------
+
+[ID] peer_join
+[FILENAME] sfx_peer_join.wav
+[DURATION] 0.3–0.6s
+[ELEVENLABS PROMPT]
+Soft multiplayer join chime, welcoming, modern, short.
+
+---
+
+[ID] peer_leave
+[FILENAME] sfx_peer_leave.wav
+[DURATION] 0.25–0.5s
+[ELEVENLABS PROMPT]
+Soft multiplayer leave tone, gentle fade blip, not sad.
+
+--------------------------------------------------------------------------------
+B5. ADMIN / PUBLISH
+--------------------------------------------------------------------------------
+
+[ID] admin_publish
+[FILENAME] sfx_admin_publish.wav
+[DURATION] 0.35–0.7s
+[ELEVENLABS PROMPT]
+Satisfying publish / send update sound, soft whoosh plus confirm chime.
+
+---
+
+[ID] admin_delete
+[FILENAME] sfx_admin_delete.wav
+[DURATION] 0.2–0.4s
+[ELEVENLABS PROMPT]
+Soft trash / delete, paper crumple digital, short not violent.
+
+================================================================================
+PART C — SUGGESTED FOLDER / SUPABASE LAYOUT (for later)
+================================================================================
+Supabase Storage bucket (proposed):  audio-hub
+
+  audio-hub/
+    music/
+      house_ambient_main.mp3
+      house_bedroom_night.mp3
+      house_living_arcade_glow.mp3
+      house_library_dust.mp3
+      house_studio_pulse.mp3
+      house_hearth_warm.mp3
+      truthos_boot_theme.mp3
+      truthos_desktop_idle.mp3
+      arcade_lobby.mp3
+      arcade_serpent.mp3
+      arcade_tetra.mp3
+      arcade_veil.mp3
+      soul_mirror_reflect.mp3
+      offering_sustain.mp3
+    sfx/
+      sfx_ui_click.wav|mp3
+      sfx_ui_hover.wav|mp3
+      ... (all B* files)
+
+Public or signed URLs → mapped in app config table later, e.g.:
+
+  audio_assets (
+    id text primary key,       -- matches [ID]
+    kind text,                 -- music | sfx
+    storage_path text,
+    duration_ms int,
+    loop boolean,
+    volume real default 1,
+    meta jsonb
+  )
+
+================================================================================
+PART D — GENERATION ORDER (recommended)
+================================================================================
+1. house_ambient_main + ui_click + ui_open + house_interact_ring + house_use_e
+2. truthos_boot_theme + os_boot_* + truthos_desktop_idle
+3. arcade_lobby + arcade game beds + arcade SFX pack
+4. zone ambients (bedroom, library, studio, hearth)
+5. presence + admin SFX
+6. polish / alts if needed
+
+================================================================================
+PART E — BRAND DO'S AND DON'TS (for both tools)
+================================================================================
+DO:
+  • Modern, night, soulful, clean
+  • African American spiritual depth without pastiche
+  • Warm lows, restrained highs
+  • Short tails for SFX (web-friendly)
+
+DON'T:
+  • Stereotype "tribal" drums as default spiritual cue
+  • Loud horror, jump scares
+  • Copyrighted melodies (games themes, pop songs)
+  • Overlong SFX (harder to mix in browser)
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+When files are ready, drop them in a folder or upload to Supabase and tell the
+agent: "wire audio pack" — we will map IDs to playback in House + Truth.OS + Arcade.

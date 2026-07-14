@@ -48,7 +48,8 @@ function canvasTex(
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(repeat[0], repeat[1]);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 8;
+    tex.needsUpdate = true;
     cache.set(ck, tex);
     return tex;
 }
@@ -356,9 +357,45 @@ function paintConcrete(ctx: CanvasRenderingContext2D, s: number) {
     }
 }
 
+/** Grayscale roughness companion for a color map (adds micro-depth under light) */
+export function makeRoughnessMap(
+    colorTex: THREE.Texture,
+    strength = 0.65,
+): THREE.CanvasTexture | THREE.Texture {
+    const ck = `rough_${(colorTex as THREE.CanvasTexture).uuid || 'x'}_${strength}`;
+    const hit = cache.get(ck);
+    if (hit) return hit;
+
+    const src = colorTex.image as HTMLCanvasElement | HTMLImageElement | undefined;
+    if (!src || typeof document === 'undefined') return colorTex;
+
+    const w = 'width' in src ? (src as HTMLCanvasElement).width || 256 : 256;
+    const h = 'height' in src ? (src as HTMLCanvasElement).height || 256 : 256;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(src as CanvasImageSource, 0, 0, w, h);
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const g = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) | 0;
+        // Invert slightly so dark grain = rougher
+        const r = Math.min(255, Math.max(0, 255 - g * strength + (1 - strength) * 140));
+        d[i] = d[i + 1] = d[i + 2] = r;
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.copy(colorTex.repeat);
+    tex.colorSpace = THREE.NoColorSpace;
+    cache.set(ck, tex);
+    return tex;
+}
+
 export function makeHouseMap(id: HouseSkinId, opts: SkinOpts = {}): THREE.CanvasTexture | THREE.Texture {
     const low = opts.low ?? false;
-    const size = low ? 128 : 256;
+    const size = low ? 192 : 512;
     const rep = opts.repeat ?? [1, 1];
 
     switch (id) {

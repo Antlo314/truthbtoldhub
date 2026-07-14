@@ -89,8 +89,9 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'library',
         label: 'Bookshelves',
         hint: 'Open the Library',
-        position: [-6.55, 1.1, -4.5],
-        radius: 1.35,
+        // In front of west-wall bookcase
+        position: [-9.2, 1.1, -4.5],
+        radius: 1.4,
         action: { type: 'panel', panel: 'library' },
     },
     {
@@ -204,14 +205,16 @@ export const COLLIDERS: Collider[] = [
     { x: -5.85, z: 1.27, hx: 0.16, hz: 0.1 },
     { x: -5.85, z: 2.83, hx: 0.16, hz: 0.1 },
 
-    // Library shelves (wall-hug west)
-    { x: -8.75, z: -4.5, hx: 0.4, hz: 2.15 },
-    { x: -5.6, z: -3.85, hx: 0.4, hz: 0.4 },
+    // Library bookcase flush west wall
+    { x: -10.12, z: -4.5, hx: 0.28, hz: 2.25 },
+    // Reading chair facing shelves
+    { x: -7.6, z: -3.7, hx: 0.4, hz: 0.4 },
 
     // Study
     { x: 6.4, z: -4.55, hx: 0.85, hz: 0.45 },
     { x: 6.35, z: -3.75, hx: 0.3, hz: 0.3 },
-    { x: 8.6, z: -5.7, hx: 0.35, hz: 1.1 },
+    // Study bookcase flush east wall
+    { x: 10.12, z: -5.5, hx: 0.24, hz: 1.25 },
 
     // Cinema against east wall
     { x: 8.95, z: 1.25, hx: 0.25, hz: 1.25 },
