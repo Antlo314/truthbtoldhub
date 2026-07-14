@@ -90,10 +90,11 @@ export default function HouseCanvas({
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-                    // Ensure camera up direction is correct
+                    // Pure euler FPS pose — avoid lookAt residual roll (flips world / ceiling walk)
                     camera.up.set(0, 1, 0);
                     camera.position.set(4.55, 1.62, 6.35);
-                    camera.lookAt(4.55, 1.35, 8.2);
+                    camera.rotation.order = 'YXZ';
+                    camera.rotation.set(0, Math.PI, 0);
                     // Local body only for mirror FBO
                     camera.layers.disable(1);
                 }}

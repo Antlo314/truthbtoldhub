@@ -82,11 +82,10 @@ export default function FirstPersonController({
         yawS.current = SPAWN_YAW;
         pitchS.current = 0;
         camera.position.copy(pos.current);
-        // Ensure camera up direction is correct
+        // Lock Y-up FPS orientation (no roll) — residual lookAt/quaternion roll = ceiling walk
         camera.up.set(0, 1, 0);
         camera.rotation.order = 'YXZ';
-        camera.rotation.y = SPAWN_YAW;
-        camera.rotation.x = 0;
+        camera.rotation.set(0, SPAWN_YAW, 0);
         houseInput.clearAll();
         keys.current.clear();
     }, [camera]);
@@ -133,8 +132,6 @@ export default function FirstPersonController({
 
         const onPointerDown = (e: PointerEvent) => {
             if (lockedRef.current || mobile) return;
-            // Ensure camera up direction is correct on lock state changes
-            camera.up.set(0, 1, 0);
             // Prefer pointer lock for cinematic PC look (no OS cursor fight)
             if (e.button === 0) {
                 if (!document.pointerLockElement) {
@@ -217,6 +214,8 @@ export default function FirstPersonController({
     useFrame((_, dtRaw) => {
         const d = Math.min(Math.max(dtRaw, 0), 0.05) || 0.016;
         const lockedNow = lockedRef.current;
+        // Every frame: force Y-up, zero roll — prevents upside-down / ceiling walking
+        camera.up.set(0, 1, 0);
         camera.rotation.order = 'YXZ';
         const lookSens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
         const k = keys.current;
@@ -256,8 +255,8 @@ export default function FirstPersonController({
         yawS.current = yaw.current - err;
         yawS.current = damp(yawS.current, yaw.current, LOOK_SMOOTH, d);
         pitchS.current = damp(pitchS.current, pitch.current, LOOK_SMOOTH, d);
-        camera.rotation.y = yawS.current;
-        camera.rotation.x = pitchS.current;
+        // set() applies pitch/yaw/roll together so z never drifts to π (world invert)
+        camera.rotation.set(pitchS.current, yawS.current, 0);
 
         if (!lockedNow) {
             const yawUse = yawS.current;
