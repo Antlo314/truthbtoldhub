@@ -1,5 +1,20 @@
 # AI Sync Status & Changelog
 
+## 2026-07-13 (Grok) — Soul Mirror full vessel, restage, Studio, paths out of house UI
+- **Agent**: Grok
+- **Status**: Completed (`tsc` 0).
+- **What shipped**:
+  - **Soul Mirror**: full-body vessel (camera targets mid-body), OrbitControls drag/zoom, idle spin; Paths tab removed from house Soul UI.
+  - **Restage**: sofa faces wall TV from conversation distance; coffee table mid; wall-mounted mirror; front door (west, “outside soon”); library books mixed depth.
+  - **Forge → Signal Studio**: modern brand panel (support/cinema/hall/library lanes), no WeaponForge in house.
+  - **Interact HUD**: title + hint + E/Use; tighter hotspot radii / approach points; front_door soon toast.
+  - Form polish: sharper boxes, SEGS=12 cylinders, studio dual monitors.
+- **Files**: SoulPanel, houseMap, HouseGeometry, HouseDecor, HousePanels, StudioPanel, HouseCinematicChrome, HouseExperience, houseUiStore, stationProgress, HouseCanvas
+- **Handoff**: Texture/life pass still deferred. Exterior beyond front door next. Paths may remain in 2D RPG world2d (not house).
+- grok → idle.
+
+---
+
 ## 2026-07-13 (Grok) — Arcade device controls + house staging + 3D form pass
 - **Agent**: Grok
 - **Status**: Completed (`tsc --noEmit` 0). **Form pass complete; texture/life pass next.**

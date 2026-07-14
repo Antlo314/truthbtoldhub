@@ -1,7 +1,7 @@
 /**
- * House layout — staged open-plan home.
- * Zones, conversation triangles, clear ~1.1 m walk paths.
- * One household object → one feature. Truth only in Truth.OS (computer).
+ * House layout — real-home staging, modern brand stations.
+ * Zones · clear paths · furniture against walls where it belongs.
+ * One object → one feature. Truth only in Truth.OS (computer).
  */
 
 import type { HousePanelId } from './houseUiStore';
@@ -17,15 +17,21 @@ export type HotspotId =
     | 'soul_mirror'
     | 'wayfinder'
     | 'arcade'
-    | 'forge';
+    | 'studio'
+    | 'front_door';
 
 export type Hotspot = {
     id: HotspotId;
     label: string;
     hint: string;
+    /** World position — stand here to interact (in front of furniture, not inside) */
     position: [number, number, number];
+    /** Horizontal reach (meters). Keep tight so HUD doesn't fire from next room. */
     radius: number;
-    action: { type: 'os' } | { type: 'panel'; panel: HousePanelId };
+    action:
+        | { type: 'os' }
+        | { type: 'panel'; panel: HousePanelId }
+        | { type: 'soon'; message: string };
 };
 
 /** Expanded ~22×20 m footprint */
@@ -36,107 +42,124 @@ export const HOUSE_BOUNDS = {
     maxZ: 9.2,
 };
 
-/** Bedroom doorway — facing living / media wall */
-export const SPAWN: [number, number, number] = [0, 1.62, 4.6];
+/** Bedroom doorway looking into living / media wall (−Z) */
+export const SPAWN: [number, number, number] = [0, 1.62, 4.4];
 
 /**
- * Staged interactables — positions match furniture heroes.
- * Arcade = controller on coffee table (TV is décor only).
+ * Interact points sit in the open approach zone (not inside colliders).
+ * radius tuned so only nearby approach triggers HUD.
  */
 export const HOTSPOTS: Hotspot[] = [
     {
         id: 'computer',
         label: 'Desktop',
         hint: 'Log in · boot Truth.OS',
-        position: [3.55, 1.0, 4.9],
-        radius: 1.4,
+        position: [3.35, 1.0, 4.55],
+        radius: 1.05,
         action: { type: 'os' },
     },
     {
         id: 'soul_mirror',
-        label: 'Mirror',
+        label: 'Soul Mirror',
         hint: 'Vessel · shape your form',
-        position: [3.85, 1.3, 7.55],
-        radius: 1.25,
+        // In front of wall mirror (east bedroom wall)
+        position: [3.15, 1.25, 7.45],
+        radius: 1.0,
         action: { type: 'panel', panel: 'soul' },
     },
     {
         id: 'arcade',
         label: 'Controller',
-        hint: 'Pick up controller · Arcade',
-        position: [0.15, 0.55, -0.95],
-        radius: 1.15,
+        hint: 'Pick up · Arcade',
+        // Coffee table between sofa and TV
+        position: [0.2, 0.5, -1.85],
+        radius: 0.95,
         action: { type: 'panel', panel: 'arcade' },
     },
     {
         id: 'envelope',
         label: 'Offering tray',
         hint: 'The Offering',
-        position: [-2.35, 0.85, -0.35],
-        radius: 1.3,
+        position: [-2.55, 0.8, 0.15],
+        radius: 1.0,
         action: { type: 'panel', panel: 'offering' },
     },
     {
         id: 'library',
         label: 'Bookshelves',
         hint: 'Open the Library',
-        position: [-6.4, 1.2, -4.6],
-        radius: 1.85,
+        position: [-6.55, 1.1, -4.5],
+        radius: 1.35,
         action: { type: 'panel', panel: 'library' },
     },
     {
         id: 'codex',
         label: 'Study desk',
         hint: 'Codex · memory',
-        position: [6.35, 1.0, -4.55],
-        radius: 1.5,
+        position: [6.2, 1.0, -4.2],
+        radius: 1.15,
         action: { type: 'panel', panel: 'codex' },
     },
     {
         id: 'ledger',
         label: 'Ledger',
         hint: 'Daily word',
-        position: [-5.15, 1.0, 2.15],
-        radius: 1.3,
+        position: [-5.0, 1.0, 2.0],
+        radius: 1.05,
         action: { type: 'panel', panel: 'ledger' },
     },
     {
         id: 'wayfinder',
         label: 'Wall map',
-        hint: 'Wayfinder · roads',
-        position: [0, 1.2, -8.35],
-        radius: 1.5,
+        hint: 'Roads · next steps',
+        position: [0, 1.15, -8.15],
+        radius: 1.15,
         action: { type: 'panel', panel: 'wayfinder' },
     },
     {
         id: 'cinema',
         label: 'Film screen',
         hint: 'Cinema · film',
-        position: [7.85, 1.4, 1.25],
-        radius: 1.55,
+        position: [7.55, 1.3, 1.25],
+        radius: 1.2,
         action: { type: 'panel', panel: 'cinema' },
     },
     {
         id: 'hall',
         label: 'Hall arch',
         hint: 'The Hall · community',
-        position: [-7.15, 1.2, 2.05],
-        radius: 1.5,
+        position: [-6.9, 1.15, 2.0],
+        radius: 1.15,
         action: { type: 'panel', panel: 'hall' },
     },
     {
-        id: 'forge',
-        label: 'Forge bench',
-        hint: 'Temper arms & tonics',
-        position: [7.7, 1.0, -7.05],
-        radius: 1.45,
-        action: { type: 'panel', panel: 'forge' },
+        id: 'studio',
+        label: 'Studio',
+        hint: 'Signal Studio · brand pulse',
+        position: [7.35, 1.0, -6.75],
+        radius: 1.2,
+        action: { type: 'panel', panel: 'studio' },
+    },
+    {
+        id: 'front_door',
+        label: 'Front door',
+        hint: 'Outside · coming soon',
+        // West entry into living
+        position: [-9.15, 1.2, 0.15],
+        radius: 1.1,
+        action: {
+            type: 'soon',
+            message: 'The grounds open soon. For now, this is home.',
+        },
     },
 ];
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
-/** AABB furniture/walls — leave clear center corridor for circulation */
+/**
+ * Furniture against walls / floating seating groups.
+ * Living: TV on north media wall (−Z), sofa further south (+Z) facing it.
+ */
 export const COLLIDERS: Collider[] = [
     // Outer walls
     { x: 0, z: -9.5, hx: 10.6, hz: 0.22 },
@@ -144,57 +167,56 @@ export const COLLIDERS: Collider[] = [
     { x: -10.5, z: 0, hx: 0.22, hz: 9.8 },
     { x: 10.5, z: 0, hx: 0.22, hz: 9.8 },
 
-    // Bedroom partial walls (doorway gap ~2.4 m at x=0)
-    { x: -3.4, z: 3.05, hx: 2.15, hz: 0.14 },
-    { x: 3.4, z: 3.05, hx: 2.15, hz: 0.14 },
+    // Bedroom partial walls (doorway ~2.3 m)
+    { x: -3.45, z: 3.0, hx: 2.2, hz: 0.14 },
+    { x: 3.45, z: 3.0, hx: 2.2, hz: 0.14 },
 
-    // Bed + headboard (south wall)
-    { x: -0.7, z: 7.55, hx: 1.2, hz: 0.95 },
-    // Nightstands
-    { x: -2.15, z: 7.55, hx: 0.28, hz: 0.28 },
-    { x: 0.75, z: 7.55, hx: 0.28, hz: 0.28 },
-    // Desk + chair (bedroom work corner)
-    { x: 3.55, z: 5.1, hx: 0.95, hz: 0.42 },
-    { x: 3.55, z: 4.35, hx: 0.32, hz: 0.32 },
-    // Soul mirror
-    { x: 3.95, z: 7.85, hx: 0.16, hz: 0.4 },
+    // Bed against south wall
+    { x: -0.7, z: 7.7, hx: 1.2, hz: 0.95 },
+    { x: -2.15, z: 7.7, hx: 0.28, hz: 0.28 },
+    { x: 0.75, z: 7.7, hx: 0.28, hz: 0.28 },
+    // Desk against east bedroom wall
+    { x: 3.7, z: 5.15, hx: 0.9, hz: 0.4 },
+    { x: 3.55, z: 4.4, hx: 0.3, hz: 0.3 },
+    // Wall mirror (flush east wall)
+    { x: 4.15, z: 7.55, hx: 0.12, hz: 0.45 },
 
-    // Living: sofa (floats, faces media −Z)
-    { x: 0.55, z: -2.55, hx: 1.35, hz: 0.55 },
-    // Coffee table (controller)
-    { x: 0.15, z: -0.95, hx: 0.55, hz: 0.38 },
-    // Offering side table (west of seating)
-    { x: -2.35, z: -0.35, hx: 0.55, hz: 0.38 },
-    // Media console + TV base
-    { x: 0.0, z: -4.05, hx: 1.15, hz: 0.32 },
-    // Accent chair (east of conversation group)
-    { x: 2.65, z: -1.35, hx: 0.42, hz: 0.42 },
+    // Living — sofa further from TV (conversation distance)
+    { x: 0.4, z: 0.15, hx: 1.35, hz: 0.55 },
+    // Coffee table mid conversation
+    { x: 0.2, z: -1.9, hx: 0.55, hz: 0.4 },
+    // Media console + TV against wall
+    { x: 0.0, z: -4.55, hx: 1.2, hz: 0.35 },
+    // Offering console against west living
+    { x: -2.7, z: 0.2, hx: 0.5, hz: 0.4 },
+    // Accent chair east of seating
+    { x: 2.85, z: -0.4, hx: 0.4, hz: 0.4 },
 
-    // Ledger lectern
-    { x: -5.15, z: 2.15, hx: 0.38, hz: 0.38 },
+    // Ledger
+    { x: -5.1, z: 2.1, hx: 0.38, hz: 0.38 },
     // Hearth
-    { x: -7.55, z: 3.75, hx: 0.72, hz: 0.48 },
+    { x: -7.55, z: 3.7, hx: 0.7, hz: 0.48 },
     // Hall pillars
-    { x: -7.75, z: 2.05, hx: 0.22, hz: 0.18 },
-    { x: -6.55, z: 2.05, hx: 0.22, hz: 0.18 },
+    { x: -7.7, z: 2.0, hx: 0.22, hz: 0.18 },
+    { x: -6.5, z: 2.0, hx: 0.22, hz: 0.18 },
 
-    // Library shelves (wall-hug)
-    { x: -8.65, z: -4.6, hx: 0.42, hz: 2.1 },
-    // Reading chair
-    { x: -5.55, z: -3.9, hx: 0.4, hz: 0.4 },
+    // Library shelves (wall-hug west)
+    { x: -8.75, z: -4.5, hx: 0.4, hz: 2.15 },
+    { x: -5.6, z: -3.85, hx: 0.4, hz: 0.4 },
 
-    // Study desk + chair
-    { x: 6.35, z: -4.55, hx: 0.85, hz: 0.48 },
-    { x: 6.35, z: -3.7, hx: 0.32, hz: 0.32 },
-    // Study shelf
-    { x: 8.55, z: -5.7, hx: 0.35, hz: 1.15 },
+    // Study
+    { x: 6.4, z: -4.55, hx: 0.85, hz: 0.45 },
+    { x: 6.35, z: -3.75, hx: 0.3, hz: 0.3 },
+    { x: 8.6, z: -5.7, hx: 0.35, hz: 1.1 },
 
-    // Cinema screen base
-    { x: 8.85, z: 1.25, hx: 0.22, hz: 1.25 },
-    // Wayfinder map wall furniture
-    { x: 0, z: -9.0, hx: 0.95, hz: 0.16 },
-    // Forge bench
-    { x: 7.7, z: -7.05, hx: 0.9, hz: 0.55 },
+    // Cinema against east wall
+    { x: 8.95, z: 1.25, hx: 0.25, hz: 1.25 },
+    // Wayfinder north wall
+    { x: 0, z: -9.05, hx: 0.95, hz: 0.16 },
+    // Studio desk (SE)
+    { x: 7.65, z: -7.15, hx: 0.95, hz: 0.55 },
+    // Front door frame (west wall)
+    { x: -10.15, z: 0.15, hx: 0.28, hz: 0.55 },
 ];
 
 const PLAYER_R = 0.34;
@@ -278,6 +300,7 @@ export function collideMove(
     return { x: nx, z: nz };
 }
 
+/** Closest hotspot within radius (strict). Prefer smaller distance. */
 export function nearestHotspot(x: number, z: number): Hotspot | null {
     let best: Hotspot | null = null;
     let bestD = Infinity;
@@ -289,4 +312,11 @@ export function nearestHotspot(x: number, z: number): Hotspot | null {
         }
     }
     return best;
+}
+
+/** 0..1 proximity for HUD intensity (1 = on top of interact) */
+export function hotspotProximity(x: number, z: number, h: Hotspot): number {
+    const d = Math.hypot(x - h.position[0], z - h.position[2]);
+    if (d >= h.radius) return 0;
+    return 1 - d / h.radius;
 }

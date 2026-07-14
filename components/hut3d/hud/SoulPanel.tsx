@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Soul Mirror — live 3D vessel forge (AvatarConfig → VesselModel).
+ * Soul Mirror — full-body live 3D vessel (rotatable). No Paths.
  */
-import { Suspense, useMemo, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { ContactShadows } from '@react-three/drei';
+import { Suspense, useMemo, useRef, useState } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { ContactShadows, OrbitControls } from '@react-three/drei';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { VesselModel } from '@/components/hut3d/VesselModel';
 import {
@@ -22,7 +22,6 @@ import {
     type OutfitStyle,
     type Extra,
 } from '@/lib/game/avatar';
-import type { GamePath } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 const HAIR_STYLES: HairStyle[] = [
@@ -31,12 +30,6 @@ const HAIR_STYLES: HairStyle[] = [
 ];
 const FACES: FaceStyle[] = ['calm', 'keen', 'goatee', 'beard', 'mustache'];
 const EXTRAS: Extra[] = ['none', 'circlet', 'hood', 'earrings', 'glasses', 'warpaint', 'belt', 'flower', 'scar'];
-const PATHS: { id: GamePath; label: string }[] = [
-    { id: 'seer', label: 'Seer' },
-    { id: 'sentinel', label: 'Sentinel' },
-    { id: 'scribe', label: 'Scribe' },
-    { id: 'mystic', label: 'Mystic' },
-];
 
 function outfitsFor(build: Build): OutfitStyle[] {
     return build === 'fem'
@@ -108,25 +101,65 @@ function ChipRow<T extends string>({
     );
 }
 
-function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
+/** Orbit + gentle idle spin when not dragging */
+function VesselOrbit({ spinning }: { spinning: boolean }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const controls = useRef<any>(null);
+    useFrame((_, dt) => {
+        const c = controls.current;
+        if (!spinning || !c) return;
+        c.setAzimuthalAngle(c.getAzimuthalAngle() + dt * 0.35);
+        c.update();
+    });
     return (
-        <div className="w-full h-52 rounded-2xl border border-white/10 bg-gradient-to-b from-[#1a1528] to-black overflow-hidden">
+        <OrbitControls
+            ref={controls}
+            makeDefault
+            enablePan={false}
+            enableZoom
+            minDistance={1.6}
+            maxDistance={4.2}
+            minPolarAngle={0.35}
+            maxPolarAngle={Math.PI / 2 + 0.15}
+            target={[0, 0.95, 0]}
+            rotateSpeed={0.7}
+        />
+    );
+}
+
+function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
+    const [dragging, setDragging] = useState(false);
+
+    return (
+        <div
+            className="relative w-full h-full min-h-[280px] rounded-none sm:rounded-2xl border-0 sm:border border-white/10 bg-gradient-to-b from-[#1a1528] via-[#0c0a14] to-black overflow-hidden touch-none"
+            onPointerDown={() => setDragging(true)}
+            onPointerUp={() => setDragging(false)}
+            onPointerLeave={() => setDragging(false)}
+        >
             <Canvas
-                camera={{ position: [0, 1.1, 2.4], fov: 35 }}
-                dpr={[1, 1.5]}
+                camera={{ position: [0, 1.05, 2.85], fov: 32, near: 0.1, far: 20 }}
+                dpr={[1, 1.75]}
                 gl={{ antialias: true, alpha: true }}
+                onCreated={({ camera }) => {
+                    camera.lookAt(0, 0.95, 0);
+                }}
             >
                 <color attach="background" args={['#0c0a12']} />
-                <ambientLight intensity={0.65} />
-                <directionalLight position={[2, 4, 2]} intensity={1.1} color="#e8ecff" />
-                <pointLight position={[-1, 1.5, 1]} intensity={0.5} color="#a78bfa" />
+                <ambientLight intensity={0.7} />
+                <directionalLight position={[2.2, 4.2, 2.5]} intensity={1.25} color="#e8ecff" />
+                <directionalLight position={[-2, 2, -1]} intensity={0.35} color="#a78bfa" />
+                <pointLight position={[0, 1.6, 1.2]} intensity={0.55} color="#f5e6c8" />
                 <Suspense fallback={null}>
-                    <group position={[0, 0, 0]}>
-                        <VesselModel avatar={avatar} scale={1.05} />
-                    </group>
-                    <ContactShadows position={[0, 0.01, 0]} opacity={0.45} scale={4} blur={2.5} />
+                    {/* Feet at y=0 · mid-body ~0.95 — camera targets torso */}
+                    <VesselModel avatar={avatar} scale={1} position={[0, 0, 0]} />
+                    <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={3.5} blur={2.2} far={3} />
+                    <VesselOrbit spinning={!dragging} />
                 </Suspense>
             </Canvas>
+            <p className="absolute bottom-3 inset-x-0 text-center text-[9px] uppercase tracking-[0.28em] text-white/35 pointer-events-none">
+                Drag to rotate · scroll to zoom
+            </p>
         </div>
     );
 }
@@ -135,10 +168,9 @@ export default function SoulPanel({ onClose }: { onClose: () => void }) {
     const character = useGameStore((s) => s.character);
     const setAvatar = useGameStore((s) => s.setAvatar);
     const setName = useGameStore((s) => s.setName);
-    const setPath = useGameStore((s) => s.setPath);
     const saveToCloud = useGameStore((s) => s.saveToCloud);
     const [saving, setSaving] = useState(false);
-    const [tab, setTab] = useState<'body' | 'hair' | 'face' | 'outfit' | 'path'>('body');
+    const [tab, setTab] = useState<'body' | 'hair' | 'face' | 'outfit'>('body');
 
     const avatar = character.avatar;
     const outfits = useMemo(() => outfitsFor(avatar.build), [avatar.build]);
@@ -164,154 +196,133 @@ export default function SoulPanel({ onClose }: { onClose: () => void }) {
         { id: 'hair' as const, label: 'Hair' },
         { id: 'face' as const, label: 'Face' },
         { id: 'outfit' as const, label: 'Outfit' },
-        { id: 'path' as const, label: 'Path' },
     ];
 
     return (
-        <div className="flex flex-col h-full min-h-0 bg-[#0a0a12]">
-            <header className="shrink-0 px-5 pt-4 pb-3 border-b border-white/10">
-                <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400 font-bold">Soul Mirror</p>
-                <h2 className="font-ritual text-2xl text-white mt-1">Your Vessel</h2>
-                <p className="mt-1.5 text-sm text-white/50 leading-relaxed">
-                    Live 3D form — changes update immediately. Save to keep them.
-                </p>
-            </header>
-
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex flex-col lg:flex-row h-full min-h-0 bg-[#0a0a12]">
+            {/* Full-body vessel — majority of viewport on large screens */}
+            <div className="relative shrink-0 h-[42dvh] min-h-[260px] lg:h-full lg:flex-1 lg:min-w-0 border-b lg:border-b-0 lg:border-r border-white/10">
                 <VesselPreview avatar={avatar} />
-
-                <input
-                    value={character.name || ''}
-                    onChange={(e) => setName(e.target.value)}
-                    maxLength={40}
-                    placeholder="Name"
-                    className="w-full rounded-xl bg-black/50 border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold/50"
-                />
-
-                <div className="flex gap-1 p-1 rounded-xl bg-black/40 border border-white/8">
-                    {tabs.map((t) => (
-                        <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => setTab(t.id)}
-                            className={`flex-1 py-1.5 rounded-lg text-[10px] uppercase tracking-wider ${
-                                tab === t.id ? 'bg-white/10 text-white' : 'text-white/40'
-                            }`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-
-                {tab === 'body' && (
-                    <div className="space-y-3">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Build</p>
-                        <ChipRow
-                            options={['masc', 'fem'] as Build[]}
-                            value={avatar.build}
-                            onChange={(v) => {
-                                const next = outfitsFor(v);
-                                patch({
-                                    build: v,
-                                    outfit: next.includes(avatar.outfit) ? avatar.outfit : next[0],
-                                });
-                            }}
-                            labels={{ masc: 'Masc', fem: 'Fem' }}
-                        />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Skin</p>
-                        <SwatchRow colors={SKIN_TONES} value={avatar.skin} onChange={(i) => patch({ skin: i })} />
-                    </div>
-                )}
-
-                {tab === 'hair' && (
-                    <div className="space-y-3">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Style</p>
-                        <ChipRow options={HAIR_STYLES} value={avatar.hairStyle} onChange={(v) => patch({ hairStyle: v })} />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Color</p>
-                        <SwatchRow
-                            colors={HAIR_COLORS}
-                            value={avatar.hairColor}
-                            onChange={(i) => patch({ hairColor: i })}
-                        />
-                    </div>
-                )}
-
-                {tab === 'face' && (
-                    <div className="space-y-3">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Face</p>
-                        <ChipRow options={FACES} value={avatar.face} onChange={(v) => patch({ face: v })} />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Eyes</p>
-                        <SwatchRow
-                            colors={EYE_COLORS}
-                            value={avatar.eyes ?? 0}
-                            onChange={(i) => patch({ eyes: i })}
-                        />
-                        <p className="text-[9px] text-white/30">{EYE_NAMES[avatar.eyes ?? 0]}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Extra</p>
-                        <ChipRow
-                            options={EXTRAS}
-                            value={(avatar.extra ?? 'none') as Extra}
-                            onChange={(v) => patch({ extra: v })}
-                        />
-                    </div>
-                )}
-
-                {tab === 'outfit' && (
-                    <div className="space-y-3">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Garb</p>
-                        <ChipRow options={outfits} value={avatar.outfit} onChange={(v) => patch({ outfit: v })} />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Top</p>
-                        <SwatchRow colors={CLOTH_COLORS} value={avatar.top} onChange={(i) => patch({ top: i })} />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Legs</p>
-                        <SwatchRow colors={CLOTH_COLORS} value={avatar.bottom} onChange={(i) => patch({ bottom: i })} />
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Boots</p>
-                        <SwatchRow colors={BOOT_COLORS} value={avatar.boots} onChange={(i) => patch({ boots: i })} />
-                    </div>
-                )}
-
-                {tab === 'path' && (
-                    <div className="space-y-3">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">Path</p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {PATHS.map((p) => (
-                                <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => {
-                                        sacredUi.click();
-                                        setPath(p.id);
-                                    }}
-                                    className={`py-3 rounded-xl border text-sm ${
-                                        character.path === p.id
-                                            ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100'
-                                            : 'border-white/10 text-white/60 hover:border-white/25'
-                                    }`}
-                                >
-                                    {p.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            <footer className="shrink-0 p-4 border-t border-white/10 flex gap-2">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex-1 py-3 rounded-xl bg-white/5 border border-white/15 text-sm uppercase tracking-[0.15em] text-white/70"
-                >
-                    Close
-                </button>
-                <button
-                    type="button"
-                    onClick={() => void handleSave()}
-                    disabled={saving}
-                    className="flex-1 py-3 rounded-xl bg-aether-gold text-black font-semibold text-sm uppercase tracking-[0.15em] disabled:opacity-60"
-                >
-                    {saving ? 'Saving…' : 'Save vessel'}
-                </button>
-            </footer>
+            <div className="flex flex-col flex-1 min-h-0 lg:max-w-md xl:max-w-lg">
+                <header className="shrink-0 px-5 pt-4 pb-3 border-b border-white/10">
+                    <p className="text-[10px] uppercase tracking-[0.35em] text-slate-400 font-bold">Soul Mirror</p>
+                    <h2 className="font-ritual text-2xl text-white mt-1">Your Vessel</h2>
+                    <p className="mt-1.5 text-sm text-white/50 leading-relaxed">
+                        Full 3D form — drag to spin. Save when it feels like you.
+                    </p>
+                </header>
+
+                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+                    <input
+                        value={character.name || ''}
+                        onChange={(e) => setName(e.target.value)}
+                        maxLength={40}
+                        placeholder="Name"
+                        className="w-full rounded-xl bg-black/50 border border-white/10 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-aether-gold/50"
+                    />
+
+                    <div className="flex gap-1 p-1 rounded-xl bg-black/40 border border-white/8">
+                        {tabs.map((t) => (
+                            <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setTab(t.id)}
+                                className={`flex-1 py-1.5 rounded-lg text-[10px] uppercase tracking-wider ${
+                                    tab === t.id ? 'bg-white/10 text-white' : 'text-white/40'
+                                }`}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {tab === 'body' && (
+                        <div className="space-y-3">
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Build</p>
+                            <ChipRow
+                                options={['masc', 'fem'] as Build[]}
+                                value={avatar.build}
+                                onChange={(v) => {
+                                    const next = outfitsFor(v);
+                                    patch({
+                                        build: v,
+                                        outfit: next.includes(avatar.outfit) ? avatar.outfit : next[0],
+                                    });
+                                }}
+                                labels={{ masc: 'Masc', fem: 'Fem' }}
+                            />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Skin</p>
+                            <SwatchRow colors={SKIN_TONES} value={avatar.skin} onChange={(i) => patch({ skin: i })} />
+                        </div>
+                    )}
+
+                    {tab === 'hair' && (
+                        <div className="space-y-3">
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Style</p>
+                            <ChipRow options={HAIR_STYLES} value={avatar.hairStyle} onChange={(v) => patch({ hairStyle: v })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Color</p>
+                            <SwatchRow
+                                colors={HAIR_COLORS}
+                                value={avatar.hairColor}
+                                onChange={(i) => patch({ hairColor: i })}
+                            />
+                        </div>
+                    )}
+
+                    {tab === 'face' && (
+                        <div className="space-y-3">
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Face</p>
+                            <ChipRow options={FACES} value={avatar.face} onChange={(v) => patch({ face: v })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Eyes</p>
+                            <SwatchRow
+                                colors={EYE_COLORS}
+                                value={avatar.eyes ?? 0}
+                                onChange={(i) => patch({ eyes: i })}
+                            />
+                            <p className="text-[9px] text-white/30">{EYE_NAMES[avatar.eyes ?? 0]}</p>
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Extra</p>
+                            <ChipRow
+                                options={EXTRAS}
+                                value={(avatar.extra ?? 'none') as Extra}
+                                onChange={(v) => patch({ extra: v })}
+                            />
+                        </div>
+                    )}
+
+                    {tab === 'outfit' && (
+                        <div className="space-y-3">
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Look</p>
+                            <ChipRow options={outfits} value={avatar.outfit} onChange={(v) => patch({ outfit: v })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Top</p>
+                            <SwatchRow colors={CLOTH_COLORS} value={avatar.top} onChange={(i) => patch({ top: i })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Legs</p>
+                            <SwatchRow colors={CLOTH_COLORS} value={avatar.bottom} onChange={(i) => patch({ bottom: i })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">Boots</p>
+                            <SwatchRow colors={BOOT_COLORS} value={avatar.boots} onChange={(i) => patch({ boots: i })} />
+                        </div>
+                    )}
+                </div>
+
+                <footer className="shrink-0 p-4 border-t border-white/10 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-3 rounded-xl bg-white/5 border border-white/15 text-sm uppercase tracking-[0.15em] text-white/70"
+                    >
+                        Close
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void handleSave()}
+                        disabled={saving}
+                        className="flex-1 py-3 rounded-xl bg-aether-gold text-black font-semibold text-sm uppercase tracking-[0.15em] disabled:opacity-60"
+                    >
+                        {saving ? 'Saving…' : 'Save vessel'}
+                    </button>
+                </footer>
+            </div>
         </div>
     );
 }

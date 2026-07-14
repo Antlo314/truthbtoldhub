@@ -7,7 +7,7 @@
 import dynamic from 'next/dynamic';
 import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
-import WeaponForge from '@/components/game/WeaponForge';
+import StudioPanel from './StudioPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { visionStats } from '@/lib/brand/visionProgress';
 import { suggestNextRoad } from '@/lib/brand/nextRoad';
@@ -23,7 +23,7 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
 });
 
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'forge' | 'wayfinder' | 'arcade'>,
+    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
@@ -70,12 +70,14 @@ function Shell({
     onClose,
     children,
     full = false,
+    bare = false,
 }: {
     title: string;
     accent: string;
     onClose: () => void;
     children: React.ReactNode;
     full?: boolean;
+    bare?: boolean;
 }) {
     return (
         <div className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -93,19 +95,21 @@ function Shell({
                         : 'h-[min(92dvh,780px)] sm:max-w-lg sm:rounded-2xl border-t sm:border rounded-t-2xl',
                 ].join(' ')}
             >
-                <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-black/50">
-                    <div>
-                        <p className={`text-[10px] uppercase tracking-[0.3em] font-mono ${accent}`}>House</p>
-                        <h2 className="text-white font-semibold text-lg leading-tight">{title}</h2>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-3 py-1.5 rounded-lg border border-white/15 text-[10px] uppercase tracking-widest text-white/60 hover:text-white hover:border-white/30"
-                    >
-                        Close
-                    </button>
-                </header>
+                {!bare && (
+                    <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-black/50">
+                        <div>
+                            <p className={`text-[10px] uppercase tracking-[0.3em] font-mono ${accent}`}>House</p>
+                            <h2 className="text-white font-semibold text-lg leading-tight">{title}</h2>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-3 py-1.5 rounded-lg border border-white/15 text-[10px] uppercase tracking-widest text-white/60 hover:text-white hover:border-white/30"
+                        >
+                            Close
+                        </button>
+                    </header>
+                )}
                 <div className="flex-1 min-h-0 relative">{children}</div>
             </div>
         </div>
@@ -142,7 +146,7 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
         <Shell title="Wayfinder" accent="text-emerald-300" onClose={onClose}>
             <div className="p-5 space-y-4 overflow-y-auto h-full">
                 <p className="text-sm text-white/70 leading-relaxed">
-                    Only Eden is open while the garden is completed. Other ages remain sealed.
+                    Your next modern steps on the hub — portals, trials, and work still open.
                 </p>
                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-2">
                     <p className="text-emerald-300 font-medium">{next.label}</p>
@@ -156,7 +160,7 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                     onClick={() => sacredUi.click()}
                     className="block w-full text-center py-3 rounded-xl border border-emerald-400/35 text-emerald-100 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
                 >
-                    Walk the next road
+                    Continue
                 </a>
             </div>
         </Shell>
@@ -165,20 +169,30 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
 
 function SoulNative({ onClose }: { onClose: () => void }) {
     return (
-        <Shell title="Soul Mirror" accent="text-slate-300" onClose={onClose} full>
+        <Shell title="Soul Mirror" accent="text-slate-300" onClose={onClose} full bare>
+            <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-lg border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/80 hover:text-white backdrop-blur-md"
+            >
+                Close
+            </button>
             <SoulPanel onClose={onClose} />
         </Shell>
     );
 }
 
-function ForgePanel({ onClose }: { onClose: () => void }) {
-    const equipWeapon = useGameStore((s) => s.equipWeapon);
+function StudioNative({ onClose }: { onClose: () => void }) {
     return (
-        <Shell title="The Forge" accent="text-orange-300" onClose={onClose} full>
-            <WeaponForge
-                onForge={(id) => equipWeapon(id)}
-                onClose={onClose}
-            />
+        <Shell title="Signal Studio" accent="text-orange-300" onClose={onClose} full bare>
+            <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-lg border border-white/20 bg-black/60 text-[10px] uppercase tracking-widest text-white/80 hover:text-white backdrop-blur-md"
+            >
+                Close
+            </button>
+            <StudioPanel onClose={onClose} />
         </Shell>
     );
 }
@@ -202,14 +216,13 @@ export default function HousePanels() {
     const onClose = () => {
         sacredUi.veilClose();
         closePanel();
-        // Rehydrate after forge/soul so cloud + local stay aligned
-        if (panel === 'soul' || panel === 'forge' || panel === 'arcade') {
+        if (panel === 'soul' || panel === 'studio' || panel === 'arcade') {
             void loadFromCloud?.();
         }
     };
 
     if (panel === 'soul') return <SoulNative onClose={onClose} />;
-    if (panel === 'forge') return <ForgePanel onClose={onClose} />;
+    if (panel === 'studio') return <StudioNative onClose={onClose} />;
     if (panel === 'wayfinder') return <WayfinderNative onClose={onClose} />;
     if (panel === 'arcade') return <ArcadePanel onClose={onClose} />;
     if (panel in PANEL_META) {

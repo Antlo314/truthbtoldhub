@@ -82,6 +82,8 @@ export default function HouseExperience() {
     const { device } = useClientDevice();
     const { enterOs, closeToRoom } = useTruthOs();
     const openPanel = useHouseUi((s) => s.openPanel);
+    const setSoonMessage = useHouseUi((s) => s.setSoonMessage);
+    const soonMessage = useHouseUi((s) => s.soonMessage);
     const panel = useHouseUi((s) => s.panel);
     const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
     const walkthroughOpen = useHouseUi((s) => s.walkthroughOpen);
@@ -281,9 +283,14 @@ export default function HouseExperience() {
             }
             if (h.action.type === 'panel') {
                 openPanel(h.action.panel as HousePanelId);
+                return;
+            }
+            if (h.action.type === 'soon') {
+                setSoonMessage(h.action.message);
+                window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest],
+        [enterOs, openPanel, guest, setSoonMessage],
     );
 
     const tryInteract = useCallback(() => {
@@ -463,6 +470,14 @@ export default function HouseExperience() {
 
             <HouseWalkthrough />
             <HousePanels />
+
+            {soonMessage && (
+                <div className="fixed inset-x-0 bottom-[18%] z-[56] flex justify-center px-4 pointer-events-none">
+                    <p className="max-w-md text-center text-sm text-amber-50 bg-black/85 border border-amber-400/40 px-5 py-3 rounded-2xl backdrop-blur-md shadow-xl">
+                        {soonMessage}
+                    </p>
+                </div>
+            )}
 
             {osOpen && (
                 <div

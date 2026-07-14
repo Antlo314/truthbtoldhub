@@ -12,20 +12,23 @@ export type HousePanelId =
     | 'cinema'
     | 'hall'
     | 'offering'
-    | 'forge'
+    | 'studio'
     | 'arcade';
 
 type HouseUiState = {
     panel: HousePanelId | null;
     walkthroughOpen: boolean;
     walkthroughStep: number;
+    /** Transient toast for front door / soon stations */
+    soonMessage: string | null;
     openPanel: (id: HousePanelId) => void;
     closePanel: () => void;
     setWalkthrough: (open: boolean, step?: number) => void;
     nextWalkthrough: () => void;
+    setSoonMessage: (msg: string | null) => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v5';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v6';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -48,9 +51,11 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     panel: null,
     walkthroughOpen: false,
     walkthroughStep: 0,
+    soonMessage: null,
 
     openPanel: (id) => set({ panel: id }),
     closePanel: () => set({ panel: null }),
+    setSoonMessage: (msg) => set({ soonMessage: msg }),
 
     setWalkthrough: (open, step = 0) => set({ walkthroughOpen: open, walkthroughStep: step }),
 
@@ -63,7 +68,7 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 export const WALKTHROUGH_STEPS = [
     {
         title: 'Welcome home',
-        body: 'A staged house — living room, bedroom, library, study, forge. Each object opens one feature. Nothing is repeated.',
+        body: 'A staged modern house — living room, bedroom, library, study, studio. Each object opens one feature.',
         tip: 'Continue when you’re ready',
     },
     {
@@ -73,22 +78,22 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'Gold rings',
-        body: 'Rings mark interactables: controller (Arcade), mirror (vessel), forge, map, shelves, film screen, hall arch, and more.',
+        body: 'Rings mark what you can use: controller, mirror, studio, map, shelves, film screen, hall, front door, and more.',
         tip: 'Walk onto a ring · E or Use',
     },
     {
-        title: 'Arcade',
-        body: 'Sofa faces the living-room TV. Pick up the controller on the coffee table to open the Arcade — PC uses keys, phone uses tap.',
-        tip: 'Controller · cyan ring',
+        title: 'Living room',
+        body: 'Sofa faces the wall TV from across the room. Controller on the coffee table opens Arcade.',
+        tip: 'Cyan ring on the table',
     },
     {
-        title: 'Truth.OS computer',
-        body: 'Sensitive data, updates, and Truth.sys live only on the bedroom desk computer. Sign in to boot the OS.',
-        tip: 'Bedroom · green monitor',
+        title: 'Soul Mirror & Studio',
+        body: 'Wall mirror shapes your vessel. SE Studio is the brand pulse — modern tools, not fantasy forge.',
+        tip: 'Bedroom mirror · Studio desk',
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space. Replay this tour anytime from Tour.',
+        body: 'Only LIVE players share the space. The front door opens to outside soon.',
         tip: 'Enter the house',
     },
 ] as const;

@@ -1,9 +1,7 @@
 'use client';
 
 /**
- * House props — unique interactables + staging accents.
- * Arcade: TV/console in geometry; controller mesh here (hotspot).
- * Form pass only — no heavy textures.
+ * House props — rings + small interactables staged with furniture.
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -21,12 +19,13 @@ const ACCENT: Record<string, string> = {
     hall: '#38bdf8',
     soul_mirror: '#94a3b8',
     arcade: '#22d3ee',
-    forge: '#f97316',
+    studio: '#f97316',
+    front_door: '#e8d5b0',
 };
 
 function SpinRing({
     accent,
-    radius = 0.42,
+    radius = 0.38,
     low,
 }: {
     accent: string;
@@ -38,21 +37,20 @@ function SpinRing({
         if (ref.current) ref.current.rotation.z += dt * (low ? 0.2 : 0.35);
     });
     return (
-        <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
-            <ringGeometry args={[radius, radius + 0.1, low ? 16 : 28]} />
+        <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <ringGeometry args={[radius, radius + 0.09, low ? 16 : 28]} />
             <meshStandardMaterial
                 color={accent}
                 emissive={accent}
-                emissiveIntensity={0.55}
+                emissiveIntensity={0.6}
                 transparent
-                opacity={0.75}
+                opacity={0.78}
                 side={THREE.DoubleSide}
             />
         </mesh>
     );
 }
 
-/** Gamepad on coffee table — the arcade interactable */
 function ArcadeController({ low }: { low?: boolean }) {
     const glow = useRef<THREE.Mesh>(null);
     useFrame(({ clock }) => {
@@ -60,77 +58,47 @@ function ArcadeController({ low }: { low?: boolean }) {
         const p = 0.55 + Math.sin(clock.elapsedTime * 2.4) * 0.25;
         (glow.current.material as THREE.MeshStandardMaterial).emissiveIntensity = p;
     });
+    // Coffee table top
     return (
-        <group position={[0.15, 0.42, -0.95]} rotation={[0, 0.35, 0]}>
-            {/* body */}
+        <group position={[0.2, 0.42, -1.9]} rotation={[0, 0.35, 0]}>
             <mesh castShadow={!low}>
-                <boxGeometry args={[0.34, 0.07, 0.22]} />
-                <meshStandardMaterial color="#1a1a22" roughness={0.5} metalness={0.3} />
+                <boxGeometry args={[0.34, 0.065, 0.21]} />
+                <meshStandardMaterial color="#1a1a22" roughness={0.48} metalness={0.32} />
             </mesh>
-            {/* grips */}
-            <mesh position={[-0.15, -0.01, 0.05]} rotation={[0.15, 0, 0.22]} castShadow={!low}>
-                <boxGeometry args={[0.11, 0.055, 0.13]} />
+            <mesh position={[-0.15, -0.01, 0.05]} rotation={[0.15, 0, 0.22]}>
+                <boxGeometry args={[0.1, 0.05, 0.12]} />
                 <meshStandardMaterial color="#121218" roughness={0.7} />
             </mesh>
-            <mesh position={[0.15, -0.01, 0.05]} rotation={[0.15, 0, -0.22]} castShadow={!low}>
-                <boxGeometry args={[0.11, 0.055, 0.13]} />
+            <mesh position={[0.15, -0.01, 0.05]} rotation={[0.15, 0, -0.22]}>
+                <boxGeometry args={[0.1, 0.05, 0.12]} />
                 <meshStandardMaterial color="#121218" roughness={0.7} />
             </mesh>
-            {/* LED strip */}
             <mesh ref={glow} position={[0, 0.04, -0.02]}>
-                <boxGeometry args={[0.15, 0.018, 0.035]} />
-                <meshStandardMaterial
-                    color="#22d3ee"
-                    emissive="#22d3ee"
-                    emissiveIntensity={0.7}
-                    toneMapped={false}
-                />
+                <boxGeometry args={[0.14, 0.016, 0.03]} />
+                <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={0.7} toneMapped={false} />
             </mesh>
-            {/* sticks */}
             <mesh position={[-0.08, 0.045, 0.02]}>
-                <cylinderGeometry args={[0.022, 0.022, 0.035, 8]} />
+                <cylinderGeometry args={[0.02, 0.02, 0.03, 10]} />
                 <meshStandardMaterial color="#2a2a32" />
             </mesh>
             <mesh position={[0.08, 0.045, 0.02]}>
-                <cylinderGeometry args={[0.022, 0.022, 0.035, 8]} />
+                <cylinderGeometry args={[0.02, 0.02, 0.03, 10]} />
                 <meshStandardMaterial color="#2a2a32" />
             </mesh>
-            {/* face buttons hint */}
-            {!low &&
-                [
-                    [0.1, 0.04, -0.04],
-                    [0.14, 0.04, -0.01],
-                    [0.1, 0.04, 0.02],
-                    [0.06, 0.04, -0.01],
-                ].map((p, i) => (
-                    <mesh key={i} position={p as [number, number, number]}>
-                        <sphereGeometry args={[0.012, 6, 6]} />
-                        <meshStandardMaterial
-                            color={['#ef4444', '#22c55e', '#3b82f6', '#fbbf24'][i]}
-                            emissive={['#ef4444', '#22c55e', '#3b82f6', '#fbbf24'][i]}
-                            emissiveIntensity={0.4}
-                        />
-                    </mesh>
-                ))}
         </group>
     );
 }
 
 function OfferingTray() {
     return (
-        <group position={[-2.35, 0.5, -0.35]} rotation={[-0.08, 0.35, 0]}>
+        <group position={[-2.7, 0.5, 0.2]} rotation={[-0.06, 0.2, 0]}>
             <mesh castShadow>
-                <boxGeometry args={[0.32, 0.025, 0.2]} />
+                <boxGeometry args={[0.3, 0.022, 0.18]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.85} />
             </mesh>
             <mesh position={[0, 0.02, 0]}>
-                <planeGeometry args={[0.24, 0.14]} />
-                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.45} />
-            </mesh>
-            {/* coin stack accent */}
-            <mesh position={[0.08, 0.03, 0.04]}>
-                <cylinderGeometry args={[0.03, 0.03, 0.02, 10]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.3} emissive="#fbbf24" emissiveIntensity={0.2} />
+                <planeGeometry args={[0.22, 0.12]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.42} />
             </mesh>
         </group>
     );
@@ -138,19 +106,14 @@ function OfferingTray() {
 
 function LedgerBook() {
     return (
-        <group position={[-5.15, 0, 2.15]}>
-            <mesh position={[0, 1.08, 0]} rotation={[-0.18, 0.2, 0]} castShadow>
-                <boxGeometry args={[0.4, 0.07, 0.3]} />
+        <group position={[-5.1, 0, 2.1]}>
+            <mesh position={[0, 1.05, 0]} rotation={[-0.16, 0.15, 0]} castShadow>
+                <boxGeometry args={[0.38, 0.06, 0.28]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.8} />
             </mesh>
-            <mesh position={[0, 1.13, 0]} rotation={[-0.18, 0.2, 0]}>
-                <planeGeometry args={[0.3, 0.2]} />
-                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.38} />
-            </mesh>
-            {/* quill pot */}
-            <mesh position={[0.22, 1.05, 0.1]}>
-                <cylinderGeometry args={[0.04, 0.05, 0.12, 8]} />
-                <meshStandardMaterial color="#2c241c" roughness={0.9} />
+            <mesh position={[0, 1.1, 0]} rotation={[-0.16, 0.15, 0]}>
+                <planeGeometry args={[0.28, 0.18]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.35} />
             </mesh>
         </group>
     );
@@ -162,44 +125,18 @@ function HearthFlame({ low }: { low?: boolean }) {
         if (!flame.current || low) return;
         const t = clock.elapsedTime;
         flame.current.scale.y = 1 + Math.sin(t * 8) * 0.12;
-        flame.current.position.y = 0.55 + Math.sin(t * 6) * 0.03;
+        flame.current.position.y = 0.52 + Math.sin(t * 6) * 0.03;
     });
     return (
-        <group position={[-7.55, 0, 3.75]}>
-            <mesh ref={flame} position={[0, 0.55, 0.18]}>
-                <coneGeometry args={[0.2, 0.5, 6]} />
-                <meshStandardMaterial
-                    color="#ff6b2c"
-                    emissive="#ff6b2c"
-                    emissiveIntensity={1.15}
-                    toneMapped={false}
-                />
+        <group position={[-7.55, 0, 3.7]}>
+            <mesh ref={flame} position={[0, 0.52, 0.16]}>
+                <coneGeometry args={[0.18, 0.48, 8]} />
+                <meshStandardMaterial color="#ff6b2c" emissive="#ff6b2c" emissiveIntensity={1.1} toneMapped={false} />
             </mesh>
             {!low && (
-                <>
-                    <mesh position={[0.08, 0.42, 0.12]}>
-                        <coneGeometry args={[0.1, 0.28, 5]} />
-                        <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.9} toneMapped={false} />
-                    </mesh>
-                    <pointLight position={[0, 0.95, 0.25]} intensity={1.65} color="#ff8a3d" distance={6.5} decay={2} />
-                </>
+                <pointLight position={[0, 0.9, 0.2]} intensity={1.5} color="#ff8a3d" distance={6} decay={2} />
             )}
         </group>
-    );
-}
-
-function ForgeEmber({ low }: { low?: boolean }) {
-    const ref = useRef<THREE.Mesh>(null);
-    useFrame(({ clock }) => {
-        if (!ref.current || low) return;
-        (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
-            0.85 + Math.sin(clock.elapsedTime * 5) * 0.35;
-    });
-    return (
-        <mesh ref={ref} position={[7.95, 1.2, -7.2]}>
-            <sphereGeometry args={[0.11, 8, 8]} />
-            <meshStandardMaterial color="#fb923c" emissive="#fb923c" emissiveIntensity={1} toneMapped={false} />
-        </mesh>
     );
 }
 
@@ -210,12 +147,11 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
             <OfferingTray />
             <LedgerBook />
             <HearthFlame low={low} />
-            <ForgeEmber low={low} />
             {HOTSPOTS.map((h) => (
                 <group key={h.id} position={[h.position[0], 0, h.position[2]]}>
                     <SpinRing
                         accent={ACCENT[h.id] || '#fbbf24'}
-                        radius={h.id === 'arcade' ? 0.32 : 0.42}
+                        radius={h.id === 'arcade' ? 0.28 : h.id === 'front_door' ? 0.48 : 0.36}
                         low={low}
                     />
                 </group>
