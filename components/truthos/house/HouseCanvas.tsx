@@ -89,7 +89,7 @@ export default function HouseCanvas({
                 }}
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
-                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
+                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
                     camera.position.set(0, 1.62, 1.2);
                     camera.lookAt(0, 1.3, -2);
                     // Local body only for mirror FBO
