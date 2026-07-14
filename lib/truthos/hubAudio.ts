@@ -407,7 +407,7 @@ class HubAudioController {
         const nearFire = fireDist < 3.6;
         // Living media wall (east) + cinema screen (east mid-room)
         const nearTv =
-            Math.hypot(x - 4.55, z - -7.8) < 3.0 || Math.hypot(x - 12.5, z - 1.0) < 3.2;
+            Math.hypot(x - 4.55, z - -7.8) < 3.0 || Math.hypot(x - 12.5, z - 7.0) < 3.2;
         const nearDesk = Math.hypot(x - 4.8, z - 7.6) < 3.0;
         const fireVol = nearFire ? 0.04 + (1 - Math.min(1, fireDist / 3.6)) * 0.08 : 0;
         this.setAmbient('fire', nearFire ? 'fire_crackle_loop' : null, fireVol);

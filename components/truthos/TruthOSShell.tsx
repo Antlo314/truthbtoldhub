@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * Truth.OS — real desktop OS shell.
- * Menu bar · desktop icons · draggable windows · taskbar / Start · admin console.
+ * Truth.OS — desktop OS shell with custom icon sheet + wallpaper.
  */
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
@@ -13,23 +12,52 @@ import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 
-type DockItem = { app: OsAppId; label: string; glyph: string; adminOnly?: boolean };
+type DockItem = {
+    app: OsAppId;
+    label: string;
+    /** Position on 2×3 icon sheet (row-major 0–5) */
+    sheet: number;
+    adminOnly?: boolean;
+};
 
 const APPS: DockItem[] = [
-    { app: 'truth', label: 'Truth', glyph: '◈' },
-    { app: 'updates', label: 'Updates', glyph: '※' },
-    { app: 'files', label: 'Files', glyph: '📁' },
-    { app: 'account', label: 'Account', glyph: '◎' },
-    { app: 'settings', label: 'Settings', glyph: '⚙' },
-    { app: 'admin', label: 'Admin', glyph: '🛡', adminOnly: true },
+    { app: 'truth', label: 'Truth', sheet: 0 },
+    { app: 'updates', label: 'Updates', sheet: 1 },
+    { app: 'files', label: 'Files', sheet: 2 },
+    { app: 'account', label: 'Account', sheet: 3 },
+    { app: 'settings', label: 'Settings', sheet: 4 },
+    { app: 'admin', label: 'Admin', sheet: 5, adminOnly: true },
 ];
 
 const BOOT_LINES = [
     'Truth.OS BIOS · firmware OK',
     'mounting soul_fs…',
+    'loading icon atlas…',
     'network · encrypted channel',
     'desktop session ready',
 ];
+
+/** 2×3 atlas → CSS background position (percent) */
+function OsIcon({ index, size = 48, className = '' }: { index: number; size?: number; className?: string }) {
+    const col = index % 3;
+    const row = Math.floor(index / 3);
+    const x = col === 0 ? 0 : col === 1 ? 50 : 100;
+    const y = row === 0 ? 0 : 100;
+    return (
+        <span
+            className={`block rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 ${className}`}
+            style={{
+                width: size,
+                height: size,
+                backgroundImage: 'url(/truthos/os-icons.jpg)',
+                backgroundSize: '300% 200%',
+                backgroundPosition: `${x}% ${y}%`,
+                backgroundRepeat: 'no-repeat',
+            }}
+            aria-hidden
+        />
+    );
+}
 
 export default function TruthOSShell({
     onLogout,
@@ -65,7 +93,7 @@ export default function TruthOSShell({
         const t = setInterval(() => {
             i += 1;
             setBootLine(i);
-            hubAudio.playSfx('os_boot_blip', { volume: 0.22 });
+            hubAudio.playSfx('os_boot_blip', { volume: 0.18 });
             if (i >= BOOT_LINES.length) {
                 clearInterval(t);
                 setTimeout(() => {
@@ -74,7 +102,7 @@ export default function TruthOSShell({
                     sacredUi.access();
                 }, 180);
             }
-        }, 140);
+        }, 130);
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -104,13 +132,27 @@ export default function TruthOSShell({
         return (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050508] font-mono text-sm text-[#5dff6a]">
                 <div className="w-full max-w-md px-6 space-y-2">
-                    <p className="text-[10px] tracking-[0.4em] text-[#2d6b35] mb-4">TRUTH.OS</p>
+                    <div className="flex items-center gap-3 mb-5">
+                        <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-sm font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)]">
+                            T
+                        </span>
+                        <div>
+                            <p className="text-[10px] tracking-[0.4em] text-[#2d6b35]">TRUTH.OS</p>
+                            <p className="text-[11px] text-emerald-400/50">v1.4 · house desktop</p>
+                        </div>
+                    </div>
                     {BOOT_LINES.slice(0, bootLine).map((m, i) => (
-                        <p key={i} className={i === bootLine - 1 ? 'animate-pulse' : ''}>
+                        <p key={i} className={i === bootLine - 1 ? 'animate-pulse' : 'text-emerald-400/80'}>
+                            <span className="text-emerald-700 mr-2">›</span>
                             {m}
                         </p>
                     ))}
-                    <p className="text-[#2d6b35] mt-6">_</p>
+                    <div className="mt-6 h-1 rounded-full bg-emerald-950 overflow-hidden">
+                        <div
+                            className="h-full bg-gradient-to-r from-emerald-600 to-cyan-400 transition-all duration-200"
+                            style={{ width: `${Math.min(100, (bootLine / BOOT_LINES.length) * 100)}%` }}
+                        />
+                    </div>
                 </div>
             </div>
         );
@@ -118,25 +160,23 @@ export default function TruthOSShell({
 
     return (
         <div className="absolute inset-0 z-50 flex flex-col overflow-hidden select-none bg-[#0a0c12]">
-            {/* Wallpaper */}
+            {/* Wallpaper image + soft overlays */}
             <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                    background:
-                        'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(34,197,94,0.12), transparent 55%), radial-gradient(ellipse 60% 50% at 20% 80%, rgba(99,102,241,0.14), transparent 50%), linear-gradient(160deg, #0b0f18 0%, #0a0c12 40%, #08060e 100%)',
-                }}
+                className="pointer-events-none absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: 'url(/truthos/os-wallpaper.jpg)' }}
             />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.04]"
+                className="pointer-events-none absolute inset-0 opacity-[0.035]"
                 style={{
                     backgroundImage:
                         'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-                    backgroundSize: '40px 40px',
+                    backgroundSize: '48px 48px',
                 }}
             />
 
             {/* Menu bar */}
-            <header className="relative z-40 h-9 shrink-0 flex items-center justify-between px-3 border-b border-white/10 bg-black/55 backdrop-blur-xl">
+            <header className="relative z-40 h-9 shrink-0 flex items-center justify-between px-3 border-b border-white/10 bg-black/60 backdrop-blur-xl">
                 <div className="flex items-center gap-3 min-w-0">
                     <button
                         type="button"
@@ -159,18 +199,16 @@ export default function TruthOSShell({
                     </span>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] font-mono text-white/50">
+                    <span className="hidden md:inline text-white/25">soul_fs · secure</span>
                     <span className="hidden sm:inline">{clock}</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]" title="Online" />
                 </div>
             </header>
 
             {/* Desktop */}
-            <div
-                className="relative flex-1 min-h-0"
-                onClick={() => setStartOpen(false)}
-            >
-                {/* Desktop icons */}
-                <div className="absolute top-4 left-3 sm:left-5 grid grid-cols-1 gap-4 z-[1]">
+            <div className="relative flex-1 min-h-0" onClick={() => setStartOpen(false)}>
+                {/* Desktop icons — icon sheet */}
+                <div className="absolute top-4 left-3 sm:left-5 grid grid-cols-1 sm:grid-cols-1 gap-5 z-[1]">
                     {visibleApps.map((d) => (
                         <button
                             key={d.app}
@@ -181,22 +219,29 @@ export default function TruthOSShell({
                                 hubAudio.osWindowOpen();
                                 sacredUi.click();
                             }}
-                            className="w-[72px] flex flex-col items-center gap-1.5 group"
+                            className="w-[80px] flex flex-col items-center gap-1.5 group touch-manipulation"
                         >
                             <span
-                                className={`w-12 h-12 rounded-2xl border flex items-center justify-center text-lg shadow-lg transition-transform group-hover:scale-105 group-active:scale-95 ${
-                                    d.adminOnly
-                                        ? 'bg-rose-500/15 border-rose-400/35 text-rose-300'
-                                        : 'bg-white/8 border-white/12 text-emerald-300/95 group-hover:border-emerald-400/40'
+                                className={`relative transition-transform group-hover:scale-105 group-active:scale-95 ${
+                                    d.adminOnly ? 'ring-2 ring-rose-400/40 rounded-2xl' : ''
                                 }`}
                             >
-                                {d.glyph}
+                                <OsIcon index={d.sheet} size={52} />
+                                <span className="pointer-events-none absolute inset-0 rounded-2xl bg-white/0 group-hover:bg-white/5" />
                             </span>
-                            <span className="text-[11px] text-white/75 group-hover:text-white text-center leading-tight drop-shadow-md">
+                            <span className="text-[11px] text-white/85 group-hover:text-white text-center leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] px-1 rounded bg-black/25">
                                 {d.label}
                             </span>
                         </button>
                     ))}
+                </div>
+
+                {/* Welcome card */}
+                <div className="absolute bottom-4 right-3 sm:right-5 z-[1] max-w-[220px] rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-3.5 py-3 pointer-events-none hidden sm:block">
+                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">Desktop</p>
+                    <p className="text-[12px] text-white/75 mt-1 leading-snug">
+                        Open Truth, Files, or Account. Walk the house for stations.
+                    </p>
                 </div>
 
                 {/* Windows */}
@@ -206,6 +251,7 @@ export default function TruthOSShell({
                             key={w.id}
                             title={w.title}
                             app={w.app}
+                            sheet={APPS.find((a) => a.app === w.app)?.sheet ?? 0}
                             x={w.x}
                             y={w.y}
                             w={w.w}
@@ -230,14 +276,17 @@ export default function TruthOSShell({
                 {/* Start menu */}
                 {startOpen && (
                     <div
-                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,300px)] rounded-2xl border border-white/12 bg-[#12151c]/90 backdrop-blur-2xl shadow-2xl overflow-hidden"
+                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,320px)] rounded-2xl border border-white/12 bg-[#12151c]/92 backdrop-blur-2xl shadow-2xl overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="px-4 py-3 border-b border-white/10">
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-mono">Start</p>
-                            <p className="text-sm text-white font-medium mt-0.5 truncate">
-                                {email || 'Truth.OS user'}
-                            </p>
+                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3">
+                            <OsIcon index={3} size={36} />
+                            <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-mono">Start</p>
+                                <p className="text-sm text-white font-medium mt-0.5 truncate">
+                                    {email || 'Truth.OS user'}
+                                </p>
+                            </div>
                         </div>
                         <div className="p-2 grid grid-cols-2 gap-1">
                             {visibleApps.map((d) => (
@@ -249,9 +298,9 @@ export default function TruthOSShell({
                                         hubAudio.osWindowOpen();
                                         sacredUi.click();
                                     }}
-                                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-white/8 text-left"
+                                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-white/8 text-left"
                                 >
-                                    <span className="text-base w-7 text-center">{d.glyph}</span>
+                                    <OsIcon index={d.sheet} size={32} className="!rounded-xl shrink-0" />
                                     <span className="text-[12px] text-white/80">{d.label}</span>
                                 </button>
                             ))}
@@ -284,7 +333,7 @@ export default function TruthOSShell({
             </div>
 
             {/* Taskbar */}
-            <footer className="relative z-40 h-12 shrink-0 flex items-center gap-1 px-2 border-t border-white/10 bg-black/70 backdrop-blur-xl">
+            <footer className="relative z-40 h-12 shrink-0 flex items-center gap-1 px-2 border-t border-white/10 bg-black/75 backdrop-blur-xl">
                 <button
                     type="button"
                     onClick={() => {
@@ -304,24 +353,28 @@ export default function TruthOSShell({
                 </button>
                 <div className="w-px h-6 bg-white/10 mx-1" />
                 <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0">
-                    {windows.map((w) => (
-                        <button
-                            key={w.id}
-                            type="button"
-                            onClick={() => {
-                                if (w.minimized || focusId !== w.id) focusWindow(w.id);
-                                else minimizeWindow(w.id);
-                                sacredUi.click();
-                            }}
-                            className={`h-9 px-3 rounded-lg text-[11px] truncate max-w-[140px] border transition-colors ${
-                                focusId === w.id && !w.minimized
-                                    ? 'bg-white/12 border-white/15 text-white'
-                                    : 'border-transparent text-white/50 hover:bg-white/8'
-                            }`}
-                        >
-                            {w.title}
-                        </button>
-                    ))}
+                    {windows.map((w) => {
+                        const sheet = APPS.find((a) => a.app === w.app)?.sheet ?? 0;
+                        return (
+                            <button
+                                key={w.id}
+                                type="button"
+                                onClick={() => {
+                                    if (w.minimized || focusId !== w.id) focusWindow(w.id);
+                                    else minimizeWindow(w.id);
+                                    sacredUi.click();
+                                }}
+                                className={`h-9 pl-1.5 pr-3 rounded-lg text-[11px] truncate max-w-[160px] border transition-colors flex items-center gap-1.5 ${
+                                    focusId === w.id && !w.minimized
+                                        ? 'bg-white/12 border-white/15 text-white'
+                                        : 'border-transparent text-white/50 hover:bg-white/8'
+                                }`}
+                            >
+                                <OsIcon index={sheet} size={22} className="!rounded-md shrink-0" />
+                                <span className="truncate">{w.title}</span>
+                            </button>
+                        );
+                    })}
                 </div>
                 <div className="hidden sm:flex items-center gap-2 px-2 text-[10px] font-mono text-white/40 shrink-0">
                     <span>{clock.split(' · ')[0]}</span>
@@ -334,6 +387,7 @@ export default function TruthOSShell({
 function OsWindowFrame({
     title,
     app,
+    sheet,
     x,
     y,
     w,
@@ -350,6 +404,7 @@ function OsWindowFrame({
 }: {
     title: string;
     app: OsAppId;
+    sheet: number;
     x: number;
     y: number;
     w: number;
@@ -444,7 +499,8 @@ function OsWindowFrame({
                         }}
                     />
                 </div>
-                <span className="ml-2 text-[12px] text-white/70 truncate flex-1 font-medium">{title}</span>
+                <OsIcon index={sheet} size={18} className="!rounded-md ml-1 shrink-0" />
+                <span className="ml-1.5 text-[12px] text-white/70 truncate flex-1 font-medium">{title}</span>
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
         </div>

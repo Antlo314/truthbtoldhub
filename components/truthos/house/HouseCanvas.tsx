@@ -85,13 +85,13 @@ export default function HouseCanvas({
                     fov: mobile ? 78 : 68,
                     near: 0.08,
                     far: mobile ? 48 : 90,
-                    position: [0, 1.62, 1.2],
+                    position: [4.55, 1.62, 6.35],
                 }}
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-                    camera.position.set(0, 1.62, 1.2);
-                    camera.lookAt(0, 1.3, -2);
+                    camera.position.set(4.55, 1.62, 6.35);
+                    camera.lookAt(4.55, 1.35, 8.2);
                     // Local body only for mirror FBO
                     camera.layers.disable(1);
                 }}

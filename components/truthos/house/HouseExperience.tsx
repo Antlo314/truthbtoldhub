@@ -234,9 +234,9 @@ export default function HouseExperience() {
                 aura: character.appearance?.aura || '#a78bfa',
                 skin: character.avatar?.skin ?? 6,
                 build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
-                x: 0,
+                x: 4.55,
                 y: 0,
-                z: 5.5,
+                z: 6.35,
                 yaw: Math.PI,
             },
             (list) => {

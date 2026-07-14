@@ -7,7 +7,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { collideMove, resolveStuck, SPAWN, nearestHotspot, isOnLivingRug, type Hotspot } from './houseMap';
+import { collideMove, resolveStuck, SPAWN, SPAWN_YAW, nearestHotspot, isOnLivingRug, type Hotspot } from './houseMap';
 import { houseInput } from './houseInput';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import {
@@ -53,9 +53,9 @@ export default function FirstPersonController({
     lockedRef.current = locked;
 
     const keys = useRef(createKeyState());
-    const yaw = useRef(Math.PI);
+    const yaw = useRef(SPAWN_YAW);
     const pitch = useRef(0);
-    const yawS = useRef(Math.PI);
+    const yawS = useRef(SPAWN_YAW);
     const pitchS = useRef(0);
     const pos = useRef(new THREE.Vector3(SPAWN[0], EYE_HEIGHT, SPAWN[2]));
     const vel = useRef({ x: 0, z: 0 });
@@ -77,13 +77,13 @@ export default function FirstPersonController({
         vel.current = { x: 0, z: 0 };
         vy.current = 0;
         grounded.current = true;
-        yaw.current = Math.PI;
+        yaw.current = SPAWN_YAW;
         pitch.current = 0;
-        yawS.current = Math.PI;
+        yawS.current = SPAWN_YAW;
         pitchS.current = 0;
         camera.position.copy(pos.current);
         camera.rotation.order = 'YXZ';
-        camera.rotation.y = Math.PI;
+        camera.rotation.y = SPAWN_YAW;
         camera.rotation.x = 0;
         houseInput.clearAll();
         keys.current.clear();

@@ -27,7 +27,7 @@ function Panel({ children, className = '' }: { children: React.ReactNode; classN
 
 function AppHeader({ title, sub, accent }: { title: string; sub: string; accent: string }) {
     return (
-        <div className="mb-4">
+        <div className="mb-4 pb-3 border-b border-white/8">
             <p className={`text-[10px] uppercase tracking-[0.32em] font-mono ${accent}`}>{title}</p>
             <h3 className="text-white font-semibold text-lg mt-1 leading-tight">{sub}</h3>
         </div>
@@ -97,22 +97,32 @@ export function FilesApp() {
     return (
         <Panel className="bg-zinc-950 space-y-3">
             <AppHeader title="Files" sub="Local house links" accent="text-sky-400/80" />
+            <p className="text-xs text-zinc-500 leading-relaxed">
+                Shortcuts into the house web. 3D stations still open by walking to them.
+            </p>
             <ul className="space-y-2">
                 {[
-                    { href: '/library', label: 'Library' },
-                    { href: '/cinema', label: 'Cinema' },
-                    { href: '/archive', label: 'The Hall' },
-                    { href: '/support', label: 'Support' },
-                    { href: '/codex', label: 'Codex' },
+                    { href: '/library', label: 'Library', tag: 'west wing' },
+                    { href: '/cinema', label: 'Cinema', tag: 'east room' },
+                    { href: '/archive', label: 'The Hall', tag: 'community' },
+                    { href: '/support', label: 'Support', tag: 'offering' },
+                    { href: '/codex', label: 'Codex', tag: 'study' },
                 ].map((l) => (
                     <li key={l.href}>
                         <a
                             href={l.href}
                             onClick={() => sacredUi.click()}
-                            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.06]"
+                            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.06] hover:border-sky-400/25 transition-colors"
                         >
-                            <span className="text-sm text-white/90">{l.label}</span>
-                            <span className="text-[10px] font-mono text-white/30">{l.href}</span>
+                            <span className="w-9 h-9 rounded-lg bg-sky-500/15 border border-sky-400/25 flex items-center justify-center text-sky-300 text-sm shrink-0">
+                                ▣
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm text-white/90">{l.label}</span>
+                                <span className="block text-[10px] text-white/30 font-mono mt-0.5">
+                                    {l.tag} · {l.href}
+                                </span>
+                            </span>
                         </a>
                     </li>
                 ))}

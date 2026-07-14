@@ -67,11 +67,14 @@ function Wall({
     return <MatBox pos={pos} size={size} material={m.plaster} shadows={sh} />;
 }
 
+/**
+ * Hollow wall bookcase — open bays, books rest ON shelf tops (no solid fill clip).
+ */
 function WallBookcase({
     wallX,
     wallZ,
-    depth = 0.4,
-    height = 2.6,
+    depth = 0.42,
+    height = 2.55,
     width = 4.2,
     face = 'west' as 'west' | 'east',
     sh,
@@ -93,54 +96,93 @@ function WallBookcase({
     const into = face === 'west' ? 1 : -1;
     const cx = wallX + into * (depth / 2 + 0.02);
     const cz = wallZ;
-    const sx = depth;
     const sz = width;
-    const y = height / 2;
+    const shelfT = 0.04;
+    const sideT = 0.08;
+    const backT = 0.05;
     const shelfCount = low ? 4 : 5;
+    // Even shelf tops from plinth to under crown — leave bay clearance
+    const bottomY = 0.12;
+    const topInner = height - 0.12;
     const shelves: number[] = [];
     for (let i = 0; i < shelfCount; i++) {
-        shelves.push(0.22 + (i / (shelfCount - 1)) * (height - 0.45));
+        shelves.push(bottomY + (i / (shelfCount - 1)) * (topInner - bottomY - shelfT));
     }
-    const bookSlots = low ? 10 : 16;
+    const bayH =
+        shelfCount > 1
+            ? (shelves[1] - shelves[0] - shelfT) * 0.92
+            : 0.28;
+    const bookSlots = low ? 9 : 14;
+    const bookDepth = depth * 0.52;
+    const bookX = cx + into * (backT * 0.5 + bookDepth * 0.35);
 
     return (
         <group>
-            <MatBox pos={[cx, y, cz]} size={[sx, height, sz]} material={m.wood} shadows={sh} />
+            {/* Thin back panel only (not a solid filled volume) */}
             <MatBox
-                pos={[wallX + into * 0.03, y, cz]}
-                size={[0.04, height - 0.08, sz - 0.08]}
+                pos={[wallX + into * (backT / 2 + 0.01), height / 2, cz]}
+                size={[backT, height - 0.04, sz - 0.06]}
                 material={m.woodDark}
                 shadows={false}
             />
-            <MatBox pos={[cx, y, cz - sz / 2 + 0.05]} size={[depth + 0.02, height, 0.1]} material={m.woodDark} shadows={sh} />
-            <MatBox pos={[cx, y, cz + sz / 2 - 0.05]} size={[depth + 0.02, height, 0.1]} material={m.woodDark} shadows={sh} />
-            <MatBox pos={[cx, height - 0.04, cz]} size={[depth + 0.08, 0.1, sz + 0.08]} material={m.wood} shadows={false} />
-            {shelves.map((sy, row) => (
-                <group key={row}>
-                    <MatBox
-                        pos={[cx + into * 0.02, sy, cz]}
-                        size={[depth - 0.08, 0.05, sz - 0.2]}
-                        material={m.woodDark}
-                        shadows={false}
-                    />
-                    {rich &&
-                        Array.from({ length: bookSlots }).map((_, j) => {
-                            const t = (j + 0.5) / bookSlots - 0.5;
-                            const pull = ((row * 5 + j) % 4) * 0.022;
-                            const tall = 0.15 + ((j + row) % 4) * 0.05;
-                            const thick = 0.05 + (j % 3) * 0.014;
-                            return (
-                                <MatBox
-                                    key={j}
-                                    pos={[cx + into * (0.02 + pull), sy + tall * 0.5 + 0.02, cz + t * (sz - 0.3)]}
-                                    size={[depth * 0.55 + pull, tall, thick]}
-                                    material={m.book}
-                                    shadows={false}
-                                />
-                            );
-                        })}
-                </group>
-            ))}
+            {/* Sides */}
+            <MatBox
+                pos={[cx, height / 2, cz - sz / 2 + sideT / 2]}
+                size={[depth, height, sideT]}
+                material={m.wood}
+                shadows={sh}
+            />
+            <MatBox
+                pos={[cx, height / 2, cz + sz / 2 - sideT / 2]}
+                size={[depth, height, sideT]}
+                material={m.wood}
+                shadows={sh}
+            />
+            {/* Plinth + crown */}
+            <MatBox pos={[cx, bottomY / 2, cz]} size={[depth + 0.04, bottomY, sz]} material={m.wood} shadows={sh} />
+            <MatBox
+                pos={[cx, height - 0.05, cz]}
+                size={[depth + 0.06, 0.1, sz + 0.06]}
+                material={m.wood}
+                shadows={false}
+            />
+            {shelves.map((sy, row) => {
+                const shelfTop = sy + shelfT;
+                const nextShelf = shelves[row + 1];
+                const maxBookH = nextShelf
+                    ? Math.max(0.12, nextShelf - shelfTop - 0.03)
+                    : Math.min(bayH, height - shelfTop - 0.14);
+                return (
+                    <group key={row}>
+                        <MatBox
+                            pos={[cx + into * 0.01, sy + shelfT / 2, cz]}
+                            size={[depth - 0.06, shelfT, sz - sideT * 2 - 0.04]}
+                            material={m.woodDark}
+                            shadows={false}
+                        />
+                        {rich &&
+                            Array.from({ length: bookSlots }).map((_, j) => {
+                                const t = (j + 0.5) / bookSlots - 0.5;
+                                const tall = Math.min(
+                                    maxBookH,
+                                    0.14 + ((j + row) % 4) * 0.035,
+                                );
+                                const thick = 0.045 + (j % 3) * 0.012;
+                                // Bottom of book sits flush on shelf top
+                                const by = shelfTop + tall * 0.5 + 0.002;
+                                return (
+                                    <MatBox
+                                        key={j}
+                                        pos={[bookX, by, cz + t * (sz - sideT * 2 - 0.22)]}
+                                        size={[bookDepth, tall, thick]}
+                                        material={m.book}
+                                        shadows={false}
+                                    />
+                                );
+                            })}
+                    </group>
+                );
+            })}
         </group>
     );
 }
@@ -397,7 +439,14 @@ export default function HouseGeometry({
             <MatBox pos={[-6.2, 2.7, 1.1]} size={[0.28, 0.16, 1.6]} material={m.wood} shadows={false} />
 
             <Wall pos={[6.2, 1.4, -7.0]} size={[0.22, 2.8, 7.6]} m={m} sh={sh} />
-            <Wall pos={[6.2, 1.4, 6.5]} size={[0.22, 2.8, 8.4]} m={m} sh={sh} />
+            {/* East partition — split to leave cinema door into SE empty room */}
+            <Wall pos={[6.2, 1.4, 4.15]} size={[0.22, 2.8, 3.5]} m={m} sh={sh} />
+            <Wall pos={[6.2, 1.4, 9.55]} size={[0.22, 2.8, 3.5]} m={m} sh={sh} />
+            {/* Cinema doorway frame (enter empty room from bedroom) */}
+            <MatBox pos={[6.2, 1.4, 6.55]} size={[0.28, 2.8, 0.14]} material={m.wood} shadows={false} />
+            <MatBox pos={[6.2, 1.4, 8.05]} size={[0.28, 2.8, 0.14]} material={m.wood} shadows={false} />
+            <MatBox pos={[6.2, 2.7, 7.3]} size={[0.28, 0.16, 1.65]} material={m.wood} shadows={false} />
+            {/* Hall-level east opening (study/cinema approach from corridor) */}
             <MatBox pos={[6.2, 1.4, -0.2]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
             <MatBox pos={[6.2, 1.4, 1.4]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
             <MatBox pos={[6.2, 2.7, 0.6]} size={[0.28, 0.16, 1.8]} material={m.wood} shadows={false} />
@@ -519,10 +568,10 @@ export default function HouseGeometry({
             {/* ── EAST WING ── */}
             <Desk pos={[9.4, 0, -3.5]} sh={sh} rich={rich} m={m} chairSign={1} />
             <WallBookcase wallX={13.4} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
-            {/* Cinema — east mid-room off hall door (fully inside, TV on outer east wall) */}
-            <MatBox pos={[12.55, 0.4, 1.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
-            <MatBox pos={[12.6, 1.65, 1.0]} size={[0.1, 1.55, 2.4]} material={m.black} shadows={sh} />
-            <mesh position={[12.5, 1.65, 1.0]} rotation={[0, -Math.PI / 2, 0]}>
+            {/* Cinema — SE empty room (opposite of prior hall push: +3 on Z from z=1 → z=4, deeper to 7.0) */}
+            <MatBox pos={[12.55, 0.4, 7.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
+            <MatBox pos={[12.6, 1.65, 7.0]} size={[0.1, 1.55, 2.4]} material={m.black} shadows={sh} />
+            <mesh position={[12.5, 1.65, 7.0]} rotation={[0, -Math.PI / 2, 0]}>
                 <planeGeometry args={[2.15, 1.3]} />
                 <meshStandardMaterial
                     color="#0a0a12"
@@ -531,9 +580,14 @@ export default function HouseGeometry({
                     toneMapped={false}
                 />
             </mesh>
-            {/* Chairs face TV (+X / east) — rotY −90° */}
-            <AccentChair x={9.4} z={0.35} sh={sh} m={m} rotY={-Math.PI / 2} />
-            <AccentChair x={9.4} z={1.65} sh={sh} m={m} rotY={-Math.PI / 2} />
+            {/* Chairs face TV (+X) fully inside room */}
+            <AccentChair x={10.0} z={6.35} sh={sh} m={m} rotY={-Math.PI / 2} />
+            <AccentChair x={10.0} z={7.65} sh={sh} m={m} rotY={-Math.PI / 2} />
+            {/* Cinema rug */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[10.6, 0.012, 7.0]} receiveShadow={sh}>
+                <planeGeometry args={[3.2, 3.0]} />
+                <primitive object={m.rug} attach="material" />
+            </mesh>
             {/* Signal Studio desk SE */}
             <MatBox pos={[10.3, 0.72, -9.1]} size={[2.0, 0.06, 0.95]} material={m.metalDark} shadows={sh} />
             {[

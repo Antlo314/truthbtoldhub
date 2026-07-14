@@ -39,8 +39,13 @@ export const HOUSE_BOUNDS = {
     maxZ: 12.2,
 };
 
-/** Foyer, facing hall toward living (−Z) */
-export const SPAWN: [number, number, number] = [0, 1.62, 2.0];
+/**
+ * In front of the Truth.OS computer (bedroom desk) so new players see the station first.
+ * Yaw = Math.PI looks toward +Z (desk / monitor).
+ */
+export const SPAWN: [number, number, number] = [4.55, 1.62, 6.35];
+/** Radians — face the desk / screen */
+export const SPAWN_YAW = Math.PI;
 
 /** Living north-wall fireplace (hero focal) */
 export const FIREPLACE = { x: 0, z: -11.55, y: 0.9 };
@@ -149,8 +154,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'cinema',
         label: 'Film screen',
         hint: 'Cinema · film',
-        // East mid-room off hall door — fully inside, not in hallway
-        position: [10.4, 1.35, 1.0],
+        // SE empty room (east of bedroom doorway)
+        position: [10.6, 1.35, 7.0],
         radius: 1.25,
         action: { type: 'panel', panel: 'cinema' },
     },
@@ -185,7 +190,9 @@ export const COLLIDERS: Collider[] = [
     { x: -6.25, z: -6.8, hx: 0.14, hz: 4.0 },
     { x: -6.25, z: 7.6, hx: 0.14, hz: 3.6 },
     { x: 6.25, z: -7.2, hx: 0.14, hz: 3.6 },
-    { x: 6.25, z: 6.8, hx: 0.14, hz: 4.0 },
+    // East partition split for cinema doorway (~z 6.55–8.05 open)
+    { x: 6.25, z: 4.15, hx: 0.14, hz: 1.75 },
+    { x: 6.25, z: 9.55, hx: 0.14, hz: 1.75 },
 
     // Front door jambs
     { x: -1.15, z: 12.25, hx: 0.35, hz: 0.22 },
@@ -232,10 +239,10 @@ export const COLLIDERS: Collider[] = [
     { x: 9.2, z: -2.55, hx: 0.32, hz: 0.32 },
     { x: 13.0, z: -5.2, hx: 0.32, hz: 1.5 },
 
-    // Cinema — east mid-room (hall entry x>6.2, z~0..2), TV on outer east wall
-    { x: 12.55, z: 1.0, hx: 0.28, hz: 1.2 },
-    { x: 9.4, z: 0.35, hx: 0.38, hz: 0.38 },
-    { x: 9.4, z: 1.65, hx: 0.38, hz: 0.38 },
+    // Cinema SE empty room
+    { x: 12.55, z: 7.0, hx: 0.28, hz: 1.2 },
+    { x: 10.0, z: 6.35, hx: 0.38, hz: 0.38 },
+    { x: 10.0, z: 7.65, hx: 0.38, hz: 0.38 },
     // Studio SE + stool
     { x: 10.3, z: -9.1, hx: 1.05, hz: 0.55 },
     { x: 10.3, z: -8.35, hx: 0.28, hz: 0.28 },
