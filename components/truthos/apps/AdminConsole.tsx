@@ -14,6 +14,7 @@ import {
     type Bulletin,
 } from '@/lib/game/hut';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 export default function AdminConsole() {
     const [rows, setRows] = useState<Bulletin[]>([]);
@@ -65,10 +66,12 @@ export default function AdminConsole() {
             setTitle('');
             setBody('');
             setPinned(false);
+            hubAudio.playSfx('admin_publish', { duck: true });
             sacredUi.access();
             setMsg('Published.');
             await refresh();
         } catch (e) {
+            hubAudio.playSfx('ui_error');
             setMsg(e instanceof Error ? e.message : 'Post failed');
         } finally {
             setPosting(false);
@@ -194,6 +197,7 @@ export default function AdminConsole() {
                                             onClick={async () => {
                                                 if (!confirm('Delete this update?')) return;
                                                 await deleteBulletin(r.id);
+                                                hubAudio.playSfx('admin_delete');
                                                 void refresh();
                                             }}
                                         >

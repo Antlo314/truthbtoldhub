@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import { useGameStore } from '@/lib/store/useGameStore';
-import { usePageMusic } from '@/lib/game/usePageMusic';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { joinHousePresence, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
@@ -118,11 +118,16 @@ export default function HouseExperience() {
         uiLocked,
     });
 
-    usePageMusic('world_cavern');
+    useEffect(() => {
+        hubAudio.unlock();
+        hubAudio.enterHouse();
+        return () => hubAudio.leaveHouse();
+    }, []);
 
     useEffect(() => {
         hotspotRef.current = hotspot;
-    }, [hotspot]);
+        if (hotspot && !uiLocked) hubAudio.approachHotspot(hotspot.id);
+    }, [hotspot, uiLocked]);
 
     useEffect(() => {
         applyMusicSetting(loadSettings().music);
@@ -255,6 +260,9 @@ export default function HouseExperience() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authed, presenceKey]);
 
+    const movingRef = useRef(false);
+    const lastPoseAt = useRef(0);
+
     const onPose = useCallback(
         (p: { x: number; y: number; z: number; yaw: number }) => {
             presence.current?.track({
@@ -264,13 +272,23 @@ export default function HouseExperience() {
                 build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
                 ...p,
             });
+            // Zone music + ambient layers + footsteps (throttled inside hubAudio)
+            if (!uiLocked) {
+                const now = performance.now();
+                if (now - lastPoseAt.current > 80) {
+                    lastPoseAt.current = now;
+                    const onRug = Math.abs(p.x) < 3.8 && p.z > -4.8 && p.z < 0.8;
+                    hubAudio.updateHousePose(p.x, p.z, movingRef.current, onRug);
+                }
+            }
         },
-        [character, guest],
+        [character, guest, uiLocked],
     );
 
     const activateHotspot = useCallback(
         (h: Hotspot) => {
             sacredUi.click();
+            hubAudio.useHotspot(h.id);
             markVisited(h.id);
             if (h.action.type === 'os') {
                 markVisited('computer');
@@ -303,6 +321,11 @@ export default function HouseExperience() {
 
     const onMoveActivity = useCallback((kind: 'move' | 'look' | 'jump' | 'idle') => {
         setActivity(kind);
+        movingRef.current = kind === 'move';
+        if (kind === 'jump') {
+            // land cue shortly after jump impulse
+            window.setTimeout(() => hubAudio.jumpLand(), 280);
+        }
     }, []);
 
     useEffect(() => {
@@ -312,6 +335,7 @@ export default function HouseExperience() {
                 if (osOpen) {
                     setOsOpen(false);
                     closeToRoom();
+                    hubAudio.osExitToHouse();
                 }
             }
         };
@@ -362,6 +386,12 @@ export default function HouseExperience() {
 
     const showHud = ready && authed && !osOpen && !authOpen && !panel && !walkthroughOpen;
     const liveCount = peers.filter((p) => p.kind === 'live').length;
+    const prevLive = useRef(0);
+    useEffect(() => {
+        if (liveCount > prevLive.current) hubAudio.peerJoined();
+        else if (liveCount < prevLive.current && prevLive.current > 0) hubAudio.peerLeft();
+        prevLive.current = liveCount;
+    }, [liveCount]);
 
     return (
         <div

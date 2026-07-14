@@ -10,6 +10,7 @@ import {
     type LeaderRow, type ArcadeGameDef, type PersonalStats, type PastChampion,
 } from '@/lib/game/arcade';
 import { unlockArcadeAudio } from '@/lib/game/arcadeSfx';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 import TetrisGame from '@/components/game/arcade/TetrisGame';
 import SnakeGame from '@/components/game/arcade/SnakeGame';
 import VeilGame from '@/components/game/arcade/VeilGame';
@@ -72,6 +73,13 @@ export default function ArcadeLobby({ character, onClose }: Props) {
         return () => { alive = false; };
     }, [boardGame.id]);
 
+    useEffect(() => {
+        hubAudio.arcadeLobby();
+        return () => {
+            /* leave music to house when lobby unmounts via panel close */
+        };
+    }, []);
+
     const handlePlay = (g: ArcadeGameDef) => {
         if (!g.live) return;
         unlockArcadeAudio();
@@ -81,6 +89,9 @@ export default function ArcadeLobby({ character, onClose }: Props) {
         setSubmitMessage(undefined);
         setIsNewBest(false);
         setView('playing');
+        const map = { tetra: 'tetra', serpent: 'serpent', veil: 'veil' } as const;
+        const key = map[g.id as keyof typeof map];
+        if (key) hubAudio.arcadeGame(key);
     };
 
     const handleGameOver = useCallback(async (r: GameResult) => {

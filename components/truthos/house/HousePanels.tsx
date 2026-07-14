@@ -10,6 +10,7 @@ import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
@@ -215,7 +216,9 @@ export default function HousePanels() {
     const onClose = () => {
         sacredUi.veilClose();
         closePanel();
-        if (panel === 'soul' || panel === 'studio' || panel === 'arcade') {
+        // Restore house bed after panel music
+        if (panel === 'soul' || panel === 'studio' || panel === 'arcade' || panel === 'offering') {
+            hubAudio.playMusic('house_ambient_main');
             void loadFromCloud?.();
         }
     };

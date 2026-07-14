@@ -11,6 +11,7 @@ import { renderOsApp } from './apps/OsApps';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 type DockItem = { app: OsAppId; label: string; glyph: string; adminOnly?: boolean };
 
@@ -59,14 +60,17 @@ export default function TruthOSShell({
 
     useEffect(() => {
         enterOs();
+        hubAudio.osBootStart();
         let i = 0;
         const t = setInterval(() => {
             i += 1;
             setBootLine(i);
+            hubAudio.playSfx('os_boot_blip', { volume: 0.22 });
             if (i >= BOOT_LINES.length) {
                 clearInterval(t);
                 setTimeout(() => {
                     setBootDone(true);
+                    hubAudio.osBootReady();
                     sacredUi.access();
                 }, 180);
             }
@@ -137,8 +141,10 @@ export default function TruthOSShell({
                     <button
                         type="button"
                         onClick={() => {
-                            setStartOpen(!startOpen);
-                            sacredUi.click();
+                            const next = !startOpen;
+                            setStartOpen(next);
+                            if (next) hubAudio.osStartMenu();
+                            else sacredUi.click();
                         }}
                         className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-white/10"
                     >
@@ -172,6 +178,7 @@ export default function TruthOSShell({
                             onClick={(e) => {
                                 e.stopPropagation();
                                 openApp(d.app);
+                                hubAudio.osWindowOpen();
                                 sacredUi.click();
                             }}
                             className="w-[72px] flex flex-col items-center gap-1.5 group"
@@ -239,6 +246,7 @@ export default function TruthOSShell({
                                     type="button"
                                     onClick={() => {
                                         openApp(d.app);
+                                        hubAudio.osWindowOpen();
                                         sacredUi.click();
                                     }}
                                     className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-white/8 text-left"
@@ -253,6 +261,7 @@ export default function TruthOSShell({
                                 type="button"
                                 onClick={() => {
                                     closeToRoom();
+                                    hubAudio.osExitToHouse();
                                     sacredUi.click();
                                 }}
                                 className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-white/60 hover:bg-white/8"
@@ -279,8 +288,10 @@ export default function TruthOSShell({
                 <button
                     type="button"
                     onClick={() => {
-                        setStartOpen(!startOpen);
-                        sacredUi.click();
+                        const next = !startOpen;
+                        setStartOpen(next);
+                        if (next) hubAudio.osStartMenu();
+                        else sacredUi.click();
                     }}
                     className={`h-9 px-3 rounded-lg flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
                         startOpen ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10'
@@ -409,6 +420,7 @@ function OsWindowFrame({
                         className="w-3 h-3 rounded-full bg-red-500/85 hover:bg-red-400"
                         onClick={(e) => {
                             e.stopPropagation();
+                            hubAudio.osWindowClose();
                             onClose();
                         }}
                     />
@@ -418,6 +430,7 @@ function OsWindowFrame({
                         className="w-3 h-3 rounded-full bg-amber-500/70 hover:bg-amber-400"
                         onClick={(e) => {
                             e.stopPropagation();
+                            hubAudio.playSfx('os_window_close', { volume: 0.22 });
                             onMinimize();
                         }}
                     />

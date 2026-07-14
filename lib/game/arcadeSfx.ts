@@ -1,10 +1,8 @@
 // ============================================================
-//  ARCADE SFX — procedural Web-Audio sounds for the Sanctum
-//  Arcade (Tetra, Serpent, …). No asset files; built from
-//  oscillators + noise so the bundle stays lean and it works
-//  offline. Its own context + mute (separate from combat sfx),
-//  persisted to localStorage. Unlock from a user gesture.
+//  ARCADE SFX — prefers hub assets when present, else procedural
+//  Web Audio. Mute persisted to localStorage.
 // ============================================================
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 let ctx: AudioContext | null = null;
 let muted = false;
@@ -31,7 +29,12 @@ export function unlockArcadeAudio() {
 
 export function setArcadeMuted(m: boolean) {
     muted = m;
-    if (m) arcadeMusic.stop(); // unmute does NOT auto-restart — the game starts it on next play
+    if (m) {
+        arcadeMusic.stop(); // unmute does NOT auto-restart — the game starts it on next play
+        hubAudio.setMuted(true);
+    } else {
+        hubAudio.setMuted(false);
+    }
     if (typeof window !== 'undefined') {
         try { localStorage.setItem('tbth-arcade-muted', m ? '1' : '0'); } catch { /* ignore */ }
     }
@@ -87,10 +90,23 @@ const CLEAR_NOTES = [523, 659, 784, 1047, 1319];
 export const asfx = {
     // Tetra ------------------------------------------------
     move() { tone({ freq: 200, type: 'square', dur: 0.025, gain: 0.03 }); },
-    rotate() { tone({ freq: 440, to: 560, type: 'square', dur: 0.05, gain: 0.045 }); },
-    lock() { tone({ freq: 150, to: 88, type: 'square', dur: 0.08, gain: 0.08 }); noise({ dur: 0.05, gain: 0.05, type: 'lowpass', freq: 300 }); },
+    rotate() {
+        if (!muted) hubAudio.playSfx('arcade_rotate');
+        else tone({ freq: 440, to: 560, type: 'square', dur: 0.05, gain: 0.045 });
+    },
+    lock() {
+        if (!muted) hubAudio.playSfx('arcade_hard_drop', { volume: 0.28 });
+        else {
+            tone({ freq: 150, to: 88, type: 'square', dur: 0.08, gain: 0.08 });
+            noise({ dur: 0.05, gain: 0.05, type: 'lowpass', freq: 300 });
+        }
+    },
     hold() { tone({ freq: 360, to: 300, type: 'triangle', dur: 0.07, gain: 0.05 }); },
     lineClear(n: number) {
+        if (!muted) {
+            hubAudio.playSfx('arcade_line_clear', { volume: n >= 4 ? 0.52 : 0.42, duck: n >= 3 });
+            return;
+        }
         const big = n >= 4;
         const count = Math.min(CLEAR_NOTES.length, n + 1);
         for (let i = 0; i < count; i++) tone({ freq: CLEAR_NOTES[i], type: 'triangle', dur: big ? 0.22 : 0.13, gain: big ? 0.13 : 0.1, delay: i * 0.05 });
@@ -98,15 +114,33 @@ export const asfx = {
     },
     levelUp() { tone({ freq: 330, to: 880, type: 'triangle', dur: 0.3, gain: 0.12 }); tone({ freq: 660, to: 1320, type: 'sine', dur: 0.3, gain: 0.07, delay: 0.06 }); },
     // Serpent ----------------------------------------------
-    eat() { tone({ freq: 560, to: 880, type: 'triangle', dur: 0.08, gain: 0.08 }); },
+    eat() {
+        if (!muted) hubAudio.playSfx('arcade_eat');
+        else tone({ freq: 560, to: 880, type: 'triangle', dur: 0.08, gain: 0.08 });
+    },
     bonus() { tone({ freq: 880, to: 1320, type: 'triangle', dur: 0.14, gain: 0.1 }); tone({ freq: 1320, type: 'sine', dur: 0.12, gain: 0.06, delay: 0.07 }); },
-    crash() { tone({ freq: 220, to: 50, type: 'sawtooth', dur: 0.3, gain: 0.16 }); noise({ dur: 0.22, gain: 0.12, type: 'lowpass', freq: 360 }); },
+    crash() {
+        if (!muted) hubAudio.playSfx('arcade_die', { duck: true });
+        else {
+            tone({ freq: 220, to: 50, type: 'sawtooth', dur: 0.3, gain: 0.16 });
+            noise({ dur: 0.22, gain: 0.12, type: 'lowpass', freq: 360 });
+        }
+    },
     // Veil -------------------------------------------------
-    jump() { tone({ freq: 320, to: 620, type: 'square', dur: 0.10, gain: 0.07 }); },
+    jump() {
+        if (!muted) hubAudio.playSfx('arcade_jump');
+        else tone({ freq: 320, to: 620, type: 'square', dur: 0.10, gain: 0.07 });
+    },
     orb() { tone({ freq: 700, to: 1180, type: 'triangle', dur: 0.12, gain: 0.08 }); tone({ freq: 1400, type: 'sine', dur: 0.10, gain: 0.04, delay: 0.05 }); },
     pad() { tone({ freq: 180, to: 760, type: 'sawtooth', dur: 0.16, gain: 0.09 }); noise({ dur: 0.06, type: 'bandpass', freq: 900, gain: 0.04 }); },
     portal() { tone({ freq: 240, to: 880, type: 'sine', dur: 0.30, gain: 0.10 }); tone({ freq: 480, to: 1320, type: 'triangle', dur: 0.30, gain: 0.05, delay: 0.04 }); noise({ dur: 0.25, type: 'bandpass', freq: 1200, gain: 0.04 }); },
-    coin() { tone({ freq: 988, type: 'square', dur: 0.06, gain: 0.06 }); tone({ freq: 1319, type: 'square', dur: 0.12, gain: 0.06, delay: 0.06 }); },
+    coin() {
+        if (!muted) hubAudio.playSfx('arcade_coin');
+        else {
+            tone({ freq: 988, type: 'square', dur: 0.06, gain: 0.06 });
+            tone({ freq: 1319, type: 'square', dur: 0.12, gain: 0.06, delay: 0.06 });
+        }
+    },
     flip() { tone({ freq: 300, to: 520, type: 'triangle', dur: 0.08, gain: 0.06 }); },
     complete() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.4, gain: 0.13, delay: i * 0.1 })); tone({ freq: 1568, type: 'sine', dur: 0.5, gain: 0.08, delay: 0.5 }); },
     // power-ups & pickups ----------------------------------
@@ -159,7 +193,14 @@ export const asfx = {
     // Shard near — soft high shimmer telegraphing an approaching un-collected shard
     shardNear() { tone({ freq: 1245, type: 'sine', dur: 0.10, gain: 0.04 }); tone({ freq: 1760, type: 'sine', dur: 0.12, gain: 0.03, delay: 0.04 }); },
     // shared -----------------------------------------------
-    gameOver() { [392, 294, 196].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.5, gain: 0.15, delay: i * 0.14 })); },
+    gameOver() {
+        if (!muted) {
+            hubAudio.playSfx('arcade_die', { duck: true });
+            hubAudio.playSfx('arcade_pause', { volume: 0.25 });
+            return;
+        }
+        [392, 294, 196].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.5, gain: 0.15, delay: i * 0.14 }));
+    },
 };
 
 // ============================================================
