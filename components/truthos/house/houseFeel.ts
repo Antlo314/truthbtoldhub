@@ -25,8 +25,9 @@ export const JUMP_V = 5.5;
 export const GRAVITY = 16;
 export const EYE_HEIGHT = 1.62;
 
-export const BOB_AMP = 0.016;
-export const BOB_FREQ = 8.2;
+export const BOB_AMP = 0.014;
+/** ~2 foot plants/sec at walk (sin zero-cross both ways) — was too fast by ~2 beats */
+export const BOB_FREQ = 5.8;
 
 /** Mild look smoothing — still responsive */
 export const LOOK_SMOOTH = 22;

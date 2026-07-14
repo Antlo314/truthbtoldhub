@@ -95,16 +95,16 @@ export const asfx = {
         else tone({ freq: 440, to: 560, type: 'square', dur: 0.05, gain: 0.045 });
     },
     lock() {
-        if (!muted) hubAudio.playSfx('arcade_hard_drop', { volume: 0.28 });
+        if (!muted) hubAudio.playSfx('arcade_hard_drop', { volume: 0.14 });
         else {
-            tone({ freq: 150, to: 88, type: 'square', dur: 0.08, gain: 0.08 });
-            noise({ dur: 0.05, gain: 0.05, type: 'lowpass', freq: 300 });
+            tone({ freq: 150, to: 88, type: 'square', dur: 0.08, gain: 0.04 });
+            noise({ dur: 0.05, gain: 0.025, type: 'lowpass', freq: 300 });
         }
     },
-    hold() { tone({ freq: 360, to: 300, type: 'triangle', dur: 0.07, gain: 0.05 }); },
+    hold() { tone({ freq: 360, to: 300, type: 'triangle', dur: 0.07, gain: 0.025 }); },
     lineClear(n: number) {
         if (!muted) {
-            hubAudio.playSfx('arcade_line_clear', { volume: n >= 4 ? 0.52 : 0.42, duck: n >= 3 });
+            hubAudio.playSfx('arcade_line_clear', { volume: n >= 4 ? 0.22 : 0.16, duck: n >= 3 });
             return;
         }
         const big = n >= 4;
@@ -196,7 +196,7 @@ export const asfx = {
     gameOver() {
         if (!muted) {
             hubAudio.playSfx('arcade_die', { duck: true });
-            hubAudio.playSfx('arcade_pause', { volume: 0.25 });
+            hubAudio.playSfx('arcade_pause', { volume: 0.12 });
             return;
         }
         [392, 294, 196].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.5, gain: 0.15, delay: i * 0.14 }));

@@ -7,8 +7,9 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { collideMove, resolveStuck, SPAWN, nearestHotspot, type Hotspot } from './houseMap';
+import { collideMove, resolveStuck, SPAWN, nearestHotspot, isOnLivingRug, type Hotspot } from './houseMap';
 import { houseInput } from './houseInput';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 import {
     WALK_SPEED,
     SPRINT_MULT,
@@ -68,6 +69,7 @@ export default function FirstPersonController({
     const activityCb = useRef(onMoveActivity);
     activityCb.current = onMoveActivity;
     const lastKeyAt = useRef(0);
+    const lastBobSin = useRef(0);
 
     useEffect(() => {
         const free = resolveStuck(SPAWN[0], SPAWN[2]);
@@ -360,16 +362,32 @@ export default function FirstPersonController({
             }
 
             const spd = Math.hypot(vel.current.x, vel.current.z);
-            if (grounded.current && spd > 0.4) {
-                bobT.current += d * BOB_FREQ * (spd / WALK_SPEED);
+            // Foot plant only while intentional move + grounded + real speed (no ghost steps)
+            const stepping = hasInput && grounded.current && spd > 0.55;
+            if (stepping) {
+                bobT.current += d * BOB_FREQ * Math.min(1.35, spd / WALK_SPEED);
+                const s = Math.sin(bobT.current);
+                const prev = lastBobSin.current;
+                // Heel-down on each zero-cross of walk cycle
+                if ((prev <= 0 && s > 0) || (prev >= 0 && s < 0)) {
+                    hubAudio.footPlant(isOnLivingRug(pos.current.x, pos.current.z));
+                }
+                lastBobSin.current = s;
             } else {
-                bobT.current *= 1 - Math.min(1, d * 8);
+                bobT.current *= 1 - Math.min(1, d * 10);
+                lastBobSin.current = 0;
+                // Stop moving immediately for HUD/audio — no 1.5s ghost steps
+                if (!hasInput && lastKind.current === 'move') {
+                    emit('idle');
+                }
             }
-            const bob = Math.sin(bobT.current) * BOB_AMP * Math.min(1, spd / WALK_SPEED);
+            const bob =
+                Math.sin(bobT.current) * BOB_AMP * (stepping ? Math.min(1, spd / WALK_SPEED) : 0);
             camera.position.set(pos.current.x, pos.current.y + bob, pos.current.z);
         } else {
             houseInput.consumeJump();
             vel.current = { x: 0, z: 0 };
+            lastBobSin.current = 0;
             camera.position.set(pos.current.x, pos.current.y, pos.current.z);
         }
 
@@ -387,7 +405,7 @@ export default function FirstPersonController({
         }
 
         activityT.current += d;
-        if (activityT.current > 1.5 && lastKind.current !== 'idle') {
+        if (activityT.current > 0.35 && lastKind.current !== 'idle') {
             lastKind.current = 'idle';
             activityCb.current?.('idle');
         }

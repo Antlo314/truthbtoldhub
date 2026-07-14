@@ -402,12 +402,16 @@ export default function HouseGeometry({
             <MatBox pos={[6.2, 1.4, 1.4]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
             <MatBox pos={[6.2, 2.7, 0.6]} size={[0.28, 0.16, 1.8]} material={m.wood} shadows={false} />
 
-            {/* Front door (south foyer) */}
+            {/* Front door (south foyer) — stylized domain plate */}
             <MatBox pos={[-1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[0, 2.7, 12.25]} size={[2.5, 0.25, 0.3]} material={m.wood} shadows={sh} />
             <MatBox pos={[0, 1.3, 12.15]} size={[1.7, 2.5, 0.12]} material={m.woodDark} shadows={sh} />
-            <MatCyl pos={[0.55, 1.2, 12.05]} r={0.04} h={0.1} material={m.gold} shadows={false} segs={8} />
+            <mesh position={[0, 1.55, 12.08]}>
+                <planeGeometry args={[1.35, 1.55]} />
+                <primitive object={m.artDomain} attach="material" />
+            </mesh>
+            <MatCyl pos={[0.62, 1.15, 12.05]} r={0.04} h={0.1} material={m.gold} shadows={false} segs={8} />
 
             {/* Wayfinder console — against hall wall, path stays clear (staging: off-spine) */}
             <group position={[2.5, 0, 0.35]}>
@@ -415,9 +419,37 @@ export default function HouseGeometry({
                 <MatBox pos={[0, 1.85, 0.02]} size={[1.15, 0.08, 0.32]} material={m.wood} shadows={false} />
                 <mesh position={[0, 1.2, 0.16]}>
                     <planeGeometry args={[0.9, 0.95]} />
-                    <primitive object={m.sanctum} attach="material" />
+                    <primitive object={m.artStillPoint} attach="material" />
                 </mesh>
             </group>
+
+            {/* Esoteric wall art (one-liners only) */}
+            {/* Living west wall */}
+            <group position={[-5.0, 1.65, -9.2]} rotation={[0, Math.PI / 2, 0]}>
+                <MatBox pos={[0, 0, 0.02]} size={[1.05, 0.85, 0.06]} material={m.woodDark} shadows={false} />
+                <mesh position={[0, 0, 0.06]}>
+                    <planeGeometry args={[0.92, 0.72]} />
+                    <primitive object={m.artAsWithin} attach="material" />
+                </mesh>
+            </group>
+            {/* Hall north face of bedroom partition */}
+            <group position={[-3.6, 1.7, 2.95]}>
+                <MatBox pos={[0, 0, 0.02]} size={[1.05, 0.85, 0.06]} material={m.woodDark} shadows={false} />
+                <mesh position={[0, 0, 0.06]}>
+                    <planeGeometry args={[0.92, 0.72]} />
+                    <primitive object={m.artUnnamed} attach="material" />
+                </mesh>
+            </group>
+            {/* Bedroom west-ish wall strip */}
+            {!low && (
+                <group position={[-5.0, 1.7, 7.5]} rotation={[0, Math.PI / 2, 0]}>
+                    <MatBox pos={[0, 0, 0.02]} size={[0.95, 0.75, 0.06]} material={m.woodDark} shadows={false} />
+                    <mesh position={[0, 0, 0.06]}>
+                        <planeGeometry args={[0.82, 0.62]} />
+                        <primitive object={m.artStillPoint} attach="material" />
+                    </mesh>
+                </group>
+            )}
 
             {/* ── LIVING (staged conversation group) ──
                 Hero = fireplace. Sofa faces fire. TV on east side wall. Paths left/right. */}
@@ -466,11 +498,11 @@ export default function HouseGeometry({
             <Desk pos={[4.8, 0, 7.6]} sh={sh} rich={rich} m={m} monitor chairSign={1} />
             <SoulMirrorMesh low={low} rich={rich} mats={m} />
 
-            {/* ── LIBRARY (west wall shelves, reading nook faces shelves) ── */}
-            <WallBookcase wallX={-13.4} wallZ={-3.8} width={5.6} face="west" sh={sh} rich={rich} m={m} low={low} />
-            <AccentChair x={-10.0} z={-2.4} sh={sh} m={m} rotY={Math.PI / 2} />
-            <ConsoleTable x={-9.0} z={-1.1} sh={sh} m={m} />
-            <MatBox pos={[-9.0, 0.88, -1.1]} size={[0.36, 0.06, 0.28]} material={m.leather} shadows={false} />
+            {/* ── LIBRARY (deep west room — not hall threshold) ── */}
+            <WallBookcase wallX={-13.4} wallZ={-5.0} width={4.8} face="west" sh={sh} rich={rich} m={m} low={low} />
+            <AccentChair x={-11.2} z={-4.6} sh={sh} m={m} rotY={Math.PI / 2} />
+            <ConsoleTable x={-10.4} z={-3.5} sh={sh} m={m} />
+            <MatBox pos={[-10.4, 0.88, -3.5]} size={[0.36, 0.06, 0.28]} material={m.leather} shadows={false} />
 
             {/* Community hall doorway (NW) */}
             <group position={[-8.95, 0, 6.4]}>
@@ -487,16 +519,21 @@ export default function HouseGeometry({
             {/* ── EAST WING ── */}
             <Desk pos={[9.4, 0, -3.5]} sh={sh} rich={rich} m={m} chairSign={1} />
             <WallBookcase wallX={13.4} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
-            {/* Cinema screen on east wall */}
-            <MatBox pos={[12.7, 0.42, 4.0]} size={[0.5, 0.72, 2.6]} material={m.woodDark} shadows={sh} />
-            <MatBox pos={[12.75, 1.7, 4.0]} size={[0.12, 1.65, 2.75]} material={m.black} shadows={sh} />
-            <mesh position={[12.65, 1.7, 4.0]} rotation={[0, -Math.PI / 2, 0]}>
-                <planeGeometry args={[2.45, 1.4]} />
-                <meshStandardMaterial color="#0a0a12" emissive="#7c3aed" emissiveIntensity={rich ? 0.65 : 0.45} toneMapped={false} />
+            {/* Cinema — east mid-room off hall door (fully inside, TV on outer east wall) */}
+            <MatBox pos={[12.55, 0.4, 1.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
+            <MatBox pos={[12.6, 1.65, 1.0]} size={[0.1, 1.55, 2.4]} material={m.black} shadows={sh} />
+            <mesh position={[12.5, 1.65, 1.0]} rotation={[0, -Math.PI / 2, 0]}>
+                <planeGeometry args={[2.15, 1.3]} />
+                <meshStandardMaterial
+                    color="#0a0a12"
+                    emissive="#7c3aed"
+                    emissiveIntensity={rich ? 0.65 : 0.45}
+                    toneMapped={false}
+                />
             </mesh>
-            {/* Two cinema chairs facing screen */}
-            <AccentChair x={10.2} z={3.4} sh={sh} m={m} rotY={Math.PI / 2} />
-            <AccentChair x={10.2} z={4.6} sh={sh} m={m} rotY={Math.PI / 2} />
+            {/* Chairs face TV (+X / east) — rotY −90° */}
+            <AccentChair x={9.4} z={0.35} sh={sh} m={m} rotY={-Math.PI / 2} />
+            <AccentChair x={9.4} z={1.65} sh={sh} m={m} rotY={-Math.PI / 2} />
             {/* Signal Studio desk SE */}
             <MatBox pos={[10.3, 0.72, -9.1]} size={[2.0, 0.06, 0.95]} material={m.metalDark} shadows={sh} />
             {[

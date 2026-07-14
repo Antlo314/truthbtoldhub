@@ -104,8 +104,8 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
                 </mesh>
             </group>
 
-            {/* Ledger book on library reading table */}
-            <group position={[-9.0, 0, -1.1]}>
+            {/* Ledger book on library reading table (deep in room) */}
+            <group position={[-10.4, 0, -3.5]}>
                 <mesh position={[0, 0.95, 0]} rotation={[-0.12, 0.2, 0]} castShadow>
                     <boxGeometry args={[0.36, 0.055, 0.26]} />
                     <primitive object={m.leather} attach="material" />

@@ -45,13 +45,13 @@ const BGM_META: Record<BgmId, BgmMeta> = {
 };
 
 const CUE_SRC: Record<CueId, { main: string; alt?: string; volume: number }> = {
-    river_attune: { main: `${CUE}/river_attune.mp3`, alt: `${CUE}/river_attune_alt.mp3`, volume: 0.65 },
-    rivers_converge: { main: `${CUE}/rivers_converge.mp3`, volume: 0.72 },
+    river_attune: { main: `${CUE}/river_attune.mp3`, alt: `${CUE}/river_attune_alt.mp3`, volume: 0.32 },
+    rivers_converge: { main: `${CUE}/rivers_converge.mp3`, volume: 0.36 },
 };
 
 const STING_SRC: Record<StingId, { main: string; alt?: string; volume: number }> = {
-    relic_claim: { main: `${STING}/relic_claim.mp3`, alt: `${STING}/relic_claim_alt.mp3`, volume: 0.7 },
-    soul_recognized: { main: `${STING}/soul_recognized.mp3`, volume: 0.68 },
+    relic_claim: { main: `${STING}/relic_claim.mp3`, alt: `${STING}/relic_claim_alt.mp3`, volume: 0.34 },
+    soul_recognized: { main: `${STING}/soul_recognized.mp3`, volume: 0.32 },
 };
 
 const howlCache = new Map<string, Howl>();

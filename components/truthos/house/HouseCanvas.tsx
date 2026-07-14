@@ -70,8 +70,8 @@ export default function HouseCanvas({
                     cursor: mobile ? 'default' : 'crosshair',
                 }}
                 shadows={!mobile}
-                dpr={mobile ? [1, 1.35] : [1, 2]}
-                performance={{ min: mobile ? 0.45 : 0.8 }}
+                dpr={mobile ? [1, 1.25] : [1, 2]}
+                performance={{ min: mobile ? 0.4 : 0.8 }}
                 gl={{
                     antialias: !mobile,
                     alpha: false,

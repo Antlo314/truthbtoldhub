@@ -5,7 +5,7 @@
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { makeHouseMap, makeRoughnessMap, loadBrandMap } from './houseSkins';
+import { makeHouseMap, makeRoughnessMap } from './houseSkins';
 
 export function useHouseMaterials(low = false) {
     return useMemo(() => {
@@ -26,9 +26,10 @@ export function useHouseMaterials(low = false) {
         const screenMap = makeHouseMap('screen', { repeat: [1, 1], low });
         const tileMap = makeHouseMap('tile', { repeat: [8, 8], low });
         const concreteMap = makeHouseMap('concrete', { repeat: [5, 5], low });
-        const tapestryMap = loadBrandMap('/brand/hut-interior-cinematic.jpg', [1, 1]);
-        const hallMap = loadBrandMap('/brand/bg-hall.jpg', [1, 1]);
-        const sanctumMap = loadBrandMap('/brand/bg-hut-sanctuary.jpg', [1, 1]);
+        const artDomainMap = makeHouseMap('artDomain', { low });
+        const artAsWithinMap = makeHouseMap('artAsWithin', { low });
+        const artStillMap = makeHouseMap('artStillPoint', { low });
+        const artUnnamedMap = makeHouseMap('artUnnamed', { low });
 
         const mk = (
             map: THREE.Texture,
@@ -77,18 +78,15 @@ export function useHouseMaterials(low = false) {
             }, 0.22),
             tile: mk(tileMap, '#a898b8', { roughness: 0.5, metalness: 0.14 }, 0.48),
             concrete: mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72),
-            tapestry: mk(tapestryMap, '#ddd5c8', { roughness: 0.82 }, 0.5),
-            hallArt: mk(hallMap, '#d0d8e8', {
-                roughness: 0.75,
-                emissive: '#1e3a5f',
-                emissiveIntensity: 0.14,
-            }, 0.4),
-            sanctum: mk(sanctumMap, '#ddd0ff', {
-                roughness: 0.45,
-                metalness: 0.22,
-                emissive: '#4c1d95',
-                emissiveIntensity: 0.22,
-            }, 0.4),
+            artDomain: mk(artDomainMap, '#ffffff', {
+                roughness: 0.55,
+                metalness: 0.12,
+                emissive: '#3b2a6e',
+                emissiveIntensity: 0.18,
+            }, 0.35),
+            artAsWithin: mk(artAsWithinMap, '#ffffff', { roughness: 0.7 }, 0.4),
+            artStillPoint: mk(artStillMap, '#ffffff', { roughness: 0.7 }, 0.4),
+            artUnnamed: mk(artUnnamedMap, '#ffffff', { roughness: 0.7 }, 0.4),
             ember: new THREE.MeshStandardMaterial({
                 color: '#ff6b2c',
                 emissive: '#ff6b2c',

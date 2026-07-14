@@ -22,7 +22,11 @@ export type HouseSkinId =
     | 'leaf'
     | 'screen'
     | 'tile'
-    | 'concrete';
+    | 'concrete'
+    | 'artDomain'
+    | 'artAsWithin'
+    | 'artStillPoint'
+    | 'artUnnamed';
 
 type SkinOpts = { repeat?: [number, number]; low?: boolean };
 
@@ -412,6 +416,115 @@ function paintConcrete(ctx: CanvasRenderingContext2D, s: number) {
     }
 }
 
+/** Stylized door brand plate */
+function paintDomain(ctx: CanvasRenderingContext2D, s: number) {
+    const g = ctx.createLinearGradient(0, 0, s, s);
+    g.addColorStop(0, '#0c0a14');
+    g.addColorStop(0.5, '#1a1430');
+    g.addColorStop(1, '#0a0812');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    // soft gold ring
+    ctx.strokeStyle = 'rgba(251,191,36,0.55)';
+    ctx.lineWidth = s * 0.018;
+    ctx.beginPath();
+    ctx.arc(s / 2, s * 0.42, s * 0.22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(167,139,250,0.35)';
+    ctx.lineWidth = s * 0.008;
+    ctx.beginPath();
+    ctx.arc(s / 2, s * 0.42, s * 0.16, 0.2, Math.PI * 1.7);
+    ctx.stroke();
+    // inner glyph — simple eye / vesica hint
+    ctx.fillStyle = 'rgba(251,191,36,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(s / 2, s * 0.42, s * 0.1, s * 0.055, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(34,211,238,0.5)';
+    ctx.beginPath();
+    ctx.arc(s / 2, s * 0.42, s * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+    // wordmark
+    ctx.fillStyle = '#f5e6c8';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `600 ${Math.floor(s * 0.07)}px Georgia, "Times New Roman", serif`;
+    ctx.fillText('truthbtoldhub.com', s / 2, s * 0.72);
+    ctx.fillStyle = 'rgba(167,139,250,0.7)';
+    ctx.font = `${Math.floor(s * 0.04)}px Georgia, serif`;
+    ctx.fillText('THE HOUSE OF TRUTH', s / 2, s * 0.82);
+    // corner ornaments
+    ctx.strokeStyle = 'rgba(251,191,36,0.3)';
+    ctx.lineWidth = 1.5;
+    for (const [ox, oy] of [
+        [0.08, 0.08],
+        [0.92, 0.08],
+        [0.08, 0.92],
+        [0.92, 0.92],
+    ] as const) {
+        ctx.beginPath();
+        ctx.moveTo(ox * s, oy * s + (oy < 0.5 ? s * 0.08 : -s * 0.08));
+        ctx.lineTo(ox * s, oy * s);
+        ctx.lineTo(ox * s + (ox < 0.5 ? s * 0.08 : -s * 0.08), oy * s);
+        ctx.stroke();
+    }
+}
+
+function paintEsoteric(
+    ctx: CanvasRenderingContext2D,
+    s: number,
+    line1: string,
+    line2: string,
+    hue: 'violet' | 'gold' | 'teal',
+) {
+    const bg =
+        hue === 'violet'
+            ? ['#120e1c', '#1e1630', '#0e0a18']
+            : hue === 'gold'
+              ? ['#14100c', '#241a10', '#0e0a08']
+              : ['#0a1214', '#0e1e22', '#081012'];
+    const g = ctx.createLinearGradient(0, 0, s, s);
+    g.addColorStop(0, bg[0]);
+    g.addColorStop(0.55, bg[1]);
+    g.addColorStop(1, bg[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    // parchment noise
+    for (let i = 0; i < 400; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${0.01 + Math.random() * 0.03})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 1, 1);
+    }
+    // frame
+    const accent =
+        hue === 'violet' ? 'rgba(167,139,250,0.55)' : hue === 'gold' ? 'rgba(251,191,36,0.55)' : 'rgba(34,211,238,0.5)';
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = s * 0.02;
+    ctx.strokeRect(s * 0.08, s * 0.08, s * 0.84, s * 0.84);
+    ctx.lineWidth = s * 0.006;
+    ctx.strokeRect(s * 0.12, s * 0.12, s * 0.76, s * 0.76);
+    // center symbol
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(s / 2, s * 0.36, s * 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s / 2, s * 0.22);
+    ctx.lineTo(s / 2, s * 0.5);
+    ctx.moveTo(s * 0.38, s * 0.36);
+    ctx.lineTo(s * 0.62, s * 0.36);
+    ctx.stroke();
+    // text
+    ctx.fillStyle = '#e8dcc8';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `italic ${Math.floor(s * 0.055)}px Georgia, serif`;
+    ctx.fillText(line1, s / 2, s * 0.62);
+    ctx.font = `italic ${Math.floor(s * 0.048)}px Georgia, serif`;
+    ctx.fillStyle = 'rgba(232,220,200,0.85)';
+    ctx.fillText(line2, s / 2, s * 0.72);
+}
+
 /** Grayscale roughness companion for a color map (adds micro-depth under light) */
 export function makeRoughnessMap(
     colorTex: THREE.Texture,
@@ -490,6 +603,20 @@ export function makeHouseMap(id: HouseSkinId, opts: SkinOpts = {}): THREE.Canvas
             return canvasTex('h_tile', size, paintTile, rep);
         case 'concrete':
             return canvasTex('h_concrete', size, paintConcrete, rep);
+        case 'artDomain':
+            return canvasTex('h_artDomain', size, paintDomain, [1, 1]);
+        case 'artAsWithin':
+            return canvasTex('h_artAsWithin', size, (c, s) =>
+                paintEsoteric(c, s, 'As within,', 'so without.', 'violet'),
+            );
+        case 'artStillPoint':
+            return canvasTex('h_artStill', size, (c, s) =>
+                paintEsoteric(c, s, 'The still point', 'moves the world.', 'gold'),
+            );
+        case 'artUnnamed':
+            return canvasTex('h_artUnnamed', size, (c, s) =>
+                paintEsoteric(c, s, 'Name nothing.', 'Become the witness.', 'teal'),
+            );
         default:
             return canvasTex('h_wood', size, (c, s) => paintWood(c, s, false), rep);
     }

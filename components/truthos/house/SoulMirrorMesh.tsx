@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Soul Mirror — wall-mounted real-time reflector.
- * Virtual camera enables all layers so LocalPlayerBody (layer 1) appears like a true mirror.
+ * Soul Mirror — wall-mounted real-time reflector on bedroom east wall.
+ * Faces into the room (−X). Virtual camera includes LocalPlayerBody (layer 1).
  */
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -11,12 +11,15 @@ import * as THREE from 'three';
 import type { HouseMaterials } from './HouseMaterials';
 import { LOCAL_BODY_LAYER } from './LocalPlayerBody';
 
+/** Bedroom east wall — fully inside the room (not hallway) */
 export const MIRROR_WALL = {
-    x: 5.9,
+    x: 5.88,
     y: 1.48,
-    z: 11.9,
+    z: 9.2,
     glassW: 0.82,
     glassH: 1.5,
+    /** Glass faces west into bedroom */
+    yaw: Math.PI / 2,
 };
 
 export default function SoulMirrorMesh({
@@ -28,10 +31,10 @@ export default function SoulMirrorMesh({
     rich?: boolean;
     mats: HouseMaterials;
 }) {
-    const { x, y, z, glassW, glassH } = MIRROR_WALL;
+    const { x, y, z, glassW, glassH, yaw } = MIRROR_WALL;
     const meshRef = useRef<THREE.Mesh>(null);
     const { gl, scene, camera } = useThree();
-    const res = low ? 256 : 512;
+    const res = low ? 192 : 512;
     const fbo = useFBO(res, res);
     const virtualCam = useMemo(() => {
         const c = new THREE.PerspectiveCamera();
@@ -45,7 +48,6 @@ export default function SoulMirrorMesh({
     const mirrorWorldPos = useMemo(() => new THREE.Vector3(), []);
     const lookAtPos = useMemo(() => new THREE.Vector3(), []);
     const rotationMatrix = useMemo(() => new THREE.Matrix4(), []);
-    const target = useMemo(() => new THREE.Vector3(), []);
     const view = useMemo(() => new THREE.Vector3(), []);
     const q = useMemo(() => new THREE.Quaternion(), []);
 
@@ -61,17 +63,15 @@ export default function SoulMirrorMesh({
 
         mesh.updateWorldMatrix(true, false);
         mesh.getWorldPosition(mirrorWorldPos);
-        // Glass faces into room (−Z in local; after no rotation that's world −Z)
+        // Local plane faces −Z; group yaw rotates that into world −X
         normal.set(0, 0, -1);
         normal.transformDirection(mesh.matrixWorld);
         reflectorPlane.setFromNormalAndCoplanarPoint(normal, mirrorWorldPos);
 
-        // Reflect camera across the mirror plane
         view.copy(camera.position);
         const dist = reflectorPlane.distanceToPoint(view);
         view.sub(normal.clone().multiplyScalar(2 * dist));
 
-        // Reflection look-at
         lookAtPos.copy(camera.position).add(camera.getWorldDirection(new THREE.Vector3()));
         const distLook = reflectorPlane.distanceToPoint(lookAtPos);
         lookAtPos.sub(normal.clone().multiplyScalar(2 * distLook));
@@ -88,24 +88,6 @@ export default function SoulMirrorMesh({
         virtualCam.layers.enable(0);
         virtualCam.layers.enable(LOCAL_BODY_LAYER);
 
-        // Clip bias
-        const clipBias = 0.003;
-        const plane = reflectorPlane.clone();
-        plane.applyMatrix4(virtualCam.matrixWorldInverse);
-        const clipPlane = new THREE.Vector4(
-            plane.normal.x,
-            plane.normal.y,
-            plane.normal.z,
-            plane.constant + clipBias,
-        );
-        const projectionMatrix = virtualCam.projectionMatrix.clone();
-        q.set(
-            (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0],
-            (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5],
-            -1,
-            (1 + projectionMatrix.elements[10]) / projectionMatrix.elements[14],
-        );
-        // Simplified: render without oblique clip for stability
         const prev = gl.getRenderTarget();
         gl.setRenderTarget(fbo);
         gl.clear(true, true, true);
@@ -113,28 +95,25 @@ export default function SoulMirrorMesh({
         gl.setRenderTarget(prev);
 
         mesh.visible = true;
+        void q;
     });
 
     return (
-        <group>
-            {/* Wall backplate */}
-            <mesh position={[x, y, z + 0.03]} castShadow receiveShadow>
+        <group position={[x, y, z]} rotation={[0, yaw, 0]}>
+            <mesh position={[0, 0, 0.03]} castShadow={!low} receiveShadow={!low}>
                 <boxGeometry args={[glassW + 0.32, glassH + 0.36, 0.08]} />
                 <primitive object={mats.woodDark} attach="material" />
             </mesh>
-            {/* Wood frame */}
-            <mesh position={[x, y, z - 0.01]} castShadow>
+            <mesh position={[0, 0, -0.01]} castShadow={!low}>
                 <boxGeometry args={[glassW + 0.2, glassH + 0.24, 0.1]} />
                 <primitive object={mats.wood} attach="material" />
             </mesh>
-            {/* Gold trim */}
-            <mesh position={[x, y, z - 0.05]}>
+            <mesh position={[0, 0, -0.05]}>
                 <boxGeometry args={[glassW + 0.1, glassH + 0.12, 0.04]} />
                 <primitive object={mats.gold} attach="material" />
             </mesh>
 
-            {/* Real-time mirror surface */}
-            <mesh ref={meshRef} position={[x, y, z - 0.09]}>
+            <mesh ref={meshRef} position={[0, 0, -0.09]}>
                 <planeGeometry args={[glassW, glassH]} />
                 <meshBasicMaterial
                     map={fbo.texture}
@@ -143,9 +122,8 @@ export default function SoulMirrorMesh({
                 />
             </mesh>
 
-            {/* Specular sheen edge */}
             {!low && (
-                <mesh position={[x, y, z - 0.095]}>
+                <mesh position={[0, 0, -0.095]}>
                     <planeGeometry args={[glassW * 0.98, glassH * 0.98]} />
                     <meshBasicMaterial color="#ffffff" transparent opacity={0.06} depthWrite={false} />
                 </mesh>

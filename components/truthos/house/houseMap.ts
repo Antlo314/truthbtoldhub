@@ -106,7 +106,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'soul_mirror',
         label: 'Soul Mirror',
         hint: 'Vessel · shape your form',
-        position: [5.5, 1.25, 10.85],
+        // Bedroom east wall — fully inside room, approach from west
+        position: [4.7, 1.25, 9.2],
         radius: 1.1,
         action: { type: 'panel', panel: 'soul' },
     },
@@ -114,16 +115,17 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'library',
         label: 'Bookshelves',
         hint: 'Open the Library',
-        position: [-10.85, 1.1, -3.8],
-        radius: 1.4,
+        // Deep in west library room (not hall threshold)
+        position: [-11.4, 1.1, -5.0],
+        radius: 1.35,
         action: { type: 'panel', panel: 'library' },
     },
     {
         id: 'ledger',
         label: 'Ledger',
         hint: 'Daily word',
-        // Reading nook table, not blocking shelf aisle
-        position: [-9.0, 1.0, -1.1],
+        // Reading nook fully inside library
+        position: [-10.4, 1.0, -3.5],
         radius: 1.1,
         action: { type: 'panel', panel: 'ledger' },
     },
@@ -147,7 +149,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'cinema',
         label: 'Film screen',
         hint: 'Cinema · film',
-        position: [10.6, 1.35, 4.0],
+        // East mid-room off hall door — fully inside, not in hallway
+        position: [10.4, 1.35, 1.0],
         radius: 1.25,
         action: { type: 'panel', panel: 'cinema' },
     },
@@ -212,14 +215,13 @@ export const COLLIDERS: Collider[] = [
     // Desk SE corner, chair room-side
     { x: 4.8, z: 7.6, hx: 0.95, hz: 0.42 },
     { x: 4.6, z: 8.45, hx: 0.32, hz: 0.32 },
-    // Mirror on east bedroom wall
-    { x: 6.0, z: 11.5, hx: 0.18, hz: 0.48 },
+    // Mirror on bedroom east wall (inside room)
+    { x: 5.95, z: 9.2, hx: 0.16, hz: 0.5 },
 
-    // ── Library ──
-    { x: -13.0, z: -3.8, hx: 0.38, hz: 2.9 },
-    // Reading chair faces shelves, table beside
-    { x: -10.0, z: -2.4, hx: 0.42, hz: 0.42 },
-    { x: -9.0, z: -1.1, hx: 0.4, hz: 0.4 },
+    // ── Library (deep west, clear of hall threshold) ──
+    { x: -13.0, z: -5.0, hx: 0.38, hz: 2.4 },
+    { x: -11.2, z: -4.6, hx: 0.42, hz: 0.42 },
+    { x: -10.4, z: -3.5, hx: 0.42, hz: 0.4 },
 
     // Hall arch
     { x: -9.7, z: 6.4, hx: 0.22, hz: 0.85 },
@@ -230,10 +232,10 @@ export const COLLIDERS: Collider[] = [
     { x: 9.2, z: -2.55, hx: 0.32, hz: 0.32 },
     { x: 13.0, z: -5.2, hx: 0.32, hz: 1.5 },
 
-    // Cinema east wall + two chairs facing screen
-    { x: 12.7, z: 4.0, hx: 0.3, hz: 1.35 },
-    { x: 10.2, z: 3.4, hx: 0.38, hz: 0.38 },
-    { x: 10.2, z: 4.6, hx: 0.38, hz: 0.38 },
+    // Cinema — east mid-room (hall entry x>6.2, z~0..2), TV on outer east wall
+    { x: 12.55, z: 1.0, hx: 0.28, hz: 1.2 },
+    { x: 9.4, z: 0.35, hx: 0.38, hz: 0.38 },
+    { x: 9.4, z: 1.65, hx: 0.38, hz: 0.38 },
     // Studio SE + stool
     { x: 10.3, z: -9.1, hx: 1.05, hz: 0.55 },
     { x: 10.3, z: -8.35, hx: 0.28, hz: 0.28 },

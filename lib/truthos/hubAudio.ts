@@ -91,52 +91,53 @@ const MUSIC_META: Record<HubMusicId, MusicMeta> = {
     offering_sustain: { src: `${MUSIC}/offering_sustain.mp3`, volume: 0.26, fadeIn: 1600, fadeOut: 1400 },
 };
 
+/** SFX sit ~50% under typical music beds (music 0.24–0.36) — subtle, not competing */
 const SFX_META: Record<HubSfxId, SfxMeta> = {
-    ui_click: { src: `${SFX}/ui_click.mp3`, volume: 0.42 },
-    ui_hover: { src: `${SFX}/ui_hover.mp3`, volume: 0.18 },
-    ui_open: { src: `${SFX}/ui_open.mp3`, volume: 0.38 },
-    ui_close: { src: `${SFX}/ui_close.mp3`, volume: 0.36 },
-    ui_success: { src: `${SFX}/ui_success.mp3`, volume: 0.45 },
-    ui_error: { src: `${SFX}/ui_error.mp3`, volume: 0.4 },
-    ui_type: { src: `${SFX}/ui_type.mp3`, volume: 0.22 },
-    os_boot_blip: { src: `${SFX}/os_boot_blip.mp3`, volume: 0.35 },
-    os_boot_ready: { src: `${SFX}/os_boot_ready.mp3`, volume: 0.42 },
-    os_window_open: { src: `${SFX}/os_window_open.mp3`, volume: 0.36 },
-    os_window_close: { src: `${SFX}/os_window_close.mp3`, volume: 0.34 },
-    os_start_menu: { src: `${SFX}/os_start_menu.mp3`, volume: 0.34 },
-    house_footstep_wood: { src: `${SFX}/house_footstep_wood.mp3`, volume: 0.28 },
-    house_footstep_rug: { src: `${SFX}/house_footstep_rug.mp3`, volume: 0.26 },
-    house_jump_land: { src: `${SFX}/house_jump_land.mp3`, volume: 0.4 },
-    house_interact_ring: { src: `${SFX}/house_interact_ring.mp3`, volume: 0.38 },
-    house_use_e: { src: `${SFX}/house_use_e.mp3`, volume: 0.42 },
-    door_front_touch: { src: `${SFX}/door_front_touch.mp3`, volume: 0.45 },
-    door_soon: { src: `${SFX}/door_soon.mp3`, volume: 0.4 },
-    mirror_approach: { src: `${SFX}/mirror_approach.mp3`, volume: 0.32 },
-    mirror_open: { src: `${SFX}/mirror_open.mp3`, volume: 0.44 },
-    computer_boot: { src: `${SFX}/computer_boot.mp3`, volume: 0.42 },
-    computer_hum_loop: { src: `${SFX}/computer_hum_loop.mp3`, volume: 0.12, loop: true },
-    tv_static_soft: { src: `${SFX}/tv_static_soft.mp3`, volume: 0.1, loop: true },
-    arcade_controller_pickup: { src: `${SFX}/arcade_controller_pickup.mp3`, volume: 0.45 },
-    arcade_start: { src: `${SFX}/arcade_start.mp3`, volume: 0.48 },
-    book_pull: { src: `${SFX}/book_pull.mp3`, volume: 0.4 },
-    book_place: { src: `${SFX}/book_place.mp3`, volume: 0.38 },
-    library_open: { src: `${SFX}/library_open.mp3`, volume: 0.42 },
-    fire_crackle_loop: { src: `${SFX}/fire_crackle_loop.mp3`, volume: 0.12, loop: true },
-    studio_key: { src: `${SFX}/studio_key.mp3`, volume: 0.28 },
-    hall_arch_pass: { src: `${SFX}/hall_arch_pass.mp3`, volume: 0.36 },
-    map_offline: { src: `${SFX}/map_offline.mp3`, volume: 0.4 },
-    arcade_eat: { src: `${SFX}/arcade_eat.mp3`, volume: 0.4 },
-    arcade_die: { src: `${SFX}/arcade_die.mp3`, volume: 0.45 },
-    arcade_line_clear: { src: `${SFX}/arcade_line_clear.mp3`, volume: 0.46 },
-    arcade_hard_drop: { src: `${SFX}/arcade_hard_drop.mp3`, volume: 0.42 },
-    arcade_rotate: { src: `${SFX}/arcade_rotate.mp3`, volume: 0.32 },
-    arcade_jump: { src: `${SFX}/arcade_jump.mp3`, volume: 0.38 },
-    arcade_coin: { src: `${SFX}/arcade_coin.mp3`, volume: 0.4 },
-    arcade_pause: { src: `${SFX}/arcade_pause.mp3`, volume: 0.36 },
-    peer_join: { src: `${SFX}/peer_join.mp3`, volume: 0.4 },
-    peer_leave: { src: `${SFX}/peer_leave.mp3`, volume: 0.36 },
-    admin_publish: { src: `${SFX}/admin_publish.mp3`, volume: 0.46 },
-    admin_delete: { src: `${SFX}/admin_delete.mp3`, volume: 0.38 },
+    ui_click: { src: `${SFX}/ui_click.mp3`, volume: 0.18 },
+    ui_hover: { src: `${SFX}/ui_hover.mp3`, volume: 0.08 },
+    ui_open: { src: `${SFX}/ui_open.mp3`, volume: 0.16 },
+    ui_close: { src: `${SFX}/ui_close.mp3`, volume: 0.15 },
+    ui_success: { src: `${SFX}/ui_success.mp3`, volume: 0.2 },
+    ui_error: { src: `${SFX}/ui_error.mp3`, volume: 0.18 },
+    ui_type: { src: `${SFX}/ui_type.mp3`, volume: 0.1 },
+    os_boot_blip: { src: `${SFX}/os_boot_blip.mp3`, volume: 0.16 },
+    os_boot_ready: { src: `${SFX}/os_boot_ready.mp3`, volume: 0.2 },
+    os_window_open: { src: `${SFX}/os_window_open.mp3`, volume: 0.15 },
+    os_window_close: { src: `${SFX}/os_window_close.mp3`, volume: 0.14 },
+    os_start_menu: { src: `${SFX}/os_start_menu.mp3`, volume: 0.15 },
+    house_footstep_wood: { src: `${SFX}/house_footstep_wood.mp3`, volume: 0.12 },
+    house_footstep_rug: { src: `${SFX}/house_footstep_rug.mp3`, volume: 0.1 },
+    house_jump_land: { src: `${SFX}/house_jump_land.mp3`, volume: 0.18 },
+    house_interact_ring: { src: `${SFX}/house_interact_ring.mp3`, volume: 0.16 },
+    house_use_e: { src: `${SFX}/house_use_e.mp3`, volume: 0.18 },
+    door_front_touch: { src: `${SFX}/door_front_touch.mp3`, volume: 0.2 },
+    door_soon: { src: `${SFX}/door_soon.mp3`, volume: 0.18 },
+    mirror_approach: { src: `${SFX}/mirror_approach.mp3`, volume: 0.14 },
+    mirror_open: { src: `${SFX}/mirror_open.mp3`, volume: 0.2 },
+    computer_boot: { src: `${SFX}/computer_boot.mp3`, volume: 0.18 },
+    computer_hum_loop: { src: `${SFX}/computer_hum_loop.mp3`, volume: 0.05, loop: true },
+    tv_static_soft: { src: `${SFX}/tv_static_soft.mp3`, volume: 0.04, loop: true },
+    arcade_controller_pickup: { src: `${SFX}/arcade_controller_pickup.mp3`, volume: 0.2 },
+    arcade_start: { src: `${SFX}/arcade_start.mp3`, volume: 0.22 },
+    book_pull: { src: `${SFX}/book_pull.mp3`, volume: 0.16 },
+    book_place: { src: `${SFX}/book_place.mp3`, volume: 0.15 },
+    library_open: { src: `${SFX}/library_open.mp3`, volume: 0.18 },
+    fire_crackle_loop: { src: `${SFX}/fire_crackle_loop.mp3`, volume: 0.07, loop: true },
+    studio_key: { src: `${SFX}/studio_key.mp3`, volume: 0.12 },
+    hall_arch_pass: { src: `${SFX}/hall_arch_pass.mp3`, volume: 0.14 },
+    map_offline: { src: `${SFX}/map_offline.mp3`, volume: 0.16 },
+    arcade_eat: { src: `${SFX}/arcade_eat.mp3`, volume: 0.16 },
+    arcade_die: { src: `${SFX}/arcade_die.mp3`, volume: 0.2 },
+    arcade_line_clear: { src: `${SFX}/arcade_line_clear.mp3`, volume: 0.2 },
+    arcade_hard_drop: { src: `${SFX}/arcade_hard_drop.mp3`, volume: 0.16 },
+    arcade_rotate: { src: `${SFX}/arcade_rotate.mp3`, volume: 0.12 },
+    arcade_jump: { src: `${SFX}/arcade_jump.mp3`, volume: 0.15 },
+    arcade_coin: { src: `${SFX}/arcade_coin.mp3`, volume: 0.16 },
+    arcade_pause: { src: `${SFX}/arcade_pause.mp3`, volume: 0.14 },
+    peer_join: { src: `${SFX}/peer_join.mp3`, volume: 0.16 },
+    peer_leave: { src: `${SFX}/peer_leave.mp3`, volume: 0.14 },
+    admin_publish: { src: `${SFX}/admin_publish.mp3`, volume: 0.2 },
+    admin_delete: { src: `${SFX}/admin_delete.mp3`, volume: 0.16 },
 };
 
 const howlCache = new Map<string, Howl>();
@@ -332,7 +333,10 @@ class HubAudioController {
             if (existing) {
                 const from = existing.volume();
                 existing.fade(from, 0, 900);
-                setTimeout(() => existing.stop(), 960);
+                setTimeout(() => {
+                    if (!existing.playing()) return;
+                    existing.stop();
+                }, 960);
                 this.ambient.delete(key);
             }
             return;
@@ -342,9 +346,13 @@ class HubAudioController {
         const meta = SFX_META[id];
         if (!meta?.loop) return;
         const h = getHowl(meta.src, true);
+        // Ensure Howler loop flag stays on (html5 loops can drop after stop)
+        h.loop(true);
         const vol = (targetVol ?? meta.volume) * this.master;
         if (existing === h && h.playing()) {
-            h.fade(h.volume(), vol, 600);
+            // Soft volume track without re-triggering play (avoids loop glitch)
+            const cur = h.volume();
+            if (Math.abs(cur - vol) > 0.02) h.volume(vol);
             return;
         }
         if (existing && existing !== h) {
@@ -354,8 +362,10 @@ class HubAudioController {
         if (!h.playing()) {
             h.volume(0);
             h.play();
+            h.fade(0, vol, 800);
+        } else {
+            h.volume(vol);
         }
-        h.fade(h.volume(), vol, 1000);
         this.ambient.set(key, h);
     }
 
@@ -379,8 +389,8 @@ class HubAudioController {
         this.lastZone = null;
     }
 
-    /** Call from FP pose ~every frame throttled externally */
-    updateHousePose(x: number, z: number, moving: boolean, onRug: boolean) {
+    /** Call from FP pose ~every frame throttled externally (footsteps are separate — footPlant) */
+    updateHousePose(x: number, z: number, _moving: boolean, _onRug: boolean) {
         if (this.muted) return;
         const zone = zoneFromPose(x, z);
         const now = performance.now();
@@ -395,24 +405,31 @@ class HubAudioController {
         // Ambient layers — tight radii so crackle only at the real fireplace
         const fireDist = Math.hypot(x - 0, z - -11.4);
         const nearFire = fireDist < 3.6;
-        const nearTv = Math.hypot(x - 0, z - -7.6) < 3.2;
-        const nearDesk = Math.hypot(x - 4.4, z - 7.4) < 3.0;
-        const fireVol = nearFire ? 0.1 + (1 - Math.min(1, fireDist / 3.6)) * 0.14 : 0;
+        // Living media wall (east) + cinema screen (east mid-room)
+        const nearTv =
+            Math.hypot(x - 4.55, z - -7.8) < 3.0 || Math.hypot(x - 12.5, z - 1.0) < 3.2;
+        const nearDesk = Math.hypot(x - 4.8, z - 7.6) < 3.0;
+        const fireVol = nearFire ? 0.04 + (1 - Math.min(1, fireDist / 3.6)) * 0.08 : 0;
         this.setAmbient('fire', nearFire ? 'fire_crackle_loop' : null, fireVol);
-        this.setAmbient('tv', nearTv ? 'tv_static_soft' : null, nearTv ? 0.07 : 0);
-        this.setAmbient('pc', nearDesk ? 'computer_hum_loop' : null, nearDesk ? 0.09 : 0);
+        this.setAmbient('tv', nearTv ? 'tv_static_soft' : null, nearTv ? 0.035 : 0);
+        this.setAmbient('pc', nearDesk ? 'computer_hum_loop' : null, nearDesk ? 0.04 : 0);
+    }
 
-        if (moving) {
-            const gap = onRug ? 380 : 320;
-            if (now - this.lastFootAt > gap) {
-                this.lastFootAt = now;
-                const rate = 0.92 + Math.random() * 0.16;
-                this.playSfx(onRug ? 'house_footstep_rug' : 'house_footstep_wood', {
-                    volume: (onRug ? 0.22 : 0.26) * (0.85 + Math.random() * 0.2),
-                    rate,
-                });
-            }
-        }
+    /**
+     * One foot plant only — call on bob zero-cross while grounded + actually moving.
+     * No ghost steps on stop (caller must gate on speed + input).
+     */
+    footPlant(onRug: boolean) {
+        if (this.muted) return;
+        const now = performance.now();
+        // Hard min gap prevents double-fire from frame jitter
+        if (now - this.lastFootAt < 220) return;
+        this.lastFootAt = now;
+        const rate = 0.94 + Math.random() * 0.12;
+        this.playSfx(onRug ? 'house_footstep_rug' : 'house_footstep_wood', {
+            volume: (onRug ? 0.09 : 0.11) * (0.88 + Math.random() * 0.18),
+            rate,
+        });
     }
 
     /** One-shot approach cue (throttled per hotspot id) */
