@@ -54,8 +54,9 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'computer',
         label: 'Desktop',
         hint: 'Log in · boot Truth.OS',
-        position: [3.35, 1.0, 4.55],
-        radius: 1.05,
+        // Approach from chair side (+Z of desk)
+        position: [3.35, 1.0, 5.55],
+        radius: 1.1,
         action: { type: 'os' },
     },
     {
@@ -111,7 +112,7 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'wayfinder',
         label: 'Wall map',
-        hint: 'Roads · next steps',
+        hint: 'Roads · temporarily down',
         position: [0, 1.15, -8.15],
         radius: 1.15,
         action: { type: 'panel', panel: 'wayfinder' },
@@ -176,9 +177,9 @@ export const COLLIDERS: Collider[] = [
     { x: -0.7, z: 7.7, hx: 1.2, hz: 0.95 },
     { x: -2.15, z: 7.7, hx: 0.28, hz: 0.28 },
     { x: 0.75, z: 7.7, hx: 0.28, hz: 0.28 },
-    // Desk against east bedroom wall
+    // Desk against east bedroom wall; chair on +Z (room) side
     { x: 3.7, z: 5.15, hx: 0.9, hz: 0.4 },
-    { x: 3.55, z: 4.4, hx: 0.3, hz: 0.3 },
+    { x: 3.55, z: 5.9, hx: 0.3, hz: 0.32 },
     // Wall mirror (south bedroom wall)
     { x: 3.15, z: 9.25, hx: 0.55, hz: 0.14 },
 

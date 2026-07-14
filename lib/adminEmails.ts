@@ -2,6 +2,7 @@
 // truth used to SHOW admin UI client-side; server-side enforcement lives in RLS
 // (see library_schema.sql's is_library_admin(), which mirrors this list — keep
 // the two in sync). The auth email is signed by Supabase and cannot be spoofed.
+// Primary Architect: iamwhoiambook@gmail.com
 
 export const ADMIN_EMAILS = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'] as const;
 

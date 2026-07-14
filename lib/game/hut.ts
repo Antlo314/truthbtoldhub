@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 // ============================================================
 //  TRUTH'S HUT — data access for bulletins + dispatch media.
@@ -209,8 +210,7 @@ export async function getArchitectStatus(): Promise<{ signedIn: boolean; isArchi
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { signedIn: false, isArchitect: false, email: null };
     const email = session.user.email ?? null;
-    const adminEmails = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'];
-    let isArchitect = !!email && adminEmails.includes(email);
+    let isArchitect = isAdminEmail(email);
     if (!isArchitect) {
         const { data: profile } = await supabase.from('profiles').select('tier').eq('id', session.user.id).maybeSingle();
         isArchitect = profile?.tier === 'Architect';

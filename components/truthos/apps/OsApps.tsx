@@ -14,6 +14,8 @@ import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { loadSettings, applyMusicSetting, saveSettings } from '@/lib/game/settings';
 import { supabase } from '@/lib/supabase';
 import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
+import AdminConsole from './AdminConsole';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (
@@ -66,12 +68,12 @@ export function AccountApp() {
                     <p className="font-semibold text-lg text-white truncate">
                         {character.name?.trim() || profile?.display_name || 'Soul'}
                     </p>
-                    <p className="text-[11px] text-zinc-500 uppercase tracking-[0.18em] mt-0.5">
-                        {character.path ? `Path · ${character.path}` : 'Path unchosen'}
-                    </p>
                     {email && (
                         <p className="text-[11px] text-zinc-500 mt-1 truncate" title={email}>
                             {email}
+                            {isAdminEmail(email) && (
+                                <span className="ml-2 text-rose-400 uppercase tracking-wider text-[9px]">Admin</span>
+                            )}
                         </p>
                     )}
                 </div>
@@ -84,10 +86,37 @@ export function AccountApp() {
                 />
             </div>
             <p className="text-xs text-zinc-500 leading-relaxed">
-                Shape your vessel at the <span className="text-zinc-300">Soul Mirror</span> in the bedroom. Temper arms
-                at the <span className="text-zinc-300">Forge bench</span>. Play at the{' '}
-                <span className="text-zinc-300">controller</span> on the living-room table.
+                Shape your vessel at the <span className="text-zinc-300">Soul Mirror</span>. Play Arcade at the living-room
+                controller. Studio is for brand pulse. Truth.sys lives only on this computer.
             </p>
+        </Panel>
+    );
+}
+
+export function FilesApp() {
+    return (
+        <Panel className="bg-zinc-950 space-y-3">
+            <AppHeader title="Files" sub="Local house links" accent="text-sky-400/80" />
+            <ul className="space-y-2">
+                {[
+                    { href: '/library', label: 'Library' },
+                    { href: '/cinema', label: 'Cinema' },
+                    { href: '/archive', label: 'The Hall' },
+                    { href: '/support', label: 'Support' },
+                    { href: '/codex', label: 'Codex' },
+                ].map((l) => (
+                    <li key={l.href}>
+                        <a
+                            href={l.href}
+                            onClick={() => sacredUi.click()}
+                            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.06]"
+                        >
+                            <span className="text-sm text-white/90">{l.label}</span>
+                            <span className="text-[10px] font-mono text-white/30">{l.href}</span>
+                        </a>
+                    </li>
+                ))}
+            </ul>
         </Panel>
     );
 }
@@ -218,6 +247,10 @@ export function renderOsApp(
             return <AccountApp />;
         case 'settings':
             return <SettingsApp onLogout={ctx.onLogout} onExit={ctx.onExit} />;
+        case 'admin':
+            return <AdminConsole />;
+        case 'files':
+            return <FilesApp />;
         default:
             return null;
     }

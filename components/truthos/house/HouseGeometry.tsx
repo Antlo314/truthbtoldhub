@@ -164,13 +164,15 @@ function StagedDesk({
             <MatBox pos={[x, 0.74, z]} size={[1.7, 0.06, 0.75]} material={m.wood} shadows={sh} />
             <MatBox pos={[x - 0.7, 0.36, z]} size={[0.09, 0.7, 0.6]} material={m.woodDark} shadows={sh} />
             <MatBox pos={[x + 0.7, 0.36, z]} size={[0.09, 0.7, 0.6]} material={m.woodDark} shadows={sh} />
-            <MatBox pos={[x, 0.38, z - 0.7]} size={[0.52, 0.07, 0.48]} material={m.fabric} shadows={sh} />
-            <MatCyl pos={[x, 0.2, z - 0.7]} r={0.055} h={0.28} material={m.metal} shadows={false} />
-            <MatBox pos={[x, 0.7, z - 0.88]} size={[0.52, 0.52, 0.07]} material={m.fabricLight} shadows={sh} />
+            {/* Chair on the room side of the desk (+Z) so you face the monitor */}
+            <MatBox pos={[x, 0.38, z + 0.72]} size={[0.52, 0.07, 0.48]} material={m.fabric} shadows={sh} />
+            <MatCyl pos={[x, 0.2, z + 0.72]} r={0.055} h={0.28} material={m.metal} shadows={false} />
+            <MatBox pos={[x, 0.7, z + 0.92]} size={[0.52, 0.52, 0.07]} material={m.fabricLight} shadows={sh} />
             {monitor && (
                 <>
-                    <MatBox pos={[x, 1.18, z - 0.25]} size={[0.92, 0.58, 0.05]} material={m.black} shadows={sh} />
-                    <mesh position={[x, 1.18, z - 0.21]}>
+                    {/* Monitor faces the chair (+Z) */}
+                    <MatBox pos={[x, 1.18, z - 0.22]} size={[0.92, 0.58, 0.05]} material={m.black} shadows={sh} />
+                    <mesh position={[x, 1.18, z - 0.18]} rotation={[0, Math.PI, 0]}>
                         <planeGeometry args={[0.8, 0.48]} />
                         <meshStandardMaterial
                             color="#041208"
@@ -179,7 +181,7 @@ function StagedDesk({
                             toneMapped={false}
                         />
                     </mesh>
-                    <MatBox pos={[x, 0.86, z - 0.15]} size={[0.16, 0.07, 0.1]} material={m.metalDark} shadows={false} />
+                    <MatBox pos={[x, 0.86, z - 0.12]} size={[0.16, 0.07, 0.1]} material={m.metalDark} shadows={false} />
                     {rich && (
                         <MatBox pos={[x + 0.52, 0.82, z + 0.08]} size={[0.3, 0.07, 0.2]} material={m.metalDark} shadows={false} />
                     )}

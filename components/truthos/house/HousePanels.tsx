@@ -9,8 +9,6 @@ import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
-import { visionStats } from '@/lib/brand/visionProgress';
-import { suggestNextRoad } from '@/lib/brand/nextRoad';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
@@ -140,28 +138,29 @@ function FramePanel({
 }
 
 function WayfinderNative({ onClose }: { onClose: () => void }) {
-    const stats = visionStats();
-    const next = suggestNextRoad();
     return (
-        <Shell title="Wayfinder" accent="text-emerald-300" onClose={onClose}>
-            <div className="p-5 space-y-4 overflow-y-auto h-full">
-                <p className="text-sm text-white/70 leading-relaxed">
-                    Your next modern steps on the hub — portals, trials, and work still open.
-                </p>
-                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-2">
-                    <p className="text-emerald-300 font-medium">{next.label}</p>
-                    <p className="text-xs text-zinc-500">{next.whisper}</p>
-                    <p className="text-xs text-zinc-500">
-                        Visions {stats.seen}/{stats.total} · relics {stats.relics}
+        <Shell title="Wall map · Roads" accent="text-emerald-300" onClose={onClose}>
+            <div className="p-6 space-y-5 overflow-y-auto h-full flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-2xl border border-amber-400/30 bg-amber-500/10 flex items-center justify-center text-2xl">
+                    🛤
+                </div>
+                <div className="space-y-2 max-w-sm">
+                    <p className="text-[10px] uppercase tracking-[0.35em] font-mono text-amber-300/80">
+                        Temporarily down
+                    </p>
+                    <h3 className="text-xl font-semibold text-white">Roads offline</h3>
+                    <p className="text-sm text-white/55 leading-relaxed">
+                        The wall map is under maintenance. Destinations and wayfinding will return soon.
+                        Walk the house, boot Truth.OS, or open the Library while we re-route.
                     </p>
                 </div>
-                <a
-                    href={next.href}
-                    onClick={() => sacredUi.click()}
-                    className="block w-full text-center py-3 rounded-xl border border-emerald-400/35 text-emerald-100 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-2 px-6 py-2.5 rounded-xl border border-white/15 text-[11px] uppercase tracking-[0.2em] text-white/70 hover:text-white hover:border-white/30"
                 >
-                    Continue
-                </a>
+                    Back to house
+                </button>
             </div>
         </Shell>
     );
