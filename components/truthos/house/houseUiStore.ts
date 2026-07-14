@@ -12,7 +12,8 @@ export type HousePanelId =
     | 'cinema'
     | 'hall'
     | 'offering'
-    | 'forge';
+    | 'forge'
+    | 'arcade';
 
 type HouseUiState = {
     panel: HousePanelId | null;
@@ -24,7 +25,7 @@ type HouseUiState = {
     nextWalkthrough: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v3';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v4';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -62,7 +63,7 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 export const WALKTHROUGH_STEPS = [
     {
         title: 'Welcome to the House',
-        body: 'This is Truth.OS House — a walkable home. Rooms open hub sections. There is no separate Hut.',
+        body: 'Truth.OS House is a walkable home. Each room object opens one feature — nothing is repeated.',
         tip: 'Continue when you’re ready',
     },
     {
@@ -72,17 +73,22 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'Gold rings',
-        body: 'Gold rings mark interactables: library, cinema, hall, offering, mirror, and more.',
+        body: 'Gold rings mark objects: controller (Arcade), mirror (vessel), forge bench, map, shelves, film screen, hall arch, and more.',
         tip: 'Walk onto a ring · E or Use',
     },
     {
-        title: 'Truth lives in Truth.OS',
-        body: 'All Truth threads, lore, and Ask Truth content open only inside Truth.OS — boot the green computer in the bedroom. Nowhere else.',
-        tip: 'Bedroom · glowing monitor',
+        title: 'Arcade',
+        body: 'Living room wall TV and console are for show — pick up the controller on the coffee table to open the Arcade.',
+        tip: 'Controller · cyan ring',
+    },
+    {
+        title: 'Truth.OS computer',
+        body: 'Sensitive data, updates, and Truth.sys live only on the bedroom computer. Sign in at the desk to boot the OS.',
+        tip: 'Bedroom · green monitor',
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space with you. Replay this tour with Tour anytime.',
+        body: 'Only LIVE players share the space. Replay this tour anytime from Tour.',
         tip: 'Enter the house',
     },
 ] as const;

@@ -1,17 +1,29 @@
 'use client';
 
 /**
- * House station panels — hub sections only.
- * Truth is never opened here — only via Truth.OS on the computer.
+ * House station panels — one object → one feature.
+ * Truth never opens here — only via Truth.OS on the computer.
  */
+import dynamic from 'next/dynamic';
 import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
+import WeaponForge from '@/components/game/WeaponForge';
+import { useGameStore } from '@/lib/store/useGameStore';
 import { visionStats } from '@/lib/brand/visionProgress';
 import { suggestNextRoad } from '@/lib/brand/nextRoad';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
+const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-cyan-400/60 font-mono text-xs tracking-widest">
+            loading arcade…
+        </div>
+    ),
+});
+
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'forge' | 'wayfinder'>,
+    Exclude<HousePanelId, 'soul' | 'forge' | 'wayfinder' | 'arcade'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
@@ -126,7 +138,6 @@ function FramePanel({
 function WayfinderNative({ onClose }: { onClose: () => void }) {
     const stats = visionStats();
     const next = suggestNextRoad();
-    const openPanel = useHouseUi((s) => s.openPanel);
     return (
         <Shell title="Wayfinder" accent="text-emerald-300" onClose={onClose}>
             <div className="p-5 space-y-4 overflow-y-auto h-full">
@@ -134,24 +145,19 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                     Only Eden is open while the garden is completed. Other ages remain sealed.
                 </p>
                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-2">
-                    <p className="text-emerald-300 font-medium">Eden · first road</p>
+                    <p className="text-emerald-300 font-medium">{next.label}</p>
+                    <p className="text-xs text-zinc-500">{next.whisper}</p>
                     <p className="text-xs text-zinc-500">
                         Visions {stats.seen}/{stats.total} · relics {stats.relics}
                     </p>
-                    <p className="text-xs text-zinc-500">
-                        Next signal: <span className="text-zinc-300">{next.label}</span>
-                    </p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => {
-                        sacredUi.click();
-                        openPanel('cinema');
-                    }}
-                    className="w-full py-3 rounded-xl border border-emerald-400/35 text-emerald-100 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
+                <a
+                    href={next.href}
+                    onClick={() => sacredUi.click()}
+                    className="block w-full text-center py-3 rounded-xl border border-emerald-400/35 text-emerald-100 text-sm uppercase tracking-[0.18em] hover:bg-emerald-500/10"
                 >
-                    Eden vision · cinema
-                </button>
+                    Walk the next road
+                </a>
             </div>
         </Shell>
     );
@@ -159,38 +165,53 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
 
 function SoulNative({ onClose }: { onClose: () => void }) {
     return (
-        <Shell title="Soul Mirror" accent="text-slate-300" onClose={onClose}>
+        <Shell title="Soul Mirror" accent="text-slate-300" onClose={onClose} full>
             <SoulPanel onClose={onClose} />
         </Shell>
     );
 }
 
 function ForgePanel({ onClose }: { onClose: () => void }) {
+    const equipWeapon = useGameStore((s) => s.equipWeapon);
     return (
-        <Shell title="Vessel Forge" accent="text-cyan-300" onClose={onClose} full>
-            <iframe
-                title="Vessel Forge"
-                src="/awakening/create"
-                className="absolute inset-0 w-full h-full border-0 bg-black"
+        <Shell title="The Forge" accent="text-orange-300" onClose={onClose} full>
+            <WeaponForge
+                onForge={(id) => equipWeapon(id)}
+                onClose={onClose}
             />
         </Shell>
+    );
+}
+
+function ArcadePanel({ onClose }: { onClose: () => void }) {
+    const character = useGameStore((s) => s.character);
+    return (
+        <div className="fixed inset-0 z-[55] bg-black">
+            <ArcadeLobby character={character} onClose={onClose} />
+        </div>
     );
 }
 
 export default function HousePanels() {
     const panel = useHouseUi((s) => s.panel);
     const closePanel = useHouseUi((s) => s.closePanel);
+    const loadFromCloud = useGameStore((s) => s.loadFromCloud);
 
     if (!panel) return null;
 
     const onClose = () => {
         sacredUi.veilClose();
         closePanel();
+        // Rehydrate after forge/soul so cloud + local stay aligned
+        if (panel === 'soul' || panel === 'forge' || panel === 'arcade') {
+            void loadFromCloud?.();
+        }
     };
 
     if (panel === 'soul') return <SoulNative onClose={onClose} />;
     if (panel === 'forge') return <ForgePanel onClose={onClose} />;
     if (panel === 'wayfinder') return <WayfinderNative onClose={onClose} />;
+    if (panel === 'arcade') return <ArcadePanel onClose={onClose} />;
     if (panel in PANEL_META) {
         return <FramePanel id={panel as keyof typeof PANEL_META} onClose={onClose} />;
     }

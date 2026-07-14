@@ -749,14 +749,17 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
     const pct = MAX_CHARGE > 0 ? Math.min(100, (charge / MAX_CHARGE) * 100) : 0;
 
     return (
-        <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}22, transparent 60%), linear-gradient(180deg,#070a12,#05060a)`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <style>{`@keyframes arcadePop{0%{transform:scale(0.6);opacity:0}20%{transform:scale(1.12);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}@keyframes arcadeReady{0%,100%{opacity:.7}50%{opacity:1}}@media (prefers-reduced-motion: reduce){[data-ready-glow]{animation:none!important}}`}</style>
-            {/* header */}
-            <div className="flex items-center justify-between px-3 pt-2 shrink-0">
+            {/* header — shared arcade chrome */}
+            <div className="flex items-center justify-between px-3 pt-2 shrink-0 border-b border-white/5 pb-2">
                 <button onClick={onExit} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave Tetra">
                     <ArrowLeft className="w-4 h-4" />
                 </button>
-                <p className="font-ritual text-xl tracking-[0.3em]" style={{ color: accent }}>TETRA</p>
+                <div className="text-center">
+                    <p className="text-[8px] uppercase tracking-[0.35em] text-white/35">Arcade</p>
+                    <p className="font-ritual text-xl tracking-[0.3em] leading-none" style={{ color: accent }}>TETRA</p>
+                </div>
                 <div className="flex items-center gap-1">
                     <button onClick={toggleMute} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Mute">
                         {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

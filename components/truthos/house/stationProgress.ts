@@ -1,16 +1,17 @@
 /**
- * Track house stations visited (no Truth / no Hut / no chamber).
+ * Track house stations visited (no Truth in-world).
  */
 
 import type { HotspotId } from './houseMap';
 
 export type { HotspotId };
 
-const KEY = 'tbth-house-stations-v2';
+const KEY = 'tbth-house-stations-v3';
 
 export const HOUSE_CORE: HotspotId[] = [
     'computer',
     'soul_mirror',
+    'arcade',
     'wayfinder',
     'library',
     'hall',
@@ -21,18 +22,21 @@ export const HOUSE_EXTRA: HotspotId[] = [
     'codex',
     'cinema',
     'ledger',
+    'forge',
 ];
 
 export const STATION_LABELS: Record<HotspotId, string> = {
     computer: 'Truth.OS computer',
-    envelope: 'The Offering',
+    envelope: 'Offering tray',
     library: 'Library shelves',
-    codex: 'Codex desk',
-    ledger: 'The Ledger',
-    cinema: 'Cinema screen',
-    hall: 'The Hall arch',
+    codex: 'Study desk',
+    ledger: 'Ledger lectern',
+    cinema: 'Film screen',
+    hall: 'Hall arch',
     soul_mirror: 'Soul Mirror',
-    wayfinder: 'Wayfinder map',
+    wayfinder: 'Wall map',
+    arcade: 'Controller · Arcade',
+    forge: 'Forge bench',
 };
 
 export function loadVisited(): Set<string> {

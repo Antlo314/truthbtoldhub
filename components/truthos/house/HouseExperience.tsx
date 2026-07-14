@@ -78,12 +78,15 @@ function ensureGuestId(): string {
 
 export default function HouseExperience() {
     const character = useGameStore((s) => s.character);
+    const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const { device } = useClientDevice();
     const { enterOs, closeToRoom } = useTruthOs();
     const openPanel = useHouseUi((s) => s.openPanel);
     const panel = useHouseUi((s) => s.panel);
     const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
     const walkthroughOpen = useHouseUi((s) => s.walkthroughOpen);
+    /** After guest signs in from the computer, open OS once session lands */
+    const pendingOsLogin = useRef(false);
 
     const [ready, setReady] = useState(true);
     const [authed, setAuthed] = useState(true);
@@ -170,6 +173,7 @@ export default function HouseExperience() {
                     } catch {
                         /* */
                     }
+                    void loadFromCloud();
                 }
             })
             .catch(() => {
@@ -183,12 +187,20 @@ export default function HouseExperience() {
                 setAuthOpen(false);
                 selfId.current = session.user.id;
                 setPresenceKey(session.user.id);
+                void loadFromCloud();
+                if (pendingOsLogin.current) {
+                    pendingOsLogin.current = false;
+                    setOsOpen(true);
+                    enterOs();
+                }
             } else {
                 const gid = ensureGuestId();
                 selfId.current = gid;
                 setPresenceKey(gid);
                 setGuest(true);
                 setAuthed(true);
+                setOsOpen(false);
+                closeToRoom();
                 try {
                     localStorage.setItem('tbth-house-guest', '1');
                 } catch {
@@ -201,7 +213,7 @@ export default function HouseExperience() {
             cancelled = true;
             sub.subscription.unsubscribe();
         };
-    }, []);
+    }, [loadFromCloud, enterOs, closeToRoom]);
 
     // Join once per presence identity — not on every avatar field tick (that spawned ghosts)
     useEffect(() => {
@@ -257,6 +269,12 @@ export default function HouseExperience() {
             markVisited(h.id);
             if (h.action.type === 'os') {
                 markVisited('computer');
+                // Truth.OS requires a real signed-in soul (not guest)
+                if (guest) {
+                    pendingOsLogin.current = true;
+                    setAuthOpen(true);
+                    return;
+                }
                 setOsOpen(true);
                 enterOs();
                 return;
@@ -265,7 +283,7 @@ export default function HouseExperience() {
                 openPanel(h.action.panel as HousePanelId);
             }
         },
-        [enterOs, openPanel],
+        [enterOs, openPanel, guest],
     );
 
     const tryInteract = useCallback(() => {
@@ -301,6 +319,12 @@ export default function HouseExperience() {
         setAuthed(true);
         setAuthOpen(false);
         sacredUi.access();
+        void loadFromCloud();
+        if (pendingOsLogin.current) {
+            pendingOsLogin.current = false;
+            setOsOpen(true);
+            enterOs();
+        }
     };
 
     const onLogout = async () => {
@@ -442,11 +466,7 @@ export default function HouseExperience() {
 
             {osOpen && (
                 <div
-                    className={
-                        isMobile
-                            ? 'fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100vw-12px,400px)] h-[min(100dvh-16px,800px)] rounded-[1.75rem] overflow-hidden border-[3px] border-zinc-800'
-                            : 'fixed z-50 inset-[2%] rounded-xl overflow-hidden border border-zinc-700 shadow-2xl bg-black'
-                    }
+                    className="fixed z-50 inset-0 sm:inset-[1.5%] sm:rounded-xl overflow-hidden border-0 sm:border border-zinc-700 shadow-2xl bg-black"
                     data-allow-select
                 >
                     <button
@@ -459,10 +479,7 @@ export default function HouseExperience() {
                     >
                         Exit OS · house
                     </button>
-                    <TruthOSShell
-                        mode={isMobile ? 'phone' : 'desktop'}
-                        onLogout={onLogout}
-                    />
+                    <TruthOSShell onLogout={onLogout} />
                 </div>
             )}
         </div>

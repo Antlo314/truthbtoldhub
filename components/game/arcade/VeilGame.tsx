@@ -781,7 +781,10 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 <button onClick={onExit} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave Veil">
                     <ArrowLeft className="w-4 h-4" />
                 </button>
-                <p className="font-ritual text-xl tracking-[0.3em]" style={{ color: accent }}>VEIL</p>
+                <div className="text-center">
+                    <p className="text-[8px] uppercase tracking-[0.35em] text-white/35">Arcade</p>
+                    <p className="font-ritual text-xl tracking-[0.3em] leading-none" style={{ color: accent }}>VEIL</p>
+                </div>
                 <div className="flex items-center gap-1">
                     <button onClick={toggleMute} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Mute">
                         {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

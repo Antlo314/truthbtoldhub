@@ -35,8 +35,7 @@ function Box({
 }
 
 /**
- * Full house staging — rooms map to Hut features.
- * cinematic: PC-only beams, moldings, window glow, richer props.
+ * Expanded house (~22×20) — media bay, forge bay, unique station props.
  */
 export default function HouseGeometry({
     low = false,
@@ -47,187 +46,223 @@ export default function HouseGeometry({
 }) {
     const sh = !low;
     const rich = cinematic && !low;
+    const floorW = 21.2;
+    const floorD = 19.2;
+
     return (
         <group>
             {/* Floor */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow={sh}>
-                <planeGeometry args={[18, 18]} />
+                <planeGeometry args={[floorW, floorD]} />
                 <meshStandardMaterial color={FLOOR} roughness={0.9} />
             </mesh>
             {!low && (
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-                    <planeGeometry args={[18, 18]} />
+                    <planeGeometry args={[floorW, floorD]} />
                     <meshBasicMaterial color="#3a3250" transparent opacity={0.12} />
                 </mesh>
             )}
-            {/* Living aisle runner */}
             {rich && (
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} receiveShadow>
-                    <planeGeometry args={[1.6, 12]} />
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0.5]} receiveShadow>
+                    <planeGeometry args={[1.7, 14]} />
                     <meshStandardMaterial color="#4a2840" roughness={0.95} />
                 </mesh>
             )}
 
             {/* Outer walls */}
-            <Box pos={[0, 1.5, -8.5]} size={[18, 3, 0.3]} color={WALL} shadows={sh} />
-            <Box pos={[0, 1.5, 8.5]} size={[18, 3, 0.3]} color={WALL} shadows={sh} />
-            <Box pos={[-8.5, 1.5, 0]} size={[0.3, 3, 18]} color={WALL} shadows={sh} />
-            <Box pos={[8.5, 1.5, 0]} size={[0.3, 3, 18]} color={WALL} shadows={sh} />
+            <Box pos={[0, 1.5, -9.5]} size={[floorW, 3, 0.3]} color={WALL} shadows={sh} />
+            <Box pos={[0, 1.5, 9.5]} size={[floorW, 3, 0.3]} color={WALL} shadows={sh} />
+            <Box pos={[-10.5, 1.5, 0]} size={[0.3, 3, floorD]} color={WALL} shadows={sh} />
+            <Box pos={[10.5, 1.5, 0]} size={[0.3, 3, floorD]} color={WALL} shadows={sh} />
 
-            {/* Ceiling beams (PC cinematic) */}
             {rich &&
-                [-6, -3, 0, 3, 6].map((z) => (
-                    <Box key={`beam-${z}`} pos={[0, 2.85, z]} size={[17.2, 0.14, 0.22]} color={WOOD} shadows={false} />
+                [-7, -3.5, 0, 3.5, 7].map((z) => (
+                    <Box key={`beam-${z}`} pos={[0, 2.85, z]} size={[20.4, 0.14, 0.22]} color={WOOD} shadows={false} />
                 ))}
-            {/* Baseboards */}
             {rich && (
                 <>
-                    <Box pos={[0, 0.08, -8.32]} size={[17.5, 0.16, 0.08]} color="#1a1520" shadows={false} />
-                    <Box pos={[0, 0.08, 8.32]} size={[17.5, 0.16, 0.08]} color="#1a1520" shadows={false} />
-                    <Box pos={[-8.32, 0.08, 0]} size={[0.08, 0.16, 17.5]} color="#1a1520" shadows={false} />
-                    <Box pos={[8.32, 0.08, 0]} size={[0.08, 0.16, 17.5]} color="#1a1520" shadows={false} />
+                    <Box pos={[0, 0.08, -9.32]} size={[20.8, 0.16, 0.08]} color="#1a1520" shadows={false} />
+                    <Box pos={[0, 0.08, 9.32]} size={[20.8, 0.16, 0.08]} color="#1a1520" shadows={false} />
+                    <Box pos={[-10.32, 0.08, 0]} size={[0.08, 0.16, 18.8]} color="#1a1520" shadows={false} />
+                    <Box pos={[10.32, 0.08, 0]} size={[0.08, 0.16, 18.8]} color="#1a1520" shadows={false} />
                 </>
             )}
 
             {/* ── BEDROOM (south / +Z) ── */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, 0.01, 5]} receiveShadow={sh}>
-                <planeGeometry args={[6, 5]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1.5, 0.01, 6.2]} receiveShadow={sh}>
+                <planeGeometry args={[8, 6]} />
                 <meshStandardMaterial color="#1c1628" roughness={0.95} />
             </mesh>
-            {/* bed */}
-            <Box pos={[-0.5, 0.35, 6.2]} size={[2.2, 0.4, 1.6]} color="#1e1830" shadows={sh} />
-            <Box pos={[-0.5, 0.6, 6.2]} size={[2.0, 0.15, 1.4]} color="#2a2240" shadows={sh} />
+            <Box pos={[-0.5, 0.35, 7.0]} size={[2.2, 0.4, 1.6]} color="#1e1830" shadows={sh} />
+            <Box pos={[-0.5, 0.6, 7.0]} size={[2.0, 0.15, 1.4]} color="#2a2240" shadows={sh} />
             {/* desk + computer */}
-            <Box pos={[3.2, 0.72, 4.5]} size={[1.6, 0.08, 0.7]} color={WOOD} shadows={sh} />
-            <Box pos={[3.2, 0.36, 4.5]} size={[0.1, 0.72, 0.55]} color="#221c16" shadows={sh} />
-            <Box pos={[3.2, 1.15, 4.25]} size={[0.85, 0.55, 0.06]} color="#1a1a1e" shadows={sh} />
-            <mesh position={[3.2, 1.15, 4.29]}>
-                <planeGeometry args={[0.75, 0.45]} />
+            <Box pos={[3.4, 0.72, 5.15]} size={[1.7, 0.08, 0.75]} color={WOOD} shadows={sh} />
+            <Box pos={[3.4, 0.36, 5.15]} size={[0.1, 0.72, 0.55]} color="#221c16" shadows={sh} />
+            <Box pos={[3.4, 1.18, 4.9]} size={[0.9, 0.58, 0.06]} color="#1a1a1e" shadows={sh} />
+            <mesh position={[3.4, 1.18, 4.94]}>
+                <planeGeometry args={[0.8, 0.48]} />
                 <meshStandardMaterial
                     color="#041208"
                     emissive="#22c55e"
-                    emissiveIntensity={1.1}
+                    emissiveIntensity={1.15}
                     toneMapped={false}
                 />
             </mesh>
-            {/* mirror (soul) */}
-            <Box pos={[2.8, 1.4, 6.8]} size={[0.08, 1.2, 0.7]} color="#1a1a22" shadows={sh} />
-            <mesh position={[2.75, 1.4, 6.8]} rotation={[0, -Math.PI / 2, 0]}>
-                <planeGeometry args={[0.55, 1.0]} />
-                <meshStandardMaterial color="#4a6a8a" metalness={0.7} roughness={0.2} emissive="#1a3048" emissiveIntensity={0.25} />
+            {/* soul mirror */}
+            <Box pos={[3.15, 1.4, 7.85]} size={[0.08, 1.35, 0.72]} color="#1a1a22" shadows={sh} />
+            <mesh position={[3.1, 1.4, 7.85]} rotation={[0, -Math.PI / 2, 0]}>
+                <planeGeometry args={[0.58, 1.15]} />
+                <meshStandardMaterial
+                    color="#4a6a8a"
+                    metalness={0.75}
+                    roughness={0.18}
+                    emissive="#1a3048"
+                    emissiveIntensity={0.28}
+                />
             </mesh>
-            {/* window bedroom */}
-            <mesh position={[5.5, 1.8, 8.3]}>
-                <planeGeometry args={[1.4, 1.1]} />
+            <mesh position={[6.2, 1.85, 9.32]}>
+                <planeGeometry args={[1.5, 1.15]} />
                 <meshStandardMaterial color="#1e1b4b" emissive="#6366f1" emissiveIntensity={rich ? 0.65 : 0.4} />
             </mesh>
             {rich && (
                 <>
-                    <Box pos={[-0.5, 0.85, 6.9]} size={[0.5, 0.35, 0.35]} color="#2a2038" shadows={sh} />
-                    <Box pos={[3.2, 0.95, 4.85]} size={[0.35, 0.12, 0.25]} color="#1a1a1e" shadows={false} />
-                    {/* Nightstand lamp */}
-                    <mesh position={[-0.5, 1.15, 6.9]}>
+                    <Box pos={[-0.5, 0.85, 7.75]} size={[0.5, 0.35, 0.35]} color="#2a2038" shadows={sh} />
+                    <Box pos={[3.4, 0.95, 5.45]} size={[0.38, 0.12, 0.28]} color="#1a1a1e" shadows={false} />
+                    <mesh position={[-0.5, 1.15, 7.75]}>
                         <sphereGeometry args={[0.1, 10, 10]} />
                         <meshStandardMaterial color="#fde68a" emissive="#fbbf24" emissiveIntensity={0.8} />
                     </mesh>
                 </>
             )}
 
-            {/* ── LIVING ROOM (center) ── */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, -0.5]} receiveShadow={sh}>
-                <planeGeometry args={[7, 5]} />
+            {/* ── LIVING + MEDIA ── */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.2, 0.012, -1.2]} receiveShadow={sh}>
+                <planeGeometry args={[8.5, 7]} />
                 <meshStandardMaterial color={RUG} roughness={0.95} />
             </mesh>
-            <Box pos={[-1.5, 0.4, -1.0]} size={[1.2, 0.08, 0.7]} color={WOOD} shadows={sh} />
-            <Box pos={[-1.5, 0.18, -1.0]} size={[0.08, 0.36, 0.5]} color="#221c16" shadows={sh} />
-            <mesh position={[-1.5, 0.48, -1.0]} rotation={[-0.1, 0.4, 0]}>
-                <boxGeometry args={[0.28, 0.02, 0.18]} />
-                <meshStandardMaterial color="#f5f0e6" roughness={0.85} />
+            {/* sofa facing north media wall */}
+            <Box pos={[1.6, 0.4, -2.6]} size={[2.5, 0.5, 0.95]} color="#2a2038" shadows={sh} />
+            <Box pos={[1.6, 0.78, -2.95]} size={[2.5, 0.42, 0.28]} color="#322848" shadows={sh} />
+            {/* coffee table — controller sits here (see HouseDecor) */}
+            <Box pos={[0.15, 0.32, -1.15]} size={[1.05, 0.08, 0.65]} color={WOOD} shadows={sh} />
+            <Box pos={[0.15, 0.16, -1.15]} size={[0.9, 0.28, 0.5]} color="#221c16" shadows={sh} />
+            {/* offering side table */}
+            <Box pos={[-1.8, 0.4, -0.4]} size={[1.15, 0.08, 0.7]} color={WOOD} shadows={sh} />
+            <Box pos={[-1.8, 0.18, -0.4]} size={[0.08, 0.36, 0.5]} color="#221c16" shadows={sh} />
+            {/* media stand under TV */}
+            <Box pos={[0, 0.28, -3.85]} size={[2.1, 0.5, 0.45]} color="#1a1520" shadows={sh} />
+            {/* wall TV bezel (cyan arcade — not cinema purple) */}
+            <Box pos={[0, 1.55, -4.15]} size={[2.4, 1.35, 0.08]} color="#0a0a0c" shadows={sh} />
+            <mesh position={[0, 1.55, -4.1]}>
+                <planeGeometry args={[2.15, 1.15]} />
+                <meshStandardMaterial
+                    color="#020814"
+                    emissive="#22d3ee"
+                    emissiveIntensity={0.42}
+                    toneMapped={false}
+                />
             </mesh>
-            <mesh position={[-1.5, 0.5, -1.0]} rotation={[-0.1, 0.4, 0]}>
-                <planeGeometry args={[0.22, 0.12]} />
-                <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.35} />
+            {/* console under TV */}
+            <Box pos={[0, 0.55, -3.7]} size={[0.7, 0.18, 0.38]} color="#111118" shadows={sh} />
+            <mesh position={[0, 0.55, -3.5]}>
+                <boxGeometry args={[0.12, 0.04, 0.04]} />
+                <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={1.2} toneMapped={false} />
             </mesh>
-            <Box pos={[1.5, 0.4, -2.2]} size={[2.4, 0.5, 0.9]} color="#2a2038" shadows={sh} />
-            <Box pos={[1.5, 0.75, -2.5]} size={[2.4, 0.4, 0.25]} color="#322848" shadows={sh} />
 
-            {/* ── LIBRARY ── */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5.5, 0.01, -4.5]} receiveShadow={sh}>
-                <planeGeometry args={[5, 5]} />
+            {/* ── LIBRARY (west) ── */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-6.8, 0.01, -4.8]} receiveShadow={sh}>
+                <planeGeometry args={[5.5, 5.5]} />
                 <meshStandardMaterial color="#141018" roughness={0.95} />
             </mesh>
-            {(low ? [-5.5] : [-6.0, -5.5, -5.0]).map((z, i) => (
-                <group key={i}>
-                    <Box pos={[-7.2, 1.2, z]} size={[0.35, 2.2, low ? 2.2 : 1.1]} color={WOOD} shadows={sh} />
+            {(low ? [-4.8] : [-5.6, -4.8, -4.0]).map((z, i) => (
+                <group key={`lib-${i}`}>
+                    <Box pos={[-8.7, 1.2, z]} size={[0.38, 2.2, low ? 2.4 : 1.15]} color={WOOD} shadows={sh} />
                     {!low &&
                         [0.4, 0.9, 1.4, 1.9].map((y) => (
-                            <Box key={y} pos={[-7.05, y, z]} size={[0.12, 0.06, 1.0]} color="#3a2e22" shadows={false} />
+                            <Box key={y} pos={[-8.55, y, z]} size={[0.12, 0.06, 1.0]} color="#3a2e22" shadows={false} />
                         ))}
-                    <Box pos={[-7.05, 0.65, z - 0.2]} size={[0.1, 0.35, 0.12]} color="#4a3b6b" shadows={false} />
-                    <Box pos={[-7.05, 0.65, z + 0.15]} size={[0.1, 0.4, 0.1]} color="#2f5b45" shadows={false} />
                 </group>
             ))}
-            <mesh position={[-5.5, 2.4, -4.5]}>
-                <planeGeometry args={[2.5, 0.15]} />
+            <mesh position={[-6.5, 2.45, -4.8]}>
+                <planeGeometry args={[2.6, 0.15]} />
                 <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.25} />
             </mesh>
 
-            {/* ── STUDY ── */}
-            <Box pos={[5.5, 0.75, -4.2]} size={[1.4, 0.08, 0.8]} color={WOOD} shadows={sh} />
-            <Box pos={[5.5, 0.9, -4.2]} size={[0.35, 0.08, 0.45]} color="#1a1520" shadows={sh} />
-            <Box pos={[6.5, 1.3, -5.5]} size={[0.4, 2.4, 1.8]} color={WOOD} shadows={sh} />
+            {/* ── STUDY / CODEX (east-south) ── */}
+            <Box pos={[6.2, 0.75, -4.6]} size={[1.5, 0.08, 0.85]} color={WOOD} shadows={sh} />
+            <Box pos={[6.2, 0.92, -4.6]} size={[0.4, 0.1, 0.5]} color="#1a1520" shadows={sh} />
+            <Box pos={[8.0, 1.3, -5.8]} size={[0.42, 2.4, 2.0]} color={WOOD} shadows={sh} />
 
-            {/* ── CINEMA ── */}
-            <Box pos={[6.5, 1.5, 1.5]} size={[0.12, 1.4, 2.2]} color="#111" shadows={sh} />
-            <mesh position={[6.42, 1.5, 1.5]} rotation={[0, -Math.PI / 2, 0]}>
-                <planeGeometry args={[2.0, 1.2]} />
-                <meshStandardMaterial color="#0a0a12" emissive="#7c3aed" emissiveIntensity={0.45} toneMapped={false} />
+            {/* ── FORGE BAY (SE) ── */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[7.6, 0.012, -7.0]} receiveShadow={sh}>
+                <planeGeometry args={[4.5, 3.5]} />
+                <meshStandardMaterial color="#1a1210" roughness={0.95} />
+            </mesh>
+            <Box pos={[7.6, 0.55, -7.0]} size={[1.6, 0.9, 0.9]} color="#2a2018" shadows={sh} />
+            <Box pos={[7.6, 1.05, -7.0]} size={[1.4, 0.12, 0.75]} color="#3a2a1c" shadows={sh} />
+            {/* anvil silhouette */}
+            <Box pos={[7.35, 1.25, -6.85]} size={[0.55, 0.28, 0.35]} color="#3a3a42" shadows={sh} />
+            <mesh position={[7.9, 1.15, -7.15]}>
+                <sphereGeometry args={[0.12, 8, 8]} />
+                <meshStandardMaterial color="#ff6b2c" emissive="#ff6b2c" emissiveIntensity={1.0} toneMapped={false} />
+            </mesh>
+            {!low && (
+                <pointLight position={[7.9, 1.4, -7.1]} intensity={1.4} color="#ff8a3d" distance={5} decay={2} />
+            )}
+
+            {/* ── CINEMA (east — purple film wall, NOT arcade) ── */}
+            <Box pos={[8.7, 1.55, 1.2]} size={[0.12, 1.55, 2.5]} color="#111" shadows={sh} />
+            <mesh position={[8.62, 1.55, 1.2]} rotation={[0, -Math.PI / 2, 0]}>
+                <planeGeometry args={[2.25, 1.35]} />
+                <meshStandardMaterial color="#0a0a12" emissive="#7c3aed" emissiveIntensity={0.5} toneMapped={false} />
             </mesh>
 
-            {/* ── HALL ── */}
-            <Box pos={[-6.0, 1.2, 1.5]} size={[0.3, 2.4, 0.15]} color={WALL} shadows={sh} />
-            <Box pos={[-5.0, 1.2, 1.5]} size={[0.3, 2.4, 0.15]} color={WALL} shadows={sh} />
-            <mesh position={[-5.5, 2.2, 1.5]}>
-                <torusGeometry args={[0.35, 0.04, 6, low ? 12 : 20]} />
-                <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.3} />
+            {/* ── HALL ARCH (west) ── */}
+            <Box pos={[-7.7, 1.25, 1.8]} size={[0.32, 2.5, 0.18]} color={WALL} shadows={sh} />
+            <Box pos={[-6.7, 1.25, 1.8]} size={[0.32, 2.5, 0.18]} color={WALL} shadows={sh} />
+            <Box pos={[-7.2, 2.45, 1.8]} size={[1.2, 0.2, 0.2]} color={WALL} shadows={sh} />
+            <mesh position={[-7.2, 2.35, 1.9]}>
+                <torusGeometry args={[0.38, 0.045, 6, low ? 12 : 20]} />
+                <meshStandardMaterial color={GOLD} emissive={GOLD} emissiveIntensity={0.35} />
             </mesh>
 
-            {/* North wall art — decorative only (no Hut / no chamber entry) */}
-            <Box pos={[-1.3, 1.3, -8.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
-            <Box pos={[1.3, 1.3, -8.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
-            <mesh position={[0, 1.6, -8.32]}>
-                <planeGeometry args={[2.2, 1.4]} />
-                <meshStandardMaterial color="#1a1528" emissive="#312e81" emissiveIntensity={0.25} />
-            </mesh>
+            {/* ── LEDGER + HEARTH (west living) ── */}
+            <Box pos={[-5.0, 0.45, 2.0]} size={[0.55, 0.9, 0.55]} color="#2c241c" shadows={sh} />
+            <Box pos={[-7.6, 0.4, 3.6]} size={[1.25, 0.8, 0.75]} color="#1a1410" shadows={sh} />
 
-            {/* Interior partial walls */}
-            <Box pos={[-2.8, 1.2, 2.5]} size={[3.5, 2.4, 0.2]} color={WALL} shadows={sh} />
-            <Box pos={[2.8, 1.2, 2.5]} size={[3.5, 2.4, 0.2]} color={WALL} shadows={sh} />
+            {/* ── WAYFINDER (north wall map) ── */}
+            <Box pos={[0, 1.55, -9.15]} size={[2.0, 1.35, 0.1]} color="#1a1520" shadows={sh} />
+            <mesh position={[0, 1.55, -9.08]}>
+                <planeGeometry args={[1.75, 1.15]} />
+                <meshStandardMaterial
+                    color="#041208"
+                    emissive="#22c55e"
+                    emissiveIntensity={0.5}
+                    toneMapped={false}
+                />
+            </mesh>
+            <Box pos={[-1.5, 1.3, -9.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
+            <Box pos={[1.5, 1.3, -9.2]} size={[0.35, 2.6, 0.2]} color="#1a1230" shadows={sh} />
+
+            {/* Interior partial walls (bedroom doorway) */}
+            <Box pos={[-3.2, 1.2, 3.0]} size={[4.0, 2.4, 0.22]} color={WALL} shadows={sh} />
+            <Box pos={[3.2, 1.2, 3.0]} size={[4.0, 2.4, 0.22]} color={WALL} shadows={sh} />
 
             {/* Ceiling */}
             <mesh position={[0, 3.0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[18, 18]} />
+                <planeGeometry args={[floorW, floorD]} />
                 <meshStandardMaterial color="#0c0a10" roughness={1} />
             </mesh>
 
-            {/* Extra windows + pendant (PC cinematic) */}
             {rich && (
                 <>
-                    <mesh position={[-8.32, 1.8, -4]} rotation={[0, Math.PI / 2, 0]}>
+                    <mesh position={[-10.32, 1.8, -4]} rotation={[0, Math.PI / 2, 0]}>
                         <planeGeometry args={[1.1, 1.0]} />
                         <meshStandardMaterial color="#0f172a" emissive="#4c1d95" emissiveIntensity={0.35} />
                     </mesh>
-                    <mesh position={[8.32, 1.9, -2]} rotation={[0, -Math.PI / 2, 0]}>
+                    <mesh position={[10.32, 1.9, -2]} rotation={[0, -Math.PI / 2, 0]}>
                         <planeGeometry args={[1.0, 0.9]} />
                         <meshStandardMaterial color="#0f172a" emissive="#1e3a5f" emissiveIntensity={0.4} />
-                    </mesh>
-                    <mesh position={[-1.5, 2.4, -1]}>
-                        <cylinderGeometry args={[0.02, 0.02, 0.5, 6]} />
-                        <meshStandardMaterial color="#1a1520" />
-                    </mesh>
-                    <mesh position={[-1.5, 2.1, -1]}>
-                        <coneGeometry args={[0.22, 0.18, 8]} />
-                        <meshStandardMaterial color="#2a2030" emissive="#fbbf24" emissiveIntensity={0.25} />
                     </mesh>
                 </>
             )}

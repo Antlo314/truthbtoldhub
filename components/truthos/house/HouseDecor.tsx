@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * House props — no Truth figure, no Hut totem, no chamber portal.
+ * House props — unique interactables.
+ * Arcade: TV + console (geometry) + controller mesh here; hotspot = controller.
  * Truth content is only inside Truth.OS.
  */
 import { useRef } from 'react';
@@ -19,6 +20,8 @@ const ACCENT: Record<string, string> = {
     cinema: '#c084fc',
     hall: '#38bdf8',
     soul_mirror: '#94a3b8',
+    arcade: '#22d3ee',
+    forge: '#f97316',
 };
 
 function SpinRing({
@@ -49,34 +52,71 @@ function SpinRing({
     );
 }
 
-function SoulMirrorOnly({ low }: { low?: boolean }) {
+/** Gamepad on coffee table — the arcade interactable */
+function ArcadeController({ low }: { low?: boolean }) {
+    const glow = useRef<THREE.Mesh>(null);
+    useFrame(({ clock }) => {
+        if (!glow.current || low) return;
+        const p = 0.55 + Math.sin(clock.elapsedTime * 2.4) * 0.25;
+        (glow.current.material as THREE.MeshStandardMaterial).emissiveIntensity = p;
+    });
     return (
-        <group position={[2.75, 0, 6.8]}>
-            <mesh position={[0, 1.3, 0]} castShadow={!low}>
-                <boxGeometry args={[0.1, 1.4, 0.75]} />
-                <meshStandardMaterial color="#1a1a22" roughness={0.6} metalness={0.3} />
+        <group position={[0.15, 0.42, -1.15]} rotation={[0, 0.35, 0]}>
+            {/* body */}
+            <mesh castShadow={!low}>
+                <boxGeometry args={[0.32, 0.06, 0.2]} />
+                <meshStandardMaterial color="#1a1a22" roughness={0.55} metalness={0.25} />
             </mesh>
-            <mesh position={[-0.06, 1.3, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                <planeGeometry args={[0.6, 1.15]} />
+            {/* grips */}
+            <mesh position={[-0.14, -0.01, 0.04]} rotation={[0.15, 0, 0.2]}>
+                <boxGeometry args={[0.1, 0.05, 0.12]} />
+                <meshStandardMaterial color="#121218" roughness={0.7} />
+            </mesh>
+            <mesh position={[0.14, -0.01, 0.04]} rotation={[0.15, 0, -0.2]}>
+                <boxGeometry args={[0.1, 0.05, 0.12]} />
+                <meshStandardMaterial color="#121218" roughness={0.7} />
+            </mesh>
+            {/* LED strip */}
+            <mesh ref={glow} position={[0, 0.035, -0.02]}>
+                <boxGeometry args={[0.14, 0.015, 0.03]} />
                 <meshStandardMaterial
-                    color="#4a6a8a"
-                    metalness={0.85}
-                    roughness={0.12}
-                    emissive="#1a3048"
-                    emissiveIntensity={0.3}
+                    color="#22d3ee"
+                    emissive="#22d3ee"
+                    emissiveIntensity={0.7}
+                    toneMapped={false}
                 />
+            </mesh>
+            {/* sticks */}
+            <mesh position={[-0.08, 0.04, 0.02]}>
+                <cylinderGeometry args={[0.02, 0.02, 0.03, 8]} />
+                <meshStandardMaterial color="#2a2a32" />
+            </mesh>
+            <mesh position={[0.08, 0.04, 0.02]}>
+                <cylinderGeometry args={[0.02, 0.02, 0.03, 8]} />
+                <meshStandardMaterial color="#2a2a32" />
             </mesh>
         </group>
     );
 }
 
-function LedgerPedestal() {
+function OfferingTray() {
     return (
-        <group position={[-4.2, 0, 1.2]}>
-            <mesh position={[0, 0.45, 0]}>
-                <boxGeometry args={[0.55, 0.9, 0.55]} />
-                <meshStandardMaterial color="#2c241c" roughness={0.85} />
+        <group position={[-1.8, 0.48, -0.4]} rotation={[-0.08, 0.35, 0]}>
+            <mesh>
+                <boxGeometry args={[0.28, 0.02, 0.18]} />
+                <meshStandardMaterial color="#f5f0e6" roughness={0.85} />
             </mesh>
+            <mesh position={[0, 0.02, 0]}>
+                <planeGeometry args={[0.22, 0.12]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.4} />
+            </mesh>
+        </group>
+    );
+}
+
+function LedgerBook() {
+    return (
+        <group position={[-5.0, 0, 2.0]}>
             <mesh position={[0, 0.95, 0]} rotation={[-0.15, 0.2, 0]}>
                 <boxGeometry args={[0.38, 0.06, 0.28]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.8} />
@@ -89,27 +129,7 @@ function LedgerPedestal() {
     );
 }
 
-function WayfinderMap() {
-    return (
-        <group position={[0, 1.5, -5.4]}>
-            <mesh>
-                <boxGeometry args={[1.4, 1.0, 0.08]} />
-                <meshStandardMaterial color="#1a1520" roughness={0.7} />
-            </mesh>
-            <mesh position={[0, 0, 0.05]}>
-                <planeGeometry args={[1.2, 0.85]} />
-                <meshStandardMaterial
-                    color="#041208"
-                    emissive="#22c55e"
-                    emissiveIntensity={0.55}
-                    toneMapped={false}
-                />
-            </mesh>
-        </group>
-    );
-}
-
-function HearthWest({ low }: { low?: boolean }) {
+function HearthFlame({ low }: { low?: boolean }) {
     const flame = useRef<THREE.Mesh>(null);
     useFrame(({ clock }) => {
         if (!flame.current || low) return;
@@ -118,11 +138,7 @@ function HearthWest({ low }: { low?: boolean }) {
         flame.current.position.y = 0.55 + Math.sin(t * 6) * 0.03;
     });
     return (
-        <group position={[-6.8, 0, 3.2]}>
-            <mesh position={[0, 0.4, 0]}>
-                <boxGeometry args={[1.2, 0.8, 0.7]} />
-                <meshStandardMaterial color="#1a1410" roughness={0.95} />
-            </mesh>
+        <group position={[-7.6, 0, 3.6]}>
             <mesh ref={flame} position={[0, 0.55, 0.15]}>
                 <coneGeometry args={[0.18, 0.45, 6]} />
                 <meshStandardMaterial
@@ -133,39 +149,42 @@ function HearthWest({ low }: { low?: boolean }) {
                 />
             </mesh>
             {!low && (
-                <pointLight position={[0, 0.9, 0.2]} intensity={1.6} color="#ff8a3d" distance={6} decay={2} />
+                <pointLight position={[0, 0.9, 0.2]} intensity={1.5} color="#ff8a3d" distance={6} decay={2} />
             )}
         </group>
     );
 }
 
-/** Living room center — simple table accent, no Truth dais */
-function LivingCenter() {
+function ForgeEmber({ low }: { low?: boolean }) {
+    const ref = useRef<THREE.Mesh>(null);
+    useFrame(({ clock }) => {
+        if (!ref.current || low) return;
+        (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity =
+            0.85 + Math.sin(clock.elapsedTime * 5) * 0.35;
+    });
     return (
-        <group position={[0.2, 0, -0.2]}>
-            <mesh position={[0, 0.35, 0]}>
-                <cylinderGeometry args={[0.55, 0.6, 0.7, 16]} />
-                <meshStandardMaterial color="#2c241c" roughness={0.88} />
-            </mesh>
-            <mesh position={[0, 0.72, 0]}>
-                <cylinderGeometry args={[0.62, 0.62, 0.06, 16]} />
-                <meshStandardMaterial color="#3d2e22" roughness={0.85} />
-            </mesh>
-        </group>
+        <mesh ref={ref} position={[7.95, 1.18, -7.2]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <meshStandardMaterial color="#fb923c" emissive="#fb923c" emissiveIntensity={1} toneMapped={false} />
+        </mesh>
     );
 }
 
 export default function HouseDecor({ low = false }: { low?: boolean }) {
     return (
         <group>
-            <LivingCenter />
-            <SoulMirrorOnly low={low} />
-            <LedgerPedestal />
-            <WayfinderMap />
-            <HearthWest low={low} />
+            <ArcadeController low={low} />
+            <OfferingTray />
+            <LedgerBook />
+            <HearthFlame low={low} />
+            <ForgeEmber low={low} />
             {HOTSPOTS.map((h) => (
                 <group key={h.id} position={[h.position[0], 0, h.position[2]]}>
-                    <SpinRing accent={ACCENT[h.id] || '#fbbf24'} low={low} />
+                    <SpinRing
+                        accent={ACCENT[h.id] || '#fbbf24'}
+                        radius={h.id === 'arcade' ? 0.32 : 0.42}
+                        low={low}
+                    />
                 </group>
             ))}
         </group>

@@ -12,6 +12,7 @@ import { houseInput } from './houseInput';
 import {
     WALK_SPEED,
     SPRINT_MULT,
+    STRAFE_MULT,
     MOVE_ACCEL,
     MOVE_FRICTION,
     LOOK_SENS_DESKTOP,
@@ -274,21 +275,22 @@ export default function FirstPersonController({
                 hasInput = true;
             }
             if (k.has('KeyA') || k.has('ArrowLeft')) {
-                wishX -= rx;
-                wishZ -= rz;
+                wishX -= rx * STRAFE_MULT;
+                wishZ -= rz * STRAFE_MULT;
                 hasInput = true;
             }
             if (k.has('KeyD') || k.has('ArrowRight')) {
-                wishX += rx;
-                wishZ += rz;
+                wishX += rx * STRAFE_MULT;
+                wishZ += rz * STRAFE_MULT;
                 hasInput = true;
             }
 
             const jx = houseInput.axisX;
             const jf = houseInput.axisFwd;
             if (Math.abs(jx) > 0.02 || Math.abs(jf) > 0.02) {
-                wishX += fx * jf + rx * jx;
-                wishZ += fz * jf + rz * jx;
+                // Strafe axis slightly boosted; forward uses base walk speed
+                wishX += fx * jf + rx * jx * STRAFE_MULT;
+                wishZ += fz * jf + rz * jx * STRAFE_MULT;
                 hasInput = true;
             }
 

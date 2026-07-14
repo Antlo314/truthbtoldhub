@@ -125,7 +125,10 @@ export default function ArcadeLobby({ character, onClose }: Props) {
     return (
         <div
             className="absolute inset-0 z-[55] overflow-y-auto custom-scrollbar"
-            style={{ background: 'radial-gradient(120% 60% at 50% -8%, rgba(34,211,238,0.10), transparent 55%), #06080e' }}
+            style={{
+                background:
+                    'radial-gradient(120% 60% at 50% -8%, rgba(34,211,238,0.14), transparent 55%), linear-gradient(180deg, #070a12 0%, #05060a 100%)',
+            }}
         >
             {/* header */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 backdrop-blur-md bg-black/40 border-b border-white/5" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
@@ -133,8 +136,10 @@ export default function ArcadeLobby({ character, onClose }: Props) {
                     <ArrowLeft className="w-4 h-4" />
                 </button>
                 <div className="text-center pointer-events-none">
-                    <p className="text-[9px] tracking-[0.4em] uppercase text-aether-gold/70">Truth's Hut</p>
-                    <p className="font-ritual text-lg gold-shimmer leading-tight flex items-center gap-2"><Gamepad2 className="w-4 h-4" /> The Arcade</p>
+                    <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-400/70">Truth.OS House</p>
+                    <p className="font-ritual text-lg leading-tight flex items-center gap-2 justify-center text-white">
+                        <Gamepad2 className="w-4 h-4 text-cyan-400" /> The Arcade
+                    </p>
                 </div>
                 <div className="w-[44px]" />
             </div>

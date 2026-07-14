@@ -1,5 +1,23 @@
 # AI Sync Status & Changelog
 
+## 2026-07-13 (Grok) — Truth.OS House: arcade console, unique stations, OS, 3D vessel
+- **Agent**: Grok
+- **Status**: Completed (tsc 0). Product track = Truth.OS House on `/` (Unity handoff remains stale).
+- **What shipped**:
+  - Expanded house footprint (~22×20) with freestyled unique objects for every Hut feature (no OS duplicates).
+  - **Arcade restored**: living-room wall TV + console + **controller** hotspot (cyan) → `ArcadeLobby`; cinema film screen stays separate (purple).
+  - Forge bench (SE), wall wayfinder map (north), soul mirror (bedroom), computer (login-gated OS), hall arch, ledger, library, study codex, offering tray.
+  - **Live 3D vessel forge** at Soul Mirror (`VesselModel` + AvatarConfig controls).
+  - Weapon forge panel at forge bench (`WeaponForge`).
+  - Truth.OS unified shell (no PC/phone fork); dock = Truth · Updates · Account · Settings only; computer requires sign-in.
+  - Cloud hydrate on session; strafe mult ~1.12 + slightly higher accel.
+  - Arcade lobby/game headers restyled for house chrome.
+- **Files**: `components/truthos/house/*`, `TruthOSShell.tsx`, `truthOsStore.ts`, `apps/OsApps.tsx`, `hut3d/hud/SoulPanel.tsx`, `game/arcade/*`, `.agent_sync/*`
+- **Handoff**: Playtest media wall controller + OS login gate + 3D mirror on mobile; run `npm run build` before push. Optional next: VesselModel for LIVE peers; richer Updates feed from media table.
+- grok → idle.
+
+---
+
 ## 2026-07-03 (Claude) — 3D HUT GOES LIVE ON WEB + FABLE BUILD PROMPT
 - **Agent**: Claude (branch `claude/hut3d-golive`, pushed, **NOT merged to main**)
 - **Status**: Go-live infrastructure done; feature build delegated to Fable via a written prompt

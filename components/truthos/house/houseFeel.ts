@@ -5,10 +5,12 @@
 /** Walk m/s — readable indoors, still snappy */
 export const WALK_SPEED = 5.6;
 export const SPRINT_MULT = 1.4;
+/** Lateral (strafe / stick X) slightly snappier than forward */
+export const STRAFE_MULT = 1.12;
 
 /** High accel = almost instant response (less "heavy") */
-export const MOVE_ACCEL = 28;
-export const MOVE_FRICTION = 22;
+export const MOVE_ACCEL = 32;
+export const MOVE_FRICTION = 20;
 
 /** Soft deadzone so light thumb still moves */
 export const STICK_DEADZONE = 0.1;

@@ -2,17 +2,21 @@
 
 import { create } from 'zustand';
 
+/** OS apps only — house stations are NOT duplicated here */
 export type OsAppId =
     | 'truth'
-    | 'soul'
-    | 'wayfinder'
-    | 'chamber'
-    | 'ledger'
-    | 'hall'
-    | 'codex'
-    | 'cinema'
-    | 'offering'
+    | 'updates'
+    | 'account'
     | 'settings';
+
+/** Legacy helper for BedroomStage / ImmersiveExperience device chrome */
+export function detectDevice(): 'desktop' | 'phone' {
+    if (typeof window === 'undefined') return 'desktop';
+    const narrow = window.innerWidth < 768;
+    const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+    const touch = navigator.maxTouchPoints > 0;
+    return narrow || (coarse && touch) ? 'phone' : 'desktop';
+}
 
 export type OsWindow = {
     id: string;
@@ -27,9 +31,7 @@ export type OsWindow = {
 };
 
 type TruthOsState = {
-    /** Outside device: room. Inside: truth.os */
     phase: 'room' | 'device-lock' | 'os';
-    device: 'desktop' | 'phone';
     windows: OsWindow[];
     focusId: string | null;
     zTop: number;
@@ -46,14 +48,8 @@ type TruthOsState = {
 
 const APP_META: Record<OsAppId, { title: string; w: number; h: number }> = {
     truth: { title: 'TRUTH.SYS — terminal', w: 520, h: 480 },
-    soul: { title: 'Vessel — identity', w: 440, h: 520 },
-    wayfinder: { title: 'Wayfinder — roads', w: 480, h: 420 },
-    chamber: { title: 'Chamber — 3D sanctum', w: 400, h: 320 },
-    ledger: { title: 'Ledger — daily word', w: 440, h: 400 },
-    hall: { title: 'Hall — community', w: 400, h: 300 },
-    codex: { title: 'Codex — memory', w: 400, h: 300 },
-    cinema: { title: 'Cinema — transmissions', w: 400, h: 300 },
-    offering: { title: 'Offering — sustain', w: 400, h: 300 },
+    updates: { title: 'Updates — dispatches', w: 460, h: 440 },
+    account: { title: 'Account — identity', w: 420, h: 480 },
     settings: { title: 'Settings', w: 380, h: 340 },
 };
 
@@ -61,7 +57,6 @@ let winSeq = 1;
 
 export const useTruthOs = create<TruthOsState>((set, get) => ({
     phase: 'room',
-    device: 'desktop',
     windows: [],
     focusId: null,
     zTop: 10,
@@ -102,15 +97,15 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
     closeWindow: (id) =>
         set((s) => ({
             windows: s.windows.filter((w) => w.id !== id),
-            focusId: s.focusId === id ? null : s.focusId,
+            focusId: s.focusId === id ? s.windows.find((w) => w.id !== id)?.id ?? null : s.focusId,
         })),
 
     focusWindow: (id) => {
         const z = get().zTop + 1;
         set((s) => ({
-            zTop: z,
             focusId: id,
-            windows: s.windows.map((w) => (w.id === id ? { ...w, z, minimized: false } : w)),
+            zTop: z,
+            windows: s.windows.map((w) => (w.id === id ? { ...w, z } : w)),
         }));
     },
 
@@ -119,10 +114,3 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
             windows: s.windows.map((w) => (w.id === id ? { ...w, x, y } : w)),
         })),
 }));
-
-export function detectDevice(): 'desktop' | 'phone' {
-    if (typeof window === 'undefined') return 'desktop';
-    return window.matchMedia('(max-width: 768px)').matches || 'ontouchstart' in window
-        ? 'phone'
-        : 'desktop';
-}

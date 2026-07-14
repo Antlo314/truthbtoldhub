@@ -1,6 +1,6 @@
 /**
- * House layout — hub rooms only.
- * Truth lives exclusively in Truth.OS (computer). No Hut / no Speak-with-Truth in world.
+ * House layout — expanded hub.
+ * Each Hut feature = one household object. Truth only in Truth.OS (computer).
  */
 
 import type { HousePanelId } from './houseUiStore';
@@ -14,7 +14,9 @@ export type HotspotId =
     | 'cinema'
     | 'hall'
     | 'soul_mirror'
-    | 'wayfinder';
+    | 'wayfinder'
+    | 'arcade'
+    | 'forge';
 
 export type Hotspot = {
     id: HotspotId;
@@ -25,123 +27,162 @@ export type Hotspot = {
     action: { type: 'os' } | { type: 'panel'; panel: HousePanelId };
 };
 
+/** Expanded ~22×20 m footprint */
 export const HOUSE_BOUNDS = {
-    minX: -8.15,
-    maxX: 8.15,
-    minZ: -8.15,
-    maxZ: 8.15,
+    minX: -10.2,
+    maxX: 10.2,
+    minZ: -9.2,
+    maxZ: 9.2,
 };
 
-/** Open bedroom floor — facing house center */
-export const SPAWN: [number, number, number] = [0, 1.62, 4.0];
+/** Bedroom floor — facing house center */
+export const SPAWN: [number, number, number] = [0, 1.62, 5.2];
 
+/**
+ * One object → one feature.
+ * Arcade interact is the CONTROLLER on the coffee table (not the TV).
+ */
 export const HOTSPOTS: Hotspot[] = [
     {
         id: 'computer',
         label: 'Desktop',
-        hint: 'Boot Truth.OS',
-        position: [3.2, 1.0, 4.2],
-        radius: 1.55,
+        hint: 'Log in · boot Truth.OS',
+        position: [3.4, 1.0, 5.0],
+        radius: 1.45,
         action: { type: 'os' },
     },
     {
+        id: 'soul_mirror',
+        label: 'Mirror',
+        hint: 'Vessel · shape your form',
+        position: [3.0, 1.3, 7.4],
+        radius: 1.3,
+        action: { type: 'panel', panel: 'soul' },
+    },
+    {
+        id: 'arcade',
+        label: 'Controller',
+        hint: 'Pick up controller · Arcade',
+        // Coffee table controller in living room (media wall is decorative)
+        position: [0.15, 0.55, -1.15],
+        radius: 1.15,
+        action: { type: 'panel', panel: 'arcade' },
+    },
+    {
         id: 'envelope',
-        label: 'Envelope',
+        label: 'Offering tray',
         hint: 'The Offering',
-        position: [-1.5, 0.85, -1.0],
-        radius: 1.45,
+        position: [-1.8, 0.85, -0.4],
+        radius: 1.35,
         action: { type: 'panel', panel: 'offering' },
     },
     {
         id: 'library',
-        label: 'Library',
+        label: 'Bookshelves',
         hint: 'Open the Library',
-        position: [-5.5, 1.2, -4.5],
-        radius: 2.0,
+        position: [-6.8, 1.2, -4.8],
+        radius: 1.9,
         action: { type: 'panel', panel: 'library' },
     },
     {
         id: 'codex',
-        label: 'Study',
+        label: 'Study desk',
         hint: 'Codex · memory',
-        position: [5.0, 1.0, -4.0],
-        radius: 1.7,
+        position: [6.2, 1.0, -4.6],
+        radius: 1.55,
         action: { type: 'panel', panel: 'codex' },
     },
     {
         id: 'ledger',
         label: 'Ledger',
-        hint: 'Ledger · daily word',
-        position: [-4.2, 1.0, 1.2],
-        radius: 1.4,
+        hint: 'Daily word',
+        position: [-5.0, 1.0, 2.0],
+        radius: 1.35,
         action: { type: 'panel', panel: 'ledger' },
     },
     {
         id: 'wayfinder',
-        label: 'Wayfinder',
-        hint: 'Wayfinder · Eden',
-        position: [0, 1.2, -5.2],
-        radius: 1.4,
+        label: 'Wall map',
+        hint: 'Wayfinder · roads',
+        position: [0, 1.2, -8.2],
+        radius: 1.5,
         action: { type: 'panel', panel: 'wayfinder' },
     },
     {
         id: 'cinema',
-        label: 'Cinema',
+        label: 'Film screen',
         hint: 'Cinema · film',
-        position: [5.5, 1.4, 1.5],
-        radius: 1.7,
+        position: [7.8, 1.4, 1.2],
+        radius: 1.6,
         action: { type: 'panel', panel: 'cinema' },
     },
     {
         id: 'hall',
-        label: 'Hall',
+        label: 'Hall arch',
         hint: 'The Hall · community',
-        position: [-5.5, 1.2, 1.5],
-        radius: 1.7,
+        position: [-7.2, 1.2, 1.8],
+        radius: 1.55,
         action: { type: 'panel', panel: 'hall' },
     },
     {
-        id: 'soul_mirror',
-        label: 'Mirror',
-        hint: 'Vessel · identity',
-        position: [2.6, 1.3, 6.1],
-        radius: 1.35,
-        action: { type: 'panel', panel: 'soul' },
+        id: 'forge',
+        label: 'Forge bench',
+        hint: 'Temper arms & tonics',
+        position: [7.6, 1.0, -7.0],
+        radius: 1.5,
+        action: { type: 'panel', panel: 'forge' },
     },
 ];
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
 export const COLLIDERS: Collider[] = [
-    { x: 0, z: -8.5, hx: 9.2, hz: 0.22 },
-    { x: 0, z: 8.5, hx: 9.2, hz: 0.22 },
-    { x: -8.5, z: 0, hx: 0.22, hz: 9.2 },
-    { x: 8.5, z: 0, hx: 0.22, hz: 9.2 },
+    // Outer walls
+    { x: 0, z: -9.5, hx: 10.6, hz: 0.22 },
+    { x: 0, z: 9.5, hx: 10.6, hz: 0.22 },
+    { x: -10.5, z: 0, hx: 0.22, hz: 9.8 },
+    { x: 10.5, z: 0, hx: 0.22, hz: 9.8 },
 
-    { x: -2.9, z: 2.5, hx: 1.7, hz: 0.14 },
-    { x: 2.9, z: 2.5, hx: 1.7, hz: 0.14 },
+    // Bedroom partial walls
+    { x: -3.2, z: 3.0, hx: 2.0, hz: 0.14 },
+    { x: 3.2, z: 3.0, hx: 2.0, hz: 0.14 },
 
-    { x: -3.2, z: -3.0, hx: 0.14, hz: 2.1 },
-    { x: 3.2, z: -3.0, hx: 0.14, hz: 2.1 },
+    // Bed
+    { x: -0.5, z: 7.0, hx: 1.15, hz: 0.85 },
+    // Desk + computer
+    { x: 3.4, z: 5.15, hx: 0.9, hz: 0.4 },
+    // Soul mirror
+    { x: 3.15, z: 7.85, hx: 0.18, hz: 0.42 },
 
-    { x: -0.5, z: 6.35, hx: 1.15, hz: 0.75 },
-    { x: 3.2, z: 4.55, hx: 0.85, hz: 0.38 },
-    { x: 2.85, z: 6.85, hx: 0.16, hz: 0.38 },
+    // Living sofa
+    { x: 1.6, z: -2.6, hx: 1.3, hz: 0.55 },
+    // Coffee table (controller)
+    { x: 0.15, z: -1.15, hx: 0.55, hz: 0.35 },
+    // Offering table
+    { x: -1.8, z: -0.4, hx: 0.65, hz: 0.38 },
+    // Media stand / console under TV (north living)
+    { x: 0.0, z: -3.85, hx: 1.1, hz: 0.28 },
 
-    { x: -1.5, z: -1.0, hx: 0.65, hz: 0.38 },
-    { x: 1.5, z: -2.25, hx: 1.25, hz: 0.5 },
+    // Ledger lectern
+    { x: -5.0, z: 2.0, hx: 0.4, hz: 0.4 },
+    // Hearth
+    { x: -7.6, z: 3.6, hx: 0.7, hz: 0.45 },
+    // Hall pillars
+    { x: -7.7, z: 1.8, hx: 0.22, hz: 0.18 },
+    { x: -6.7, z: 1.8, hx: 0.22, hz: 0.18 },
 
-    { x: -4.2, z: 1.2, hx: 0.38, hz: 0.38 },
-    { x: -7.15, z: -5.5, hx: 0.38, hz: 1.85 },
-    { x: 5.5, z: -4.2, hx: 0.75, hz: 0.42 },
-    { x: 6.5, z: -5.5, hx: 0.32, hz: 1.0 },
-    { x: 6.55, z: 1.5, hx: 0.18, hz: 1.15 },
-    { x: -6.0, z: 1.5, hx: 0.24, hz: 0.18 },
-    { x: -5.0, z: 1.5, hx: 0.24, hz: 0.18 },
-    { x: -1.3, z: -7.75, hx: 0.28, hz: 0.3 },
-    { x: 1.3, z: -7.75, hx: 0.28, hz: 0.3 },
-    { x: 0, z: -5.45, hx: 0.75, hz: 0.14 },
-    { x: -6.8, z: 3.2, hx: 0.68, hz: 0.42 },
+    // Library shelves
+    { x: -8.6, z: -4.8, hx: 0.4, hz: 2.0 },
+    // Study desk
+    { x: 6.2, z: -4.6, hx: 0.8, hz: 0.45 },
+    // Study shelf
+    { x: 8.0, z: -5.8, hx: 0.35, hz: 1.1 },
+    // Cinema screen base
+    { x: 8.5, z: 1.2, hx: 0.2, hz: 1.2 },
+    // Wayfinder map wall furniture
+    { x: 0, z: -8.85, hx: 0.9, hz: 0.16 },
+    // Forge bench
+    { x: 7.6, z: -7.0, hx: 0.85, hz: 0.55 },
 ];
 
 const PLAYER_R = 0.34;
