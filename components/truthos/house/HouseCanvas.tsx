@@ -90,6 +90,8 @@ export default function HouseCanvas({
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+                    // Ensure camera up direction is correct
+                    camera.up.set(0, 1, 0);
                     camera.position.set(4.55, 1.62, 6.35);
                     camera.lookAt(4.55, 1.35, 8.2);
                     // Local body only for mirror FBO
@@ -141,6 +143,20 @@ export default function HouseCanvas({
                         <pointLight position={[7.6, 1.55, -7.0]} intensity={1.35} color="#fb923c" distance={6} decay={2} />
                         <pointLight position={[-5.5, 1.8, 2.05]} intensity={1.05} color="#38bdf8" distance={5} decay={2} />
                         <pointLight position={[-9.2, 1.6, 0.15]} intensity={0.85} color="#e8d5b0" distance={5} decay={2} />
+                        {
+                            if (document.pointerLockElement === el) {
+                              // Ensure camera up direction remains correct when pointer lock changes
+                              camera.up.set(0, 1, 0);
+                            }
+                            // Existing logic continues
+                            const dx = e.movementX || 0;
+                            const dy = e.movementY || 0;
+                            if (dx === 0 && dy === 0) return;
+                             yaw.current -= dx * sens;
+                             pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
+                             emit('look');
+                            return;
+                        }
                         <spotLight
                             position={[0.2, 2.9, -1.2]}
                             angle={0.7}

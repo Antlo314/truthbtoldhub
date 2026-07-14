@@ -82,6 +82,8 @@ export default function FirstPersonController({
         yawS.current = SPAWN_YAW;
         pitchS.current = 0;
         camera.position.copy(pos.current);
+        // Ensure camera up direction is correct
+        camera.up.set(0, 1, 0);
         camera.rotation.order = 'YXZ';
         camera.rotation.y = SPAWN_YAW;
         camera.rotation.x = 0;
@@ -131,6 +133,8 @@ export default function FirstPersonController({
 
         const onPointerDown = (e: PointerEvent) => {
             if (lockedRef.current || mobile) return;
+            // Ensure camera up direction is correct on lock state changes
+            camera.up.set(0, 1, 0);
             // Prefer pointer lock for cinematic PC look (no OS cursor fight)
             if (e.button === 0) {
                 if (!document.pointerLockElement) {
