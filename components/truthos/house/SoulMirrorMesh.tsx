@@ -12,11 +12,11 @@ import type { HouseMaterials } from './HouseMaterials';
 import { LOCAL_BODY_LAYER } from './LocalPlayerBody';
 
 export const MIRROR_WALL = {
-    x: 3.15,
+    x: 5.9,
     y: 1.48,
-    z: 9.32,
-    glassW: 0.78,
-    glassH: 1.45,
+    z: 11.9,
+    glassW: 0.82,
+    glassH: 1.5,
 };
 
 export default function SoulMirrorMesh({

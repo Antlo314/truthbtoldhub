@@ -84,14 +84,14 @@ export default function HouseCanvas({
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
-                    far: mobile ? 36 : 70,
-                    position: [0, 1.62, 4.0],
+                    far: mobile ? 48 : 90,
+                    position: [0, 1.62, 1.2],
                 }}
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
-                    camera.position.set(0, 1.62, 4.0);
-                    camera.lookAt(0, 1.3, 0);
+                    camera.position.set(0, 1.62, 1.2);
+                    camera.lookAt(0, 1.3, -2);
                     // Local body only for mirror FBO
                     camera.layers.disable(1);
                 }}
@@ -169,7 +169,7 @@ export default function HouseCanvas({
                     onMoveActivity={onMoveActivity}
                 />
                 {!mobile && (
-                    <ContactShadows position={[0, 0.02, 0]} opacity={0.38} scale={22} blur={2.6} far={10} />
+                    <ContactShadows position={[0, 0.02, 0]} opacity={0.34} scale={32} blur={2.8} far={14} />
                 )}
             </Canvas>
         </div>

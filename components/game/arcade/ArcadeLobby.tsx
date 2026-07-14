@@ -138,21 +138,21 @@ export default function ArcadeLobby({ character, onClose }: Props) {
             className="absolute inset-0 z-[55] overflow-y-auto custom-scrollbar"
             style={{
                 background:
-                    'radial-gradient(120% 60% at 50% -8%, rgba(34,211,238,0.14), transparent 55%), linear-gradient(180deg, #070a12 0%, #05060a 100%)',
+                    'radial-gradient(120% 60% at 50% -8%, rgba(34,211,238,0.16), transparent 55%), linear-gradient(180deg, #0a0d14 0%, #05060a 100%)',
             }}
         >
-            {/* header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 backdrop-blur-md bg-black/40 border-b border-white/5" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-                <button onClick={onClose} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave the Arcade">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 backdrop-blur-xl bg-black/55 border-b border-white/10" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+                <button onClick={onClose} className="h-10 px-3 rounded-lg border border-white/12 bg-white/[0.04] text-zinc-200 hover:text-white flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider" aria-label="Leave the Arcade">
                     <ArrowLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">House</span>
                 </button>
                 <div className="text-center pointer-events-none">
-                    <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-400/70">Truth.OS House</p>
+                    <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-400/70 font-mono">Cabinet</p>
                     <p className="font-ritual text-lg leading-tight flex items-center gap-2 justify-center text-white">
                         <Gamepad2 className="w-4 h-4 text-cyan-400" /> The Arcade
                     </p>
                 </div>
-                <div className="w-[44px]" />
+                <div className="w-[72px]" />
             </div>
 
             <div className="max-w-lg mx-auto px-4 pb-28 pt-5">

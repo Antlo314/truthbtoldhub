@@ -14,6 +14,7 @@ import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { joinHousePresence, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
 import type { Hotspot } from './houseMap';
+// isOnLivingRug inlined in onPose for rug footsteps
 import TruthGuideWidget from './TruthGuideWidget';
 import TruthOSShell from '../TruthOSShell';
 import { useTruthOs } from '../truthOsStore';
@@ -272,12 +273,11 @@ export default function HouseExperience() {
                 build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
                 ...p,
             });
-            // Zone music + ambient layers + footsteps (throttled inside hubAudio)
             if (!uiLocked) {
                 const now = performance.now();
                 if (now - lastPoseAt.current > 80) {
                     lastPoseAt.current = now;
-                    const onRug = Math.abs(p.x) < 3.8 && p.z > -4.8 && p.z < 0.8;
+                    const onRug = Math.abs(p.x) < 4.5 && p.z > -8.5 && p.z < -2.2;
                     hubAudio.updateHousePose(p.x, p.z, movingRef.current, onRug);
                 }
             }

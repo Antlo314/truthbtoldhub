@@ -19,7 +19,6 @@ type HouseUiState = {
     panel: HousePanelId | null;
     walkthroughOpen: boolean;
     walkthroughStep: number;
-    /** Transient toast for front door / soon stations */
     soonMessage: string | null;
     openPanel: (id: HousePanelId) => void;
     closePanel: () => void;
@@ -28,7 +27,7 @@ type HouseUiState = {
     setSoonMessage: (msg: string | null) => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v6';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v7';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -68,32 +67,37 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 export const WALKTHROUGH_STEPS = [
     {
         title: 'Welcome home',
-        body: 'A staged modern house — living room, bedroom, library, study, studio. Each object opens one feature.',
-        tip: 'Continue when you’re ready',
+        body: 'You are in the foyer. A real hallway connects living, bedroom, library, and the east wing. Take a full walk — the house is bigger now.',
+        tip: 'Continue',
     },
     {
         title: 'How to move',
-        body: 'Desktop: WASD or arrows · click to look. Mobile: left stick · right drag look.',
-        tip: 'Explore at your pace',
+        body: 'Desktop: WASD or arrows · click the scene to look. Mobile: left stick move · right drag look · Use button to interact.',
+        tip: 'Try a few steps',
     },
     {
-        title: 'Gold rings',
-        body: 'Rings mark what you can use: controller, mirror, studio, map, shelves, film screen, hall, front door, and more.',
-        tip: 'Walk onto a ring · E or Use',
+        title: 'The hallway',
+        body: 'The runner marks the main corridor. Doorways open to every wing. Gold rings mark what you can open.',
+        tip: 'Look for gold rings',
     },
     {
         title: 'Living room',
-        body: 'Sofa faces the wall TV from across the room. Controller on the coffee table opens Arcade.',
-        tip: 'Cyan ring on the table',
+        body: 'North of the hall — sofa, TV, and a real wall fireplace. Controller on the coffee table opens the Arcade.',
+        tip: 'Cyan ring · controller',
     },
     {
-        title: 'Soul Mirror & Studio',
-        body: 'Wall mirror shapes your vessel. SE Studio is the brand pulse — modern tools, not fantasy forge.',
-        tip: 'Bedroom mirror · Studio desk',
+        title: 'Bedroom & Truth.OS',
+        body: 'South wing — bed, Soul Mirror on the wall, and the green desktop. Only the computer boots Truth.OS.',
+        tip: 'Green monitor · bedroom',
+    },
+    {
+        title: 'Wings',
+        body: 'West: library shelves on the wall. East: study, cinema, Signal Studio. Northwest arch opens The Hall community.',
+        tip: 'Explore freely',
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space. The front door opens to outside soon.',
+        body: 'Only LIVE players share the space. Tour again anytime. Front door leads outside soon.',
         tip: 'Enter the house',
     },
 ] as const;

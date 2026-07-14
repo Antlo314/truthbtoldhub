@@ -6,13 +6,14 @@ import type { HotspotId } from './houseMap';
 
 export type { HotspotId };
 
-const KEY = 'tbth-house-stations-v4';
+const KEY = 'tbth-house-stations-v5';
 
 export const HOUSE_CORE: HotspotId[] = [
+    'front_door',
     'computer',
     'soul_mirror',
     'arcade',
-    'wayfinder',
+    'fireplace',
     'library',
     'hall',
 ];
@@ -23,7 +24,7 @@ export const HOUSE_EXTRA: HotspotId[] = [
     'cinema',
     'ledger',
     'studio',
-    'front_door',
+    'wayfinder',
 ];
 
 export const STATION_LABELS: Record<HotspotId, string> = {
@@ -39,6 +40,7 @@ export const STATION_LABELS: Record<HotspotId, string> = {
     arcade: 'Controller · Arcade',
     studio: 'Signal Studio',
     front_door: 'Front door',
+    fireplace: 'Fireplace',
 };
 
 export function loadVisited(): Set<string> {

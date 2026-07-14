@@ -75,20 +75,20 @@ type MusicMeta = { src: string; volume: number; fadeIn: number; fadeOut: number;
 type SfxMeta = { src: string; volume: number; loop?: boolean };
 
 const MUSIC_META: Record<HubMusicId, MusicMeta> = {
-    house_ambient_main: { src: `${MUSIC}/house_ambient_main.mp3`, volume: 0.34, fadeIn: 2800, fadeOut: 2200 },
-    house_bedroom_night: { src: `${MUSIC}/house_bedroom_night.mp3`, volume: 0.3, fadeIn: 2400, fadeOut: 2000 },
-    house_living_arcade_glow: { src: `${MUSIC}/house_living_arcade_glow.mp3`, volume: 0.28, fadeIn: 2200, fadeOut: 1800 },
-    house_library_dust: { src: `${MUSIC}/house_library_dust.mp3`, volume: 0.3, fadeIn: 2400, fadeOut: 2000 },
-    house_studio_pulse: { src: `${MUSIC}/house_studio_pulse.mp3`, volume: 0.28, fadeIn: 2000, fadeOut: 1800 },
-    house_hearth_warm: { src: `${MUSIC}/house_hearth_warm.mp3`, volume: 0.3, fadeIn: 2400, fadeOut: 2000 },
-    truthos_boot_theme: { src: `${MUSIC}/truthos_boot_theme.mp3`, volume: 0.36, fadeIn: 400, fadeOut: 900, loop: false },
-    truthos_desktop_idle: { src: `${MUSIC}/truthos_desktop_idle.mp3`, volume: 0.22, fadeIn: 2000, fadeOut: 1600 },
-    arcade_lobby: { src: `${MUSIC}/arcade_lobby.mp3`, volume: 0.38, fadeIn: 1200, fadeOut: 1000 },
-    arcade_serpent: { src: `${MUSIC}/arcade_serpent.mp3`, volume: 0.36, fadeIn: 800, fadeOut: 700 },
-    arcade_tetra: { src: `${MUSIC}/arcade_tetra.mp3`, volume: 0.36, fadeIn: 800, fadeOut: 700 },
-    arcade_veil: { src: `${MUSIC}/arcade_veil.mp3`, volume: 0.4, fadeIn: 600, fadeOut: 600 },
-    soul_mirror_reflect: { src: `${MUSIC}/soul_mirror_reflect.mp3`, volume: 0.32, fadeIn: 1600, fadeOut: 1400 },
-    offering_sustain: { src: `${MUSIC}/offering_sustain.mp3`, volume: 0.3, fadeIn: 1600, fadeOut: 1400 },
+    house_ambient_main: { src: `${MUSIC}/house_ambient_main.mp3`, volume: 0.3, fadeIn: 2800, fadeOut: 2200 },
+    house_bedroom_night: { src: `${MUSIC}/house_bedroom_night.mp3`, volume: 0.26, fadeIn: 2400, fadeOut: 2000 },
+    house_living_arcade_glow: { src: `${MUSIC}/house_living_arcade_glow.mp3`, volume: 0.24, fadeIn: 2200, fadeOut: 1800 },
+    house_library_dust: { src: `${MUSIC}/house_library_dust.mp3`, volume: 0.26, fadeIn: 2400, fadeOut: 2000 },
+    house_studio_pulse: { src: `${MUSIC}/house_studio_pulse.mp3`, volume: 0.24, fadeIn: 2000, fadeOut: 1800 },
+    house_hearth_warm: { src: `${MUSIC}/house_hearth_warm.mp3`, volume: 0.26, fadeIn: 2400, fadeOut: 2000 },
+    truthos_boot_theme: { src: `${MUSIC}/truthos_boot_theme.mp3`, volume: 0.32, fadeIn: 400, fadeOut: 900, loop: false },
+    truthos_desktop_idle: { src: `${MUSIC}/truthos_desktop_idle.mp3`, volume: 0.18, fadeIn: 2000, fadeOut: 1600 },
+    arcade_lobby: { src: `${MUSIC}/arcade_lobby.mp3`, volume: 0.34, fadeIn: 1200, fadeOut: 1000 },
+    arcade_serpent: { src: `${MUSIC}/arcade_serpent.mp3`, volume: 0.32, fadeIn: 800, fadeOut: 700 },
+    arcade_tetra: { src: `${MUSIC}/arcade_tetra.mp3`, volume: 0.32, fadeIn: 800, fadeOut: 700 },
+    arcade_veil: { src: `${MUSIC}/arcade_veil.mp3`, volume: 0.36, fadeIn: 600, fadeOut: 600 },
+    soul_mirror_reflect: { src: `${MUSIC}/soul_mirror_reflect.mp3`, volume: 0.28, fadeIn: 1600, fadeOut: 1400 },
+    offering_sustain: { src: `${MUSIC}/offering_sustain.mp3`, volume: 0.26, fadeIn: 1600, fadeOut: 1400 },
 };
 
 const SFX_META: Record<HubSfxId, SfxMeta> = {
@@ -121,7 +121,7 @@ const SFX_META: Record<HubSfxId, SfxMeta> = {
     book_pull: { src: `${SFX}/book_pull.mp3`, volume: 0.4 },
     book_place: { src: `${SFX}/book_place.mp3`, volume: 0.38 },
     library_open: { src: `${SFX}/library_open.mp3`, volume: 0.42 },
-    fire_crackle_loop: { src: `${SFX}/fire_crackle_loop.mp3`, volume: 0.16, loop: true },
+    fire_crackle_loop: { src: `${SFX}/fire_crackle_loop.mp3`, volume: 0.12, loop: true },
     studio_key: { src: `${SFX}/studio_key.mp3`, volume: 0.28 },
     hall_arch_pass: { src: `${SFX}/hall_arch_pass.mp3`, volume: 0.36 },
     map_offline: { src: `${SFX}/map_offline.mp3`, volume: 0.4 },
@@ -194,13 +194,14 @@ function zoneMusic(zone: HouseZone): HubMusicId {
     }
 }
 
-/** Zone from world position (house coordinates) */
+/** Zone from world position (expanded house) */
 export function zoneFromPose(x: number, z: number): HouseZone {
-    if (z > 3.2) return 'bedroom';
-    if (x < -6.2 && z < -1.5) return 'library';
-    if (x > 5.5 && z < -5.2) return 'studio';
-    if (x < -5.5 && z > 1.2) return 'hearth';
-    if (z < -0.5 && z > -5.5 && Math.abs(x) < 4.2) return 'living';
+    if (z > 3.5) return 'bedroom';
+    if (x < -6.5) return 'library';
+    if (x > 6.5 && z < -5.5) return 'studio';
+    if (x > 6.5) return 'living'; // east wing shares bright living bed if not studio
+    if (z < -1.5 && Math.abs(x) < 6) return 'living';
+    if (Math.hypot(x - 0, z - -11.4) < 5) return 'hearth';
     return 'main';
 }
 
@@ -391,13 +392,15 @@ class HubAudioController {
             this.playMusic(zoneMusic(zone));
         }
 
-        // Ambient layers by proximity
-        const nearFire = Math.hypot(x - -7.55, z - 3.7) < 4.5;
-        const nearTv = Math.hypot(x - 0, z - -4.2) < 3.8;
-        const nearDesk = Math.hypot(x - 3.55, z - 5.2) < 3.2;
-        this.setAmbient('fire', nearFire ? 'fire_crackle_loop' : null, nearFire ? 0.14 + (1 - Math.min(1, Math.hypot(x + 7.55, z - 3.7) / 4.5)) * 0.1 : 0);
-        this.setAmbient('tv', nearTv ? 'tv_static_soft' : null, nearTv ? 0.08 : 0);
-        this.setAmbient('pc', nearDesk ? 'computer_hum_loop' : null, nearDesk ? 0.1 : 0);
+        // Ambient layers — tight radii so crackle only at the real fireplace
+        const fireDist = Math.hypot(x - 0, z - -11.4);
+        const nearFire = fireDist < 3.6;
+        const nearTv = Math.hypot(x - 0, z - -7.6) < 3.2;
+        const nearDesk = Math.hypot(x - 4.4, z - 7.4) < 3.0;
+        const fireVol = nearFire ? 0.1 + (1 - Math.min(1, fireDist / 3.6)) * 0.14 : 0;
+        this.setAmbient('fire', nearFire ? 'fire_crackle_loop' : null, fireVol);
+        this.setAmbient('tv', nearTv ? 'tv_static_soft' : null, nearTv ? 0.07 : 0);
+        this.setAmbient('pc', nearDesk ? 'computer_hum_loop' : null, nearDesk ? 0.09 : 0);
 
         if (moving) {
             const gap = onRug ? 380 : 320;
@@ -460,6 +463,10 @@ class HubAudioController {
                 break;
             case 'offering':
                 this.playMusic('offering_sustain');
+                break;
+            case 'fireplace':
+                this.playSfx('house_interact_ring', { volume: 0.25 });
+                this.playMusic('house_hearth_warm');
                 break;
             default:
                 break;

@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
 import { useArcadeInputProfile } from './useArcadeInputProfile';
 import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
+import { ArcadeGameShell, StatPill } from './ArcadeChrome';
 
 // ============================================================
 //  SERPENT — a mobile-first Snake for the Sanctum Arcade.
@@ -715,108 +716,92 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
 
     const toggleMute = () => { const m = !muted; setArcadeMuted(m); setMuted(m); };
     const a = actionsRef.current;
-    const dpad = 'flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] active:bg-white/[0.14] text-white/90 select-none touch-none h-14';
-    const stat = (label: string, val: number | string) => (
-        <div className="text-center px-2">
-            <p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">{label}</p>
-            <p className="font-ritual text-lg leading-tight" style={{ color: accent }}>{val}</p>
-        </div>
-    );
+    const dpad = 'flex items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] active:bg-white/[0.16] text-white/95 select-none touch-none h-14 shadow-inner';
 
     return (
-        <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(120% 70% at 50% -10%, ${accent}1f, transparent 60%), #05060a`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div onPointerDown={() => unlockArcadeAudio()} className="contents">
             <style>{`@keyframes arcadePop{0%{transform:scale(0.6);opacity:0}20%{transform:scale(1.12);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}`}</style>
-            {/* header — shared arcade chrome */}
-            <div className="flex items-center justify-between px-3 pt-2 shrink-0 border-b border-white/5 pb-2">
-                <button onClick={onExit} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Leave Serpent">
-                    <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div className="text-center">
-                    <p className="text-[8px] uppercase tracking-[0.35em] text-white/35">Arcade</p>
-                    <p className="font-ritual text-xl tracking-[0.3em] leading-none" style={{ color: accent }}>SERPENT</p>
-                </div>
-                <div className="flex items-center gap-1">
-                    <button onClick={toggleMute} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Mute">
-                        {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </button>
-                    <button onClick={() => a.togglePause?.()} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Pause">
-                        {status === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    </button>
-                </div>
-            </div>
-
-            {/* stats */}
-            <div className="flex items-center justify-center gap-3 px-3 pt-2 shrink-0">
-                {stat('Score', score)}
-                {stat('Orbs', orbs)}
-                {stat(speedTier(speed), speed)}
-            </div>
-
-            {/* board */}
-            <div ref={wrapRef} className="relative flex-1 min-h-0 flex items-center justify-center px-3 py-2">
-                <canvas ref={canvasRef} className="rounded-xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none' }} />
-
-                {flash && status === 'playing' && (
-                    <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
-                        <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: '#fbbf24', textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
+            <ArcadeGameShell
+                title="SERPENT"
+                subtitle="Eat · grow · survive"
+                accent={accent}
+                muted={muted}
+                status={status}
+                onExit={onExit}
+                onMute={toggleMute}
+                onPause={() => a.togglePause?.()}
+                hud={
+                    <div className="flex items-center justify-center gap-1 max-w-md mx-auto">
+                        <StatPill label="Score" value={score} accent={accent} />
+                        <StatPill label="Orbs" value={orbs} />
+                        <StatPill label={speedTier(speed)} value={speed} />
                     </div>
-                )}
-
-                {status === 'paused' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">
-                        <div className="text-center">
-                            <p className="font-ritual text-2xl gold-shimmer mb-4">Paused</p>
-                            <button onClick={() => a.togglePause?.()} className="px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: accent }}>Resume</button>
-                        </div>
-                    </div>
-                )}
-
-                {status === 'over' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/82 backdrop-blur-sm rounded-xl p-4">
-                        <div className="w-full max-w-xs text-center">
-                            <p className="text-[10px] tracking-[0.4em] uppercase text-white/50 mb-1">The serpent stills</p>
-                            <h2 className="font-ritual text-3xl gold-shimmer mb-1">Game Over</h2>
-                            {isNewBest && <p className="text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: accent }}>✦ New personal best</p>}
-                            <div className="grid grid-cols-3 gap-2 my-4">
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Orbs</p><p className="font-ritual text-xl text-white">{orbs}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">{speedTier(speed)}</p><p className="font-ritual text-xl text-white">{speed}</p></div>
+                }
+                board={
+                    <div ref={wrapRef} className="absolute inset-0 flex items-center justify-center p-2">
+                        <canvas ref={canvasRef} className="max-w-full max-h-full" style={{ touchAction: 'none', imageRendering: 'pixelated' }} />
+                        {flash && status === 'playing' && (
+                            <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
+                                <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: '#fbbf24', textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
                             </div>
-                            <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.6)' }}>
-                                {submitState === 'saving' && 'Recording your score…'}
-                                {submitState === 'saved' && (submitMessage || '✦ Score recorded on the leaderboard')}
-                                {submitState === 'error' && (submitMessage || 'Could not record score.')}
-                            </p>
-                            <div className="flex gap-2">
-                                <button onClick={() => a.reset?.()} className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] text-black" style={{ background: accent }}>Play Again</button>
-                                <button onClick={onExit} className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] text-white border border-white/15 bg-white/[0.04]">Leaderboard</button>
+                        )}
+                        {status === 'paused' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+                                <div className="text-center px-6">
+                                    <p className="font-ritual text-3xl text-white mb-2">Paused</p>
+                                    <p className="text-xs text-white/40 mb-5 font-mono uppercase tracking-widest">Press P or Resume</p>
+                                    <button type="button" onClick={() => a.togglePause?.()} className="px-10 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: accent }}>Resume</button>
+                                </div>
                             </div>
+                        )}
+                        {status === 'over' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+                                <div className="w-full max-w-xs text-center rounded-2xl border border-white/10 bg-[#0a0c12] p-5 shadow-2xl">
+                                    <p className="text-[10px] tracking-[0.4em] uppercase text-white/45 mb-1">Run ended</p>
+                                    <h2 className="font-ritual text-3xl text-white mb-1">Game Over</h2>
+                                    {isNewBest && <p className="text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: accent }}>✦ New personal best</p>}
+                                    <div className="grid grid-cols-3 gap-2 my-4">
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score}</p></div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Orbs</p><p className="font-ritual text-xl text-white">{orbs}</p></div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Speed</p><p className="font-ritual text-xl text-white">{speed}</p></div>
+                                    </div>
+                                    <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.55)' }}>
+                                        {submitState === 'saving' && 'Recording…'}
+                                        {submitState === 'saved' && (submitMessage || 'Score saved')}
+                                        {submitState === 'error' && (submitMessage || 'Could not record.')}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={() => a.reset?.()} className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] text-black" style={{ background: accent }}>Play Again</button>
+                                        <button type="button" onClick={onExit} className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] text-white border border-white/15 bg-white/[0.04]">Lobby</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                }
+                controls={
+                    isKeyboard ? (
+                        <div className="shrink-0 px-3 pb-3 pt-1 flex justify-center">
+                            <KeyboardHintBar hints={SERPENT_HINTS} className="py-2 px-4 gap-x-4" />
                         </div>
-                    </div>
-                )}
-            </div>
-
-            {/* PC: keyboard hints · Phone: d-pad + swipe */}
-            {isKeyboard ? (
-                <div className="shrink-0 px-3 pb-3 pt-1 flex justify-center">
-                    <KeyboardHintBar hints={SERPENT_HINTS} className="py-2 px-4 gap-x-4" />
-                </div>
-            ) : (
-                <div className="shrink-0 px-3 pb-3 pt-1" style={{ touchAction: 'none' }}>
-                    <div className="grid grid-cols-3 gap-2 w-[198px] mx-auto">
-                        <div />
-                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, -1); }} aria-label="Up"><ChevronUp className="w-6 h-6" /></button>
-                        <div />
-                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(-1, 0); }} aria-label="Left"><ChevronLeft className="w-6 h-6" /></button>
-                        <div className="flex items-center justify-center"><span className="w-2.5 h-2.5 rounded-full" style={{ background: `${accent}66` }} /></div>
-                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(1, 0); }} aria-label="Right"><ChevronRight className="w-6 h-6" /></button>
-                        <div />
-                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
-                        <div />
-                    </div>
-                    <p className="text-center text-[9px] font-mono uppercase tracking-[0.25em] text-white/30 mt-2">swipe the board or tap the pad</p>
-                </div>
-            )}
+                    ) : (
+                        <div className="shrink-0 px-3 pb-4 pt-1" style={{ touchAction: 'none' }}>
+                            <div className="grid grid-cols-3 gap-2 w-[210px] mx-auto">
+                                <div />
+                                <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, -1); }} aria-label="Up"><ChevronUp className="w-6 h-6" /></button>
+                                <div />
+                                <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(-1, 0); }} aria-label="Left"><ChevronLeft className="w-6 h-6" /></button>
+                                <div className="flex items-center justify-center"><span className="w-2.5 h-2.5 rounded-full" style={{ background: `${accent}88` }} /></div>
+                                <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(1, 0); }} aria-label="Right"><ChevronRight className="w-6 h-6" /></button>
+                                <div />
+                                <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
+                                <div />
+                            </div>
+                            <p className="text-center text-[9px] font-mono uppercase tracking-[0.25em] text-white/30 mt-2">Swipe board or use pad</p>
+                        </div>
+                    )
+                }
+            />
         </div>
     );
 }
