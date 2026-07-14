@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * House props — unique interactables.
- * Arcade: TV + console (geometry) + controller mesh here; hotspot = controller.
- * Truth content is only inside Truth.OS.
+ * House props — unique interactables + staging accents.
+ * Arcade: TV/console in geometry; controller mesh here (hotspot).
+ * Form pass only — no heavy textures.
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -61,24 +61,24 @@ function ArcadeController({ low }: { low?: boolean }) {
         (glow.current.material as THREE.MeshStandardMaterial).emissiveIntensity = p;
     });
     return (
-        <group position={[0.15, 0.42, -1.15]} rotation={[0, 0.35, 0]}>
+        <group position={[0.15, 0.42, -0.95]} rotation={[0, 0.35, 0]}>
             {/* body */}
             <mesh castShadow={!low}>
-                <boxGeometry args={[0.32, 0.06, 0.2]} />
-                <meshStandardMaterial color="#1a1a22" roughness={0.55} metalness={0.25} />
+                <boxGeometry args={[0.34, 0.07, 0.22]} />
+                <meshStandardMaterial color="#1a1a22" roughness={0.5} metalness={0.3} />
             </mesh>
             {/* grips */}
-            <mesh position={[-0.14, -0.01, 0.04]} rotation={[0.15, 0, 0.2]}>
-                <boxGeometry args={[0.1, 0.05, 0.12]} />
+            <mesh position={[-0.15, -0.01, 0.05]} rotation={[0.15, 0, 0.22]} castShadow={!low}>
+                <boxGeometry args={[0.11, 0.055, 0.13]} />
                 <meshStandardMaterial color="#121218" roughness={0.7} />
             </mesh>
-            <mesh position={[0.14, -0.01, 0.04]} rotation={[0.15, 0, -0.2]}>
-                <boxGeometry args={[0.1, 0.05, 0.12]} />
+            <mesh position={[0.15, -0.01, 0.05]} rotation={[0.15, 0, -0.22]} castShadow={!low}>
+                <boxGeometry args={[0.11, 0.055, 0.13]} />
                 <meshStandardMaterial color="#121218" roughness={0.7} />
             </mesh>
             {/* LED strip */}
-            <mesh ref={glow} position={[0, 0.035, -0.02]}>
-                <boxGeometry args={[0.14, 0.015, 0.03]} />
+            <mesh ref={glow} position={[0, 0.04, -0.02]}>
+                <boxGeometry args={[0.15, 0.018, 0.035]} />
                 <meshStandardMaterial
                     color="#22d3ee"
                     emissive="#22d3ee"
@@ -87,28 +87,50 @@ function ArcadeController({ low }: { low?: boolean }) {
                 />
             </mesh>
             {/* sticks */}
-            <mesh position={[-0.08, 0.04, 0.02]}>
-                <cylinderGeometry args={[0.02, 0.02, 0.03, 8]} />
+            <mesh position={[-0.08, 0.045, 0.02]}>
+                <cylinderGeometry args={[0.022, 0.022, 0.035, 8]} />
                 <meshStandardMaterial color="#2a2a32" />
             </mesh>
-            <mesh position={[0.08, 0.04, 0.02]}>
-                <cylinderGeometry args={[0.02, 0.02, 0.03, 8]} />
+            <mesh position={[0.08, 0.045, 0.02]}>
+                <cylinderGeometry args={[0.022, 0.022, 0.035, 8]} />
                 <meshStandardMaterial color="#2a2a32" />
             </mesh>
+            {/* face buttons hint */}
+            {!low &&
+                [
+                    [0.1, 0.04, -0.04],
+                    [0.14, 0.04, -0.01],
+                    [0.1, 0.04, 0.02],
+                    [0.06, 0.04, -0.01],
+                ].map((p, i) => (
+                    <mesh key={i} position={p as [number, number, number]}>
+                        <sphereGeometry args={[0.012, 6, 6]} />
+                        <meshStandardMaterial
+                            color={['#ef4444', '#22c55e', '#3b82f6', '#fbbf24'][i]}
+                            emissive={['#ef4444', '#22c55e', '#3b82f6', '#fbbf24'][i]}
+                            emissiveIntensity={0.4}
+                        />
+                    </mesh>
+                ))}
         </group>
     );
 }
 
 function OfferingTray() {
     return (
-        <group position={[-1.8, 0.48, -0.4]} rotation={[-0.08, 0.35, 0]}>
-            <mesh>
-                <boxGeometry args={[0.28, 0.02, 0.18]} />
+        <group position={[-2.35, 0.5, -0.35]} rotation={[-0.08, 0.35, 0]}>
+            <mesh castShadow>
+                <boxGeometry args={[0.32, 0.025, 0.2]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.85} />
             </mesh>
             <mesh position={[0, 0.02, 0]}>
-                <planeGeometry args={[0.22, 0.12]} />
-                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.4} />
+                <planeGeometry args={[0.24, 0.14]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.45} />
+            </mesh>
+            {/* coin stack accent */}
+            <mesh position={[0.08, 0.03, 0.04]}>
+                <cylinderGeometry args={[0.03, 0.03, 0.02, 10]} />
+                <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.3} emissive="#fbbf24" emissiveIntensity={0.2} />
             </mesh>
         </group>
     );
@@ -116,14 +138,19 @@ function OfferingTray() {
 
 function LedgerBook() {
     return (
-        <group position={[-5.0, 0, 2.0]}>
-            <mesh position={[0, 0.95, 0]} rotation={[-0.15, 0.2, 0]}>
-                <boxGeometry args={[0.38, 0.06, 0.28]} />
+        <group position={[-5.15, 0, 2.15]}>
+            <mesh position={[0, 1.08, 0]} rotation={[-0.18, 0.2, 0]} castShadow>
+                <boxGeometry args={[0.4, 0.07, 0.3]} />
                 <meshStandardMaterial color="#f5f0e6" roughness={0.8} />
             </mesh>
-            <mesh position={[0, 1.0, 0]} rotation={[-0.15, 0.2, 0]}>
-                <planeGeometry args={[0.28, 0.18]} />
-                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.35} />
+            <mesh position={[0, 1.13, 0]} rotation={[-0.18, 0.2, 0]}>
+                <planeGeometry args={[0.3, 0.2]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.38} />
+            </mesh>
+            {/* quill pot */}
+            <mesh position={[0.22, 1.05, 0.1]}>
+                <cylinderGeometry args={[0.04, 0.05, 0.12, 8]} />
+                <meshStandardMaterial color="#2c241c" roughness={0.9} />
             </mesh>
         </group>
     );
@@ -138,18 +165,24 @@ function HearthFlame({ low }: { low?: boolean }) {
         flame.current.position.y = 0.55 + Math.sin(t * 6) * 0.03;
     });
     return (
-        <group position={[-7.6, 0, 3.6]}>
-            <mesh ref={flame} position={[0, 0.55, 0.15]}>
-                <coneGeometry args={[0.18, 0.45, 6]} />
+        <group position={[-7.55, 0, 3.75]}>
+            <mesh ref={flame} position={[0, 0.55, 0.18]}>
+                <coneGeometry args={[0.2, 0.5, 6]} />
                 <meshStandardMaterial
                     color="#ff6b2c"
                     emissive="#ff6b2c"
-                    emissiveIntensity={1.1}
+                    emissiveIntensity={1.15}
                     toneMapped={false}
                 />
             </mesh>
             {!low && (
-                <pointLight position={[0, 0.9, 0.2]} intensity={1.5} color="#ff8a3d" distance={6} decay={2} />
+                <>
+                    <mesh position={[0.08, 0.42, 0.12]}>
+                        <coneGeometry args={[0.1, 0.28, 5]} />
+                        <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={0.9} toneMapped={false} />
+                    </mesh>
+                    <pointLight position={[0, 0.95, 0.25]} intensity={1.65} color="#ff8a3d" distance={6.5} decay={2} />
+                </>
             )}
         </group>
     );
@@ -163,8 +196,8 @@ function ForgeEmber({ low }: { low?: boolean }) {
             0.85 + Math.sin(clock.elapsedTime * 5) * 0.35;
     });
     return (
-        <mesh ref={ref} position={[7.95, 1.18, -7.2]}>
-            <sphereGeometry args={[0.1, 8, 8]} />
+        <mesh ref={ref} position={[7.95, 1.2, -7.2]}>
+            <sphereGeometry args={[0.11, 8, 8]} />
             <meshStandardMaterial color="#fb923c" emissive="#fb923c" emissiveIntensity={1} toneMapped={false} />
         </mesh>
     );

@@ -109,40 +109,42 @@ export default function HouseCanvas({
                     </>
                 )}
 
-                {/* Practicals */}
+                {/* Practicals — zone heroes (desk, media, hearth, map, cinema, forge) */}
                 <pointLight
-                    position={[3.2, 1.4, 4.3]}
-                    intensity={mobile ? 2.0 : 3.2}
+                    position={[3.55, 1.45, 4.85]}
+                    intensity={mobile ? 2.1 : 3.4}
                     color="#4ade80"
                     distance={mobile ? 7 : 11}
                     decay={2}
                 />
                 <pointLight
-                    position={[0.2, 1.85, -0.2]}
-                    intensity={mobile ? 1.6 : 2.2}
-                    color="#f97316"
-                    distance={7}
+                    position={[0, 1.7, -3.6]}
+                    intensity={mobile ? 1.7 : 2.4}
+                    color="#22d3ee"
+                    distance={8}
                     decay={2}
                 />
                 {!mobile && (
                     <>
-                        <pointLight position={[-1.5, 1.5, -1]} intensity={2.0} color="#fbbf24" distance={10} decay={2} />
-                        <pointLight position={[0, 2.4, -7]} intensity={2.6} color="#a78bfa" distance={14} decay={2} />
-                        <pointLight position={[-6.5, 2.0, -4]} intensity={1.4} color="#e8d5b0" distance={10} decay={2} />
-                        <pointLight position={[0, 2.6, 5]} intensity={1.0} color="#ffffff" distance={12} decay={2} />
-                        <pointLight position={[6, 2.0, 1.5]} intensity={1.5} color="#c084fc" distance={8} decay={2} />
+                        <pointLight position={[-2.3, 1.5, -0.4]} intensity={1.8} color="#fbbf24" distance={9} decay={2} />
+                        <pointLight position={[0, 2.35, -8.2]} intensity={2.5} color="#22c55e" distance={12} decay={2} />
+                        <pointLight position={[-6.5, 2.0, -4.4]} intensity={1.5} color="#e8d5b0" distance={10} decay={2} />
+                        <pointLight position={[0, 2.55, 6]} intensity={1.1} color="#ffffff" distance={11} decay={2} />
+                        <pointLight position={[8.2, 1.9, 1.25]} intensity={1.7} color="#c084fc" distance={9} decay={2} />
+                        <pointLight position={[-7.4, 1.3, 3.7]} intensity={1.6} color="#ff8a3d" distance={7} decay={2} />
+                        <pointLight position={[7.7, 1.5, -6.8]} intensity={1.3} color="#fb923c" distance={6} decay={2} />
                         <spotLight
-                            position={[0, 2.9, 0]}
-                            angle={0.85}
-                            penumbra={0.6}
-                            intensity={0.55}
+                            position={[0.3, 2.9, -1.5]}
+                            angle={0.75}
+                            penumbra={0.65}
+                            intensity={0.6}
                             color="#c4b5fd"
                             castShadow
                         />
                     </>
                 )}
                 {mobile && (
-                    <pointLight position={[0, 2.5, 0]} intensity={1.25} color="#e0d4ff" distance={14} decay={2} />
+                    <pointLight position={[0, 2.5, 0]} intensity={1.3} color="#e0d4ff" distance={14} decay={2} />
                 )}
 
                 <HouseGeometry low={mobile} cinematic={!mobile} />

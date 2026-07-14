@@ -3,6 +3,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { ArrowLeft, Pause, Play, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
+import { useArcadeInputProfile } from './useArcadeInputProfile';
+import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
 
 // ============================================================
 //  SERPENT — a mobile-first Snake for the Sanctum Arcade.
@@ -89,7 +91,15 @@ interface Props {
     isNewBest?: boolean;
 }
 
+const SERPENT_HINTS = [
+    { keys: ['W', 'A', 'S', 'D'], label: 'Move' },
+    { keys: ['↑↓←→'], label: 'or arrows' },
+    { keys: ['P'], label: 'Pause' },
+];
+
 export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitState = 'idle', submitMessage, isNewBest }: Props) {
+    const inputProfile = useArcadeInputProfile();
+    const isKeyboard = inputProfile === 'keyboard';
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dimRef = useRef({ cell: 0, w: 0, h: 0 });
@@ -786,21 +796,27 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 )}
             </div>
 
-            {/* directional pad — a single centralized cross */}
-            <div className="shrink-0 px-3 pb-3 pt-1" style={{ touchAction: 'none' }}>
-                <div className="grid grid-cols-3 gap-2 w-[198px] mx-auto">
-                    <div />
-                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, -1); }} aria-label="Up"><ChevronUp className="w-6 h-6" /></button>
-                    <div />
-                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(-1, 0); }} aria-label="Left"><ChevronLeft className="w-6 h-6" /></button>
-                    <div className="flex items-center justify-center"><span className="w-2.5 h-2.5 rounded-full" style={{ background: `${accent}66` }} /></div>
-                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(1, 0); }} aria-label="Right"><ChevronRight className="w-6 h-6" /></button>
-                    <div />
-                    <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
-                    <div />
+            {/* PC: keyboard hints · Phone: d-pad + swipe */}
+            {isKeyboard ? (
+                <div className="shrink-0 px-3 pb-3 pt-1 flex justify-center">
+                    <KeyboardHintBar hints={SERPENT_HINTS} className="py-2 px-4 gap-x-4" />
                 </div>
-                <p className="text-center text-[9px] font-mono uppercase tracking-[0.25em] text-white/30 mt-2">swipe the board or use the pad</p>
-            </div>
+            ) : (
+                <div className="shrink-0 px-3 pb-3 pt-1" style={{ touchAction: 'none' }}>
+                    <div className="grid grid-cols-3 gap-2 w-[198px] mx-auto">
+                        <div />
+                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, -1); }} aria-label="Up"><ChevronUp className="w-6 h-6" /></button>
+                        <div />
+                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(-1, 0); }} aria-label="Left"><ChevronLeft className="w-6 h-6" /></button>
+                        <div className="flex items-center justify-center"><span className="w-2.5 h-2.5 rounded-full" style={{ background: `${accent}66` }} /></div>
+                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(1, 0); }} aria-label="Right"><ChevronRight className="w-6 h-6" /></button>
+                        <div />
+                        <button className={dpad} onPointerDown={(e) => { e.preventDefault(); a.setDir?.(0, 1); }} aria-label="Down"><ChevronDown className="w-6 h-6" /></button>
+                        <div />
+                    </div>
+                    <p className="text-center text-[9px] font-mono uppercase tracking-[0.25em] text-white/30 mt-2">swipe the board or tap the pad</p>
+                </div>
+            )}
         </div>
     );
 }

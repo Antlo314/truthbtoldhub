@@ -3,6 +3,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Pause, Play, RotateCcw, RotateCw, ChevronDown, ChevronsDown, Box, Volume2, VolumeX } from 'lucide-react';
 import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
+import { useArcadeInputProfile } from './useArcadeInputProfile';
+import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
 
 // ============================================================
 //  TETRA — a full, mobile-first Tetris for the Sanctum Arcade.
@@ -149,7 +151,20 @@ function MiniPiece({ id, size = 52 }: { id: PieceId | null; size?: number }) {
     return <canvas ref={ref} width={size} height={size} style={{ width: size, height: size, imageRendering: 'pixelated' }} />;
 }
 
+const TETRA_HINTS = [
+    { keys: ['A', 'D'], label: 'Move' },
+    { keys: ['S'], label: 'Soft' },
+    { keys: ['W', 'X'], label: 'Rotate' },
+    { keys: ['Z'], label: 'CCW' },
+    { keys: ['Space'], label: 'Hard drop' },
+    { keys: ['C'], label: 'Hold' },
+    { keys: ['1', '2'], label: 'Powers' },
+    { keys: ['P'], label: 'Pause' },
+];
+
 export default function TetrisGame({ accent, onExit, onGameOver, onReset, submitState = 'idle', submitMessage, isNewBest }: Props) {
+    const inputProfile = useArcadeInputProfile();
+    const isKeyboard = inputProfile === 'keyboard';
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dimRef = useRef({ cell: 0, w: 0, h: 0 });
@@ -637,11 +652,11 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             unlockArcadeAudio();
             const a = actionsRef.current;
             switch (e.key) {
-                case 'ArrowLeft': e.preventDefault(); a.move(-1); break;
-                case 'ArrowRight': e.preventDefault(); a.move(1); break;
-                case 'ArrowUp': case 'x': case 'X': e.preventDefault(); a.rotate(1); break;
+                case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); a.move(-1); break;
+                case 'ArrowRight': case 'd': case 'D': e.preventDefault(); a.move(1); break;
+                case 'ArrowUp': case 'x': case 'X': case 'w': case 'W': e.preventDefault(); a.rotate(1); break;
                 case 'z': case 'Z': case 'Control': e.preventDefault(); a.rotate(-1); break;
-                case 'ArrowDown': e.preventDefault(); a.setSoft(true); break;
+                case 'ArrowDown': case 's': case 'S': e.preventDefault(); a.setSoft(true); break;
                 case ' ': e.preventDefault(); a.hardDrop(); break;
                 case 'c': case 'C': case 'Shift': e.preventDefault(); a.doHold(); break;
                 case '1': case 'q': case 'Q': e.preventDefault(); a.firePower('slow'); break;
@@ -649,7 +664,9 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 case 'p': case 'P': case 'Escape': e.preventDefault(); a.togglePause(); break;
             }
         };
-        const onKeyUp = (e: KeyboardEvent) => { if (e.key === 'ArrowDown') actionsRef.current.setSoft(false); };
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') actionsRef.current.setSoft(false);
+        };
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
 
@@ -842,7 +859,12 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                 )}
             </div>
 
-            {/* controls — 2 rows of h-11 (powers merged into Row 1) */}
+            {/* PC: keyboard hints · Phone: full control pad */}
+            {isKeyboard ? (
+                <div className="shrink-0 px-2 pb-2 pt-1 flex justify-center">
+                    <KeyboardHintBar hints={TETRA_HINTS} className="py-2 px-3 gap-x-3 gap-y-1.5 max-w-full" />
+                </div>
+            ) : (
             <div className="shrink-0 px-3 pb-2 pt-1.5 grid grid-cols-6 gap-1.5" style={{ touchAction: 'none' }}>
                 {/* Row 1 */}
                 <button
@@ -889,6 +911,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                     aria-label="Hard drop"
                 ><ChevronsDown className="w-5 h-5 mr-1" /> <span className="text-[11px] font-black uppercase tracking-[0.3em]">Drop</span></button>
             </div>
+            )}
             </div>
         </div>
     );

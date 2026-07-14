@@ -25,7 +25,7 @@ type HouseUiState = {
     nextWalkthrough: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v4';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v5';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -62,8 +62,8 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 
 export const WALKTHROUGH_STEPS = [
     {
-        title: 'Welcome to the House',
-        body: 'Truth.OS House is a walkable home. Each room object opens one feature — nothing is repeated.',
+        title: 'Welcome home',
+        body: 'A staged house — living room, bedroom, library, study, forge. Each object opens one feature. Nothing is repeated.',
         tip: 'Continue when you’re ready',
     },
     {
@@ -73,17 +73,17 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'Gold rings',
-        body: 'Gold rings mark objects: controller (Arcade), mirror (vessel), forge bench, map, shelves, film screen, hall arch, and more.',
+        body: 'Rings mark interactables: controller (Arcade), mirror (vessel), forge, map, shelves, film screen, hall arch, and more.',
         tip: 'Walk onto a ring · E or Use',
     },
     {
         title: 'Arcade',
-        body: 'Living room wall TV and console are for show — pick up the controller on the coffee table to open the Arcade.',
+        body: 'Sofa faces the living-room TV. Pick up the controller on the coffee table to open the Arcade — PC uses keys, phone uses tap.',
         tip: 'Controller · cyan ring',
     },
     {
         title: 'Truth.OS computer',
-        body: 'Sensitive data, updates, and Truth.sys live only on the bedroom computer. Sign in at the desk to boot the OS.',
+        body: 'Sensitive data, updates, and Truth.sys live only on the bedroom desk computer. Sign in to boot the OS.',
         tip: 'Bedroom · green monitor',
     },
     {

@@ -7,6 +7,8 @@ import {
     SPEED, SPEED_MULTS, GRAVITY, JUMP_VELOCITY, TERMINAL_VY, CEIL, START_PAD, WAVE_SLOPE, TIER_UNITS, tierName,
     createGen, generateAhead, type Obstacle, type ModeKind, type VeilGen,
 } from '@/lib/game/veilLevels';
+import { useArcadeInputProfile } from './useArcadeInputProfile';
+import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
 
 // ============================================================
 //  VEIL — a Geometry-Dash-style rhythm runner for the Sanctum
@@ -102,7 +104,14 @@ function pointInTri(px: number, py: number, ax: number, ay: number, bx: number, 
     return !(neg && pos);
 }
 
+const VEIL_HINTS = [
+    { keys: ['Space', 'W', '↑'], label: 'Jump / fly' },
+    { keys: ['P'], label: 'Pause' },
+];
+
 export default function VeilGame({ accent, onExit, onGameOver, onReset, submitState = 'idle', submitMessage, isNewBest }: Props) {
+    const inputProfile = useArcadeInputProfile();
+    const isKeyboard = inputProfile === 'keyboard';
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dimRef = useRef({ px: 0, w: 0, h: 0, viewUnits: 16, floorY: 0 });
@@ -804,13 +813,17 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Try</p><p className="font-ritual text-lg leading-tight text-white">{attempt}</p></div>
             </div>
 
-            {/* play surface — taps/holds here drive the game */}
-            <div ref={wrapRef} className="relative flex-1 min-h-0 mx-3 my-2 rounded-xl overflow-hidden border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none', cursor: 'pointer' }}>
+            {/* play surface — PC: keyboard (+ click); phone: tap/hold */}
+            <div ref={wrapRef} className="relative flex-1 min-h-0 mx-3 my-2 rounded-xl overflow-hidden border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]" style={{ touchAction: 'none', cursor: isKeyboard ? 'default' : 'pointer' }}>
                 <canvas ref={canvasRef} className="block" style={{ touchAction: 'none' }} />
 
                 {!started && status === 'playing' && (
                     <div className="absolute inset-0 flex items-end justify-center pb-[18%] pointer-events-none">
-                        <p className="font-ritual text-sm tracking-[0.2em] uppercase animate-pulse text-center px-4" style={{ color: accent }}>Tap to jump · hold to fly · gather the Source</p>
+                        <p className="font-ritual text-sm tracking-[0.2em] uppercase animate-pulse text-center px-4" style={{ color: accent }}>
+                            {isKeyboard
+                                ? 'Space / W · hold to fly · gather the Source'
+                                : 'Tap to jump · hold to fly · gather the Source'}
+                        </p>
                     </div>
                 )}
 
@@ -847,6 +860,12 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     </div>
                 )}
             </div>
+
+            {isKeyboard && (
+                <div className="shrink-0 px-3 pb-3 pt-1 flex justify-center">
+                    <KeyboardHintBar hints={VEIL_HINTS} className="py-2 px-4 gap-x-4" />
+                </div>
+            )}
         </div>
     );
 }

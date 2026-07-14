@@ -1,5 +1,20 @@
 # AI Sync Status & Changelog
 
+## 2026-07-13 (Grok) — Arcade device controls + house staging + 3D form pass
+- **Agent**: Grok
+- **Status**: Completed (`tsc --noEmit` 0). **Form pass complete; texture/life pass next.**
+- **What shipped**:
+  - **Arcade device UX**: reuses `useInputProfile` — PC hides pads, shows `KeyboardHintBar`; phone keeps d-pad / Tetra pad / Veil tap-hold.
+  - **Tetra WASD**: A/D move, S soft drop, W/X rotate, Space hard drop (plus existing keys).
+  - **House staging**: conversation triangle (sofa → coffee table → media wall), bedroom sleep vignette, clear doorway, zone rugs, circulation colliders.
+  - **3D form upgrade**: multi-part bed/sofa/desks/shelves/media/forge/cinema; lamps, plants, frames (desktop rich); mobile `low` LOD.
+  - Lights re-aimed to zone heroes. Walkthrough v5 copy updated.
+- **Files**: `components/game/arcade/*`, `components/truthos/house/{houseMap,HouseGeometry,HouseDecor,HouseCanvas,houseUiStore}.ts(x)`, `.agent_sync/*`
+- **Handoff / Next**: Full color, shade, PBR/game-asset texturing once forms locked. Optional Blender hero GLBs. Playtest PC keys + phone pads + walk paths.
+- grok → idle.
+
+---
+
 ## 2026-07-13 (Grok) — Truth.OS House: arcade console, unique stations, OS, 3D vessel
 - **Agent**: Grok
 - **Status**: Completed (tsc 0). Product track = Truth.OS House on `/` (Unity handoff remains stale).
