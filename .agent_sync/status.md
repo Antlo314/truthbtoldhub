@@ -1,5 +1,19 @@
 # AI Sync Status & Changelog
 
+## 2026-07-13 (Grok) — Full free texture pass + real-time Soul Mirror
+- **Agent**: Grok
+- **Status**: Completed (`tsc` 0).
+- **What shipped**:
+  - Free procedural house skins (`houseSkins.ts`): wood/floor, stone, plaster, rug, fabric, leather, metal, gold, book, leaf, screen, tile, concrete + brand photos.
+  - `useHouseMaterials` applied to **all** house geometry, hall arch, decor props.
+  - **Realtime mirror FBO**: virtual cam sees local vessel (layer 1); main FP cam hides self-body — true reflection of room + you.
+  - Environment night IBL + boosted practicals for material depth.
+- **Files**: `houseSkins.ts`, `HouseMaterials.tsx`, `HouseGeometry.tsx`, `HouseDecor.tsx`, `HouseCanvas.tsx`, `SoulMirrorMesh.tsx`, `LocalPlayerBody.tsx`, `HallArch.tsx`
+- **Handoff**: Optional PBR normal maps later; remote peers still capsule (not vessel skins).
+- grok → idle.
+
+---
+
 ## 2026-07-13 (Grok) — Soul Mirror full vessel, restage, Studio, paths out of house UI
 - **Agent**: Grok
 - **Status**: Completed (`tsc` 0).

@@ -2,21 +2,20 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, Stars } from '@react-three/drei';
+import { ContactShadows, Environment, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
 import HouseDecor from './HouseDecor';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
-import type { PlayerPose } from './LocalPlayerBody';
+import LocalPlayerBody, { type PlayerPose } from './LocalPlayerBody';
 import type { Hotspot } from './houseMap';
 import type { HousePeer } from '@/lib/truthos/housePresence';
 import type { AvatarConfig } from '@/lib/game/avatar';
 
 /**
- * Two cinematic paths:
- *  PC  — high fidelity, film grain fog, shadows, wider world
- *  Mobile — punchier contrast, fewer lights, tighter draw distance
+ * PC: high fidelity skins + environment light
+ * Mobile: lower res maps, fewer lights — same layout
  */
 export default function HouseCanvas({
     locked,
@@ -78,7 +77,7 @@ export default function HouseCanvas({
                     alpha: false,
                     powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: mobile ? 1.28 : 1.42,
+                    toneMappingExposure: mobile ? 1.22 : 1.38,
                     stencil: false,
                     depth: true,
                 }}
@@ -93,89 +92,74 @@ export default function HouseCanvas({
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
                     camera.position.set(0, 1.62, 4.0);
                     camera.lookAt(0, 1.3, 0);
+                    // Local body only for mirror FBO
+                    camera.layers.disable(1);
                 }}
             >
                 <color attach="background" args={[bg]} />
-                {!mobile && <fog attach="fog" args={[bg, 11, 38]} />}
+                {!mobile && <fog attach="fog" args={[bg, 12, 40]} />}
                 {mobile && <fog attach="fog" args={[bg, 8, 24]} />}
+
+                {/* Soft IBL for material depth (free preset, no paid assets) */}
+                {!mobile && <Environment preset="night" environmentIntensity={0.35} />}
+                {mobile && <Environment preset="night" environmentIntensity={0.22} />}
 
                 {!mobile && (
                     <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
                 )}
 
-                <hemisphereLight args={[mobile ? '#b8c4ff' : '#a8b8f0', '#2a2038', mobile ? 0.9 : 0.55]} />
-                <ambientLight intensity={mobile ? 0.75 : 0.42} color="#d8d0ea" />
+                <hemisphereLight args={[mobile ? '#b8c4ff' : '#c8d4ff', '#2a2038', mobile ? 0.85 : 0.5]} />
+                <ambientLight intensity={mobile ? 0.7 : 0.38} color="#e0d8f0" />
 
                 <directionalLight
                     position={[6, 9, 4]}
-                    intensity={mobile ? 0.95 : 1.35}
-                    color="#e8ecff"
+                    intensity={mobile ? 1.0 : 1.45}
+                    color="#eef2ff"
                     castShadow={!mobile}
                     shadow-mapSize-width={mobile ? 512 : 1024}
                     shadow-mapSize-height={mobile ? 512 : 1024}
                 />
                 {!mobile && (
                     <>
-                        <directionalLight position={[-5, 5, -3]} intensity={0.35} color="#9b7cff" />
-                        <directionalLight position={[0, 3, 8]} intensity={0.25} color="#ffc9a0" />
+                        <directionalLight position={[-5, 5, -3]} intensity={0.4} color="#9b7cff" />
+                        <directionalLight position={[0, 3, 8]} intensity={0.3} color="#ffc9a0" />
                     </>
                 )}
 
-                <pointLight
-                    position={[3.55, 1.4, 4.9]}
-                    intensity={mobile ? 2.1 : 3.3}
-                    color="#4ade80"
-                    distance={mobile ? 7 : 11}
-                    decay={2}
-                />
-                <pointLight
-                    position={[0, 1.75, -4.2]}
-                    intensity={mobile ? 1.7 : 2.5}
-                    color="#22d3ee"
-                    distance={8}
-                    decay={2}
-                />
-                {/* Mirror wall practical */}
-                <pointLight
-                    position={[3.15, 1.7, 8.6]}
-                    intensity={mobile ? 1.1 : 1.6}
-                    color="#a8c4e0"
-                    distance={6}
-                    decay={2}
-                />
+                {/* Zone practicals — pull color from textured materials */}
+                <pointLight position={[3.55, 1.4, 4.9]} intensity={mobile ? 2.0 : 3.1} color="#4ade80" distance={mobile ? 7 : 11} decay={2} />
+                <pointLight position={[0, 1.75, -4.2]} intensity={mobile ? 1.65 : 2.4} color="#22d3ee" distance={8} decay={2} />
+                <pointLight position={[3.15, 1.7, 8.5]} intensity={mobile ? 1.2 : 1.85} color="#c8dcf0" distance={6} decay={2} />
                 {!mobile && (
                     <>
-                        <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.6} color="#fbbf24" distance={8} decay={2} />
-                        <pointLight position={[0, 2.35, -8.2]} intensity={2.4} color="#22c55e" distance={12} decay={2} />
-                        <pointLight position={[-6.5, 2.0, -4.4]} intensity={1.45} color="#e8d5b0" distance={10} decay={2} />
+                        <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.55} color="#fbbf24" distance={8} decay={2} />
+                        <pointLight position={[0, 2.35, -8.2]} intensity={2.3} color="#22c55e" distance={12} decay={2} />
+                        <pointLight position={[-6.5, 2.0, -4.4]} intensity={1.4} color="#e8d5b0" distance={10} decay={2} />
                         <pointLight position={[0, 2.5, 6.2]} intensity={1.05} color="#ffffff" distance={11} decay={2} />
-                        <pointLight position={[8.2, 1.9, 1.25]} intensity={1.65} color="#c084fc" distance={9} decay={2} />
-                        <pointLight position={[-7.4, 1.25, 3.6]} intensity={1.5} color="#ff8a3d" distance={7} decay={2} />
-                        <pointLight position={[7.6, 1.55, -7.0]} intensity={1.4} color="#fb923c" distance={6} decay={2} />
-                        <pointLight position={[-5.5, 1.8, 2.05]} intensity={1.0} color="#38bdf8" distance={5} decay={2} />
-                        <pointLight position={[-9.2, 1.6, 0.15]} intensity={0.8} color="#e8d5b0" distance={5} decay={2} />
+                        <pointLight position={[8.2, 1.9, 1.25]} intensity={1.6} color="#c084fc" distance={9} decay={2} />
+                        <pointLight position={[-7.4, 1.25, 3.6]} intensity={1.55} color="#ff8a3d" distance={7} decay={2} />
+                        <pointLight position={[7.6, 1.55, -7.0]} intensity={1.35} color="#fb923c" distance={6} decay={2} />
+                        <pointLight position={[-5.5, 1.8, 2.05]} intensity={1.05} color="#38bdf8" distance={5} decay={2} />
+                        <pointLight position={[-9.2, 1.6, 0.15]} intensity={0.85} color="#e8d5b0" distance={5} decay={2} />
                         <spotLight
                             position={[0.2, 2.9, -1.2]}
                             angle={0.7}
                             penumbra={0.65}
-                            intensity={0.55}
+                            intensity={0.6}
                             color="#c4b5fd"
                             castShadow
                         />
                     </>
                 )}
                 {mobile && (
-                    <pointLight position={[0, 2.5, 0]} intensity={1.3} color="#e0d4ff" distance={14} decay={2} />
+                    <pointLight position={[0, 2.5, 0]} intensity={1.25} color="#e0d4ff" distance={14} decay={2} />
                 )}
 
-                <HouseGeometry
-                    low={mobile}
-                    cinematic={!mobile}
-                    mirrorAvatar={avatar}
-                    mirrorPose={localPose}
-                />
+                <HouseGeometry low={mobile} cinematic={!mobile} />
                 <HouseDecor low={mobile} />
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
+                {/* Vessel body — mirror-only layer */}
+                <LocalPlayerBody avatar={avatar} pose={localPose} />
                 <FirstPersonController
                     locked={locked}
                     mobile={mobile}
@@ -185,7 +169,7 @@ export default function HouseCanvas({
                     onMoveActivity={onMoveActivity}
                 />
                 {!mobile && (
-                    <ContactShadows position={[0, 0.02, 0]} opacity={0.32} scale={22} blur={2.4} far={10} />
+                    <ContactShadows position={[0, 0.02, 0]} opacity={0.38} scale={22} blur={2.6} far={10} />
                 )}
             </Canvas>
         </div>

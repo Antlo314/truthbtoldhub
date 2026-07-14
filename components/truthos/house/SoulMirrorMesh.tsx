@@ -1,137 +1,153 @@
 'use client';
 
 /**
- * Soul Mirror — flush on the south bedroom wall.
- * - MeshReflectorMaterial reflects the room / other LIVE players
- * - Local vessel is placed behind the glass (flipped) so you see yourself
+ * Soul Mirror — wall-mounted real-time reflector.
+ * Virtual camera enables all layers so LocalPlayerBody (layer 1) appears like a true mirror.
  */
-import { Suspense, useMemo } from 'react';
-import { MeshReflectorMaterial } from '@react-three/drei';
-import { VesselModel } from '@/components/hut3d/VesselModel';
-import type { AvatarConfig } from '@/lib/game/avatar';
-import type { PlayerPose } from './LocalPlayerBody';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useFBO } from '@react-three/drei';
+import * as THREE from 'three';
+import type { HouseMaterials } from './HouseMaterials';
+import { LOCAL_BODY_LAYER } from './LocalPlayerBody';
 
-const WOOD = '#2c241c';
-const GOLD = '#fbbf24';
-
-/** World placement: south outer wall, east of bed — glass faces into room (−Z) */
 export const MIRROR_WALL = {
     x: 3.15,
     y: 1.48,
     z: 9.32,
-    glassW: 0.72,
-    glassH: 1.38,
+    glassW: 0.78,
+    glassH: 1.45,
 };
-
-/** Max distance (xz) for showing the personal reflection vessel */
-const SELF_REFLECT_DIST = 3.2;
-
-function SelfInMirror({
-    avatar,
-    pose,
-    low,
-}: {
-    avatar: AvatarConfig;
-    pose: PlayerPose | null;
-    low?: boolean;
-}) {
-    const show = useMemo(() => {
-        if (!pose) return false;
-        const dx = pose.x - MIRROR_WALL.x;
-        const dz = pose.z - MIRROR_WALL.z;
-        return Math.hypot(dx, dz) < SELF_REFLECT_DIST;
-    }, [pose]);
-
-    if (!show || !pose) return null;
-
-    // Vessel sits just on the room side of the glass so it reads as "you" in the frame.
-    // (Opaque reflector materials cannot show meshes behind the glass.)
-    const relX = (pose.x - MIRROR_WALL.x) * 0.4;
-    const reflectX = MIRROR_WALL.x + Math.max(-0.22, Math.min(0.22, relX));
-    const reflectZ = MIRROR_WALL.z - 0.13;
-    // Face the viewer in the room (−Z) with a touch of their turn
-    const faceYaw = Math.PI + (pose.yaw - Math.PI) * 0.2;
-
-    return (
-        <group position={[reflectX, 0, reflectZ]} rotation={[0, faceYaw, 0]}>
-            <Suspense fallback={null}>
-                <VesselModel avatar={avatar} scale={low ? 0.86 : 0.9} />
-            </Suspense>
-        </group>
-    );
-}
 
 export default function SoulMirrorMesh({
     low = false,
     rich = true,
-    avatar,
-    pose,
+    mats,
 }: {
     low?: boolean;
     rich?: boolean;
-    avatar?: AvatarConfig;
-    pose?: PlayerPose | null;
+    mats: HouseMaterials;
 }) {
     const { x, y, z, glassW, glassH } = MIRROR_WALL;
+    const meshRef = useRef<THREE.Mesh>(null);
+    const { gl, scene, camera } = useThree();
     const res = low ? 256 : 512;
+    const fbo = useFBO(res, res);
+    const virtualCam = useMemo(() => {
+        const c = new THREE.PerspectiveCamera();
+        c.layers.enable(0);
+        c.layers.enable(LOCAL_BODY_LAYER);
+        return c;
+    }, []);
+
+    const reflectorPlane = useMemo(() => new THREE.Plane(), []);
+    const normal = useMemo(() => new THREE.Vector3(), []);
+    const mirrorWorldPos = useMemo(() => new THREE.Vector3(), []);
+    const lookAtPos = useMemo(() => new THREE.Vector3(), []);
+    const rotationMatrix = useMemo(() => new THREE.Matrix4(), []);
+    const target = useMemo(() => new THREE.Vector3(), []);
+    const view = useMemo(() => new THREE.Vector3(), []);
+    const q = useMemo(() => new THREE.Quaternion(), []);
+
+    useLayoutEffect(() => {
+        camera.layers.disable(LOCAL_BODY_LAYER);
+    }, [camera]);
+
+    useFrame(() => {
+        const mesh = meshRef.current;
+        if (!mesh) return;
+
+        mesh.visible = false;
+
+        mesh.updateWorldMatrix(true, false);
+        mesh.getWorldPosition(mirrorWorldPos);
+        // Glass faces into room (−Z in local; after no rotation that's world −Z)
+        normal.set(0, 0, -1);
+        normal.transformDirection(mesh.matrixWorld);
+        reflectorPlane.setFromNormalAndCoplanarPoint(normal, mirrorWorldPos);
+
+        // Reflect camera across the mirror plane
+        view.copy(camera.position);
+        const dist = reflectorPlane.distanceToPoint(view);
+        view.sub(normal.clone().multiplyScalar(2 * dist));
+
+        // Reflection look-at
+        lookAtPos.copy(camera.position).add(camera.getWorldDirection(new THREE.Vector3()));
+        const distLook = reflectorPlane.distanceToPoint(lookAtPos);
+        lookAtPos.sub(normal.clone().multiplyScalar(2 * distLook));
+
+        virtualCam.position.copy(view);
+        virtualCam.up.set(0, 1, 0);
+        rotationMatrix.lookAt(view, lookAtPos, virtualCam.up);
+        virtualCam.quaternion.setFromRotationMatrix(rotationMatrix);
+        virtualCam.far = camera.far;
+        virtualCam.fov = (camera as THREE.PerspectiveCamera).fov;
+        virtualCam.aspect = (camera as THREE.PerspectiveCamera).aspect;
+        virtualCam.updateProjectionMatrix();
+        virtualCam.updateMatrixWorld();
+        virtualCam.layers.enable(0);
+        virtualCam.layers.enable(LOCAL_BODY_LAYER);
+
+        // Clip bias
+        const clipBias = 0.003;
+        const plane = reflectorPlane.clone();
+        plane.applyMatrix4(virtualCam.matrixWorldInverse);
+        const clipPlane = new THREE.Vector4(
+            plane.normal.x,
+            plane.normal.y,
+            plane.normal.z,
+            plane.constant + clipBias,
+        );
+        const projectionMatrix = virtualCam.projectionMatrix.clone();
+        q.set(
+            (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0],
+            (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5],
+            -1,
+            (1 + projectionMatrix.elements[10]) / projectionMatrix.elements[14],
+        );
+        // Simplified: render without oblique clip for stability
+        const prev = gl.getRenderTarget();
+        gl.setRenderTarget(fbo);
+        gl.clear(true, true, true);
+        gl.render(scene, virtualCam);
+        gl.setRenderTarget(prev);
+
+        mesh.visible = true;
+    });
 
     return (
         <group>
-            {/* Wall backplate flush to south wall */}
-            <mesh position={[x, y, z + 0.02]} castShadow receiveShadow>
-                <boxGeometry args={[glassW + 0.28, glassH + 0.32, 0.06]} />
-                <meshStandardMaterial color="#1a1520" roughness={0.9} />
+            {/* Wall backplate */}
+            <mesh position={[x, y, z + 0.03]} castShadow receiveShadow>
+                <boxGeometry args={[glassW + 0.32, glassH + 0.36, 0.08]} />
+                <primitive object={mats.woodDark} attach="material" />
             </mesh>
             {/* Wood frame */}
             <mesh position={[x, y, z - 0.01]} castShadow>
-                <boxGeometry args={[glassW + 0.18, glassH + 0.22, 0.08]} />
-                <meshStandardMaterial color={WOOD} roughness={0.75} />
+                <boxGeometry args={[glassW + 0.2, glassH + 0.24, 0.1]} />
+                <primitive object={mats.wood} attach="material" />
             </mesh>
-            {/* Gold inner trim */}
-            <mesh position={[x, y, z - 0.04]}>
-                <boxGeometry args={[glassW + 0.08, glassH + 0.1, 0.03]} />
-                <meshStandardMaterial
-                    color={GOLD}
-                    metalness={0.6}
-                    roughness={0.32}
-                    emissive={GOLD}
-                    emissiveIntensity={rich ? 0.16 : 0.08}
-                />
+            {/* Gold trim */}
+            <mesh position={[x, y, z - 0.05]}>
+                <boxGeometry args={[glassW + 0.1, glassH + 0.12, 0.04]} />
+                <primitive object={mats.gold} attach="material" />
             </mesh>
 
-            {/* Self reflection — slightly behind glass, clipped by frame */}
-            {avatar && (
-                <group>
-                    {/* Soft clip volume: keep vessel inside frame silhouette via depth */}
-                    <SelfInMirror avatar={avatar} pose={pose ?? null} low={low} />
-                </group>
-            )}
-
-            {/* Reflective glass — room + peers (and any world meshes) */}
-            <mesh position={[x, y, z - 0.07]}>
+            {/* Real-time mirror surface */}
+            <mesh ref={meshRef} position={[x, y, z - 0.09]}>
                 <planeGeometry args={[glassW, glassH]} />
-                <MeshReflectorMaterial
-                    blur={low ? [0, 0] : [160, 50]}
-                    resolution={res}
-                    mixBlur={low ? 0 : 0.55}
-                    mixStrength={low ? 28 : 42}
-                    roughness={0.12}
-                    depthScale={low ? 0.35 : 0.7}
-                    minDepthThreshold={0.3}
-                    maxDepthThreshold={1.35}
-                    color="#8aa4b8"
-                    metalness={0.85}
-                    mirror={0.88}
-                    reflectorOffset={0.03}
-                    transparent
-                    opacity={0.92}
+                <meshBasicMaterial
+                    map={fbo.texture}
+                    toneMapped={false}
+                    color={rich ? '#e8f0f8' : '#c8d8e8'}
                 />
             </mesh>
 
+            {/* Specular sheen edge */}
             {!low && (
-                <mesh position={[x, y, z - 0.072]}>
-                    <planeGeometry args={[glassW * 0.94, glassH * 0.94]} />
-                    <meshBasicMaterial color="#c8d8e8" transparent opacity={0.05} depthWrite={false} />
+                <mesh position={[x, y, z - 0.095]}>
+                    <planeGeometry args={[glassW * 0.98, glassH * 0.98]} />
+                    <meshBasicMaterial color="#ffffff" transparent opacity={0.06} depthWrite={false} />
                 </mesh>
             )}
         </group>
