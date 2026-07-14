@@ -20,6 +20,8 @@ export type HairStyle =
 export type OutfitStyle = 'tunic' | 'robe' | 'vest' | 'dress' | 'gown' | 'cloak' | 'wanderer' | 'vestment';
 export type FaceStyle = 'calm' | 'keen' | 'goatee' | 'beard' | 'mustache';
 export type Extra = 'none' | 'circlet' | 'hood' | 'earrings' | 'glasses' | 'warpaint' | 'belt' | 'flower' | 'scar';
+/** Surface finish — Bruno Simon car-paint style (hot-swappable look) */
+export type VesselFinish = 'matte' | 'silk' | 'luminous' | 'abyssal';
 
 export interface AvatarConfig {
     build: Build;
@@ -34,10 +36,20 @@ export interface AvatarConfig {
     extra?: Extra;      // optional adornment layer — old saves omit it
     eyes?: number;      // index into EYE_COLORS — old saves omit it (dark)
     beardColor?: number; // index into HAIR_COLORS — defaults to hairColor
+    /** Cloth/skin finish (matte · silk · luminous · abyssal) — old saves omit */
+    finish?: VesselFinish;
     /** Worn wardrobe garment id (clothing.ts) — rendered as a gear overlay.
      *  Set at RENDER time from equipped.clothing (see wornAvatar), never saved. */
     garment?: string;
 }
+
+export const VESSEL_FINISHES: VesselFinish[] = ['matte', 'silk', 'luminous', 'abyssal'];
+export const VESSEL_FINISH_LABELS: Record<VesselFinish, string> = {
+    matte: 'Matte',
+    silk: 'Silk',
+    luminous: 'Luminous',
+    abyssal: 'Abyssal',
+};
 
 // ---- palettes ------------------------------------------------
 export const SKIN_TONES = [
@@ -672,6 +684,7 @@ export function randomAvatar(build?: Build): AvatarConfig {
         eyes: Math.random() < 0.45 ? randI(EYE_COLORS.length) : 0,
         // a small chance of a tasteful adornment
         extra: Math.random() < 0.2 ? EXTRA_OPTIONS[1 + randI(EXTRA_OPTIONS.length - 1)] : 'none',
+        finish: VESSEL_FINISHES[randI(VESSEL_FINISHES.length)],
     };
 }
 

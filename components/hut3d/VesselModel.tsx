@@ -9,7 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AvatarConfig } from '@/lib/game/avatar';
 import type { AvatarHandle } from './AvatarMesh';
-import { Limb, Mat, useVesselColors } from './vessel/materials';
+import { Limb, Mat, useVesselColors, VesselLookProvider } from './vessel/materials';
 import { HairParts } from './vessel/HairParts';
 import { TorsoOutfit, LowerOutfit, isSkirtOutfit } from './vessel/OutfitParts';
 import { FaceParts } from './vessel/FaceParts';
@@ -147,8 +147,10 @@ export const VesselModel = forwardRef<AvatarHandle, {
     // Leg visibility: under skirts, shorten visible pant legs
     const legColor = skirt ? c.skin : c.bottom;
     const legColorDeep = skirt ? c.skinDeep : c.bottomDeep;
+    const finish = c.finish;
 
     return (
+        <VesselLookProvider finish={finish}>
         <group position={position} rotation={rotation} scale={scale}>
             <group ref={(n) => { if (n) joints.current.hips = n; }} position={[0, HIP, 0]}>
                 <LowerOutfit outfit={outfit} c={c} hipW={hipW} fem={fem} />
@@ -160,11 +162,11 @@ export const VesselModel = forwardRef<AvatarHandle, {
                         <Limb radius={shinR} length={SHIN} color={legColorDeep} taper={0.88} />
                         <mesh position={[0, -SHIN - 0.015, 0.05]} castShadow>
                             <boxGeometry args={[0.12, 0.1, 0.24]} />
-                            <Mat color={c.boots} roughness={0.92} />
+                            <Mat color={c.boots} kind="leather" />
                         </mesh>
                         <mesh position={[0, -SHIN + 0.06, 0.02]} castShadow>
                             <cylinderGeometry args={[0.055, 0.06, 0.12, 8]} />
-                            <Mat color={c.boots} roughness={0.92} />
+                            <Mat color={c.boots} kind="leather" />
                         </mesh>
                     </group>
                 </group>
@@ -174,11 +176,11 @@ export const VesselModel = forwardRef<AvatarHandle, {
                         <Limb radius={shinR} length={SHIN} color={legColorDeep} taper={0.88} />
                         <mesh position={[0, -SHIN - 0.015, 0.05]} castShadow>
                             <boxGeometry args={[0.12, 0.1, 0.24]} />
-                            <Mat color={c.boots} roughness={0.92} />
+                            <Mat color={c.boots} kind="leather" />
                         </mesh>
                         <mesh position={[0, -SHIN + 0.06, 0.02]} castShadow>
                             <cylinderGeometry args={[0.055, 0.06, 0.12, 8]} />
-                            <Mat color={c.boots} roughness={0.92} />
+                            <Mat color={c.boots} kind="leather" />
                         </mesh>
                     </group>
                 </group>
@@ -232,15 +234,15 @@ export const VesselModel = forwardRef<AvatarHandle, {
                         >
                             <mesh position={[0, 0.02, 0]} castShadow>
                                 <cylinderGeometry args={[0.045, 0.055, 0.08, 10]} />
-                                <Mat color={c.skinDeep} />
+                                <Mat color={c.skinDeep} kind="skin" />
                             </mesh>
                             <mesh position={[0, headR + 0.06, 0]} castShadow>
                                 <sphereGeometry args={[headR, 18, 16]} />
-                                <Mat color={c.skin} roughness={0.62} />
+                                <Mat color={c.skin} kind="skin" />
                             </mesh>
                             <mesh position={[0, headR * 0.55, 0.02]} castShadow scale={[0.75, 0.55, 0.7]}>
                                 <sphereGeometry args={[headR * 0.85, 12, 10]} />
-                                <Mat color={c.skin} roughness={0.65} />
+                                <Mat color={c.skinMid} kind="skin" />
                             </mesh>
 
                             <HairParts style={hairStyle} c={c} headR={headR} fem={fem} />
@@ -256,5 +258,6 @@ export const VesselModel = forwardRef<AvatarHandle, {
                 )}
             </group>
         </group>
+        </VesselLookProvider>
     );
 });

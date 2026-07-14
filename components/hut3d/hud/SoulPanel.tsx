@@ -15,12 +15,15 @@ import {
     BOOT_COLORS,
     EYE_COLORS,
     EYE_NAMES,
+    VESSEL_FINISHES,
+    VESSEL_FINISH_LABELS,
     type AvatarConfig,
     type Build,
     type HairStyle,
     type FaceStyle,
     type OutfitStyle,
     type Extra,
+    type VesselFinish,
 } from '@/lib/game/avatar';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
@@ -37,6 +40,7 @@ function outfitsFor(build: Build): OutfitStyle[] {
         : ['tunic', 'vest', 'robe', 'cloak', 'wanderer', 'vestment'];
 }
 
+/** Bruno-style color picker: large touch targets, ring selection, live 3D tint */
 function SwatchRow({
     colors,
     value,
@@ -47,22 +51,34 @@ function SwatchRow({
     onChange: (i: number) => void;
 }) {
     return (
-        <div className="flex flex-wrap gap-1.5">
-            {colors.map((c, i) => (
-                <button
-                    key={`${c}-${i}`}
-                    type="button"
-                    onClick={() => {
-                        sacredUi.click();
-                        onChange(i);
-                    }}
-                    className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                        value === i ? 'border-white scale-110' : 'border-white/15 hover:border-white/40'
-                    }`}
-                    style={{ background: c }}
-                    aria-label={`Color ${i + 1}`}
-                />
-            ))}
+        <div className="flex flex-wrap gap-2">
+            {colors.map((c, i) => {
+                const on = value === i;
+                return (
+                    <button
+                        key={`${c}-${i}`}
+                        type="button"
+                        onClick={() => {
+                            sacredUi.click();
+                            onChange(i);
+                        }}
+                        className={`relative w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition-transform touch-manipulation ${
+                            on
+                                ? 'border-white scale-110 shadow-[0_0_0_2px_rgba(251,191,36,0.45)]'
+                                : 'border-white/15 hover:border-white/40 active:scale-95'
+                        }`}
+                        style={{ background: c }}
+                        aria-label={`Color ${i + 1}`}
+                        aria-pressed={on}
+                    >
+                        {on && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+                                ✓
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 }
@@ -129,6 +145,9 @@ function VesselOrbit({ spinning }: { spinning: boolean }) {
 
 function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
     const [dragging, setDragging] = useState(false);
+    const mobile =
+        typeof window !== 'undefined' &&
+        (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 768);
 
     return (
         <div
@@ -139,26 +158,35 @@ function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
         >
             <Canvas
                 camera={{ position: [0, 1.05, 2.85], fov: 32, near: 0.1, far: 20 }}
-                dpr={[1, 1.75]}
-                gl={{ antialias: true, alpha: true }}
-                onCreated={({ camera }) => {
+                dpr={mobile ? [1, 1.25] : [1, 1.75]}
+                performance={{ min: mobile ? 0.4 : 0.7 }}
+                gl={{
+                    antialias: !mobile,
+                    alpha: true,
+                    powerPreference: mobile ? 'low-power' : 'high-performance',
+                }}
+                onCreated={({ camera, gl }) => {
                     camera.lookAt(0, 0.95, 0);
+                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
                 }}
             >
                 <color attach="background" args={['#0c0a12']} />
-                <ambientLight intensity={0.7} />
-                <directionalLight position={[2.2, 4.2, 2.5]} intensity={1.25} color="#e8ecff" />
-                <directionalLight position={[-2, 2, -1]} intensity={0.35} color="#a78bfa" />
-                <pointLight position={[0, 1.6, 1.2]} intensity={0.55} color="#f5e6c8" />
+                {/* Bruno-style readable key + fill + rim for material color read */}
+                <ambientLight intensity={0.55} />
+                <hemisphereLight args={['#c8d4ff', '#2a2038', 0.45]} />
+                <directionalLight position={[2.2, 4.2, 2.5]} intensity={1.35} color="#e8ecff" />
+                <directionalLight position={[-2.4, 1.8, -1.2]} intensity={0.45} color="#a78bfa" />
+                <pointLight position={[0, 1.6, 1.4]} intensity={0.5} color="#f5e6c8" distance={6} />
                 <Suspense fallback={null}>
-                    {/* Feet at y=0 · mid-body ~0.95 — camera targets torso */}
                     <VesselModel avatar={avatar} scale={1} position={[0, 0, 0]} />
-                    <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={3.5} blur={2.2} far={3} />
+                    {!mobile && (
+                        <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={3.5} blur={2.2} far={3} />
+                    )}
                     <VesselOrbit spinning={!dragging} />
                 </Suspense>
             </Canvas>
             <p className="absolute bottom-3 inset-x-0 text-center text-[9px] uppercase tracking-[0.28em] text-white/35 pointer-events-none">
-                Drag to rotate · scroll to zoom
+                Drag to rotate · pinch / scroll zoom
             </p>
         </div>
     );
@@ -255,6 +283,18 @@ export default function SoulPanel({ onClose }: { onClose: () => void }) {
                             />
                             <p className="text-[10px] uppercase tracking-widest text-white/40">Skin</p>
                             <SwatchRow colors={SKIN_TONES} value={avatar.skin} onChange={(i) => patch({ skin: i })} />
+                            <p className="text-[10px] uppercase tracking-widest text-white/40">
+                                Finish · material look
+                            </p>
+                            <ChipRow
+                                options={VESSEL_FINISHES}
+                                value={(avatar.finish ?? 'silk') as VesselFinish}
+                                onChange={(v) => patch({ finish: v })}
+                                labels={VESSEL_FINISH_LABELS}
+                            />
+                            <p className="text-[9px] text-white/30 leading-relaxed">
+                                Matte · soft cloth · Silk · sheen · Luminous · aether glow · Abyssal · dark depth
+                            </p>
                         </div>
                     )}
 

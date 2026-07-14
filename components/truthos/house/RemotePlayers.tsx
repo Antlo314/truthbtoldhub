@@ -22,16 +22,25 @@ function PeerMesh({
     const skin = SKIN_TONES[peer.skin] ?? SKIN_TONES[6];
     const aura = peer.aura || '#a78bfa';
     const w = peer.build === 'fem' ? 0.3 : 0.36;
+    // Cheap peer mat — shared roughness/env read like vessel silk finish
+    const bodyMat = useMemo(
+        () =>
+            new THREE.MeshStandardMaterial({
+                color: skin,
+                roughness: 0.72,
+                metalness: 0.04,
+                envMapIntensity: low ? 0.35 : 0.55,
+            }),
+        [skin, low],
+    );
 
     return (
         <group position={[peer.x, 0, peer.z]} rotation={[0, peer.yaw, 0]}>
-            <mesh position={[0, 0.95, 0]}>
+            <mesh position={[0, 0.95, 0]} material={bodyMat}>
                 <capsuleGeometry args={[w * 0.45, 0.7, 4, low ? 6 : 8]} />
-                <meshStandardMaterial color={skin} roughness={0.75} />
             </mesh>
-            <mesh position={[0, 1.55, 0]}>
+            <mesh position={[0, 1.55, 0]} material={bodyMat}>
                 <sphereGeometry args={[0.15, low ? 8 : 10, low ? 8 : 10]} />
-                <meshStandardMaterial color={skin} roughness={0.7} />
             </mesh>
             <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <ringGeometry args={[0.26, 0.36, low ? 12 : 16]} />

@@ -23,7 +23,7 @@ export function ExtraParts({
             return (
                 <mesh position={[0, y + 0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
                     <torusGeometry args={[headR * 0.78, 0.018, 8, 24]} />
-                    <Mat color={c.gold} roughness={0.3} metalness={0.55} />
+                    <Mat color={c.gold} kind="gold" roughness={0.3} metalness={0.55} />
                 </mesh>
             );
         case 'hood':
@@ -44,11 +44,11 @@ export function ExtraParts({
                 <group>
                     <mesh position={[-headR * 0.95, y - 0.02, 0]} castShadow>
                         <sphereGeometry args={[0.018, 8, 8]} />
-                        <Mat color={c.gold} roughness={0.35} metalness={0.5} />
+                        <Mat color={c.gold} kind="gold" roughness={0.35} metalness={0.5} />
                     </mesh>
                     <mesh position={[headR * 0.95, y - 0.02, 0]} castShadow>
                         <sphereGeometry args={[0.018, 8, 8]} />
-                        <Mat color={c.gold} roughness={0.35} metalness={0.5} />
+                        <Mat color={c.gold} kind="gold" roughness={0.35} metalness={0.5} />
                     </mesh>
                 </group>
             );
@@ -57,15 +57,15 @@ export function ExtraParts({
                 <group position={[0, y + 0.01, headR * 0.75]}>
                     <mesh position={[-0.04, 0, 0]}>
                         <torusGeometry args={[0.028, 0.006, 6, 12]} />
-                        <Mat color={c.gold} roughness={0.4} metalness={0.4} />
+                        <Mat color={c.gold} kind="gold" roughness={0.4} metalness={0.4} />
                     </mesh>
                     <mesh position={[0.04, 0, 0]}>
                         <torusGeometry args={[0.028, 0.006, 6, 12]} />
-                        <Mat color={c.gold} roughness={0.4} metalness={0.4} />
+                        <Mat color={c.gold} kind="gold" roughness={0.4} metalness={0.4} />
                     </mesh>
                     <mesh position={[0, 0, 0]}>
                         <boxGeometry args={[0.03, 0.006, 0.006]} />
-                        <Mat color={c.gold} roughness={0.4} metalness={0.4} />
+                        <Mat color={c.gold} kind="gold" roughness={0.4} metalness={0.4} />
                     </mesh>
                 </group>
             );
@@ -105,7 +105,7 @@ export function ExtraParts({
             return (
                 <mesh position={[0.05, y - 0.04, headR * 0.88]} rotation={[0, 0, 0.6]} castShadow>
                     <boxGeometry args={[0.05, 0.008, 0.008]} />
-                    <Mat color={c.skinDeep} roughness={0.9} />
+                    <Mat color={c.skinDeep} kind="skin" roughness={0.9} />
                 </mesh>
             );
         case 'belt':
@@ -113,7 +113,7 @@ export function ExtraParts({
             return (
                 <mesh position={[hipW * 0.55, 0.02, 0.08]} castShadow>
                     <boxGeometry args={[0.1, 0.12, 0.06]} />
-                    <Mat color={c.leather} roughness={0.9} />
+                    <Mat color={c.leather} kind="leather" roughness={0.9} />
                 </mesh>
             );
         default:
