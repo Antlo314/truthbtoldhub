@@ -55,36 +55,77 @@ function canvasTex(
 }
 
 function paintWood(ctx: CanvasRenderingContext2D, s: number, dark = false, floor = false) {
-    const base = dark ? '#1c120c' : floor ? '#3a2818' : '#4a3420';
+    const base = dark ? '#1a100a' : floor ? '#3a2818' : '#4a3420';
     const grain = dark ? '#2a1a10' : floor ? '#5c4028' : '#6b4a2e';
     const highlight = dark ? '#3a2818' : floor ? '#7a5a38' : '#8a6240';
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, s, s);
-    for (let i = 0; i < s; i += floor ? 3 : 2) {
+    // Soft under-tone variance
+    for (let b = 0; b < 40; b++) {
+        const v = dark ? 18 + Math.random() * 16 : 40 + Math.random() * 30;
+        ctx.fillStyle = `rgba(${v + 12},${v},${v - 8},${0.04 + Math.random() * 0.05})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 12 + Math.random() * 40, 8 + Math.random() * 28);
+    }
+    for (let i = 0; i < s; i += floor ? 2 : 2) {
         const n = Math.sin(i * 0.08) * 8 + Math.sin(i * 0.31) * 3;
         ctx.strokeStyle = i % 7 === 0 ? highlight : grain;
-        ctx.globalAlpha = 0.14 + (i % 5) * 0.03;
+        ctx.globalAlpha = 0.12 + (i % 5) * 0.028;
+        ctx.lineWidth = i % 11 === 0 ? 1.6 : 1;
         ctx.beginPath();
         ctx.moveTo(0, i + n * 0.15);
-        for (let x = 0; x < s; x += 8) {
-            ctx.lineTo(x, i + Math.sin(x * 0.05 + i) * 1.5 + n * 0.1);
+        for (let x = 0; x < s; x += 6) {
+            ctx.lineTo(x, i + Math.sin(x * 0.05 + i * 0.02) * 1.8 + n * 0.1);
         }
         ctx.stroke();
     }
+    // Knots
+    for (let k = 0; k < (dark ? 3 : 5); k++) {
+        const kx = 20 + Math.random() * (s - 40);
+        const ky = 20 + Math.random() * (s - 40);
+        const kr = 4 + Math.random() * 10;
+        const kg = ctx.createRadialGradient(kx, ky, 1, kx, ky, kr);
+        kg.addColorStop(0, dark ? 'rgba(50,30,18,0.75)' : 'rgba(70,42,22,0.7)');
+        kg.addColorStop(0.55, dark ? 'rgba(30,18,10,0.45)' : 'rgba(45,28,14,0.4)');
+        kg.addColorStop(1, 'rgba(20,12,6,0)');
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = kg;
+        ctx.beginPath();
+        ctx.ellipse(kx, ky, kr, kr * 0.7, Math.random(), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(10,6,4,0.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
     if (floor) {
-        // plank seams
-        ctx.globalAlpha = 0.35;
-        ctx.strokeStyle = '#120a06';
-        ctx.lineWidth = 1.5;
-        for (let y = 0; y < s; y += s / 6) {
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#0e0804';
+        ctx.lineWidth = 2;
+        const planks = 6;
+        for (let y = 0; y < s; y += s / planks) {
             ctx.beginPath();
             ctx.moveTo(0, y);
-            ctx.lineTo(s, y + Math.sin(y) * 2);
+            ctx.lineTo(s, y + Math.sin(y * 0.2) * 1.5);
             ctx.stroke();
+            // end joints
+            ctx.globalAlpha = 0.25;
+            for (let j = 0; j < 3; j++) {
+                const jx = (j + 0.5) * (s / 3) + (Math.floor(y) % 2) * 20;
+                ctx.beginPath();
+                ctx.moveTo(jx, y);
+                ctx.lineTo(jx, y + s / planks);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 0.4;
+        }
+        // varnish sheen stripes
+        ctx.globalAlpha = 0.06;
+        for (let y = 0; y < s; y += 14) {
+            ctx.fillStyle = '#d4b896';
+            ctx.fillRect(0, y, s, 2);
         }
     }
-    ctx.globalAlpha = 0.12;
-    for (let k = 0; k < 90; k++) {
+    ctx.globalAlpha = 0.14;
+    for (let k = 0; k < 120; k++) {
         ctx.fillStyle = '#0a0604';
         ctx.fillRect(Math.random() * s, Math.random() * s, 1, 1 + Math.random() * 2);
     }
@@ -185,25 +226,39 @@ function paintRug(ctx: CanvasRenderingContext2D, s: number) {
 function paintFabric(ctx: CanvasRenderingContext2D, s: number, light = false) {
     ctx.fillStyle = light ? '#3a3050' : '#221a30';
     ctx.fillRect(0, 0, s, s);
-    // weave
-    for (let y = 0; y < s; y += 3) {
-        ctx.strokeStyle = light ? 'rgba(80,70,110,0.35)' : 'rgba(50,40,70,0.4)';
+    // Cross-weave (tighter upholstery look)
+    for (let y = 0; y < s; y += 2) {
+        ctx.strokeStyle = light ? 'rgba(95,82,130,0.32)' : 'rgba(55,42,78,0.38)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(s, y);
+        ctx.lineTo(s, y + (y % 4 === 0 ? 0.5 : 0));
         ctx.stroke();
     }
-    for (let x = 0; x < s; x += 4) {
-        ctx.strokeStyle = light ? 'rgba(90,80,120,0.2)' : 'rgba(40,30,55,0.25)';
+    for (let x = 0; x < s; x += 3) {
+        ctx.strokeStyle = light ? 'rgba(100,88,135,0.18)' : 'rgba(42,32,60,0.22)';
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, s);
+        ctx.lineTo(x + (x % 6 === 0 ? 0.5 : 0), s);
         ctx.stroke();
     }
-    // nap noise
-    for (let i = 0; i < 400; i++) {
-        ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.04})`;
-        ctx.fillRect(Math.random() * s, Math.random() * s, 1, 1);
+    // Soft pile mottling
+    for (let i = 0; i < 550; i++) {
+        const bright = Math.random() > 0.5;
+        ctx.fillStyle = bright
+            ? `rgba(255,255,255,${0.015 + Math.random() * 0.035})`
+            : `rgba(0,0,0,${0.02 + Math.random() * 0.04})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 2, 1);
+    }
+    // Subtle wear patches
+    for (let p = 0; p < 6; p++) {
+        const px = Math.random() * s;
+        const py = Math.random() * s;
+        const g = ctx.createRadialGradient(px, py, 2, px, py, 18 + Math.random() * 20);
+        g.addColorStop(0, light ? 'rgba(140,120,180,0.12)' : 'rgba(60,45,90,0.14)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(px - 30, py - 30, 60, 60);
     }
 }
 

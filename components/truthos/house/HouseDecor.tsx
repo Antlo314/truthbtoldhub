@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * House props — skinned interactables + rings (expanded layout).
+ * Staged room props — interactables sit on furniture (open-house placement).
  */
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -64,35 +64,77 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
 
     return (
         <group>
-            {/* Arcade controller on coffee table */}
-            <group position={[0.2, 0.42, -5.2]} rotation={[0, 0.35, 0]}>
+            {/* Arcade pad on coffee table (living conversation group) */}
+            <group position={[0.15, 0.44, -8.35]} rotation={[0, 0.28, 0]}>
                 <mesh castShadow={!low}>
-                    <boxGeometry args={[0.34, 0.065, 0.21]} />
+                    <boxGeometry args={[0.36, 0.055, 0.22]} />
                     <primitive object={m.metalDark} attach="material" />
                 </mesh>
-                <mesh ref={glow} position={[0, 0.04, -0.02]}>
-                    <boxGeometry args={[0.14, 0.016, 0.03]} />
+                <mesh position={[0, 0.035, 0.04]}>
+                    <boxGeometry args={[0.12, 0.02, 0.08]} />
+                    <primitive object={m.black} attach="material" />
+                </mesh>
+                <mesh ref={glow} position={[0, 0.04, -0.05]}>
+                    <boxGeometry args={[0.16, 0.014, 0.028]} />
                     <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={0.7} toneMapped={false} />
                 </mesh>
+                <mesh position={[-0.1, 0.04, 0.02]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.02, 10]} />
+                    <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.35} />
+                </mesh>
+                <mesh position={[-0.05, 0.04, 0.06]}>
+                    <cylinderGeometry args={[0.022, 0.022, 0.02, 10]} />
+                    <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.3} />
+                </mesh>
             </group>
-            {/* Offering tray */}
-            <group position={[-3.2, 0.52, -4.0]} rotation={[-0.06, 0.2, 0]}>
+
+            {/* Offering tray on west living console */}
+            <group position={[-4.3, 0.78, -6.2]} rotation={[-0.04, Math.PI / 2, 0]}>
                 <mesh castShadow>
-                    <boxGeometry args={[0.3, 0.022, 0.18]} />
+                    <boxGeometry args={[0.32, 0.02, 0.2]} />
                     <primitive object={m.wood} attach="material" />
                 </mesh>
-                <mesh position={[0, 0.02, 0]}>
-                    <planeGeometry args={[0.22, 0.12]} />
+                <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[0.24, 0.14]} />
                     <primitive object={m.gold} attach="material" />
                 </mesh>
-            </group>
-            {/* Ledger book */}
-            <group position={[-8.5, 0, 2.5]}>
-                <mesh position={[0, 1.08, 0]} rotation={[-0.16, 0.15, 0]} castShadow>
-                    <boxGeometry args={[0.38, 0.06, 0.28]} />
+                <mesh position={[0.08, 0.03, 0.02]}>
+                    <boxGeometry args={[0.06, 0.04, 0.04]} />
                     <primitive object={m.leather} attach="material" />
                 </mesh>
             </group>
+
+            {/* Ledger book on library reading table */}
+            <group position={[-9.0, 0, -1.1]}>
+                <mesh position={[0, 0.95, 0]} rotation={[-0.12, 0.2, 0]} castShadow>
+                    <boxGeometry args={[0.36, 0.055, 0.26]} />
+                    <primitive object={m.leather} attach="material" />
+                </mesh>
+                <mesh position={[0.02, 0.99, 0.01]} rotation={[-0.12, 0.2, 0]}>
+                    <boxGeometry args={[0.28, 0.01, 0.2]} />
+                    <primitive object={m.book} attach="material" />
+                </mesh>
+            </group>
+
+            {/* Desk lamp on bedroom workstation */}
+            <group position={[5.45, 0.78, 7.45]}>
+                <mesh>
+                    <cylinderGeometry args={[0.06, 0.08, 0.03, 10]} />
+                    <primitive object={m.metalDark} attach="material" />
+                </mesh>
+                <mesh position={[0, 0.18, 0]}>
+                    <cylinderGeometry args={[0.015, 0.015, 0.36, 6]} />
+                    <primitive object={m.metal} attach="material" />
+                </mesh>
+                <mesh position={[0.08, 0.32, -0.04]} rotation={[0.4, 0, 0.3]}>
+                    <coneGeometry args={[0.09, 0.12, 10]} />
+                    <primitive object={m.gold} attach="material" />
+                </mesh>
+                {!low && (
+                    <pointLight position={[0.1, 0.28, -0.05]} intensity={0.35} distance={2.2} color="#fbbf24" />
+                )}
+            </group>
+
             {HOTSPOTS.map((h) => (
                 <group key={h.id} position={[h.position[0], 0, h.position[2]]}>
                     <SpinRing

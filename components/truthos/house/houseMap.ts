@@ -1,6 +1,6 @@
 /**
- * Expanded multi-room house — foyer · hallway · living · bedroom · library · east wing.
- * Clear corridors (~1.2 m). One object → one feature.
+ * Staged multi-room house (open-house guidelines):
+ * · Clear ≥1.1 m walk paths · conversation groups · wall furniture · one hero per room
  */
 
 import type { HousePanelId } from './houseUiStore';
@@ -32,7 +32,6 @@ export type Hotspot = {
         | { type: 'soon'; message: string };
 };
 
-/** ~28 × 26 m footprint */
 export const HOUSE_BOUNDS = {
     minX: -13.5,
     maxX: 13.5,
@@ -40,31 +39,66 @@ export const HOUSE_BOUNDS = {
     maxZ: 12.2,
 };
 
-/** Foyer / central hall facing living (−Z) */
-export const SPAWN: [number, number, number] = [0, 1.62, 1.2];
+/** Foyer, facing hall toward living (−Z) */
+export const SPAWN: [number, number, number] = [0, 1.62, 2.0];
+
+/** Living north-wall fireplace (hero focal) */
+export const FIREPLACE = { x: 0, z: -11.55, y: 0.9 };
 
 /**
- * Wall-mounted fireplace (living, north wall) — visual + audio anchor.
+ * Hotspots in open approach zones (never inside colliders).
+ * Layout follows staging: path down hall, room vignettes left/right/north/south.
  */
-export const FIREPLACE = { x: 0, z: -11.4, y: 0.9 };
-
 export const HOTSPOTS: Hotspot[] = [
     {
         id: 'front_door',
         label: 'Front door',
         hint: 'Outside · coming soon',
-        position: [0, 1.2, 11.0],
+        position: [0, 1.2, 11.2],
         radius: 1.15,
-        action: {
-            type: 'soon',
-            message: 'The grounds open soon. For now, this is home.',
-        },
+        action: { type: 'soon', message: 'The grounds open soon. For now, this is home.' },
+    },
+    {
+        id: 'wayfinder',
+        label: 'Wall map',
+        hint: 'Roads · temporarily down',
+        // Hall console against north hall wall, offset so path stays clear
+        position: [2.4, 1.15, 0.9],
+        radius: 1.05,
+        action: { type: 'panel', panel: 'wayfinder' },
+    },
+    {
+        id: 'arcade',
+        label: 'Controller',
+        hint: 'Pick up · Arcade',
+        // Coffee table in living conversation group
+        position: [0.15, 0.5, -8.35],
+        radius: 1.0,
+        action: { type: 'panel', panel: 'arcade' },
+    },
+    {
+        id: 'fireplace',
+        label: 'Fireplace',
+        hint: 'Warmth · hearth',
+        position: [0, 1.0, -10.55],
+        radius: 1.3,
+        action: { type: 'soon', message: 'The fire keeps the house. Rest a moment.' },
+    },
+    {
+        id: 'envelope',
+        label: 'Offering tray',
+        hint: 'The Offering',
+        // Console against west living wall — TV owns east wall
+        position: [-3.85, 0.85, -6.2],
+        radius: 1.0,
+        action: { type: 'panel', panel: 'offering' },
     },
     {
         id: 'computer',
         label: 'Desktop',
         hint: 'Log in · boot Truth.OS',
-        position: [4.2, 1.0, 7.8],
+        // Bedroom work corner — approach from room center
+        position: [4.6, 1.0, 7.55],
         radius: 1.15,
         action: { type: 'os' },
     },
@@ -72,50 +106,24 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'soul_mirror',
         label: 'Soul Mirror',
         hint: 'Vessel · shape your form',
-        position: [5.4, 1.25, 10.6],
+        position: [5.5, 1.25, 10.85],
         radius: 1.1,
         action: { type: 'panel', panel: 'soul' },
-    },
-    {
-        id: 'arcade',
-        label: 'Controller',
-        hint: 'Pick up · Arcade',
-        position: [0.2, 0.5, -5.2],
-        radius: 1.0,
-        action: { type: 'panel', panel: 'arcade' },
-    },
-    {
-        id: 'envelope',
-        label: 'Offering tray',
-        hint: 'The Offering',
-        position: [-3.2, 0.85, -4.0],
-        radius: 1.05,
-        action: { type: 'panel', panel: 'offering' },
-    },
-    {
-        id: 'fireplace',
-        label: 'Fireplace',
-        hint: 'Warmth · hearth',
-        position: [0, 1.0, -10.4],
-        radius: 1.35,
-        action: {
-            type: 'soon',
-            message: 'The fire keeps the house. Rest a moment.',
-        },
     },
     {
         id: 'library',
         label: 'Bookshelves',
         hint: 'Open the Library',
-        position: [-11.0, 1.1, -2.5],
-        radius: 1.45,
+        position: [-10.85, 1.1, -3.8],
+        radius: 1.4,
         action: { type: 'panel', panel: 'library' },
     },
     {
         id: 'ledger',
         label: 'Ledger',
         hint: 'Daily word',
-        position: [-8.5, 1.0, 2.5],
+        // Reading nook table, not blocking shelf aisle
+        position: [-9.0, 1.0, -1.1],
         radius: 1.1,
         action: { type: 'panel', panel: 'ledger' },
     },
@@ -123,7 +131,7 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'hall',
         label: 'Hall arch',
         hint: 'The Hall · community',
-        position: [-8.8, 1.15, 6.2],
+        position: [-9.0, 1.15, 6.4],
         radius: 1.2,
         action: { type: 'panel', panel: 'hall' },
     },
@@ -131,40 +139,33 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'codex',
         label: 'Study desk',
         hint: 'Codex · memory',
-        position: [9.5, 1.0, -2.0],
-        radius: 1.2,
+        position: [9.3, 1.0, -3.4],
+        radius: 1.15,
         action: { type: 'panel', panel: 'codex' },
     },
     {
         id: 'cinema',
         label: 'Film screen',
         hint: 'Cinema · film',
-        position: [11.2, 1.4, 3.5],
-        radius: 1.3,
+        position: [10.6, 1.35, 4.0],
+        radius: 1.25,
         action: { type: 'panel', panel: 'cinema' },
     },
     {
         id: 'studio',
         label: 'Studio',
         hint: 'Signal Studio · brand pulse',
-        position: [10.2, 1.0, -8.5],
-        radius: 1.25,
+        position: [10.0, 1.0, -9.0],
+        radius: 1.2,
         action: { type: 'panel', panel: 'studio' },
-    },
-    {
-        id: 'wayfinder',
-        label: 'Wall map',
-        hint: 'Roads · temporarily down',
-        position: [0, 1.2, -0.4],
-        radius: 1.15,
-        action: { type: 'panel', panel: 'wayfinder' },
     },
 ];
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
 /**
- * Walls + furniture. Hallway corridor open along x≈0 (foyer) and through arches.
+ * Walls + staged furniture colliders.
+ * Living: sofa faces fireplace; media console on side wall; clear side paths.
  */
 export const COLLIDERS: Collider[] = [
     // Outer shell
@@ -173,61 +174,72 @@ export const COLLIDERS: Collider[] = [
     { x: -13.8, z: 0, hx: 0.25, hz: 12.6 },
     { x: 13.8, z: 0, hx: 0.25, hz: 12.6 },
 
-    // ── Hallway walls (east-west corridor band z −1 … +2.5 open) ──
-    // North hallway wall (separates living), openings at center (living entry) and west/east
-    { x: -7.5, z: -1.15, hx: 4.2, hz: 0.14 },
-    { x: 7.5, z: -1.15, hx: 4.2, hz: 0.14 },
-    // South hallway wall (separates bedroom), doorway at x≈0
-    { x: -5.5, z: 3.1, hx: 5.5, hz: 0.14 },
-    { x: 5.5, z: 3.1, hx: 5.5, hz: 0.14 },
-    // West hallway wall → library (opening at z≈0.5)
-    { x: -6.2, z: -6.5, hx: 0.14, hz: 4.2 },
-    { x: -6.2, z: 7.5, hx: 0.14, hz: 3.8 },
-    // East hallway wall → study wing
-    { x: 6.2, z: -7.0, hx: 0.14, hz: 3.8 },
-    { x: 6.2, z: 6.5, hx: 0.14, hz: 4.2 },
+    // Hall partitions (open doorways kept clear)
+    { x: -7.8, z: -1.15, hx: 4.0, hz: 0.14 },
+    { x: 7.8, z: -1.15, hx: 4.0, hz: 0.14 },
+    { x: -5.8, z: 3.15, hx: 5.3, hz: 0.14 },
+    { x: 5.8, z: 3.15, hx: 5.3, hz: 0.14 },
+    { x: -6.25, z: -6.8, hx: 0.14, hz: 4.0 },
+    { x: -6.25, z: 7.6, hx: 0.14, hz: 3.6 },
+    { x: 6.25, z: -7.2, hx: 0.14, hz: 3.6 },
+    { x: 6.25, z: 6.8, hx: 0.14, hz: 4.0 },
 
-    // Front door frame (south outer, foyer)
-    { x: -1.1, z: 12.2, hx: 0.35, hz: 0.2 },
-    { x: 1.1, z: 12.2, hx: 0.35, hz: 0.2 },
+    // Front door jambs
+    { x: -1.15, z: 12.25, hx: 0.35, hz: 0.22 },
+    { x: 1.15, z: 12.25, hx: 0.35, hz: 0.22 },
 
-    // Bedroom furniture
-    { x: -1.2, z: 9.2, hx: 1.25, hz: 0.95 },
-    { x: -2.7, z: 9.2, hx: 0.28, hz: 0.28 },
-    { x: 0.3, z: 9.2, hx: 0.28, hz: 0.28 },
-    { x: 4.4, z: 7.4, hx: 0.95, hz: 0.42 },
-    { x: 4.2, z: 8.2, hx: 0.32, hz: 0.32 },
-    { x: 5.9, z: 11.5, hx: 0.2, hz: 0.5 },
+    // ── Living staged group (faces fireplace −Z) ──
+    // Sofa floated, back toward hallway, face fire
+    { x: 0.0, z: -6.0, hx: 1.55, hz: 0.58 },
+    // Coffee table between sofa & fire
+    { x: 0.15, z: -8.35, hx: 0.6, hz: 0.42 },
+    // Media console against EAST living wall (side wall, not competing with fire)
+    { x: 4.55, z: -7.8, hx: 0.32, hz: 1.1 },
+    // Offering console against west living wall
+    { x: -4.3, z: -6.2, hx: 0.38, hz: 0.55 },
+    // Accent chair 90° conversation (east of group)
+    { x: 2.85, z: -7.4, hx: 0.42, hz: 0.42 },
+    // Fireplace mass
+    { x: 0, z: -11.9, hx: 1.5, hz: 0.4 },
+    { x: -1.6, z: -11.55, hx: 0.25, hz: 0.5 },
+    { x: 1.6, z: -11.55, hx: 0.25, hz: 0.5 },
 
-    // Living
-    { x: 0.5, z: -3.8, hx: 1.4, hz: 0.55 },
-    { x: 0.2, z: -5.3, hx: 0.55, hz: 0.4 },
-    { x: 0.0, z: -7.6, hx: 1.25, hz: 0.35 },
-    { x: -3.2, z: -4.0, hx: 0.5, hz: 0.4 },
-    { x: 3.2, z: -4.5, hx: 0.42, hz: 0.42 },
-    // Fireplace wall mass
-    { x: 0, z: -11.85, hx: 1.35, hz: 0.35 },
-    { x: -1.55, z: -11.5, hx: 0.22, hz: 0.55 },
-    { x: 1.55, z: -11.5, hx: 0.22, hz: 0.55 },
+    // ── Bedroom ──
+    // Bed head on south wall, left of center (path to desk clear on right)
+    { x: -2.0, z: 10.0, hx: 1.2, hz: 0.95 },
+    { x: -3.45, z: 10.0, hx: 0.3, hz: 0.3 },
+    { x: -0.55, z: 10.0, hx: 0.3, hz: 0.3 },
+    // Desk SE corner, chair room-side
+    { x: 4.8, z: 7.6, hx: 0.95, hz: 0.42 },
+    { x: 4.6, z: 8.45, hx: 0.32, hz: 0.32 },
+    // Mirror on east bedroom wall
+    { x: 6.0, z: 11.5, hx: 0.18, hz: 0.48 },
 
-    // Library (west)
-    { x: -12.9, z: -2.5, hx: 0.35, hz: 2.8 },
-    { x: -9.5, z: -1.5, hx: 0.4, hz: 0.4 },
-    { x: -8.5, z: 2.5, hx: 0.38, hz: 0.38 },
+    // ── Library ──
+    { x: -13.0, z: -3.8, hx: 0.38, hz: 2.9 },
+    // Reading chair faces shelves, table beside
+    { x: -10.0, z: -2.4, hx: 0.42, hz: 0.42 },
+    { x: -9.0, z: -1.1, hx: 0.4, hz: 0.4 },
 
-    // Community hall arch (NW)
-    { x: -9.5, z: 6.2, hx: 0.2, hz: 0.9 },
-    { x: -8.0, z: 6.2, hx: 0.2, hz: 0.9 },
+    // Hall arch
+    { x: -9.7, z: 6.4, hx: 0.22, hz: 0.85 },
+    { x: -8.2, z: 6.4, hx: 0.22, hz: 0.85 },
 
-    // Study / cinema / studio (east)
-    { x: 9.5, z: -2.0, hx: 0.9, hz: 0.5 },
-    { x: 9.4, z: -1.1, hx: 0.32, hz: 0.32 },
-    { x: 12.9, z: -4.5, hx: 0.3, hz: 1.6 },
-    { x: 12.5, z: 3.5, hx: 0.28, hz: 1.4 },
-    { x: 10.5, z: -8.5, hx: 1.0, hz: 0.6 },
+    // ── Study ──
+    { x: 9.4, z: -3.5, hx: 0.9, hz: 0.5 },
+    { x: 9.2, z: -2.55, hx: 0.32, hz: 0.32 },
+    { x: 13.0, z: -5.2, hx: 0.32, hz: 1.5 },
 
-    // Wayfinder console in hallway
-    { x: 0, z: -0.5, hx: 0.7, hz: 0.22 },
+    // Cinema east wall + two chairs facing screen
+    { x: 12.7, z: 4.0, hx: 0.3, hz: 1.35 },
+    { x: 10.2, z: 3.4, hx: 0.38, hz: 0.38 },
+    { x: 10.2, z: 4.6, hx: 0.38, hz: 0.38 },
+    // Studio SE + stool
+    { x: 10.3, z: -9.1, hx: 1.05, hz: 0.55 },
+    { x: 10.3, z: -8.35, hx: 0.28, hz: 0.28 },
+
+    // Wayfinder console against hall wall (not center of path)
+    { x: 2.5, z: 0.35, hx: 0.55, hz: 0.28 },
 ];
 
 const PLAYER_R = 0.34;
@@ -330,7 +342,7 @@ export function hotspotProximity(x: number, z: number, h: Hotspot): number {
     return 1 - d / h.radius;
 }
 
-/** Living rug band for footstep material */
 export function isOnLivingRug(x: number, z: number): boolean {
-    return Math.abs(x) < 4.5 && z > -8.5 && z < -2.2;
+    // Matches staged living rug under sofa → fire group
+    return Math.abs(x) < 3.6 && z > -10.8 && z < -4.4;
 }
