@@ -156,7 +156,7 @@ export default function HouseHints({
                     `remind-${next}`,
                     `Still unexplored: ${STATION_LABELS[next]}`,
                     next === 'computer'
-                        ? 'Truth lives only in Truth.OS — boot the monitor'
+                        ? 'Computer is powered down here — use Return to terminal'
                         : 'A house room waits',
                     5000,
                 );
@@ -167,7 +167,7 @@ export default function HouseHints({
                 key,
                 `Still unexplored: ${STATION_LABELS[id]}`,
                 id === 'computer'
-                    ? 'Truth lives only in Truth.OS — boot the monitor'
+                    ? 'Use the top-left button to return to the terminal'
                     : 'A house room waits',
                 5000,
             );

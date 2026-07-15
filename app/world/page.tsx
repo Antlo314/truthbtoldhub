@@ -28,7 +28,7 @@ export default function WorldPage() {
             >
                 ← Truth.OS desktop
             </Link>
-            <HouseExperience />
+            <HouseExperience disableOsBoot />
         </div>
     );
 }

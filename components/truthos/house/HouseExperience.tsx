@@ -77,7 +77,12 @@ function ensureGuestId(): string {
     }
 }
 
-export default function HouseExperience() {
+export default function HouseExperience({
+    /** When true (opened from Truth.OS), computer cannot re-open the terminal */
+    disableOsBoot = false,
+}: {
+    disableOsBoot?: boolean;
+} = {}) {
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const { device } = useClientDevice();
@@ -292,6 +297,12 @@ export default function HouseExperience() {
             markVisited(h.id);
             if (h.action.type === 'os') {
                 markVisited('computer');
+                // Terminal is the primary surface — no re-entry from chamber
+                if (disableOsBoot) {
+                    setSoonMessage('Return to Truth.OS with the button at the top-left of the chamber.');
+                    window.setTimeout(() => setSoonMessage(null), 3800);
+                    return;
+                }
                 // Truth.OS requires a real signed-in soul (not guest)
                 if (guest) {
                     pendingOsLogin.current = true;
@@ -311,7 +322,7 @@ export default function HouseExperience() {
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest, setSoonMessage],
+        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot],
     );
 
     const tryInteract = useCallback(() => {
@@ -486,7 +497,8 @@ export default function HouseExperience() {
                         guest={guest}
                         onSignIn={() => setAuthOpen(true)}
                     />
-                    {!isMobile && <TruthGuideWidget placement="desktop" />}
+                    {/* No “boot Truth.OS” guide when chamber is secondary to the terminal */}
+                    {!isMobile && !disableOsBoot && <TruthGuideWidget placement="desktop" />}
                 </>
             )}
 
@@ -514,7 +526,8 @@ export default function HouseExperience() {
                 </div>
             )}
 
-            {osOpen && (
+            {/* Nested OS only when house is primary host (legacy). Chamber mode never re-opens terminal. */}
+            {osOpen && !disableOsBoot && (
                 <div
                     className="fixed z-50 inset-0 sm:inset-[1.5%] sm:rounded-xl overflow-hidden border-0 sm:border border-zinc-700 shadow-2xl bg-black"
                     data-allow-select

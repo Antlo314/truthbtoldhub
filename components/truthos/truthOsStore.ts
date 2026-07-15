@@ -16,6 +16,9 @@ export type OsAppId =
     | 'archive'
     | 'wayfinder'
     | 'files'
+    | 'calculator'
+    | 'paint'
+    | 'notepad'
     | 'account'
     | 'settings'
     | 'admin'
@@ -40,7 +43,6 @@ export const PROTECTED_APPS = new Set<OsAppId>([
     'wayfinder',
     'admin',
     'account',
-    'chamber',
 ]);
 
 export function detectDevice(): 'desktop' | 'phone' {
@@ -112,11 +114,14 @@ export const APP_META: Record<
     library: { title: 'Library', w: 520, h: 480, label: 'Library', accent: 'sky' },
     archive: { title: 'The Hall', w: 560, h: 520, label: 'Hall', accent: 'indigo' },
     wayfinder: { title: 'Wayfinder', w: 480, h: 440, label: 'Wayfinder', accent: 'teal', protected: true },
-    files: { title: 'Files', w: 420, h: 400, label: 'Files', accent: 'sky' },
+    files: { title: 'File Explorer', w: 640, h: 480, label: 'Files', accent: 'sky' },
+    calculator: { title: 'Calculator', w: 320, h: 440, label: 'Calculator', accent: 'emerald' },
+    paint: { title: 'Paint', w: 700, h: 520, label: 'Paint', accent: 'pink' },
+    notepad: { title: 'Notepad', w: 520, h: 440, label: 'Notepad', accent: 'zinc' },
     account: { title: 'Account', w: 440, h: 480, label: 'Account', accent: 'cyan', protected: true },
     settings: { title: 'Settings', w: 400, h: 400, label: 'Settings', accent: 'zinc' },
     admin: { title: 'Admin Console', w: 560, h: 560, label: 'Admin', accent: 'rose', protected: true },
-    chamber: { title: 'Chamber', w: 720, h: 520, label: 'Chamber', accent: 'emerald', protected: true },
+    chamber: { title: 'Leave Terminal', w: 480, h: 360, label: 'Leave Terminal', accent: 'emerald' },
 };
 
 /** Preferred bento slot order when opening apps */

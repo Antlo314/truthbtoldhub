@@ -18,6 +18,12 @@ import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
 import AdminConsole from './AdminConsole';
 import { isAdminEmail } from '@/lib/adminEmails';
 import DonationSection from '@/components/DonationSection';
+import {
+    CalculatorApp,
+    FileExplorerApp,
+    NotepadApp,
+    PaintApp,
+} from './SystemApps';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
@@ -180,12 +186,13 @@ export function AccountApp() {
 }
 
 export function FilesApp() {
+    return <FileExplorerApp />;
+}
+
+export function WebLinksApp() {
     return (
         <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Files" sub="Sanctum shortcuts" accent="text-sky-400/80" />
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                Jump into full routes. Core Hut tools also live as desktop apps in Start.
-            </p>
+            <AppHeader title="Web" sub="Sanctum shortcuts" accent="text-sky-400/80" />
             <LinkGrid
                 links={[
                     { href: '/library', label: 'Library', tag: 'scrolls' },
@@ -355,33 +362,21 @@ export function WayfinderApp() {
 export function ChamberApp({ onEnterChamber }: { onEnterChamber: () => void }) {
     return (
         <Panel className="bg-zinc-950 space-y-4">
-            <AppHeader title="Chamber.exe" sub="Optional 3D house" accent="text-emerald-300/80" />
+            <AppHeader title="Leave Terminal" sub="Pan out into the 3D house" accent="text-emerald-300/80" />
             <p className="text-sm text-zinc-300 leading-relaxed">
-                The first-person house is for souls who enjoy walking rooms. Every Hut feature also lives on this
-                desktop — you never need 3D to use Truth.OS.
+                Step out of Truth.OS into the first-person house. Use WASD / look on desktop, or touch controls on
+                phone. Return anytime with the desktop button in the chamber.
             </p>
-            <ul className="text-xs text-zinc-500 space-y-1.5 list-disc pl-4">
-                <li>WASD / look controls on desktop</li>
-                <li>Touch controls on phone</li>
-                <li>Exit anytime to return here</li>
-            </ul>
             <button
                 type="button"
                 onClick={() => {
                     sacredUi.access();
                     onEnterChamber();
                 }}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-semibold text-sm hover:brightness-110 transition"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-semibold text-sm hover:brightness-110 transition min-h-[48px]"
             >
-                Enter the Chamber
+                Leave terminal → enter 3D world
             </button>
-            <a
-                href="/world"
-                onClick={() => sacredUi.click()}
-                className="block text-center text-[11px] text-white/40 hover:text-white/70"
-            >
-                Open /world instead
-            </a>
         </Panel>
     );
 }
@@ -429,7 +424,7 @@ export function SettingsApp({
                     onClick={onEnterChamber}
                     className="w-full py-3 rounded-xl border border-emerald-500/25 text-left px-4 text-sm text-emerald-200/90 hover:bg-emerald-500/10 min-h-[44px]"
                 >
-                    Enter 3D Chamber (optional)
+                    Leave terminal → 3D world
                 </button>
             )}
             <button
@@ -490,6 +485,12 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <AdminConsole />;
         case 'files':
             return <FilesApp />;
+        case 'calculator':
+            return <CalculatorApp />;
+        case 'paint':
+            return <PaintApp />;
+        case 'notepad':
+            return <NotepadApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:

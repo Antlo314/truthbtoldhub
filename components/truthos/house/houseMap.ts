@@ -101,7 +101,7 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'computer',
         label: 'Desktop',
-        hint: 'Log in · boot Truth.OS',
+        hint: 'Monitor · return via desktop button',
         // Bedroom work corner — approach from room center
         position: [4.6, 1.0, 7.55],
         radius: 1.15,

@@ -30,6 +30,10 @@ type DockItem = {
 
 const APPS: DockItem[] = [
     { app: 'truth', label: 'Truth', emoji: '✦', guestOk: true },
+    { app: 'files', label: 'Files', emoji: '📁', guestOk: true },
+    { app: 'calculator', label: 'Calc', emoji: '🔢', guestOk: true },
+    { app: 'paint', label: 'Paint', emoji: '🎨', guestOk: true },
+    { app: 'notepad', label: 'Notepad', emoji: '📝', guestOk: true },
     { app: 'updates', label: 'Updates', emoji: '◎', guestOk: true },
     { app: 'ledger', label: 'Ledger', emoji: '▣' },
     { app: 'soul', label: 'Soul', emoji: '◉' },
@@ -40,10 +44,9 @@ const APPS: DockItem[] = [
     { app: 'library', label: 'Library', emoji: '▤', guestOk: true },
     { app: 'archive', label: 'Hall', emoji: '☰', guestOk: true },
     { app: 'wayfinder', label: 'Wayfinder', emoji: '⌖' },
-    { app: 'files', label: 'Files', emoji: '▦', guestOk: true },
     { app: 'account', label: 'Account', emoji: '☺' },
     { app: 'settings', label: 'Settings', emoji: '⚙', guestOk: true },
-    { app: 'chamber', label: 'Chamber', emoji: '⌂' },
+    { app: 'chamber', label: 'Leave', emoji: '🚪', guestOk: true },
     { app: 'admin', label: 'Admin', emoji: '✱', adminOnly: true },
 ];
 
@@ -508,6 +511,21 @@ export default function TruthOSShell({
                     </span>
                     <span className="hidden sm:inline">Start</span>
                 </button>
+                {onEnterChamber && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStartOpen(false);
+                            enterChamber();
+                            sacredUi.access();
+                        }}
+                        className="h-10 px-3 rounded-xl flex items-center gap-1.5 text-[11px] font-semibold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-300/40 min-w-[44px] shadow-[0_0_20px_rgba(52,211,153,0.25)]"
+                        title="Leave terminal — enter 3D world"
+                    >
+                        <span aria-hidden>🚪</span>
+                        <span className="hidden sm:inline">Leave terminal</span>
+                    </button>
+                )}
                 <div className="w-px h-7 bg-white/10 mx-1" />
                 <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
                     {windows.map((w) => {
