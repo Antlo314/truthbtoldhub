@@ -1,95 +1,156 @@
 'use client';
 
 /**
- * Truth.OS — desktop OS shell with custom icon sheet + wallpaper.
+ * Truth.OS — Windows × Bento desktop shell.
+ * Bottom taskbar, Start menu, snap windows. No 3D required.
  */
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { useTruthOs, type OsAppId } from './truthOsStore';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    useTruthOs,
+    APP_META,
+    type OsAppId,
+    type BentoSlot,
+    detectDevice,
+} from './truthOsStore';
 import { renderOsApp } from './apps/OsApps';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { hubAudio } from '@/lib/truthos/hubAudio';
+import AuthModal from '@/components/AuthModal';
 
 type DockItem = {
     app: OsAppId;
     label: string;
-    /** Position on 2×3 icon sheet (row-major 0–5) */
-    sheet: number;
+    emoji: string;
     adminOnly?: boolean;
+    guestOk?: boolean;
 };
 
 const APPS: DockItem[] = [
-    { app: 'truth', label: 'Truth', sheet: 0 },
-    { app: 'updates', label: 'Updates', sheet: 1 },
-    { app: 'files', label: 'Files', sheet: 2 },
-    { app: 'account', label: 'Account', sheet: 3 },
-    { app: 'settings', label: 'Settings', sheet: 4 },
-    { app: 'admin', label: 'Admin', sheet: 5, adminOnly: true },
+    { app: 'truth', label: 'Truth', emoji: '✦', guestOk: true },
+    { app: 'updates', label: 'Updates', emoji: '◎', guestOk: true },
+    { app: 'ledger', label: 'Ledger', emoji: '▣' },
+    { app: 'soul', label: 'Soul', emoji: '◉' },
+    { app: 'arcade', label: 'Arcade', emoji: '▷' },
+    { app: 'offering', label: 'Offering', emoji: '◇' },
+    { app: 'forge', label: 'Forge', emoji: '⚒' },
+    { app: 'visions', label: 'Visions', emoji: '◈', guestOk: true },
+    { app: 'library', label: 'Library', emoji: '▤', guestOk: true },
+    { app: 'archive', label: 'Hall', emoji: '☰', guestOk: true },
+    { app: 'wayfinder', label: 'Wayfinder', emoji: '⌖' },
+    { app: 'files', label: 'Files', emoji: '▦', guestOk: true },
+    { app: 'account', label: 'Account', emoji: '☺' },
+    { app: 'settings', label: 'Settings', emoji: '⚙', guestOk: true },
+    { app: 'chamber', label: 'Chamber', emoji: '⌂' },
+    { app: 'admin', label: 'Admin', emoji: '✱', adminOnly: true },
 ];
 
 const BOOT_LINES = [
     'Truth.OS BIOS · firmware OK',
     'mounting soul_fs…',
-    'loading icon atlas…',
+    'loading bento window manager…',
     'network · encrypted channel',
     'desktop session ready',
 ];
 
-/** 2×3 atlas → CSS background position (percent) */
-function OsIcon({ index, size = 48, className = '' }: { index: number; size?: number; className?: string }) {
-    const col = index % 3;
-    const row = Math.floor(index / 3);
-    const x = col === 0 ? 0 : col === 1 ? 50 : 100;
-    const y = row === 0 ? 0 : 100;
+const BENTO_CLASS: Record<BentoSlot, string> = {
+    hero: 'col-span-1 row-span-2 md:col-start-1 md:row-start-1',
+    a: 'col-span-1 row-span-1 md:col-start-2 md:row-start-1',
+    b: 'col-span-1 row-span-1 md:col-start-3 md:row-start-1',
+    c: 'col-span-1 row-span-1 md:col-start-2 md:row-start-2',
+    d: 'col-span-1 row-span-1 md:col-start-3 md:row-start-2',
+    float: '',
+    max: 'col-span-full row-span-full',
+};
+
+function AppTile({
+    emoji,
+    label,
+    accent,
+    onClick,
+    large,
+}: {
+    emoji: string;
+    label: string;
+    accent?: string;
+    onClick: () => void;
+    large?: boolean;
+}) {
     return (
-        <span
-            className={`block rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 ${className}`}
-            style={{
-                width: size,
-                height: size,
-                backgroundImage: 'url(/truthos/os-icons.jpg)',
-                backgroundSize: '300% 200%',
-                backgroundPosition: `${x}% ${y}%`,
-                backgroundRepeat: 'no-repeat',
-            }}
-            aria-hidden
-        />
+        <button
+            type="button"
+            onClick={onClick}
+            className={`group flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.09] hover:border-emerald-400/30 transition-all active:scale-[0.98] ${
+                large ? 'min-h-[88px] p-3' : 'min-h-[72px] p-2'
+            }`}
+        >
+            <span
+                className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/10 shadow-inner ${
+                    large ? 'w-12 h-12 text-xl' : 'w-10 h-10 text-lg'
+                } ${accent || ''}`}
+            >
+                {emoji}
+            </span>
+            <span className="text-[11px] text-white/80 group-hover:text-white text-center leading-tight px-1">
+                {label}
+            </span>
+        </button>
     );
 }
 
 export default function TruthOSShell({
     onLogout,
+    onEnterChamber,
 }: {
     onLogout: () => void;
+    onEnterChamber?: () => void;
     mode?: 'desktop' | 'phone';
 }) {
+    const enterChamber = onEnterChamber ?? (() => {});
     const {
         windows,
         focusId,
         bootDone,
         startOpen,
+        layoutMode,
+        sessionEmail,
+        authPrompt,
+        pendingApp,
         openApp,
         closeWindow,
         focusWindow,
         moveWindow,
         minimizeWindow,
         toggleMaximize,
+        setSnap,
         setBootDone,
         setStartOpen,
-        closeToRoom,
+        setSessionEmail,
+        setAuthPrompt,
         enterOs,
+        setLayoutMode,
     } = useTruthOs();
+
     const [bootLine, setBootLine] = useState(0);
     const [clock, setClock] = useState('');
-    const [email, setEmail] = useState<string | null>(null);
+    const email = sessionEmail;
     const isAdmin = isAdminEmail(email);
 
     useEffect(() => {
         enterOs();
         hubAudio.osBootStart();
         let i = 0;
+        const reduce =
+            typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) {
+            setBootLine(BOOT_LINES.length);
+            setBootDone(true);
+            hubAudio.osBootReady();
+            return;
+        }
         const t = setInterval(() => {
             i += 1;
             setBootLine(i);
@@ -100,9 +161,9 @@ export default function TruthOSShell({
                     setBootDone(true);
                     hubAudio.osBootReady();
                     sacredUi.access();
-                }, 180);
+                }, 160);
             }
-        }, 130);
+        }, 120);
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -122,15 +183,44 @@ export default function TruthOSShell({
     }, []);
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
-    }, []);
+        supabase.auth.getSession().then(({ data }) => {
+            setSessionEmail(data.session?.user?.email ?? null);
+        });
+        const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+            setSessionEmail(session?.user?.email ?? null);
+        });
+        return () => sub.subscription.unsubscribe();
+    }, [setSessionEmail]);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (startOpen) setStartOpen(false);
+                else if (authPrompt) setAuthPrompt(false);
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+                e.preventDefault();
+                setStartOpen(!startOpen);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [startOpen, authPrompt, setStartOpen, setAuthPrompt]);
 
     const visibleApps = APPS.filter((a) => !a.adminOnly || isAdmin);
     const openWindows = windows.filter((w) => !w.minimized);
+    const phone = detectDevice() === 'phone';
+    const useBento = layoutMode === 'bento' && !phone;
+
+    const launch = (app: OsAppId) => {
+        openApp(app);
+        hubAudio.osWindowOpen();
+        sacredUi.click();
+    };
 
     if (!bootDone) {
         return (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050508] font-mono text-sm text-[#5dff6a]">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050508] font-mono text-sm text-[#5dff6a]">
                 <div className="w-full max-w-md px-6 space-y-2">
                     <div className="flex items-center gap-3 mb-5">
                         <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-sm font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)]">
@@ -138,7 +228,7 @@ export default function TruthOSShell({
                         </span>
                         <div>
                             <p className="text-[10px] tracking-[0.4em] text-[#2d6b35]">TRUTH.OS</p>
-                            <p className="text-[11px] text-emerald-400/50">v1.4 · house desktop</p>
+                            <p className="text-[11px] text-emerald-400/50">v2.0 · Windows × Bento</p>
                         </div>
                     </div>
                     {BOOT_LINES.slice(0, bootLine).map((m, i) => (
@@ -159,181 +249,248 @@ export default function TruthOSShell({
     }
 
     return (
-        <div className="absolute inset-0 z-50 flex flex-col overflow-hidden select-none bg-[#0a0c12]">
-            {/* Wallpaper image + soft overlays */}
+        <div className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#0a0c12]">
+            {/* Wallpaper */}
             <div
                 className="pointer-events-none absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: 'url(/truthos/os-wallpaper.jpg)' }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/55" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.035]"
+                className="pointer-events-none absolute inset-0 opacity-[0.04]"
                 style={{
                     backgroundImage:
                         'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-                    backgroundSize: '48px 48px',
+                    backgroundSize: '56px 56px',
                 }}
             />
 
-            {/* Menu bar */}
-            <header className="relative z-40 h-9 shrink-0 flex items-center justify-between px-3 border-b border-white/10 bg-black/60 backdrop-blur-xl">
-                <div className="flex items-center gap-3 min-w-0">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            const next = !startOpen;
-                            setStartOpen(next);
-                            if (next) hubAudio.osStartMenu();
-                            else sacredUi.click();
-                        }}
-                        className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-white/10"
-                    >
-                        <span className="w-4 h-4 rounded bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-[9px] font-black text-black">
-                            T
-                        </span>
-                        <span className="text-[12px] font-semibold text-white/90">Truth.OS</span>
-                    </button>
-                    <span className="hidden sm:inline text-[10px] text-white/30 font-mono truncate">
-                        {email || 'session'}
-                        {isAdmin && <span className="ml-2 text-rose-400">· ADMIN</span>}
-                    </span>
-                </div>
-                <div className="flex items-center gap-3 text-[11px] font-mono text-white/50">
-                    <span className="hidden md:inline text-white/25">soul_fs · secure</span>
-                    <span className="hidden sm:inline">{clock}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]" title="Online" />
-                </div>
-            </header>
-
-            {/* Desktop */}
-            <div className="relative flex-1 min-h-0" onClick={() => setStartOpen(false)}>
-                {/* Desktop icons — icon sheet */}
-                <div className="absolute top-4 left-3 sm:left-5 grid grid-cols-1 sm:grid-cols-1 gap-5 z-[1]">
-                    {visibleApps.map((d) => (
+            {/* Desktop workspace (above taskbar) */}
+            <div
+                className="relative flex-1 min-h-0 pb-14"
+                onClick={() => {
+                    if (startOpen) setStartOpen(false);
+                }}
+            >
+                {/* Desktop icon rail */}
+                <div className="absolute top-3 left-2 sm:left-4 z-[2] grid grid-cols-1 gap-3 max-h-[calc(100%-1rem)] overflow-y-auto pr-1">
+                    {visibleApps.slice(0, phone ? 6 : 8).map((d) => (
                         <button
                             key={d.app}
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                openApp(d.app);
-                                hubAudio.osWindowOpen();
-                                sacredUi.click();
+                                launch(d.app);
                             }}
-                            className="w-[80px] flex flex-col items-center gap-1.5 group touch-manipulation"
+                            className="w-[76px] flex flex-col items-center gap-1 group touch-manipulation"
                         >
-                            <span
-                                className={`relative transition-transform group-hover:scale-105 group-active:scale-95 ${
-                                    d.adminOnly ? 'ring-2 ring-rose-400/40 rounded-2xl' : ''
-                                }`}
-                            >
-                                <OsIcon index={d.sheet} size={52} />
-                                <span className="pointer-events-none absolute inset-0 rounded-2xl bg-white/0 group-hover:bg-white/5" />
+                            <span className="w-12 h-12 rounded-2xl bg-black/40 border border-white/15 flex items-center justify-center text-xl shadow-lg group-hover:border-emerald-400/40 group-hover:scale-105 transition">
+                                {d.emoji}
                             </span>
-                            <span className="text-[11px] text-white/85 group-hover:text-white text-center leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] px-1 rounded bg-black/25">
+                            <span className="text-[10px] text-white/85 text-center leading-tight drop-shadow px-1 rounded bg-black/30">
                                 {d.label}
                             </span>
                         </button>
                     ))}
                 </div>
 
-                {/* Welcome card */}
-                <div className="absolute bottom-4 right-3 sm:right-5 z-[1] max-w-[220px] rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-3.5 py-3 pointer-events-none hidden sm:block">
-                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">Desktop</p>
-                    <p className="text-[12px] text-white/75 mt-1 leading-snug">
-                        Open Truth, Files, or Account. Walk the house for stations.
+                {/* Welcome / lock chip */}
+                <div className="absolute top-3 right-3 z-[2] max-w-[240px] rounded-2xl border border-white/10 bg-black/50 backdrop-blur-md px-3.5 py-3 hidden sm:block">
+                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">
+                        {email ? 'Signed in' : 'Guest desktop'}
                     </p>
+                    <p className="text-[12px] text-white/75 mt-1 leading-snug">
+                        {email
+                            ? 'All Hut apps unlock from Start.'
+                            : 'Sign in with Google for Ledger, Soul, Arcade & more.'}
+                    </p>
+                    {!email && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setAuthPrompt(true);
+                                sacredUi.click();
+                            }}
+                            className="mt-2 w-full py-2 rounded-xl bg-white text-black text-[11px] font-semibold"
+                        >
+                            Sign in
+                        </button>
+                    )}
                 </div>
 
-                {/* Windows */}
-                <AnimatePresence>
-                    {openWindows.map((w) => (
-                        <OsWindowFrame
-                            key={w.id}
-                            title={w.title}
-                            app={w.app}
-                            sheet={APPS.find((a) => a.app === w.app)?.sheet ?? 0}
-                            x={w.x}
-                            y={w.y}
-                            w={w.w}
-                            h={w.h}
-                            z={w.z}
-                            maximized={!!w.maximized}
-                            focused={focusId === w.id}
-                            onFocus={() => focusWindow(w.id)}
-                            onClose={() => closeWindow(w.id)}
-                            onMinimize={() => minimizeWindow(w.id)}
-                            onMaximize={() => toggleMaximize(w.id)}
-                            onMove={(x, y) => moveWindow(w.id, x, y)}
-                        >
-                            {renderOsApp(w.app, {
-                                onLogout,
-                                onExit: () => closeToRoom(),
-                            })}
-                        </OsWindowFrame>
-                    ))}
-                </AnimatePresence>
-
-                {/* Start menu */}
-                {startOpen && (
+                {/* Bento / float window layer */}
+                {useBento ? (
                     <div
-                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,320px)] rounded-2xl border border-white/12 bg-[#12151c]/92 backdrop-blur-2xl shadow-2xl overflow-hidden"
+                        className="absolute inset-0 p-3 pl-[92px] pr-3 pt-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr"
+                        style={{ bottom: 0 }}
+                    >
+                        <AnimatePresence>
+                            {openWindows.map((w) => (
+                                <div
+                                    key={w.id}
+                                    className={`${BENTO_CLASS[w.snap] || ''} min-h-0 ${
+                                        w.snap === 'float' ? 'relative' : ''
+                                    }`}
+                                    style={{ zIndex: w.z }}
+                                >
+                                    <OsWindowFrame
+                                        title={w.title}
+                                        app={w.app}
+                                        emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
+                                        x={w.x}
+                                        y={w.y}
+                                        w={w.w}
+                                        h={w.h}
+                                        z={w.z}
+                                        maximized={!!w.maximized || w.snap === 'max'}
+                                        focused={focusId === w.id}
+                                        bento
+                                        onFocus={() => focusWindow(w.id)}
+                                        onClose={() => {
+                                            closeWindow(w.id);
+                                            hubAudio.osWindowClose();
+                                        }}
+                                        onMinimize={() => minimizeWindow(w.id)}
+                                        onMaximize={() => toggleMaximize(w.id)}
+                                        onMove={(x, y) => moveWindow(w.id, x, y)}
+                                        onSnap={(s) => setSnap(w.id, s)}
+                                    >
+                                        {renderOsApp(w.app, {
+                                            onLogout,
+                                            onEnterChamber: enterChamber,
+                                        })}
+                                    </OsWindowFrame>
+                                </div>
+                            ))}
+                        </AnimatePresence>
+                        {openWindows.length === 0 && (
+                            <div className="md:col-span-3 md:row-span-2 flex items-center justify-center pointer-events-none">
+                                <div className="rounded-3xl border border-white/10 bg-black/35 backdrop-blur-md px-8 py-6 max-w-md text-center">
+                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-400/70 font-mono mb-2">
+                                        Desktop
+                                    </p>
+                                    <p className="text-white/80 text-sm leading-relaxed">
+                                        Press <span className="text-emerald-300">Start</span> for the full Hut. Windows
+                                        snap into a Bento grid — no 3D required.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="absolute inset-0">
+                        <AnimatePresence>
+                            {openWindows.map((w) => (
+                                <OsWindowFrame
+                                    key={w.id}
+                                    title={w.title}
+                                    app={w.app}
+                                    emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
+                                    x={w.x}
+                                    y={w.y}
+                                    w={w.w}
+                                    h={w.h}
+                                    z={w.z}
+                                    maximized={!!w.maximized || phone}
+                                    focused={focusId === w.id}
+                                    bento={false}
+                                    onFocus={() => focusWindow(w.id)}
+                                    onClose={() => closeWindow(w.id)}
+                                    onMinimize={() => minimizeWindow(w.id)}
+                                    onMaximize={() => toggleMaximize(w.id)}
+                                    onMove={(x, y) => moveWindow(w.id, x, y)}
+                                    onSnap={(s) => setSnap(w.id, s)}
+                                >
+                                    {renderOsApp(w.app, {
+                                        onLogout,
+                                        onEnterChamber: enterChamber,
+                                    })}
+                                </OsWindowFrame>
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                )}
+
+                {/* Start menu — above taskbar */}
+                {startOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,380px)] max-h-[min(70vh,560px)] rounded-2xl border border-white/12 bg-[#12151c]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3">
-                            <OsIcon index={3} size={36} />
-                            <div className="min-w-0">
+                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3 shrink-0">
+                            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black">
+                                T
+                            </span>
+                            <div className="min-w-0 flex-1">
                                 <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-mono">Start</p>
                                 <p className="text-sm text-white font-medium mt-0.5 truncate">
-                                    {email || 'Truth.OS user'}
+                                    {email || 'Guest · sign in for full Hut'}
                                 </p>
                             </div>
-                        </div>
-                        <div className="p-2 grid grid-cols-2 gap-1">
-                            {visibleApps.map((d) => (
+                            {!email && (
                                 <button
-                                    key={d.app}
                                     type="button"
-                                    onClick={() => {
-                                        openApp(d.app);
-                                        hubAudio.osWindowOpen();
-                                        sacredUi.click();
-                                    }}
-                                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-white/8 text-left"
+                                    onClick={() => setAuthPrompt(true)}
+                                    className="shrink-0 text-[10px] px-2.5 py-1.5 rounded-lg bg-white text-black font-semibold"
                                 >
-                                    <OsIcon index={d.sheet} size={32} className="!rounded-xl shrink-0" />
-                                    <span className="text-[12px] text-white/80">{d.label}</span>
+                                    Google
                                 </button>
+                            )}
+                        </div>
+                        <div className="p-3 grid grid-cols-3 gap-2 overflow-y-auto flex-1">
+                            {visibleApps.map((d) => (
+                                <AppTile
+                                    key={d.app}
+                                    emoji={d.emoji}
+                                    label={d.label}
+                                    onClick={() => launch(d.app)}
+                                />
                             ))}
                         </div>
-                        <div className="p-2 border-t border-white/10 space-y-1">
+                        <div className="p-2 border-t border-white/10 space-y-1 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => {
-                                    closeToRoom();
-                                    hubAudio.osExitToHouse();
+                                    setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento');
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-white/60 hover:bg-white/8"
+                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-white/60 hover:bg-white/8 min-h-[44px]"
                             >
-                                Sleep · return to house
+                                Layout · {layoutMode === 'bento' ? 'Bento snap' : 'Free float'}
                             </button>
+                            {onEnterChamber && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStartOpen(false);
+                                        enterChamber();
+                                        sacredUi.click();
+                                    }}
+                                    className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-emerald-300/80 hover:bg-emerald-500/10 min-h-[44px]"
+                                >
+                                    Enter 3D Chamber (optional)
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => {
                                     onLogout();
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-red-300/80 hover:bg-red-500/10"
+                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-red-300/80 hover:bg-red-500/10 min-h-[44px]"
                             >
                                 Sign out
                             </button>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
             </div>
 
-            {/* Taskbar */}
-            <footer className="relative z-40 h-12 shrink-0 flex items-center gap-1 px-2 border-t border-white/10 bg-black/75 backdrop-blur-xl">
+            {/* Bottom taskbar */}
+            <footer className="absolute bottom-0 inset-x-0 z-50 h-14 flex items-center gap-1 px-2 border-t border-white/10 bg-black/80 backdrop-blur-xl">
                 <button
                     type="button"
                     onClick={() => {
@@ -342,19 +499,19 @@ export default function TruthOSShell({
                         if (next) hubAudio.osStartMenu();
                         else sacredUi.click();
                     }}
-                    className={`h-9 px-3 rounded-lg flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
-                        startOpen ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10'
+                    className={`h-10 px-3 rounded-xl flex items-center gap-2 text-[13px] font-semibold transition-colors min-w-[44px] ${
+                        startOpen ? 'bg-emerald-500/20 text-white border border-emerald-400/30' : 'text-white/80 hover:bg-white/10 border border-transparent'
                     }`}
                 >
-                    <span className="w-5 h-5 rounded bg-gradient-to-br from-emerald-400 to-cyan-500 text-[10px] font-black text-black flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-[11px] font-black text-black flex items-center justify-center">
                         T
                     </span>
-                    Start
+                    <span className="hidden sm:inline">Start</span>
                 </button>
-                <div className="w-px h-6 bg-white/10 mx-1" />
-                <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0">
+                <div className="w-px h-7 bg-white/10 mx-1" />
+                <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
                     {windows.map((w) => {
-                        const sheet = APPS.find((a) => a.app === w.app)?.sheet ?? 0;
+                        const emoji = APPS.find((a) => a.app === w.app)?.emoji ?? '▣';
                         return (
                             <button
                                 key={w.id}
@@ -364,22 +521,43 @@ export default function TruthOSShell({
                                     else minimizeWindow(w.id);
                                     sacredUi.click();
                                 }}
-                                className={`h-9 pl-1.5 pr-3 rounded-lg text-[11px] truncate max-w-[160px] border transition-colors flex items-center gap-1.5 ${
+                                className={`h-10 pl-2 pr-3 rounded-xl text-[11px] truncate max-w-[150px] border transition-colors flex items-center gap-1.5 shrink-0 ${
                                     focusId === w.id && !w.minimized
                                         ? 'bg-white/12 border-white/15 text-white'
                                         : 'border-transparent text-white/50 hover:bg-white/8'
                                 }`}
                             >
-                                <OsIcon index={sheet} size={22} className="!rounded-md shrink-0" />
-                                <span className="truncate">{w.title}</span>
+                                <span className="text-sm">{emoji}</span>
+                                <span className="truncate hidden xs:inline sm:inline">{w.title}</span>
                             </button>
                         );
                     })}
                 </div>
-                <div className="hidden sm:flex items-center gap-2 px-2 text-[10px] font-mono text-white/40 shrink-0">
-                    <span>{clock.split(' · ')[0]}</span>
+                <div className="flex items-center gap-2 px-2 shrink-0">
+                    {isAdmin && (
+                        <span className="text-[9px] uppercase tracking-widest text-rose-400/90 hidden md:inline">
+                            Admin
+                        </span>
+                    )}
+                    <span className="text-[10px] font-mono text-white/45 hidden sm:inline">
+                        {clock.split(' · ')[0]}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]" title="Online" />
                 </div>
             </footer>
+
+            <AuthModal
+                isOpen={authPrompt}
+                isGated
+                onClose={() => setAuthPrompt(false)}
+                onSuccess={() => {
+                    setAuthPrompt(false);
+                    supabase.auth.getUser().then(({ data }) => {
+                        setSessionEmail(data.user?.email ?? null);
+                        if (pendingApp) openApp(pendingApp);
+                    });
+                }}
+            />
         </div>
     );
 }
@@ -387,7 +565,7 @@ export default function TruthOSShell({
 function OsWindowFrame({
     title,
     app,
-    sheet,
+    emoji,
     x,
     y,
     w,
@@ -395,16 +573,18 @@ function OsWindowFrame({
     z,
     maximized,
     focused,
+    bento,
     children,
     onFocus,
     onClose,
     onMinimize,
     onMaximize,
     onMove,
+    onSnap,
 }: {
     title: string;
     app: OsAppId;
-    sheet: number;
+    emoji: string;
     x: number;
     y: number;
     w: number;
@@ -412,97 +592,127 @@ function OsWindowFrame({
     z: number;
     maximized: boolean;
     focused: boolean;
-    children: React.ReactNode;
+    bento: boolean;
+    children: ReactNode;
     onFocus: () => void;
     onClose: () => void;
     onMinimize: () => void;
     onMaximize: () => void;
     onMove: (x: number, y: number) => void;
+    onSnap: (s: BentoSlot) => void;
 }) {
     const drag = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
-    const narrow = typeof window !== 'undefined' && window.innerWidth < 640;
-    const accent = app === 'admin' ? 'border-rose-500/40' : focused ? 'border-emerald-500/35' : 'border-white/12';
+    const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
+    const accent =
+        app === 'admin'
+            ? 'border-rose-500/40'
+            : focused
+              ? 'border-emerald-500/35'
+              : 'border-white/12';
+
+    const style: React.CSSProperties =
+        bento || maximized || narrow
+            ? {
+                  position: bento && !maximized && !narrow ? 'relative' : 'absolute',
+                  inset: bento && !maximized && !narrow ? undefined : narrow || maximized ? 8 : undefined,
+                  bottom: bento && !maximized && !narrow ? undefined : narrow || maximized ? 60 : undefined,
+                  left: bento && !maximized && !narrow ? undefined : maximized || narrow ? 8 : x,
+                  top: bento && !maximized && !narrow ? undefined : maximized || narrow ? 8 : y,
+                  width: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(w, (typeof window !== 'undefined' ? window.innerWidth : w) - 24),
+                  height: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(h, (typeof window !== 'undefined' ? window.innerHeight : h) - 100),
+                  zIndex: z,
+                  background: '#0e1016',
+              }
+            : {
+                  position: 'absolute',
+                  left: x,
+                  top: y,
+                  width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
+                  height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
+                  zIndex: z,
+                  background: '#0e1016',
+              };
 
     return (
         <div
-            className={`absolute flex flex-col overflow-hidden border shadow-2xl ${
-                narrow || maximized ? 'rounded-none sm:rounded-xl' : 'rounded-xl'
-            } ${accent} ${focused ? 'shadow-black/50' : 'opacity-95'}`}
-            style={
-                narrow || maximized
-                    ? {
-                          inset: narrow ? 8 : 8,
-                          bottom: narrow ? 56 : 56,
-                          zIndex: z,
-                          background: '#0e1016',
-                      }
-                    : {
-                          left: x,
-                          top: y,
-                          width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
-                          height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
-                          zIndex: z,
-                          background: '#0e1016',
-                      }
-            }
+            className={`flex flex-col overflow-hidden border shadow-2xl rounded-2xl ${accent} ${
+                focused ? 'shadow-black/50' : 'opacity-95'
+            } ${bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''}`}
+            style={style}
             onMouseDown={onFocus}
         >
             <div
-                className="h-10 shrink-0 flex items-center gap-2 px-2 bg-[#161a22] border-b border-white/8 cursor-grab active:cursor-grabbing select-none"
+                className="h-10 shrink-0 flex items-center gap-2 px-2 border-b border-white/10 bg-black/50 cursor-default"
                 onPointerDown={(e) => {
-                    if (narrow || maximized) return;
-                    if ((e.target as HTMLElement).closest('button')) return;
-                    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                    if (narrow || maximized || bento) return;
+                    const el = e.currentTarget.parentElement;
+                    if (!el) return;
                     drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
-                    onFocus();
+                    const move = (ev: PointerEvent) => {
+                        if (!drag.current) return;
+                        onMove(
+                            drag.current.sx + (ev.clientX - drag.current.ox),
+                            drag.current.sy + (ev.clientY - drag.current.oy),
+                        );
+                    };
+                    const up = () => {
+                        drag.current = null;
+                        window.removeEventListener('pointermove', move);
+                        window.removeEventListener('pointerup', up);
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up);
                 }}
-                onPointerMove={(e) => {
-                    if (!drag.current) return;
-                    onMove(
-                        drag.current.sx + (e.clientX - drag.current.ox),
-                        drag.current.sy + (e.clientY - drag.current.oy),
-                    );
-                }}
-                onPointerUp={() => {
-                    drag.current = null;
-                }}
-                onDoubleClick={() => onMaximize()}
             >
-                <div className="flex items-center gap-1.5 pl-1">
+                <span className="text-sm pl-1">{emoji}</span>
+                <span className="text-[12px] text-white/85 font-medium truncate flex-1">{title}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                    {!narrow && (
+                        <button
+                            type="button"
+                            title="Snap bento"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSnap('hero');
+                            }}
+                            className="w-7 h-7 rounded-md text-[10px] text-white/40 hover:bg-white/10 hover:text-white"
+                        >
+                            ⊞
+                        </button>
+                    )}
                     <button
                         type="button"
-                        aria-label="Close"
-                        className="w-3 h-3 rounded-full bg-red-500/85 hover:bg-red-400"
                         onClick={(e) => {
                             e.stopPropagation();
-                            hubAudio.osWindowClose();
-                            onClose();
-                        }}
-                    />
-                    <button
-                        type="button"
-                        aria-label="Minimize"
-                        className="w-3 h-3 rounded-full bg-amber-500/70 hover:bg-amber-400"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            hubAudio.playSfx('os_window_close', { volume: 0.22 });
                             onMinimize();
                         }}
-                    />
+                        className="w-7 h-7 rounded-md text-white/50 hover:bg-white/10 text-sm leading-none"
+                    >
+                        –
+                    </button>
                     <button
                         type="button"
-                        aria-label="Maximize"
-                        className="w-3 h-3 rounded-full bg-emerald-500/70 hover:bg-emerald-400"
                         onClick={(e) => {
                             e.stopPropagation();
                             onMaximize();
                         }}
-                    />
+                        className="w-7 h-7 rounded-md text-white/50 hover:bg-white/10 text-[10px]"
+                    >
+                        □
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
+                        className="w-7 h-7 rounded-md text-white/50 hover:bg-red-500/30 hover:text-red-200 text-sm leading-none"
+                    >
+                        ×
+                    </button>
                 </div>
-                <OsIcon index={sheet} size={18} className="!rounded-md ml-1 shrink-0" />
-                <span className="ml-1.5 text-[12px] text-white/70 truncate flex-1 font-medium">{title}</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+            <div className="flex-1 min-h-0 overflow-hidden bg-[#0e1016]">{children}</div>
         </div>
     );
 }

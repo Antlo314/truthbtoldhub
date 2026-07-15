@@ -1,23 +1,34 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 /**
- * Legacy /world (old Hut) — always returns to Truth.OS House.
- * No chamber embed. Truth is only on the computer (Truth.OS).
+ * Optional 3D Chamber (legacy /world).
+ * Primary product is Truth.OS at `/`.
  */
+const HouseExperience = dynamic(
+    () => import('@/components/truthos/house/HouseExperience'),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="min-h-[100dvh] bg-black flex items-center justify-center font-mono text-emerald-500/50 text-xs tracking-[0.35em]">
+                entering chamber…
+            </div>
+        ),
+    },
+);
+
 export default function WorldPage() {
-    const router = useRouter();
-
-    useEffect(() => {
-        router.replace('/');
-    }, [router]);
-
     return (
-        <div className="min-h-[100dvh] bg-[#05060c] flex flex-col items-center justify-center text-center px-6">
-            <p className="text-[10px] uppercase tracking-[0.4em] text-aether-gold/70 mb-3">Truth.OS House</p>
-            <p className="font-ritual text-2xl text-white/85">Returning home…</p>
+        <div className="relative min-h-[100dvh]">
+            <Link
+                href="/"
+                className="absolute top-3 left-3 z-[80] px-3 py-2 rounded-xl bg-black/70 border border-emerald-400/30 text-[11px] uppercase tracking-widest text-emerald-200 hover:bg-black/90 backdrop-blur-md"
+            >
+                ← Truth.OS desktop
+            </Link>
+            <HouseExperience />
         </div>
     );
 }

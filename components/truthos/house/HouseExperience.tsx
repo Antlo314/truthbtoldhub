@@ -529,7 +529,13 @@ export default function HouseExperience() {
                     >
                         Exit OS · house
                     </button>
-                    <TruthOSShell onLogout={onLogout} />
+                    <TruthOSShell
+                        onLogout={onLogout}
+                        onEnterChamber={() => {
+                            setOsOpen(false);
+                            closeToRoom();
+                        }}
+                    />
                 </div>
             )}
         </div>
