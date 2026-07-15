@@ -35,16 +35,6 @@ const SoulPanel = dynamic(() => import('@/components/hut3d/hud/SoulPanel'), {
     loading: () => <OsLoading label="Soul forge" />,
 });
 
-const HutConsumableCraft = dynamic(() => import('@/components/game/HutConsumableCraft'), {
-    ssr: false,
-    loading: () => <OsLoading label="Forge" />,
-});
-
-const HutPortalBoard = dynamic(() => import('@/components/game/HutPortalBoard'), {
-    ssr: false,
-    loading: () => <OsLoading label="Wayfinder" />,
-});
-
 const HutLedger = dynamic(() => import('@/components/game/HutLedger'), {
     ssr: false,
     loading: () => <OsLoading label="Ledger" />,
@@ -179,7 +169,7 @@ export function AccountApp() {
             </div>
             <p className="text-xs text-zinc-500 leading-relaxed">
                 Shape your vessel in the <span className="text-zinc-300">Soul</span> app. Play Arcade, tend the Ledger,
-                and enter the Chamber only if you want the 3D house.
+                and use Leave terminal only if you want the 3D house.
             </p>
         </Panel>
     );
@@ -310,15 +300,6 @@ export function OfferingApp() {
     );
 }
 
-export function ForgeApp() {
-    return (
-        <Panel className="bg-zinc-950 p-2">
-            <AppHeader title="Forge.exe" sub="Craft & weapons" accent="text-orange-300/80" />
-            <HutConsumableCraft />
-        </Panel>
-    );
-}
-
 export function VisionsApp() {
     return (
         <Panel className="bg-zinc-950 space-y-3">
@@ -344,19 +325,6 @@ export function LibraryApp() {
 
 export function ArchiveApp() {
     return <RouteFrame href="/archive" title="The Hall" />;
-}
-
-export function WayfinderApp() {
-    const character = useGameStore((s) => s.character);
-    return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Wayfinder.exe" sub="Ages & portals" accent="text-teal-300/80" />
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                Portal board and journey ages. The 3D Chamber remains optional for those who want to walk.
-            </p>
-            <HutPortalBoard character={character} />
-        </Panel>
-    );
 }
 
 export function ChamberApp({ onEnterChamber }: { onEnterChamber: () => void }) {
@@ -461,16 +429,12 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <ArcadeApp />;
         case 'offering':
             return <OfferingApp />;
-        case 'forge':
-            return <ForgeApp />;
         case 'visions':
             return <VisionsApp />;
         case 'library':
             return <LibraryApp />;
         case 'archive':
             return <ArchiveApp />;
-        case 'wayfinder':
-            return <WayfinderApp />;
         case 'account':
             return <AccountApp />;
         case 'settings':

@@ -10,11 +10,9 @@ export type OsAppId =
     | 'soul'
     | 'arcade'
     | 'offering'
-    | 'forge'
     | 'visions'
     | 'library'
     | 'archive'
-    | 'wayfinder'
     | 'files'
     | 'calculator'
     | 'paint'
@@ -38,9 +36,7 @@ export const PROTECTED_APPS = new Set<OsAppId>([
     'ledger',
     'soul',
     'arcade',
-    'forge',
     'offering',
-    'wayfinder',
     'admin',
     'account',
 ]);
@@ -109,11 +105,9 @@ export const APP_META: Record<
     soul: { title: 'Your Soul', w: 480, h: 520, label: 'Soul', accent: 'cyan', protected: true },
     arcade: { title: 'Arcade', w: 640, h: 520, label: 'Arcade', accent: 'violet', protected: true },
     offering: { title: 'The Offering', w: 480, h: 520, label: 'Offering', accent: 'rose', protected: true },
-    forge: { title: 'The Forge', w: 520, h: 480, label: 'Forge', accent: 'orange', protected: true },
     visions: { title: 'Visions', w: 480, h: 440, label: 'Visions', accent: 'sky' },
     library: { title: 'Library', w: 520, h: 480, label: 'Library', accent: 'sky' },
     archive: { title: 'The Hall', w: 560, h: 520, label: 'Hall', accent: 'indigo' },
-    wayfinder: { title: 'Wayfinder', w: 480, h: 440, label: 'Wayfinder', accent: 'teal', protected: true },
     files: { title: 'File Explorer', w: 640, h: 480, label: 'Files', accent: 'sky' },
     calculator: { title: 'Calculator', w: 320, h: 440, label: 'Calculator', accent: 'emerald' },
     paint: { title: 'Paint', w: 700, h: 520, label: 'Paint', accent: 'pink' },

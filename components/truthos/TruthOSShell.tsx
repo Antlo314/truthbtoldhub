@@ -28,26 +28,38 @@ type DockItem = {
     guestOk?: boolean;
 };
 
+/** Hut home + utilities (no Forge / Wayfinder) */
 const APPS: DockItem[] = [
     { app: 'truth', label: 'Truth', emoji: '✦', guestOk: true },
-    { app: 'files', label: 'Files', emoji: '📁', guestOk: true },
-    { app: 'calculator', label: 'Calc', emoji: '🔢', guestOk: true },
-    { app: 'paint', label: 'Paint', emoji: '🎨', guestOk: true },
-    { app: 'notepad', label: 'Notepad', emoji: '📝', guestOk: true },
-    { app: 'updates', label: 'Updates', emoji: '◎', guestOk: true },
     { app: 'ledger', label: 'Ledger', emoji: '▣' },
     { app: 'soul', label: 'Soul', emoji: '◉' },
     { app: 'arcade', label: 'Arcade', emoji: '▷' },
     { app: 'offering', label: 'Offering', emoji: '◇' },
-    { app: 'forge', label: 'Forge', emoji: '⚒' },
-    { app: 'visions', label: 'Visions', emoji: '◈', guestOk: true },
-    { app: 'library', label: 'Library', emoji: '▤', guestOk: true },
     { app: 'archive', label: 'Hall', emoji: '☰', guestOk: true },
-    { app: 'wayfinder', label: 'Wayfinder', emoji: '⌖' },
+    { app: 'library', label: 'Library', emoji: '▤', guestOk: true },
+    { app: 'visions', label: 'Visions', emoji: '◈', guestOk: true },
+    { app: 'updates', label: 'Updates', emoji: '◎', guestOk: true },
+    { app: 'files', label: 'Files', emoji: '📁', guestOk: true },
+    { app: 'calculator', label: 'Calc', emoji: '🔢', guestOk: true },
+    { app: 'paint', label: 'Paint', emoji: '🎨', guestOk: true },
+    { app: 'notepad', label: 'Notepad', emoji: '📝', guestOk: true },
     { app: 'account', label: 'Account', emoji: '☺' },
     { app: 'settings', label: 'Settings', emoji: '⚙', guestOk: true },
     { app: 'chamber', label: 'Leave', emoji: '🚪', guestOk: true },
     { app: 'admin', label: 'Admin', emoji: '✱', adminOnly: true },
+];
+
+/** Hut stations shown as home-screen bento cards */
+const HUT_HOME: { app: OsAppId; emoji: string; title: string; blurb: string; span?: string }[] = [
+    { app: 'truth', emoji: '✦', title: 'Truth', blurb: 'Ask · lore · terminal', span: 'sm:col-span-2 sm:row-span-2' },
+    { app: 'ledger', emoji: '▣', title: 'Ledger', blurb: 'Daily Word · souls' },
+    { app: 'soul', emoji: '◉', title: 'Soul', blurb: 'Vessel · identity' },
+    { app: 'arcade', emoji: '▷', title: 'Arcade', blurb: 'Games · scores' },
+    { app: 'archive', emoji: '☰', title: 'The Hall', blurb: 'Community chat' },
+    { app: 'library', emoji: '▤', title: 'Library', blurb: 'Scrolls · study' },
+    { app: 'visions', emoji: '◈', title: 'Visions', blurb: 'Roads · cinema' },
+    { app: 'offering', emoji: '◇', title: 'Offering', blurb: 'Sustain the work' },
+    { app: 'updates', emoji: '◎', title: 'Updates', blurb: 'Dispatches' },
 ];
 
 const BOOT_LINES = [
@@ -275,59 +287,110 @@ export default function TruthOSShell({
                     if (startOpen) setStartOpen(false);
                 }}
             >
-                {/* Desktop icon rail */}
-                <div className="absolute top-3 left-2 sm:left-4 z-[2] grid grid-cols-1 gap-3 max-h-[calc(100%-1rem)] overflow-y-auto pr-1">
-                    {visibleApps.slice(0, phone ? 6 : 8).map((d) => (
-                        <button
-                            key={d.app}
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                launch(d.app);
-                            }}
-                            className="w-[76px] flex flex-col items-center gap-1 group touch-manipulation"
-                        >
-                            <span className="w-12 h-12 rounded-2xl bg-black/40 border border-white/15 flex items-center justify-center text-xl shadow-lg group-hover:border-emerald-400/40 group-hover:scale-105 transition">
-                                {d.emoji}
-                            </span>
-                            <span className="text-[10px] text-white/85 text-center leading-tight drop-shadow px-1 rounded bg-black/30">
-                                {d.label}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Welcome / lock chip */}
-                <div className="absolute top-3 right-3 z-[2] max-w-[240px] rounded-2xl border border-white/10 bg-black/50 backdrop-blur-md px-3.5 py-3 hidden sm:block">
-                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">
-                        {email ? 'Signed in' : 'Guest desktop'}
-                    </p>
-                    <p className="text-[12px] text-white/75 mt-1 leading-snug">
-                        {email
-                            ? 'All Hut apps unlock from Start.'
-                            : 'Sign in with Google for Ledger, Soul, Arcade & more.'}
-                    </p>
-                    {!email && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setAuthPrompt(true);
-                                sacredUi.click();
-                            }}
-                            className="mt-2 w-full py-2 rounded-xl bg-white text-black text-[11px] font-semibold"
-                        >
-                            Sign in
-                        </button>
-                    )}
-                </div>
-
-                {/* Bento / float window layer */}
-                {useBento ? (
+                {/* HOME: Hut bento (always under windows) */}
+                {openWindows.length === 0 && (
                     <div
-                        className="absolute inset-0 p-3 pl-[92px] pr-3 pt-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr"
-                        style={{ bottom: 0 }}
+                        className="absolute inset-0 z-[1] overflow-y-auto p-3 sm:p-5"
+                        onClick={(e) => e.stopPropagation()}
                     >
+                        <div className="max-w-5xl mx-auto space-y-4 pb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-400/80 font-mono">
+                                        Truth.OS · Home
+                                    </p>
+                                    <h1 className="text-2xl sm:text-3xl font-semibold text-white mt-1 tracking-tight">
+                                        The Hut
+                                    </h1>
+                                    <p className="text-sm text-white/55 mt-1 max-w-lg">
+                                        Everything that lived in the Hut is here — open a card. No 3D required.
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-3.5 py-3 shrink-0">
+                                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">
+                                        {email ? 'Signed in' : 'Guest'}
+                                    </p>
+                                    <p className="text-[12px] text-white/70 mt-0.5 max-w-[200px]">
+                                        {email
+                                            ? email
+                                            : 'Sign in for Ledger, Soul, Arcade & more.'}
+                                    </p>
+                                    {!email && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAuthPrompt(true);
+                                                sacredUi.click();
+                                            }}
+                                            className="mt-2 w-full py-2 rounded-xl bg-white text-black text-[11px] font-semibold min-h-[40px]"
+                                        >
+                                            Sign in with Google
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Hut stations bento */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 auto-rows-[minmax(100px,auto)]">
+                                {HUT_HOME.filter(
+                                    (c) => !APPS.find((a) => a.app === c.app)?.adminOnly || isAdmin,
+                                ).map((card) => (
+                                    <button
+                                        key={card.app}
+                                        type="button"
+                                        onClick={() => launch(card.app)}
+                                        className={`group text-left rounded-2xl border border-white/10 bg-black/40 hover:bg-black/55 hover:border-emerald-400/35 backdrop-blur-md p-3.5 sm:p-4 transition-all active:scale-[0.98] shadow-lg ${
+                                            card.span || ''
+                                        }`}
+                                    >
+                                        <span className="text-2xl sm:text-3xl block mb-2 group-hover:scale-105 transition-transform origin-left">
+                                            {card.emoji}
+                                        </span>
+                                        <span className="block text-sm sm:text-base font-semibold text-white">
+                                            {card.title}
+                                        </span>
+                                        <span className="block text-[11px] text-white/45 mt-0.5 leading-snug">
+                                            {card.blurb}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Utilities strip */}
+                            <div>
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-white/35 font-mono mb-2 px-0.5">
+                                    System tools
+                                </p>
+                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                    {(
+                                        [
+                                            ['files', '📁', 'Files'],
+                                            ['calculator', '🔢', 'Calc'],
+                                            ['paint', '🎨', 'Paint'],
+                                            ['notepad', '📝', 'Notes'],
+                                            ['settings', '⚙', 'Settings'],
+                                            ['chamber', '🚪', 'Leave'],
+                                        ] as const
+                                    ).map(([app, emoji, label]) => (
+                                        <button
+                                            key={app}
+                                            type="button"
+                                            onClick={() => launch(app)}
+                                            className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] py-3 px-2 flex flex-col items-center gap-1 min-h-[72px]"
+                                        >
+                                            <span className="text-lg">{emoji}</span>
+                                            <span className="text-[10px] text-white/70">{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Window layer */}
+                {useBento && openWindows.length > 0 ? (
+                    <div className="absolute inset-0 z-[5] p-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr">
                         <AnimatePresence>
                             {openWindows.map((w) => (
                                 <div
@@ -367,52 +430,41 @@ export default function TruthOSShell({
                                 </div>
                             ))}
                         </AnimatePresence>
-                        {openWindows.length === 0 && (
-                            <div className="md:col-span-3 md:row-span-2 flex items-center justify-center pointer-events-none">
-                                <div className="rounded-3xl border border-white/10 bg-black/35 backdrop-blur-md px-8 py-6 max-w-md text-center">
-                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-400/70 font-mono mb-2">
-                                        Desktop
-                                    </p>
-                                    <p className="text-white/80 text-sm leading-relaxed">
-                                        Press <span className="text-emerald-300">Start</span> for the full Hut. Windows
-                                        snap into a Bento grid — no 3D required.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 ) : (
-                    <div className="absolute inset-0">
-                        <AnimatePresence>
-                            {openWindows.map((w) => (
-                                <OsWindowFrame
-                                    key={w.id}
-                                    title={w.title}
-                                    app={w.app}
-                                    emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
-                                    x={w.x}
-                                    y={w.y}
-                                    w={w.w}
-                                    h={w.h}
-                                    z={w.z}
-                                    maximized={!!w.maximized || phone}
-                                    focused={focusId === w.id}
-                                    bento={false}
-                                    onFocus={() => focusWindow(w.id)}
-                                    onClose={() => closeWindow(w.id)}
-                                    onMinimize={() => minimizeWindow(w.id)}
-                                    onMaximize={() => toggleMaximize(w.id)}
-                                    onMove={(x, y) => moveWindow(w.id, x, y)}
-                                    onSnap={(s) => setSnap(w.id, s)}
-                                >
-                                    {renderOsApp(w.app, {
-                                        onLogout,
-                                        onEnterChamber: enterChamber,
-                                    })}
-                                </OsWindowFrame>
-                            ))}
-                        </AnimatePresence>
-                    </div>
+                    openWindows.length > 0 && (
+                        <div className="absolute inset-0 z-[5]">
+                            <AnimatePresence>
+                                {openWindows.map((w) => (
+                                    <OsWindowFrame
+                                        key={w.id}
+                                        title={w.title}
+                                        app={w.app}
+                                        emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
+                                        x={w.x}
+                                        y={w.y}
+                                        w={w.w}
+                                        h={w.h}
+                                        z={w.z}
+                                        maximized={!!w.maximized || phone}
+                                        focused={focusId === w.id}
+                                        bento={false}
+                                        onFocus={() => focusWindow(w.id)}
+                                        onClose={() => closeWindow(w.id)}
+                                        onMinimize={() => minimizeWindow(w.id)}
+                                        onMaximize={() => toggleMaximize(w.id)}
+                                        onMove={(x, y) => moveWindow(w.id, x, y)}
+                                        onSnap={(s) => setSnap(w.id, s)}
+                                    >
+                                        {renderOsApp(w.app, {
+                                            onLogout,
+                                            onEnterChamber: enterChamber,
+                                        })}
+                                    </OsWindowFrame>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    )
                 )}
 
                 {/* Start menu — above taskbar */}
