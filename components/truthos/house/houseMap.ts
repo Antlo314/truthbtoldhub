@@ -44,12 +44,39 @@ export const HOUSE_BOUNDS = {
     maxZ: 21.4,
 };
 
+/** Outer shell planes + partition thickness (single source for mesh + colliders) */
+export const SHELL = {
+    west: -13.8,
+    east: 13.8,
+    north: -12.5,
+    south: 12.5,
+    wallT: 0.35,
+    partT: 0.22,
+} as const;
+
+/**
+ * Interior openings (center + half-width along wall).
+ * Clear gap width = 2 * halfW; must stay free of furniture colliders.
+ */
+export const OPENING = {
+    front: { x: 0, halfW: 0.95, z: 12.5 },
+    back: { x: -3.25, halfW: 1.05, z: -12.5 },
+    living: { z: -1.15, halfW: 1.65 },
+    bedroom: { z: 3.1, halfW: 1.4 },
+    westWing: { x: -6.2, z0: -2.05, z1: 3.55 },
+    eastHall: { x: 6.2, z0: -2.85, z1: 2.15 },
+    cinema: { x: 6.2, z0: 5.45, z1: 8.25 },
+} as const;
+
+/** Min free path width (m) through openings — player R 0.34 + margin */
+export const PATH_CLEAR = 1.15;
+
 /**
  * In front of the Truth.OS computer (bedroom desk) so new players see the station first.
- * Yaw = Math.PI looks toward +Z (desk / monitor).
+ * Desk sits SE bedroom north of cinema door so the east doorway stays clear.
  */
-export const SPAWN: [number, number, number] = [4.55, 1.62, 6.35];
-/** Radians — face the desk / screen */
+export const SPAWN: [number, number, number] = [3.8, 1.62, 8.9];
+/** Radians — face the desk / screen (desk faces roughly +Z) */
 export const SPAWN_YAW = Math.PI;
 
 /** Living north-wall fireplace (hero focal) */
@@ -59,6 +86,56 @@ export const FIREPLACE = { x: 0, z: -11.55, y: 0.9 };
 export const FRONT_DOOR = { x: 0, z: 12.35 };
 /** Back door offset west of fireplace so fire stays hero */
 export const BACK_DOOR = { x: -3.25, z: -12.35 };
+
+/** Shared furniture anchors (mesh + colliders + hotspots stay in sync) */
+export const FURN = {
+    sofa: { x: 0, z: -6.0 },
+    coffee: { x: 0.15, z: -8.35 },
+    media: { x: 5.55, z: -7.8 }, // against east living face of partition
+    offering: { x: -5.55, z: -6.5 }, // against west living face of partition
+    chair: { x: 2.9, z: -7.5 },
+    bed: { x: -2.0, z: 10.0 },
+    desk: { x: 4.35, z: 9.55 }, // SE bedroom, north of cinema door band
+    deskChair: { x: 4.15, z: 10.4 }, // room side of desk (south, toward bed)
+    mirror: { x: 5.95, z: 9.35 },
+    wayfinder: { x: 2.55, z: 0.4 },
+    libraryChair: { x: -11.2, z: -4.6 },
+    libraryTable: { x: -10.4, z: -3.5 },
+    studyDesk: { x: 9.4, z: -3.5 },
+    studyChair: { x: 9.2, z: -2.55 },
+    cinemaChairA: { x: 10.0, z: 6.2 },
+    cinemaChairB: { x: 10.0, z: 7.8 },
+    studio: { x: 10.3, z: -9.1 },
+    studioStool: { x: 10.3, z: -8.35 },
+} as const;
+
+/** Yard props clear of shell (canopy margin ≥ 1.0 past outer walls) */
+export const YARD = {
+    trees: [
+        { x: -8.5, z: 17.5, r: 0.38 },
+        { x: 9.2, z: 18.2, r: 0.38 },
+        { x: -9.0, z: 16.8, r: 0.32 },
+        { x: 10.0, z: 16.5, r: 0.32 },
+        { x: -10.2, z: -17.5, r: 0.36 },
+        { x: 9.5, z: -18.0, r: 0.36 },
+        { x: -16.2, z: -8.0, r: 0.32 },
+        { x: 16.2, z: 6.0, r: 0.32 },
+    ],
+    bushes: [
+        { x: -4.2, z: 15.8, r: 0.4 },
+        { x: 5.0, z: 17.8, r: 0.45 },
+        { x: -2.0, z: 19.5, r: 0.35 },
+        { x: -1.5, z: -18.5, r: 0.38 },
+        { x: 3.2, z: -19.2, r: 0.32 },
+    ],
+    benchFront: { x: 2.9, z: 16.2 },
+    benchBack: { x: 2.4, z: -14.6 },
+    lanternL: { x: -1.35, z: 14.6 },
+    lanternR: { x: 1.35, z: 14.6 },
+    bedW: { x: -5.5, z: -16.2 },
+    bedE: { x: 4.8, z: -15.8 },
+    firePit: { x: 0.15, z: -16.8 },
+} as const;
 
 /**
  * Hotspots in open approach zones (never inside colliders).
@@ -113,8 +190,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'wayfinder',
         label: 'Wall map',
         hint: 'Roads · temporarily down',
-        // Hall console against north hall wall, offset so path stays clear
-        position: [2.4, 1.15, 0.9],
+        // Hall console off spine (path |x|<1.2 clear)
+        position: [2.55, 1.15, 0.95],
         radius: 1.05,
         action: { type: 'panel', panel: 'wayfinder' },
     },
@@ -139,8 +216,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'envelope',
         label: 'Offering tray',
         hint: 'The Offering',
-        // Console against west living wall — TV owns east wall
-        position: [-3.85, 0.85, -6.2],
+        // Console against west living partition — clear of back-door corridor
+        position: [-5.15, 0.85, -6.5],
         radius: 1.0,
         action: { type: 'panel', panel: 'offering' },
     },
@@ -148,8 +225,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'computer',
         label: 'Desktop',
         hint: 'Monitor · return via desktop button',
-        // Bedroom work corner — approach from room center
-        position: [4.6, 1.0, 7.55],
+        // Bedroom work corner — desk SE north of cinema door
+        position: [4.15, 1.0, 8.95],
         radius: 1.15,
         action: { type: 'os' },
     },
@@ -157,8 +234,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'soul_mirror',
         label: 'Soul Mirror',
         hint: 'Vessel · shape your form',
-        // Bedroom east wall — fully inside room, approach from west
-        position: [4.7, 1.25, 9.2],
+        // Bedroom east wall — north of cinema doorway band
+        position: [4.7, 1.25, 9.35],
         radius: 1.1,
         action: { type: 'panel', panel: 'soul' },
     },
@@ -218,124 +295,85 @@ export const HOTSPOTS: Hotspot[] = [
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
 /**
- * Walls + staged furniture colliders.
- * Living: sofa faces fireplace; media console on side wall; clear side paths.
- * Outer N/S walls split for open front/back doors. Fence rings the grounds.
+ * Walls + furniture + yard colliders (must match HouseGeometry / YardGeometry).
+ * Interior partitions span shell-to-shell with only OPENING gaps.
  */
 export const COLLIDERS: Collider[] = [
-    // ── Outer shell (doors open) ──
-    // North wall split — back door gap around x≈-3.25 (≈2.4 m clear between wall ends)
-    { x: -9.075, z: -12.5, hx: 4.525, hz: 0.25 }, // west of back door (-13.6 … -4.55)
-    { x: 5.825, z: -12.5, hx: 7.775, hz: 0.25 }, // east of back door (-1.95 … 13.6)
-    // South wall split — front door gap at x≈0 (≈1.9 m clear)
-    { x: -7.55, z: 12.5, hx: 6.05, hz: 0.25 }, // west of front (-13.6 … -1.5)
-    { x: 7.55, z: 12.5, hx: 6.05, hz: 0.25 }, // east of front (1.5 … 13.6)
-    // East / west house walls (side wrap outside ±13.8)
-    { x: -13.8, z: 0, hx: 0.25, hz: 12.6 },
-    { x: 13.8, z: 0, hx: 0.25, hz: 12.6 },
-
-    // Hall partitions — open gaps only (no interior door colliders)
-    // Living entry z=-1.15: wall ends ~±3.3 → clear spine ~6.6 m
-    { x: -7.8, z: -1.15, hx: 4.0, hz: 0.14 },
-    { x: 7.8, z: -1.15, hx: 4.0, hz: 0.14 },
-    // Bedroom partition z=3.1: gap x ≈ -1.45 … 1.45 (~2.9 m)
-    { x: -7.625, z: 3.15, hx: 6.175, hz: 0.14 }, // -13.8 … -1.45
-    { x: 7.625, z: 3.15, hx: 6.175, hz: 0.14 }, // 1.45 … 13.8
-    // West wing library gap ~ z -2.3 … 3.5
-    { x: -6.25, z: -6.8, hx: 0.14, hz: 4.0 },
-    { x: -6.25, z: 7.55, hx: 0.14, hz: 3.65 },
-    // East wing study approach + wider cinema gap (~z 5.3 … 8.4)
-    { x: 6.25, z: -7.2, hx: 0.14, hz: 3.6 },
-    { x: 6.25, z: 3.85, hx: 0.14, hz: 1.45 },
-    { x: 6.25, z: 9.85, hx: 0.14, hz: 1.45 },
-
-    // Front door jambs
-    { x: -1.15, z: 12.25, hx: 0.35, hz: 0.22 },
-    { x: 1.15, z: 12.25, hx: 0.35, hz: 0.22 },
-    // Back door jambs (west of fireplace)
-    { x: -4.2, z: -12.25, hx: 0.35, hz: 0.22 },
-    { x: -2.3, z: -12.25, hx: 0.35, hz: 0.22 },
-
-    // ── Living staged group (faces fireplace −Z) ──
-    // Sofa floated, back toward hallway, face fire
-    { x: 0.0, z: -6.0, hx: 1.55, hz: 0.58 },
-    // Coffee table between sofa & fire
-    { x: 0.15, z: -8.35, hx: 0.6, hz: 0.42 },
-    // Media console against EAST living wall (side wall, not competing with fire)
-    { x: 4.55, z: -7.8, hx: 0.32, hz: 1.1 },
-    // Offering console against west living wall
-    { x: -4.3, z: -6.2, hx: 0.38, hz: 0.55 },
-    // Accent chair 90° conversation (east of group)
-    { x: 2.85, z: -7.4, hx: 0.42, hz: 0.42 },
-    // Fireplace mass
+    // Outer shell (doors open)
+    { x: -9.05, z: -12.5, hx: 4.75, hz: 0.22 },
+    { x: 5.8, z: -12.5, hx: 8.0, hz: 0.22 },
+    { x: -7.375, z: 12.5, hx: 6.425, hz: 0.22 },
+    { x: 7.375, z: 12.5, hx: 6.425, hz: 0.22 },
+    { x: -13.8, z: 0, hx: 0.22, hz: 12.6 },
+    { x: 13.8, z: 0, hx: 0.22, hz: 12.6 },
+    // Living entry z=-1.15 gap +/-1.65 — reach shell
+    { x: -7.725, z: -1.15, hx: 6.075, hz: 0.14 },
+    { x: 7.725, z: -1.15, hx: 6.075, hz: 0.14 },
+    // Bedroom z=3.1 gap +/-1.4 — reach shell
+    { x: -7.6, z: 3.1, hx: 6.2, hz: 0.14 },
+    { x: 7.6, z: 3.1, hx: 6.2, hz: 0.14 },
+    // West partition x=-6.2 library gap — reach N/S shell
+    { x: -6.2, z: -7.275, hx: 0.14, hz: 5.225 },
+    { x: -6.2, z: 8.025, hx: 0.14, hz: 4.475 },
+    // East partition x=6.2 hall + cinema gaps — reach N/S shell
+    { x: 6.2, z: -7.675, hx: 0.14, hz: 4.825 },
+    { x: 6.2, z: 3.8, hx: 0.14, hz: 1.65 },
+    { x: 6.2, z: 10.375, hx: 0.14, hz: 2.125 },
+    // Jambs
+    { x: -1.1, z: 12.25, hx: 0.32, hz: 0.2 },
+    { x: 1.1, z: 12.25, hx: 0.32, hz: 0.2 },
+    { x: -4.2, z: -12.25, hx: 0.32, hz: 0.2 },
+    { x: -2.3, z: -12.25, hx: 0.32, hz: 0.2 },
+    // Living furniture
+    { x: FURN.sofa.x, z: FURN.sofa.z, hx: 1.55, hz: 0.58 },
+    { x: FURN.coffee.x, z: FURN.coffee.z, hx: 0.6, hz: 0.42 },
+    { x: FURN.media.x, z: FURN.media.z, hx: 0.32, hz: 1.1 },
+    { x: FURN.offering.x, z: FURN.offering.z, hx: 0.38, hz: 0.55 },
+    { x: FURN.chair.x, z: FURN.chair.z, hx: 0.42, hz: 0.42 },
     { x: 0, z: -11.9, hx: 1.5, hz: 0.4 },
     { x: -1.6, z: -11.55, hx: 0.25, hz: 0.5 },
     { x: 1.6, z: -11.55, hx: 0.25, hz: 0.5 },
-
-    // ── Bedroom ──
-    // Bed head on south wall, left of center (path to desk clear on right)
-    { x: -2.0, z: 10.0, hx: 1.2, hz: 0.95 },
+    // Bedroom
+    { x: FURN.bed.x, z: FURN.bed.z, hx: 1.2, hz: 0.95 },
     { x: -3.45, z: 10.0, hx: 0.3, hz: 0.3 },
     { x: -0.55, z: 10.0, hx: 0.3, hz: 0.3 },
-    // Desk SE corner, chair room-side
-    { x: 4.8, z: 7.6, hx: 0.95, hz: 0.42 },
-    { x: 4.6, z: 8.45, hx: 0.32, hz: 0.32 },
-    // Mirror on bedroom east wall (inside room)
-    { x: 5.95, z: 9.2, hx: 0.16, hz: 0.5 },
-
-    // ── Library (deep west, clear of hall threshold) ──
+    { x: FURN.desk.x, z: FURN.desk.z, hx: 0.95, hz: 0.42 },
+    { x: FURN.deskChair.x, z: FURN.deskChair.z, hx: 0.32, hz: 0.32 },
+    { x: FURN.mirror.x, z: FURN.mirror.z, hx: 0.16, hz: 0.5 },
+    // Library
     { x: -13.0, z: -5.0, hx: 0.38, hz: 2.4 },
-    { x: -11.2, z: -4.6, hx: 0.42, hz: 0.42 },
-    { x: -10.4, z: -3.5, hx: 0.42, hz: 0.4 },
-
+    { x: FURN.libraryChair.x, z: FURN.libraryChair.z, hx: 0.42, hz: 0.42 },
+    { x: FURN.libraryTable.x, z: FURN.libraryTable.z, hx: 0.42, hz: 0.4 },
     // Hall arch
     { x: -9.7, z: 6.4, hx: 0.22, hz: 0.85 },
     { x: -8.2, z: 6.4, hx: 0.22, hz: 0.85 },
-
-    // ── Study ──
-    { x: 9.4, z: -3.5, hx: 0.9, hz: 0.5 },
-    { x: 9.2, z: -2.55, hx: 0.32, hz: 0.32 },
+    // Study / cinema / studio
+    { x: FURN.studyDesk.x, z: FURN.studyDesk.z, hx: 0.9, hz: 0.5 },
+    { x: FURN.studyChair.x, z: FURN.studyChair.z, hx: 0.32, hz: 0.32 },
     { x: 13.0, z: -5.2, hx: 0.32, hz: 1.5 },
-
-    // Cinema SE empty room
     { x: 12.55, z: 7.0, hx: 0.28, hz: 1.2 },
-    { x: 10.0, z: 6.35, hx: 0.38, hz: 0.38 },
-    { x: 10.0, z: 7.65, hx: 0.38, hz: 0.38 },
-    // Studio SE + stool
-    { x: 10.3, z: -9.1, hx: 1.05, hz: 0.55 },
-    { x: 10.3, z: -8.35, hx: 0.28, hz: 0.28 },
-
-    // Wayfinder console against hall wall (not center of path)
-    { x: 2.5, z: 0.35, hx: 0.55, hz: 0.28 },
-
-    // ── Property fence (outer grounds) ──
+    { x: FURN.cinemaChairA.x, z: FURN.cinemaChairA.z, hx: 0.38, hz: 0.38 },
+    { x: FURN.cinemaChairB.x, z: FURN.cinemaChairB.z, hx: 0.38, hz: 0.38 },
+    { x: FURN.studio.x, z: FURN.studio.z, hx: 1.05, hz: 0.55 },
+    { x: FURN.studioStool.x, z: FURN.studioStool.z, hx: 0.28, hz: 0.28 },
+    { x: FURN.wayfinder.x, z: FURN.wayfinder.z, hx: 0.55, hz: 0.28 },
+    // Fence
     { x: 0, z: -21.55, hx: 18.0, hz: 0.18 },
     { x: 0, z: 21.55, hx: 18.0, hz: 0.18 },
     { x: -17.75, z: 0, hx: 0.18, hz: 21.7 },
     { x: 17.75, z: 0, hx: 0.18, hz: 21.7 },
-    // Gate posts (back yard north center — walkable between)
     { x: -1.35, z: -21.35, hx: 0.22, hz: 0.28 },
     { x: 1.35, z: -21.35, hx: 0.22, hz: 0.28 },
-
-    // Front yard bench
-    { x: 2.9, z: 16.2, hx: 0.85, hz: 0.32 },
-    // Front path lantern posts
-    { x: -1.35, z: 14.6, hx: 0.14, hz: 0.14 },
-    { x: 1.35, z: 14.6, hx: 0.14, hz: 0.14 },
-    // Back garden beds
-    { x: -5.5, z: -16.2, hx: 1.1, hz: 0.55 },
-    { x: 4.8, z: -15.8, hx: 0.95, hz: 0.5 },
-    // Fire pit ring (center back yard)
-    { x: 0.15, z: -16.8, hx: 0.72, hz: 0.72 },
-    // Tree trunks (rough)
-    { x: -8.5, z: 17.5, hx: 0.35, hz: 0.35 },
-    { x: 9.2, z: 18.2, hx: 0.38, hz: 0.38 },
-    { x: -11.5, z: 14.0, hx: 0.32, hz: 0.32 },
-    { x: 11.0, z: 15.0, hx: 0.32, hz: 0.32 },
-    { x: -10.2, z: -17.5, hx: 0.36, hz: 0.36 },
-    { x: 9.5, z: -18.0, hx: 0.36, hz: 0.36 },
-    { x: -14.5, z: -8.0, hx: 0.3, hz: 0.3 },
-    { x: 14.5, z: 6.0, hx: 0.3, hz: 0.3 },
+    // Yard
+    { x: YARD.benchFront.x, z: YARD.benchFront.z, hx: 0.85, hz: 0.32 },
+    { x: YARD.benchBack.x, z: YARD.benchBack.z, hx: 0.85, hz: 0.32 },
+    { x: YARD.lanternL.x, z: YARD.lanternL.z, hx: 0.14, hz: 0.14 },
+    { x: YARD.lanternR.x, z: YARD.lanternR.z, hx: 0.14, hz: 0.14 },
+    { x: YARD.bedW.x, z: YARD.bedW.z, hx: 1.1, hz: 0.55 },
+    { x: YARD.bedE.x, z: YARD.bedE.z, hx: 0.95, hz: 0.5 },
+    { x: YARD.firePit.x, z: YARD.firePit.z, hx: 0.72, hz: 0.72 },
+    ...YARD.trees.map((t) => ({ x: t.x, z: t.z, hx: t.r, hz: t.r })),
+    ...YARD.bushes.map((b) => ({ x: b.x, z: b.z, hx: b.r, hz: b.r })),
 ];
 
 const PLAYER_R = 0.34;

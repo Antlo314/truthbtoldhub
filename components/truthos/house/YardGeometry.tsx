@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
+import { YARD } from './houseMap';
 
 function MatBox({
     pos,
@@ -285,39 +286,25 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             <Gate x={0} z={-21.35} m={m} sh={sh} />
 
             {/* Front yard props */}
-            <Bench x={2.9} z={16.2} rotY={-0.35} sh={sh} m={m} />
-            <LanternPost x={-1.35} z={14.6} sh={sh} m={m} lit={!low} />
-            <LanternPost x={1.35} z={14.6} sh={sh} m={m} lit={!low} />
+            <Bench x={YARD.benchFront.x} z={YARD.benchFront.z} rotY={-0.35} sh={sh} m={m} />
+            <LanternPost x={YARD.lanternL.x} z={YARD.lanternL.z} sh={sh} m={m} lit={!low} />
+            <LanternPost x={YARD.lanternR.x} z={YARD.lanternR.z} sh={sh} m={m} lit={!low} />
 
-            {/* Trees + bushes — front */}
-            <Tree x={-8.5} z={17.5} scale={1.15} sh={sh} m={m} low={low} />
-            <Tree x={9.2} z={18.2} scale={1.05} sh={sh} m={m} low={low} />
-            {!low && (
-                <>
-                    <Tree x={-11.5} z={14.0} scale={0.9} sh={sh} m={m} low={low} />
-                    <Tree x={11.0} z={15.0} scale={0.95} sh={sh} m={m} low={low} />
-                </>
+            {/* Trees clear of house shell (canopy margin ≥1m past walls at ±13.8 / ±12.5) */}
+            {YARD.trees.map((t, i) =>
+                low && i >= 4 ? null : (
+                    <Tree key={`t-${i}`} x={t.x} z={t.z} scale={0.9 + (i % 3) * 0.08} sh={sh} m={m} low={low} />
+                ),
             )}
-            <Bush x={-4.2} z={15.5} scale={0.9} m={m} />
-            <Bush x={5.0} z={17.8} scale={1.1} m={m} />
-            <Bush x={-2.0} z={19.5} scale={0.75} m={m} />
+            {YARD.bushes.map((b, i) =>
+                low && i >= 3 ? null : <Bush key={`b-${i}`} x={b.x} z={b.z} scale={0.7 + b.r} m={m} />,
+            )}
 
             {/* Back yard */}
-            <GardenBed x={-5.5} z={-16.2} w={2.2} d={1.1} m={m} sh={sh} />
-            <GardenBed x={4.8} z={-15.8} w={1.9} d={1.0} m={m} sh={sh} />
-            <FirePit x={0.15} z={-16.8} m={m} sh={sh} low={low} />
-            <Bench x={2.4} z={-14.6} rotY={Math.PI * 0.85} sh={sh} m={m} />
-
-            <Tree x={-10.2} z={-17.5} scale={1.1} sh={sh} m={m} low={low} />
-            <Tree x={9.5} z={-18.0} scale={1.0} sh={sh} m={m} low={low} />
-            {!low && (
-                <>
-                    <Tree x={-14.5} z={-8.0} scale={0.95} sh={sh} m={m} low={low} />
-                    <Tree x={14.5} z={6.0} scale={0.9} sh={sh} m={m} low={low} />
-                    <Bush x={-1.5} z={-18.5} scale={0.85} m={m} />
-                    <Bush x={3.2} z={-19.2} scale={0.7} m={m} />
-                </>
-            )}
+            <GardenBed x={YARD.bedW.x} z={YARD.bedW.z} w={2.2} d={1.1} m={m} sh={sh} />
+            <GardenBed x={YARD.bedE.x} z={YARD.bedE.z} w={1.9} d={1.0} m={m} sh={sh} />
+            <FirePit x={YARD.firePit.x} z={YARD.firePit.z} m={m} sh={sh} low={low} />
+            <Bench x={YARD.benchBack.x} z={YARD.benchBack.z} rotY={Math.PI * 0.85} sh={sh} m={m} />
 
             {/* Soft outdoor fill (desktop) */}
             {!low && (

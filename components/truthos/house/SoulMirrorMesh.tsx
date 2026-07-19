@@ -11,11 +11,11 @@ import * as THREE from 'three';
 import type { HouseMaterials } from './HouseMaterials';
 import { LOCAL_BODY_LAYER } from './LocalPlayerBody';
 
-/** Bedroom east wall — fully inside the room (not hallway) */
+/** Bedroom east wall — north of cinema doorway (opening z 5.45–8.25) */
 export const MIRROR_WALL = {
     x: 5.88,
     y: 1.48,
-    z: 9.2,
+    z: 9.35,
     glassW: 0.82,
     glassH: 1.5,
     /** Glass faces west into bedroom */

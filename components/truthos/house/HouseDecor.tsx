@@ -91,8 +91,8 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
                 </mesh>
             </group>
 
-            {/* Offering tray on west living console */}
-            <group position={[-4.3, 0.78, -6.2]} rotation={[-0.04, Math.PI / 2, 0]}>
+            {/* Offering tray on west living console (flush partition, clear of back door path) */}
+            <group position={[-5.55, 0.78, -6.5]} rotation={[-0.04, Math.PI / 2, 0]}>
                 <mesh castShadow>
                     <boxGeometry args={[0.32, 0.02, 0.2]} />
                     <primitive object={m.wood} attach="material" />
@@ -119,8 +119,8 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
                 </mesh>
             </group>
 
-            {/* Desk lamp on bedroom workstation */}
-            <group position={[5.45, 0.78, 7.45]}>
+            {/* Desk lamp on bedroom workstation (desk SE, north of cinema door) */}
+            <group position={[5.0, 0.78, 9.4]}>
                 <mesh>
                     <cylinderGeometry args={[0.06, 0.08, 0.03, 10]} />
                     <primitive object={m.metalDark} attach="material" />
