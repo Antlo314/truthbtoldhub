@@ -97,7 +97,7 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space. Tour again anytime. Front door leads outside soon.',
+        body: 'Only LIVE players share the space. Front door opens to the porch and front yard. Living has a back door west of the fire into the garden. Tour again anytime.',
         tip: 'Enter the house',
     },
 ] as const;

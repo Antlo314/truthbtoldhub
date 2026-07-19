@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import AvatarCanvas from '@/components/game/AvatarCanvas';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
-import TruthTerminal from './TruthTerminal';
+import TruthGuideApp from './TruthGuideApp';
 import type { OsAppId } from '../truthOsStore';
 import { APP_META } from '../truthOsStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
@@ -418,7 +418,7 @@ export type OsAppContext = {
 export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
     switch (app) {
         case 'truth':
-            return <TruthTerminal />;
+            return <TruthGuideApp />;
         case 'updates':
             return <UpdatesApp />;
         case 'ledger':

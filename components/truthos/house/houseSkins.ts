@@ -20,6 +20,9 @@ export type HouseSkinId =
     | 'gold'
     | 'book'
     | 'leaf'
+    | 'grass'
+    | 'pathStone'
+    | 'dirt'
     | 'screen'
     | 'tile'
     | 'concrete'
@@ -416,6 +419,70 @@ function paintConcrete(ctx: CanvasRenderingContext2D, s: number) {
     }
 }
 
+function paintGrass(ctx: CanvasRenderingContext2D, s: number) {
+    ctx.fillStyle = '#0c1a10';
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 90; i++) {
+        const x = Math.random() * s;
+        const y = Math.random() * s;
+        const r = 10 + Math.random() * 28;
+        const g = ctx.createRadialGradient(x, y, 1, x, y, r);
+        const mid = 55 + Math.random() * 50;
+        g.addColorStop(0, `rgba(${12 + Math.random() * 20},${mid},${22 + Math.random() * 18},0.55)`);
+        g.addColorStop(1, 'rgba(8,28,14,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // fine blade noise
+    for (let i = 0; i < 1800; i++) {
+        const v = 28 + Math.random() * 55;
+        ctx.fillStyle = `rgba(${8 + Math.random() * 12},${v},${14 + Math.random() * 16},${0.05 + Math.random() * 0.07})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 2, 2 + Math.random() * 4);
+    }
+}
+
+function paintPathStone(ctx: CanvasRenderingContext2D, s: number) {
+    ctx.fillStyle = '#1e1c22';
+    ctx.fillRect(0, 0, s, s);
+    const n = 5;
+    const tw = s / n;
+    for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+            const shade = 0.75 + Math.random() * 0.25;
+            const r = Math.floor(48 * shade);
+            const g = Math.floor(46 * shade);
+            const b = Math.floor(54 * shade);
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            const inset = 1 + Math.random() * 2;
+            ctx.fillRect(x * tw + inset, y * tw + inset, tw - inset * 2, tw - inset * 2);
+        }
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i <= n; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * tw, 0);
+        ctx.lineTo(i * tw, s);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * tw);
+        ctx.lineTo(s, i * tw);
+        ctx.stroke();
+    }
+}
+
+function paintDirt(ctx: CanvasRenderingContext2D, s: number) {
+    ctx.fillStyle = '#1a120c';
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 2200; i++) {
+        const v = 28 + Math.random() * 40;
+        ctx.fillStyle = `rgba(${v + 12},${v},${v - 8},${0.05 + Math.random() * 0.06})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 3, 1 + Math.random() * 2);
+    }
+}
+
 /** Stylized door brand plate */
 function paintDomain(ctx: CanvasRenderingContext2D, s: number) {
     const g = ctx.createLinearGradient(0, 0, s, s);
@@ -597,6 +664,12 @@ export function makeHouseMap(id: HouseSkinId, opts: SkinOpts = {}): THREE.Canvas
             return canvasTex('h_book', size, paintBook, rep);
         case 'leaf':
             return canvasTex('h_leaf', size, paintLeaf, rep);
+        case 'grass':
+            return canvasTex('h_grass', size, paintGrass, rep);
+        case 'pathStone':
+            return canvasTex('h_path', size, paintPathStone, rep);
+        case 'dirt':
+            return canvasTex('h_dirt', size, paintDirt, rep);
         case 'screen':
             return canvasTex('h_screen', size, paintScreen, rep);
         case 'tile':

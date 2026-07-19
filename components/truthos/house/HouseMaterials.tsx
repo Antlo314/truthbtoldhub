@@ -23,6 +23,9 @@ export function useHouseMaterials(low = false) {
         const goldMap = makeHouseMap('gold', { repeat: [1.5, 1.5], low });
         const bookMap = makeHouseMap('book', { repeat: [1, 1], low });
         const leafMap = makeHouseMap('leaf', { repeat: [2.5, 2.5], low });
+        const grassMap = makeHouseMap('grass', { repeat: [14, 14], low });
+        const pathMap = makeHouseMap('pathStone', { repeat: [6, 10], low });
+        const dirtMap = makeHouseMap('dirt', { repeat: [4, 4], low });
         const screenMap = makeHouseMap('screen', { repeat: [1, 1], low });
         const tileMap = makeHouseMap('tile', { repeat: [8, 8], low });
         const concreteMap = makeHouseMap('concrete', { repeat: [5, 5], low });
@@ -69,6 +72,9 @@ export function useHouseMaterials(low = false) {
             }, 0.32),
             book: mk(bookMap, '#d0b0c0', { roughness: 0.8 }, 0.55),
             leaf: mk(leafMap, '#88c898', { roughness: 0.88 }, 0.6),
+            grass: mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82),
+            path: mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75),
+            dirt: mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88),
             screen: mk(screenMap, '#88e8f8', {
                 roughness: 0.16,
                 metalness: 0.28,

@@ -1,6 +1,7 @@
 /**
- * Staged multi-room house (open-house guidelines):
+ * Staged multi-room house + front/back yards (open-house guidelines):
  * · Clear ≥1.1 m walk paths · conversation groups · wall furniture · one hero per room
+ * · Open front (south) + back (north) doors · walkable grounds
  */
 
 import type { HousePanelId } from './houseUiStore';
@@ -18,6 +19,9 @@ export type HotspotId =
     | 'arcade'
     | 'studio'
     | 'front_door'
+    | 'back_door'
+    | 'front_bench'
+    | 'back_gate'
     | 'fireplace';
 
 export type Hotspot = {
@@ -32,11 +36,12 @@ export type Hotspot = {
         | { type: 'soon'; message: string };
 };
 
+/** Interior shell ~±13.8 · yards extend beyond N/S doors · side wrap for full loop */
 export const HOUSE_BOUNDS = {
-    minX: -13.5,
-    maxX: 13.5,
-    minZ: -12.2,
-    maxZ: 12.2,
+    minX: -17.6,
+    maxX: 17.6,
+    minZ: -21.4,
+    maxZ: 21.4,
 };
 
 /**
@@ -50,6 +55,11 @@ export const SPAWN_YAW = Math.PI;
 /** Living north-wall fireplace (hero focal) */
 export const FIREPLACE = { x: 0, z: -11.55, y: 0.9 };
 
+/** Front door threshold (south foyer) — walk-through open */
+export const FRONT_DOOR = { x: 0, z: 12.35 };
+/** Back door offset west of fireplace so fire stays hero */
+export const BACK_DOOR = { x: -3.25, z: -12.35 };
+
 /**
  * Hotspots in open approach zones (never inside colliders).
  * Layout follows staging: path down hall, room vignettes left/right/north/south.
@@ -58,10 +68,46 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'front_door',
         label: 'Front door',
-        hint: 'Outside · coming soon',
-        position: [0, 1.2, 11.2],
+        hint: 'Porch · front yard open',
+        position: [0, 1.2, 11.15],
         radius: 1.15,
-        action: { type: 'soon', message: 'The grounds open soon. For now, this is home.' },
+        action: {
+            type: 'soon',
+            message: 'The front door is open. Step through to the porch and front yard.',
+        },
+    },
+    {
+        id: 'back_door',
+        label: 'Back door',
+        hint: 'Garden · back yard open',
+        position: [-3.25, 1.15, -11.25],
+        radius: 1.1,
+        action: {
+            type: 'soon',
+            message: 'The back door is open. The garden waits on the other side.',
+        },
+    },
+    {
+        id: 'front_bench',
+        label: 'Porch bench',
+        hint: 'Rest · look out',
+        position: [2.9, 0.55, 16.2],
+        radius: 1.05,
+        action: {
+            type: 'soon',
+            message: 'A quiet bench under the night air. The house holds. You can rest here.',
+        },
+    },
+    {
+        id: 'back_gate',
+        label: 'Garden gate',
+        hint: 'Beyond · later',
+        position: [0, 1.0, -19.6],
+        radius: 1.2,
+        action: {
+            type: 'soon',
+            message: 'The gate holds for now. Roads beyond open later. The garden is yours to walk.',
+        },
     },
     {
         id: 'wayfinder',
@@ -174,11 +220,17 @@ export type Collider = { x: number; z: number; hx: number; hz: number };
 /**
  * Walls + staged furniture colliders.
  * Living: sofa faces fireplace; media console on side wall; clear side paths.
+ * Outer N/S walls split for open front/back doors. Fence rings the grounds.
  */
 export const COLLIDERS: Collider[] = [
-    // Outer shell
-    { x: 0, z: -12.5, hx: 13.8, hz: 0.25 },
-    { x: 0, z: 12.5, hx: 13.8, hz: 0.25 },
+    // ── Outer shell (doors open) ──
+    // North wall split — back door gap around x≈-3.25 (≈2.4 m clear between wall ends)
+    { x: -9.075, z: -12.5, hx: 4.525, hz: 0.25 }, // west of back door (-13.6 … -4.55)
+    { x: 5.825, z: -12.5, hx: 7.775, hz: 0.25 }, // east of back door (-1.95 … 13.6)
+    // South wall split — front door gap at x≈0 (≈1.9 m clear)
+    { x: -7.55, z: 12.5, hx: 6.05, hz: 0.25 }, // west of front (-13.6 … -1.5)
+    { x: 7.55, z: 12.5, hx: 6.05, hz: 0.25 }, // east of front (1.5 … 13.6)
+    // East / west house walls (side wrap outside ±13.8)
     { x: -13.8, z: 0, hx: 0.25, hz: 12.6 },
     { x: 13.8, z: 0, hx: 0.25, hz: 12.6 },
 
@@ -197,6 +249,9 @@ export const COLLIDERS: Collider[] = [
     // Front door jambs
     { x: -1.15, z: 12.25, hx: 0.35, hz: 0.22 },
     { x: 1.15, z: 12.25, hx: 0.35, hz: 0.22 },
+    // Back door jambs (west of fireplace)
+    { x: -4.2, z: -12.25, hx: 0.35, hz: 0.22 },
+    { x: -2.3, z: -12.25, hx: 0.35, hz: 0.22 },
 
     // ── Living staged group (faces fireplace −Z) ──
     // Sofa floated, back toward hallway, face fire
@@ -249,6 +304,35 @@ export const COLLIDERS: Collider[] = [
 
     // Wayfinder console against hall wall (not center of path)
     { x: 2.5, z: 0.35, hx: 0.55, hz: 0.28 },
+
+    // ── Property fence (outer grounds) ──
+    { x: 0, z: -21.55, hx: 18.0, hz: 0.18 },
+    { x: 0, z: 21.55, hx: 18.0, hz: 0.18 },
+    { x: -17.75, z: 0, hx: 0.18, hz: 21.7 },
+    { x: 17.75, z: 0, hx: 0.18, hz: 21.7 },
+    // Gate posts (back yard north center — walkable between)
+    { x: -1.35, z: -21.35, hx: 0.22, hz: 0.28 },
+    { x: 1.35, z: -21.35, hx: 0.22, hz: 0.28 },
+
+    // Front yard bench
+    { x: 2.9, z: 16.2, hx: 0.85, hz: 0.32 },
+    // Front path lantern posts
+    { x: -1.35, z: 14.6, hx: 0.14, hz: 0.14 },
+    { x: 1.35, z: 14.6, hx: 0.14, hz: 0.14 },
+    // Back garden beds
+    { x: -5.5, z: -16.2, hx: 1.1, hz: 0.55 },
+    { x: 4.8, z: -15.8, hx: 0.95, hz: 0.5 },
+    // Fire pit ring (center back yard)
+    { x: 0.15, z: -16.8, hx: 0.72, hz: 0.72 },
+    // Tree trunks (rough)
+    { x: -8.5, z: 17.5, hx: 0.35, hz: 0.35 },
+    { x: 9.2, z: 18.2, hx: 0.38, hz: 0.38 },
+    { x: -11.5, z: 14.0, hx: 0.32, hz: 0.32 },
+    { x: 11.0, z: 15.0, hx: 0.32, hz: 0.32 },
+    { x: -10.2, z: -17.5, hx: 0.36, hz: 0.36 },
+    { x: 9.5, z: -18.0, hx: 0.36, hz: 0.36 },
+    { x: -14.5, z: -8.0, hx: 0.3, hz: 0.3 },
+    { x: 14.5, z: 6.0, hx: 0.3, hz: 0.3 },
 ];
 
 const PLAYER_R = 0.34;
@@ -354,4 +438,9 @@ export function hotspotProximity(x: number, z: number, h: Hotspot): number {
 export function isOnLivingRug(x: number, z: number): boolean {
     // Matches staged living rug under sofa → fire group
     return Math.abs(x) < 3.6 && z > -10.8 && z < -4.4;
+}
+
+/** Outside the house footprint (yards / side wrap) */
+export function isOutdoors(x: number, z: number): boolean {
+    return Math.abs(x) > 13.6 || z > 12.35 || z < -12.35;
 }

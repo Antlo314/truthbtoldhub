@@ -407,9 +407,13 @@ export default function HouseGeometry({
                 <primitive object={m.tile} attach="material" />
             </mesh>
 
-            {/* Outer walls */}
-            <Wall pos={[0, 1.55, -12.5]} size={[floorW, 3.1, 0.35]} m={m} sh={sh} />
-            <Wall pos={[0, 1.55, 12.5]} size={[floorW, 3.1, 0.35]} m={m} sh={sh} />
+            {/* Outer walls — N/S split for open back + front doors */}
+            {/* North wall: gap for back door at x≈-3.25 (~2.4 m between wall ends) */}
+            <Wall pos={[-9.075, 1.55, -12.5]} size={[9.05, 3.1, 0.35]} m={m} sh={sh} />
+            <Wall pos={[5.825, 1.55, -12.5]} size={[15.55, 3.1, 0.35]} m={m} sh={sh} />
+            {/* South wall: gap for front door at x≈0 (~1.9 m) */}
+            <Wall pos={[-7.55, 1.55, 12.5]} size={[12.1, 3.1, 0.35]} m={m} sh={sh} />
+            <Wall pos={[7.55, 1.55, 12.5]} size={[12.1, 3.1, 0.35]} m={m} sh={sh} />
             <Wall pos={[-13.8, 1.55, 0]} size={[0.35, 3.1, floorD]} m={m} sh={sh} />
             <Wall pos={[13.8, 1.55, 0]} size={[0.35, 3.1, floorD]} m={m} sh={sh} />
 
@@ -451,16 +455,40 @@ export default function HouseGeometry({
             <MatBox pos={[6.2, 1.4, 1.4]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
             <MatBox pos={[6.2, 2.7, 0.6]} size={[0.28, 0.16, 1.8]} material={m.wood} shadows={false} />
 
-            {/* Front door (south foyer) — stylized domain plate */}
+            {/* Front door (south foyer) — open walk-through, leaf swung aside */}
             <MatBox pos={[-1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[0, 2.7, 12.25]} size={[2.5, 0.25, 0.3]} material={m.wood} shadows={sh} />
-            <MatBox pos={[0, 1.3, 12.15]} size={[1.7, 2.5, 0.12]} material={m.woodDark} shadows={sh} />
-            <mesh position={[0, 1.55, 12.08]}>
-                <planeGeometry args={[1.35, 1.55]} />
-                <primitive object={m.artDomain} attach="material" />
+            {/* Open door leaf parked against east jamb (inside) */}
+            <group position={[1.05, 1.3, 11.55]} rotation={[0, -1.15, 0]}>
+                <MatBox pos={[0, 0, 0]} size={[0.1, 2.5, 0.85]} material={m.woodDark} shadows={sh} />
+                <MatCyl pos={[-0.02, -0.15, 0.28]} r={0.035} h={0.08} material={m.gold} shadows={false} segs={8} />
+            </group>
+            {/* Domain plate moved to foyer side wall (not blocking path) */}
+            <group position={[-2.35, 1.55, 11.9]} rotation={[0, Math.PI / 2, 0]}>
+                <MatBox pos={[0, 0, 0.02]} size={[0.9, 1.15, 0.06]} material={m.woodDark} shadows={false} />
+                <mesh position={[0, 0, 0.06]}>
+                    <planeGeometry args={[0.78, 1.0]} />
+                    <primitive object={m.artDomain} attach="material" />
+                </mesh>
+            </group>
+            {/* Porch slab + doormat step outside */}
+            <MatBox pos={[0, 0.06, 13.15]} size={[3.2, 0.12, 1.4]} material={m.stone} shadows={sh} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.125, 12.85]} receiveShadow={sh}>
+                <planeGeometry args={[1.1, 0.55]} />
+                <primitive object={m.rug} attach="material" />
             </mesh>
-            <MatCyl pos={[0.62, 1.15, 12.05]} r={0.04} h={0.1} material={m.gold} shadows={false} segs={8} />
+
+            {/* Back door (north living, west of fireplace) — open walk-through */}
+            <MatBox pos={[-4.2, 1.4, -12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
+            <MatBox pos={[-2.3, 1.4, -12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
+            <MatBox pos={[-3.25, 2.7, -12.25]} size={[2.4, 0.25, 0.3]} material={m.wood} shadows={sh} />
+            <group position={[-2.4, 1.3, -11.55]} rotation={[0, 1.15, 0]}>
+                <MatBox pos={[0, 0, 0]} size={[0.1, 2.5, 0.8]} material={m.woodDark} shadows={sh} />
+                <MatCyl pos={[-0.02, -0.15, -0.25]} r={0.035} h={0.08} material={m.gold} shadows={false} segs={8} />
+            </group>
+            {/* Rear step into garden */}
+            <MatBox pos={[-3.25, 0.06, -13.15]} size={[2.8, 0.12, 1.3]} material={m.stone} shadows={sh} />
 
             {/* Wayfinder console — against hall wall, path stays clear (staging: off-spine) */}
             <group position={[2.5, 0, 0.35]}>

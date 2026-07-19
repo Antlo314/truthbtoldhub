@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
+import YardGeometry from './YardGeometry';
 import HouseDecor from './HouseDecor';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
@@ -77,14 +78,15 @@ export default function HouseCanvas({
                     alpha: false,
                     powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    toneMappingExposure: mobile ? 1.22 : 1.38,
+                    // Mobile was too dark — push exposure for readability
+                    toneMappingExposure: mobile ? 1.72 : 1.38,
                     stencil: false,
                     depth: true,
                 }}
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
-                    far: mobile ? 48 : 90,
+                    far: mobile ? 72 : 130,
                     position: [4.55, 1.62, 6.35],
                 }}
                 onCreated={({ gl, camera }) => {
@@ -100,28 +102,32 @@ export default function HouseCanvas({
                 }}
             >
                 <color attach="background" args={[bg]} />
-                {!mobile && <fog attach="fog" args={[bg, 12, 40]} />}
-                {mobile && <fog attach="fog" args={[bg, 8, 24]} />}
+                {/* Farther fog so yards stay readable without washing interiors */}
+                {!mobile && <fog attach="fog" args={[bg, 18, 58]} />}
+                {mobile && <fog attach="fog" args={['#2a2438', 16, 48]} />}
 
                 {/* Soft IBL for material depth (free preset, no paid assets) */}
                 {!mobile && <Environment preset="night" environmentIntensity={0.35} />}
-                {mobile && <Environment preset="night" environmentIntensity={0.22} />}
+                {mobile && <Environment preset="apartment" environmentIntensity={0.55} />}
 
                 {!mobile && (
                     <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
                 )}
 
-                <hemisphereLight args={[mobile ? '#b8c4ff' : '#c8d4ff', '#2a2038', mobile ? 0.85 : 0.5]} />
-                <ambientLight intensity={mobile ? 0.7 : 0.38} color="#e0d8f0" />
+                <hemisphereLight args={[mobile ? '#d8e0ff' : '#c8d4ff', mobile ? '#3a3048' : '#2a2038', mobile ? 1.15 : 0.5]} />
+                <ambientLight intensity={mobile ? 1.15 : 0.38} color={mobile ? '#f0eaf8' : '#e0d8f0'} />
 
                 <directionalLight
                     position={[6, 9, 4]}
-                    intensity={mobile ? 1.0 : 1.45}
-                    color="#eef2ff"
+                    intensity={mobile ? 1.65 : 1.45}
+                    color="#ffffff"
                     castShadow={!mobile}
                     shadow-mapSize-width={mobile ? 512 : 1024}
                     shadow-mapSize-height={mobile ? 512 : 1024}
                 />
+                {mobile && (
+                    <directionalLight position={[-4, 6, -2]} intensity={0.55} color="#c4b5fd" />
+                )}
                 {!mobile && (
                     <>
                         <directionalLight position={[-5, 5, -3]} intensity={0.4} color="#9b7cff" />
@@ -130,9 +136,9 @@ export default function HouseCanvas({
                 )}
 
                 {/* Zone practicals — pull color from textured materials */}
-                <pointLight position={[3.55, 1.4, 4.9]} intensity={mobile ? 2.0 : 3.1} color="#4ade80" distance={mobile ? 7 : 11} decay={2} />
-                <pointLight position={[0, 1.75, -4.2]} intensity={mobile ? 1.65 : 2.4} color="#22d3ee" distance={8} decay={2} />
-                <pointLight position={[3.15, 1.7, 8.5]} intensity={mobile ? 1.2 : 1.85} color="#c8dcf0" distance={6} decay={2} />
+                <pointLight position={[3.55, 1.4, 4.9]} intensity={mobile ? 2.8 : 3.1} color="#4ade80" distance={mobile ? 9 : 11} decay={2} />
+                <pointLight position={[0, 1.75, -4.2]} intensity={mobile ? 2.3 : 2.4} color="#22d3ee" distance={9} decay={2} />
+                <pointLight position={[3.15, 1.7, 8.5]} intensity={mobile ? 1.9 : 1.85} color="#c8dcf0" distance={7} decay={2} />
                 {!mobile && (
                     <>
                         <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.55} color="#fbbf24" distance={8} decay={2} />
@@ -155,9 +161,14 @@ export default function HouseCanvas({
                     </>
                 )}
                 {mobile && (
-                    <pointLight position={[0, 2.5, 0]} intensity={1.25} color="#e0d4ff" distance={14} decay={2} />
+                    <>
+                        <pointLight position={[0, 2.5, 0]} intensity={2.1} color="#f0e8ff" distance={16} decay={1.6} />
+                        <pointLight position={[-2.5, 1.5, 0]} intensity={1.4} color="#fbbf24" distance={8} decay={2} />
+                        <pointLight position={[2, 1.6, -3]} intensity={1.3} color="#ffffff" distance={9} decay={2} />
+                    </>
                 )}
 
+                <YardGeometry low={mobile} />
                 <HouseGeometry low={mobile} cinematic={!mobile} />
                 <HouseDecor low={mobile} />
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
@@ -172,7 +183,7 @@ export default function HouseCanvas({
                     onMoveActivity={onMoveActivity}
                 />
                 {!mobile && (
-                    <ContactShadows position={[0, 0.02, 0]} opacity={0.34} scale={32} blur={2.8} far={14} />
+                    <ContactShadows position={[0, 0.02, 0]} opacity={0.3} scale={48} blur={2.8} far={18} />
                 )}
             </Canvas>
         </div>

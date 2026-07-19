@@ -25,6 +25,9 @@ export const HOUSE_EXTRA: HotspotId[] = [
     'ledger',
     'studio',
     'wayfinder',
+    'back_door',
+    'front_bench',
+    'back_gate',
 ];
 
 export const STATION_LABELS: Record<HotspotId, string> = {
@@ -40,6 +43,9 @@ export const STATION_LABELS: Record<HotspotId, string> = {
     arcade: 'Controller · Arcade',
     studio: 'Signal Studio',
     front_door: 'Front door',
+    back_door: 'Back door',
+    front_bench: 'Porch bench',
+    back_gate: 'Garden gate',
     fireplace: 'Fireplace',
 };
 

@@ -30,7 +30,7 @@ type DockItem = {
 
 /** Hut home + utilities (no Forge / Wayfinder) */
 const APPS: DockItem[] = [
-    { app: 'truth', label: 'Truth', emoji: '✦', guestOk: true },
+    { app: 'truth', label: 'Guide', emoji: '✦', guestOk: true },
     { app: 'ledger', label: 'Ledger', emoji: '▣' },
     { app: 'soul', label: 'Soul', emoji: '◉' },
     { app: 'arcade', label: 'Arcade', emoji: '▷' },
@@ -51,7 +51,7 @@ const APPS: DockItem[] = [
 
 /** Hut stations shown as home-screen bento cards */
 const HUT_HOME: { app: OsAppId; emoji: string; title: string; blurb: string; span?: string }[] = [
-    { app: 'truth', emoji: '✦', title: 'Truth', blurb: 'Ask · lore · terminal', span: 'sm:col-span-2 sm:row-span-2' },
+    { app: 'truth', emoji: '✦', title: 'Truth Guide', blurb: 'AI brother · scripture · OS help', span: 'sm:col-span-2 sm:row-span-2' },
     { app: 'ledger', emoji: '▣', title: 'Ledger', blurb: 'Daily Word · souls' },
     { app: 'soul', emoji: '◉', title: 'Soul', blurb: 'Vessel · identity' },
     { app: 'arcade', emoji: '▷', title: 'Arcade', blurb: 'Games · scores' },
@@ -282,7 +282,8 @@ export default function TruthOSShell({
 
             {/* Desktop workspace (above taskbar) */}
             <div
-                className="relative flex-1 min-h-0 pb-14"
+                className="relative flex-1 min-h-0 pb-16 sm:pb-14"
+                style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom, 0px) + 3.5rem)' }}
                 onClick={() => {
                     if (startOpen) setStartOpen(false);
                 }}
@@ -290,7 +291,8 @@ export default function TruthOSShell({
                 {/* HOME: Hut bento (always under windows) */}
                 {openWindows.length === 0 && (
                     <div
-                        className="absolute inset-0 z-[1] overflow-y-auto p-3 sm:p-5"
+                        className="absolute inset-0 z-[1] overflow-y-auto p-3 sm:p-5 overscroll-contain"
+                        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="max-w-5xl mx-auto space-y-4 pb-4">
@@ -544,8 +546,15 @@ export default function TruthOSShell({
                 )}
             </div>
 
-            {/* Bottom taskbar */}
-            <footer className="absolute bottom-0 inset-x-0 z-50 h-14 flex items-center gap-1 px-2 border-t border-white/10 bg-black/80 backdrop-blur-xl">
+            {/* Bottom taskbar — taller on mobile + safe area */}
+            <footer
+                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1 px-2 border-t border-white/10 bg-black/85 backdrop-blur-xl"
+                style={{
+                    minHeight: '3.5rem',
+                    paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))',
+                    paddingTop: '0.35rem',
+                }}
+            >
                 <button
                     type="button"
                     onClick={() => {

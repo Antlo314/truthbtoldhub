@@ -22,6 +22,9 @@ const ACCENT: Record<string, string> = {
     arcade: '#22d3ee',
     studio: '#f97316',
     front_door: '#e8d5b0',
+    back_door: '#c4b5a0',
+    front_bench: '#86efac',
+    back_gate: '#a3e635',
     fireplace: '#ff8a3d',
 };
 
@@ -142,11 +145,13 @@ export default function HouseDecor({ low = false }: { low?: boolean }) {
                         radius={
                             h.id === 'arcade'
                                 ? 0.28
-                                : h.id === 'front_door'
+                                : h.id === 'front_door' || h.id === 'back_door'
                                   ? 0.5
                                   : h.id === 'fireplace'
                                     ? 0.55
-                                    : 0.36
+                                    : h.id === 'front_bench' || h.id === 'back_gate'
+                                      ? 0.42
+                                      : 0.36
                         }
                         low={low}
                     />

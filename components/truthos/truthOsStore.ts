@@ -99,7 +99,7 @@ export const APP_META: Record<
     OsAppId,
     { title: string; w: number; h: number; label: string; accent: string; protected?: boolean }
 > = {
-    truth: { title: 'Truth Terminal', w: 560, h: 520, label: 'Truth', accent: 'emerald' },
+    truth: { title: 'Truth · Guide', w: 420, h: 560, label: 'Truth', accent: 'emerald' },
     updates: { title: 'Updates', w: 440, h: 420, label: 'Updates', accent: 'amber' },
     ledger: { title: 'The Ledger', w: 520, h: 480, label: 'Ledger', accent: 'gold', protected: true },
     soul: { title: 'Your Soul', w: 480, h: 520, label: 'Soul', accent: 'cyan', protected: true },

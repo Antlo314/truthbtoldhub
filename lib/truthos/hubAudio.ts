@@ -442,7 +442,8 @@ class HubAudioController {
         else if (id === 'computer') this.playSfx('computer_boot', { volume: 0.25 });
         else if (id === 'arcade') this.playSfx('house_interact_ring');
         else if (id === 'library') this.playSfx('book_pull', { volume: 0.25 });
-        else if (id === 'front_door') this.playSfx('door_front_touch', { volume: 0.3 });
+        else if (id === 'front_door' || id === 'back_door') this.playSfx('door_front_touch', { volume: 0.3 });
+        else if (id === 'front_bench' || id === 'back_gate') this.playSfx('house_interact_ring', { volume: 0.22 });
         else this.playSfx('house_interact_ring', { volume: 0.28 });
     }
 
@@ -466,7 +467,12 @@ class HubAudioController {
                 this.playSfx('book_place', { volume: 0.3 });
                 break;
             case 'front_door':
-                this.playSfx('door_soon', { duck: true });
+            case 'back_door':
+                this.playSfx('door_front_touch', { volume: 0.4, duck: true });
+                break;
+            case 'front_bench':
+            case 'back_gate':
+                this.playSfx('house_interact_ring', { volume: 0.3 });
                 break;
             case 'wayfinder':
                 this.playSfx('map_offline', { duck: true });
