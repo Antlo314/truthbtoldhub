@@ -234,17 +234,20 @@ export const COLLIDERS: Collider[] = [
     { x: -13.8, z: 0, hx: 0.25, hz: 12.6 },
     { x: 13.8, z: 0, hx: 0.25, hz: 12.6 },
 
-    // Hall partitions (open doorways kept clear)
+    // Hall partitions — open gaps only (no interior door colliders)
+    // Living entry z=-1.15: wall ends ~±3.3 → clear spine ~6.6 m
     { x: -7.8, z: -1.15, hx: 4.0, hz: 0.14 },
     { x: 7.8, z: -1.15, hx: 4.0, hz: 0.14 },
-    { x: -5.8, z: 3.15, hx: 5.3, hz: 0.14 },
-    { x: 5.8, z: 3.15, hx: 5.3, hz: 0.14 },
+    // Bedroom partition z=3.1: gap x ≈ -1.45 … 1.45 (~2.9 m)
+    { x: -7.625, z: 3.15, hx: 6.175, hz: 0.14 }, // -13.8 … -1.45
+    { x: 7.625, z: 3.15, hx: 6.175, hz: 0.14 }, // 1.45 … 13.8
+    // West wing library gap ~ z -2.3 … 3.5
     { x: -6.25, z: -6.8, hx: 0.14, hz: 4.0 },
-    { x: -6.25, z: 7.6, hx: 0.14, hz: 3.6 },
+    { x: -6.25, z: 7.55, hx: 0.14, hz: 3.65 },
+    // East wing study approach + wider cinema gap (~z 5.3 … 8.4)
     { x: 6.25, z: -7.2, hx: 0.14, hz: 3.6 },
-    // East partition split for cinema doorway (~z 6.55–8.05 open)
-    { x: 6.25, z: 4.15, hx: 0.14, hz: 1.75 },
-    { x: 6.25, z: 9.55, hx: 0.14, hz: 1.75 },
+    { x: 6.25, z: 3.85, hx: 0.14, hz: 1.45 },
+    { x: 6.25, z: 9.85, hx: 0.14, hz: 1.45 },
 
     // Front door jambs
     { x: -1.15, z: 12.25, hx: 0.35, hz: 0.22 },

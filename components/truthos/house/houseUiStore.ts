@@ -77,7 +77,7 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'The hallway',
-        body: 'The runner marks the main corridor. Doorways open to every wing. Gold rings mark what you can open.',
+        body: 'The runner marks the main corridor. Open passages lead to every wing — no interior doors. Gold rings mark what you can open.',
         tip: 'Look for gold rings',
     },
     {

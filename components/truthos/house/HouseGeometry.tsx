@@ -422,49 +422,29 @@ export default function HouseGeometry({
                     <MatBox key={bz} pos={[0, 2.95, bz]} size={[26, 0.12, 0.18]} material={m.wood} shadows={false} />
                 ))}
 
-            {/* ── HALLWAY partitions ── */}
+            {/* ── HALLWAY partitions (open gaps only — no interior doors/frames) ── */}
+            {/* Living entry at z=-1.15: gap x ≈ -3.3 … 3.3 */}
             <Wall pos={[-7.5, 1.4, -1.15]} size={[8.4, 2.8, 0.22]} m={m} sh={sh} />
             <Wall pos={[7.5, 1.4, -1.15]} size={[8.4, 2.8, 0.22]} m={m} sh={sh} />
-            {/* living entry opening framed */}
-            <MatBox pos={[-2.4, 1.4, -1.15]} size={[0.18, 2.8, 0.28]} material={m.wood} shadows={false} />
-            <MatBox pos={[2.4, 1.4, -1.15]} size={[0.18, 2.8, 0.28]} material={m.wood} shadows={false} />
-            <MatBox pos={[0, 2.7, -1.15]} size={[5.0, 0.18, 0.28]} material={m.wood} shadows={false} />
 
-            <Wall pos={[-5.5, 1.4, 3.1]} size={[11, 2.8, 0.22]} m={m} sh={sh} />
-            <Wall pos={[5.5, 1.4, 3.1]} size={[11, 2.8, 0.22]} m={m} sh={sh} />
-            <MatBox pos={[-1.35, 1.4, 3.1]} size={[0.16, 2.8, 0.28]} material={m.wood} shadows={false} />
-            <MatBox pos={[1.35, 1.4, 3.1]} size={[0.16, 2.8, 0.28]} material={m.wood} shadows={false} />
-            <MatBox pos={[0, 2.7, 3.1]} size={[2.9, 0.16, 0.28]} material={m.wood} shadows={false} />
+            {/* Bedroom / foyer partition at z=3.1: open gap x ≈ -1.45 … 1.45 (was solid mesh) */}
+            <Wall pos={[-7.6, 1.4, 3.1]} size={[12.3, 2.8, 0.22]} m={m} sh={sh} />
+            <Wall pos={[7.6, 1.4, 3.1]} size={[12.3, 2.8, 0.22]} m={m} sh={sh} />
 
+            {/* West wing — library / hall gap ~ z -2.3 … 3.5 */}
             <Wall pos={[-6.2, 1.4, -6.5]} size={[0.22, 2.8, 8.4]} m={m} sh={sh} />
-            <Wall pos={[-6.2, 1.4, 7.5]} size={[0.22, 2.8, 7.6]} m={m} sh={sh} />
-            <MatBox pos={[-6.2, 1.4, 0.4]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
-            <MatBox pos={[-6.2, 1.4, 1.8]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
-            <MatBox pos={[-6.2, 2.7, 1.1]} size={[0.28, 0.16, 1.6]} material={m.wood} shadows={false} />
+            <Wall pos={[-6.2, 1.4, 7.6]} size={[0.22, 2.8, 7.4]} m={m} sh={sh} />
 
+            {/* East wing — hall gap + wider cinema opening from bedroom */}
             <Wall pos={[6.2, 1.4, -7.0]} size={[0.22, 2.8, 7.6]} m={m} sh={sh} />
-            {/* East partition — split to leave cinema door into SE empty room */}
-            <Wall pos={[6.2, 1.4, 4.15]} size={[0.22, 2.8, 3.5]} m={m} sh={sh} />
-            <Wall pos={[6.2, 1.4, 9.55]} size={[0.22, 2.8, 3.5]} m={m} sh={sh} />
-            {/* Cinema doorway frame (enter empty room from bedroom) */}
-            <MatBox pos={[6.2, 1.4, 6.55]} size={[0.28, 2.8, 0.14]} material={m.wood} shadows={false} />
-            <MatBox pos={[6.2, 1.4, 8.05]} size={[0.28, 2.8, 0.14]} material={m.wood} shadows={false} />
-            <MatBox pos={[6.2, 2.7, 7.3]} size={[0.28, 0.16, 1.65]} material={m.wood} shadows={false} />
-            {/* Hall-level east opening (study/cinema approach from corridor) */}
-            <MatBox pos={[6.2, 1.4, -0.2]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
-            <MatBox pos={[6.2, 1.4, 1.4]} size={[0.28, 2.8, 0.16]} material={m.wood} shadows={false} />
-            <MatBox pos={[6.2, 2.7, 0.6]} size={[0.28, 0.16, 1.8]} material={m.wood} shadows={false} />
+            <Wall pos={[6.2, 1.4, 3.85]} size={[0.22, 2.8, 2.9]} m={m} sh={sh} />
+            <Wall pos={[6.2, 1.4, 9.85]} size={[0.22, 2.8, 2.9]} m={m} sh={sh} />
 
-            {/* Front door (south foyer) — open walk-through, leaf swung aside */}
+            {/* Front opening (south) — exterior only, no door leaf */}
             <MatBox pos={[-1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[0, 2.7, 12.25]} size={[2.5, 0.25, 0.3]} material={m.wood} shadows={sh} />
-            {/* Open door leaf parked against east jamb (inside) */}
-            <group position={[1.05, 1.3, 11.55]} rotation={[0, -1.15, 0]}>
-                <MatBox pos={[0, 0, 0]} size={[0.1, 2.5, 0.85]} material={m.woodDark} shadows={sh} />
-                <MatCyl pos={[-0.02, -0.15, 0.28]} r={0.035} h={0.08} material={m.gold} shadows={false} segs={8} />
-            </group>
-            {/* Domain plate moved to foyer side wall (not blocking path) */}
+            {/* Domain plate on foyer side wall (not in walk path) */}
             <group position={[-2.35, 1.55, 11.9]} rotation={[0, Math.PI / 2, 0]}>
                 <MatBox pos={[0, 0, 0.02]} size={[0.9, 1.15, 0.06]} material={m.woodDark} shadows={false} />
                 <mesh position={[0, 0, 0.06]}>
@@ -479,14 +459,10 @@ export default function HouseGeometry({
                 <primitive object={m.rug} attach="material" />
             </mesh>
 
-            {/* Back door (north living, west of fireplace) — open walk-through */}
+            {/* Back opening (north living) — exterior only, no door leaf */}
             <MatBox pos={[-4.2, 1.4, -12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[-2.3, 1.4, -12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[-3.25, 2.7, -12.25]} size={[2.4, 0.25, 0.3]} material={m.wood} shadows={sh} />
-            <group position={[-2.4, 1.3, -11.55]} rotation={[0, 1.15, 0]}>
-                <MatBox pos={[0, 0, 0]} size={[0.1, 2.5, 0.8]} material={m.woodDark} shadows={sh} />
-                <MatCyl pos={[-0.02, -0.15, -0.25]} r={0.035} h={0.08} material={m.gold} shadows={false} segs={8} />
-            </group>
             {/* Rear step into garden */}
             <MatBox pos={[-3.25, 0.06, -13.15]} size={[2.8, 0.12, 1.3]} material={m.stone} shadows={sh} />
 
