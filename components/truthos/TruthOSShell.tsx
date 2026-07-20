@@ -4,7 +4,7 @@
  * Truth.OS — Windows × Bento desktop shell.
  * Colored icons, sharp glass chrome, real open/press states.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     useTruthOs,
@@ -121,8 +121,21 @@ export default function TruthOSShell({
 
     const [bootLine, setBootLine] = useState(0);
     const [clock, setClock] = useState('');
+    const [phone, setPhone] = useState(() => detectDevice() === 'phone');
     const email = sessionEmail;
     const isAdmin = isAdminEmail(email);
+
+    // Recompute phone layout on resize / rotate
+    useEffect(() => {
+        const sync = () => setPhone(detectDevice() === 'phone');
+        sync();
+        window.addEventListener('resize', sync);
+        window.addEventListener('orientationchange', sync);
+        return () => {
+            window.removeEventListener('resize', sync);
+            window.removeEventListener('orientationchange', sync);
+        };
+    }, []);
 
     useEffect(() => {
         enterOs();
@@ -195,7 +208,6 @@ export default function TruthOSShell({
 
     const visibleApps = APPS.filter((a) => !a.adminOnly || isAdmin);
     const openWindows = windows.filter((w) => !w.minimized);
-    const phone = detectDevice() === 'phone';
     const useBento = layoutMode === 'bento' && !phone;
 
     const launch = (app: OsAppId) => {
@@ -237,17 +249,25 @@ export default function TruthOSShell({
     const openAppIds = new Set(windows.map((w) => w.app));
 
     return (
-        <div className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#07090f]">
-            {/* Wallpaper — lighter wash so color stays sharp */}
+        <div
+            className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#07090f]"
+            style={
+                {
+                    ['--os-taskbar' as string]: 'calc(3.65rem + env(safe-area-inset-bottom, 0px))',
+                    ['--os-pad-top' as string]: 'env(safe-area-inset-top, 0px)',
+                } as CSSProperties
+            }
+        >
+            {/* Wallpaper — no scale zoom on phone (sharper + cheaper) */}
             <div
-                className="pointer-events-none absolute inset-0 bg-cover bg-center scale-105"
+                className={`pointer-events-none absolute inset-0 bg-cover bg-center ${phone ? '' : 'scale-105'}`}
                 style={{ backgroundImage: 'url(/truthos/os-wallpaper.jpg)' }}
             />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.18),transparent_55%)]" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.12),transparent_50%)]" />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/75" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                className="pointer-events-none absolute inset-0 opacity-[0.06] max-sm:opacity-[0.04]"
                 style={{
                     backgroundImage:
                         'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
@@ -257,8 +277,8 @@ export default function TruthOSShell({
 
             {/* Desktop workspace (above taskbar) */}
             <div
-                className="relative flex-1 min-h-0 pb-16 sm:pb-14"
-                style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom, 0px) + 3.5rem)' }}
+                className="relative flex-1 min-h-0"
+                style={{ paddingBottom: 'var(--os-taskbar)' }}
                 onClick={() => {
                     if (startOpen) setStartOpen(false);
                 }}
@@ -266,28 +286,34 @@ export default function TruthOSShell({
                 {/* HOME: Hut bento (always under windows) */}
                 {openWindows.length === 0 && (
                     <div
-                        className="absolute inset-0 z-[1] overflow-y-auto p-3 sm:p-5 overscroll-contain"
-                        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+                        className="absolute inset-0 z-[1] overflow-y-auto overscroll-contain p-3 sm:p-5"
+                        style={
+                            {
+                                WebkitOverflowScrolling: 'touch',
+                                paddingTop: 'max(0.75rem, var(--os-pad-top))',
+                                paddingBottom: '1.5rem',
+                            } as CSSProperties
+                        }
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="max-w-5xl mx-auto space-y-4 pb-4">
+                        <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-8">
                             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono font-semibold">
                                         Truth.OS · Home
                                     </p>
-                                    <h1 className="text-2xl sm:text-3xl font-semibold text-white mt-1 tracking-tight drop-shadow-md">
+                                    <h1 className="text-xl sm:text-3xl font-semibold text-white mt-1 tracking-tight drop-shadow-md">
                                         The Hut
                                     </h1>
-                                    <p className="text-sm text-white/75 mt-1 max-w-lg leading-relaxed">
-                                        Everything that lived in the Hut is here — open a card. No 3D required.
+                                    <p className="text-[13px] sm:text-sm text-white/75 mt-1 max-w-lg leading-relaxed line-clamp-2 sm:line-clamp-none">
+                                        Open a card to launch an app. Everything from the Hut lives here.
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-white/15 bg-black/55 backdrop-blur-xl px-3.5 py-3 shrink-0 shadow-xl ring-1 ring-white/5">
+                                <div className="rounded-2xl border border-white/15 bg-black/55 sm:backdrop-blur-xl backdrop-blur-md px-3.5 py-3 shrink-0 shadow-xl ring-1 ring-white/5 w-full sm:w-auto">
                                     <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-300/90 font-mono">
                                         {email ? 'Signed in' : 'Guest'}
                                     </p>
-                                    <p className="text-[12px] text-white/80 mt-0.5 max-w-[200px]">
+                                    <p className="text-[12px] text-white/80 mt-0.5 max-w-[240px] sm:max-w-[200px] truncate">
                                         {email
                                             ? email
                                             : 'Sign in for Ledger, Soul, Arcade & more.'}
@@ -299,7 +325,7 @@ export default function TruthOSShell({
                                                 setAuthPrompt(true);
                                                 sacredUi.click();
                                             }}
-                                            className="mt-2 w-full py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-black text-[11px] font-bold min-h-[40px] shadow-[0_0_20px_rgba(52,211,153,0.35)]"
+                                            className="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-black text-[12px] font-bold min-h-[44px] shadow-[0_0_20px_rgba(52,211,153,0.35)] touch-manipulation"
                                         >
                                             Sign in with Google
                                         </button>
@@ -308,7 +334,7 @@ export default function TruthOSShell({
                             </div>
 
                             {/* Hut stations bento */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 auto-rows-[minmax(100px,auto)]">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 auto-rows-[minmax(100px,auto)]">
                                 {HUT_HOME.filter(
                                     (c) => !APPS.find((a) => a.app === c.app)?.adminOnly || isAdmin,
                                 ).map((card) => (
@@ -317,7 +343,7 @@ export default function TruthOSShell({
                                         app={card.app}
                                         title={card.title}
                                         blurb={card.blurb}
-                                        span={card.span}
+                                        span={phone ? undefined : card.span}
                                         onClick={() => launch(card.app)}
                                     />
                                 ))}
@@ -344,6 +370,7 @@ export default function TruthOSShell({
                                             app={app}
                                             label={label}
                                             open={openAppIds.has(app)}
+                                            compact={phone}
                                             onClick={() => launch(app)}
                                         />
                                     ))}
@@ -376,6 +403,7 @@ export default function TruthOSShell({
                                         maximized={!!w.maximized || w.snap === 'max'}
                                         focused={focusId === w.id}
                                         bento
+                                        phone={phone}
                                         onFocus={() => focusWindow(w.id)}
                                         onClose={() => {
                                             closeWindow(w.id);
@@ -412,6 +440,7 @@ export default function TruthOSShell({
                                         maximized={!!w.maximized || phone}
                                         focused={focusId === w.id}
                                         bento={false}
+                                        phone={phone}
                                         onFocus={() => focusWindow(w.id)}
                                         onClose={() => closeWindow(w.id)}
                                         onMinimize={() => minimizeWindow(w.id)}
@@ -430,12 +459,21 @@ export default function TruthOSShell({
                     )
                 )}
 
-                {/* Start menu — above taskbar */}
+                {/* Start menu — bottom sheet on phone, floating on desktop */}
                 {startOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 12 }}
+                        initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,400px)] max-h-[min(70vh,560px)] rounded-2xl border border-white/15 bg-[#0f1219]/96 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/10"
+                        className={`absolute z-50 border border-white/15 bg-[#0f1219]/97 shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/10 max-sm:backdrop-blur-md sm:backdrop-blur-2xl ${
+                            phone
+                                ? 'left-0 right-0 bottom-0 max-h-[min(78dvh,560px)] rounded-t-3xl rounded-b-none border-b-0'
+                                : 'bottom-2 left-2 sm:left-3 w-[min(100%-1rem,400px)] max-h-[min(70vh,560px)] rounded-2xl'
+                        }`}
+                        style={
+                            (phone
+                                ? { marginBottom: 'var(--os-taskbar)' }
+                                : undefined) as CSSProperties | undefined
+                        }
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3 shrink-0 bg-gradient-to-r from-emerald-500/10 to-cyan-500/5">
@@ -458,13 +496,19 @@ export default function TruthOSShell({
                                 </button>
                             )}
                         </div>
-                        <div className="p-3 grid grid-cols-3 gap-2 overflow-y-auto flex-1">
+                        <div
+                            className={`p-3 grid gap-2 overflow-y-auto flex-1 overscroll-contain ${
+                                phone ? 'grid-cols-4' : 'grid-cols-3'
+                            }`}
+                            style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
+                        >
                             {visibleApps.map((d) => (
                                 <OsAppButton
                                     key={d.app}
                                     app={d.app}
                                     label={d.label}
                                     open={openAppIds.has(d.app)}
+                                    compact={phone}
                                     onClick={() => launch(d.app)}
                                 />
                             ))}
@@ -508,13 +552,14 @@ export default function TruthOSShell({
                 )}
             </div>
 
-            {/* Bottom taskbar */}
+            {/* Bottom taskbar — dock height matches --os-taskbar */}
             <footer
-                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1.5 px-2 border-t border-white/15 bg-black/80 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 border-t border-white/15 bg-black/85 max-sm:backdrop-blur-md sm:backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
                 style={{
                     minHeight: '3.65rem',
-                    paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom, 0px))',
-                    paddingTop: '0.4rem',
+                    height: 'var(--os-taskbar)',
+                    paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))',
+                    paddingTop: '0.35rem',
                 }}
             >
                 <button
@@ -525,7 +570,7 @@ export default function TruthOSShell({
                         if (next) hubAudio.osStartMenu();
                         else sacredUi.click();
                     }}
-                    className={`h-10 px-3 rounded-xl flex items-center gap-2 text-[13px] font-bold transition-all active:scale-95 min-w-[44px] ${
+                    className={`h-11 min-h-[44px] min-w-[44px] px-2.5 sm:px-3 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold transition-all active:scale-95 touch-manipulation ${
                         startOpen
                             ? 'bg-emerald-500/25 text-white border border-emerald-400/40 shadow-[0_0_16px_rgba(52,211,153,0.25)]'
                             : 'text-white/90 hover:bg-white/12 border border-white/10'
@@ -544,15 +589,18 @@ export default function TruthOSShell({
                             enterChamber();
                             sacredUi.access();
                         }}
-                        className="h-10 px-3 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-200/50 min-w-[44px] shadow-[0_0_20px_rgba(52,211,153,0.3)] active:scale-95"
+                        className="h-11 min-h-[44px] min-w-[44px] px-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-200/50 shadow-[0_0_20px_rgba(52,211,153,0.3)] active:scale-95 touch-manipulation"
                         title="Leave terminal — enter 3D world"
                     >
                         <OsIconTile app="chamber" size="sm" />
                         <span className="hidden sm:inline">Leave terminal</span>
                     </button>
                 )}
-                <div className="w-px h-7 bg-white/15 mx-0.5" />
-                <div className="flex-1 flex items-center gap-1.5 overflow-x-auto min-w-0 no-scrollbar">
+                <div className="w-px h-7 bg-white/15 mx-0.5 shrink-0" />
+                <div
+                    className="flex-1 flex items-center gap-1 sm:gap-1.5 overflow-x-auto min-w-0 no-scrollbar overscroll-x-contain"
+                    style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
+                >
                     {windows.map((w) => (
                         <OsTaskbarItem
                             key={w.id}
@@ -560,6 +608,7 @@ export default function TruthOSShell({
                             title={w.title}
                             focused={focusId === w.id}
                             minimized={w.minimized}
+                            iconOnly={phone}
                             onClick={() => {
                                 if (w.minimized || focusId !== w.id) focusWindow(w.id);
                                 else minimizeWindow(w.id);
@@ -568,16 +617,16 @@ export default function TruthOSShell({
                         />
                     ))}
                 </div>
-                <div className="flex items-center gap-2.5 px-2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-10">
+                <div className="flex items-center gap-2 px-2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-11 min-h-[44px]">
                     {isAdmin && (
                         <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden md:inline">
                             Admin
                         </span>
                     )}
-                    <span className="text-[11px] font-mono text-white/75 hidden sm:inline font-medium tabular-nums">
+                    <span className="text-[11px] font-mono text-white/75 hidden md:inline font-medium tabular-nums">
                         {clock.split(' · ')[0]}
                     </span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80]" title="Online" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80]" title="Online" />
                 </div>
             </footer>
 
@@ -608,6 +657,7 @@ function OsWindowFrame({
     maximized,
     focused,
     bento,
+    phone = false,
     children,
     onFocus,
     onClose,
@@ -626,6 +676,7 @@ function OsWindowFrame({
     maximized: boolean;
     focused: boolean;
     bento: boolean;
+    phone?: boolean;
     children: ReactNode;
     onFocus: () => void;
     onClose: () => void;
@@ -635,47 +686,61 @@ function OsWindowFrame({
     onSnap: (s: BentoSlot) => void;
 }) {
     const drag = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
-    const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
+    const narrow = phone || (typeof window !== 'undefined' && window.innerWidth < 768);
     const accentId = getAppAccent(app);
     const accentStyle = ACCENT_STYLES[accentId];
     const borderCls = focused
         ? `border-white/20 ring-1 ${accentStyle.ring}`
         : 'border-white/12';
+    const fillScreen = (maximized || narrow) && !(bento && !maximized && !narrow);
 
-    const style: React.CSSProperties =
-        bento || maximized || narrow
-            ? {
-                  position: bento && !maximized && !narrow ? 'relative' : 'absolute',
-                  inset: bento && !maximized && !narrow ? undefined : narrow || maximized ? 8 : undefined,
-                  bottom: bento && !maximized && !narrow ? undefined : narrow || maximized ? 60 : undefined,
-                  left: bento && !maximized && !narrow ? undefined : maximized || narrow ? 8 : x,
-                  top: bento && !maximized && !narrow ? undefined : maximized || narrow ? 8 : y,
-                  width: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(w, (typeof window !== 'undefined' ? window.innerWidth : w) - 24),
-                  height: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(h, (typeof window !== 'undefined' ? window.innerHeight : h) - 100),
-                  zIndex: z,
-                  background: '#0c0e14',
-              }
-            : {
-                  position: 'absolute',
-                  left: x,
-                  top: y,
-                  width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
-                  height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
-                  zIndex: z,
-                  background: '#0c0e14',
-              };
+    const style: CSSProperties = fillScreen
+        ? {
+              position: 'absolute',
+              left: narrow ? 0 : 8,
+              right: narrow ? 0 : 8,
+              top: narrow
+                  ? 'max(0px, env(safe-area-inset-top, 0px))'
+                  : 8,
+              bottom: 'var(--os-taskbar, 3.65rem)',
+              width: undefined,
+              height: undefined,
+              zIndex: z,
+              background: '#0c0e14',
+          }
+        : bento && !maximized && !narrow
+          ? {
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                zIndex: z,
+                background: '#0c0e14',
+            }
+          : {
+                position: 'absolute',
+                left: x,
+                top: y,
+                width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
+                height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
+                zIndex: z,
+                background: '#0c0e14',
+            };
 
     return (
         <div
-            className={`flex flex-col overflow-hidden border shadow-2xl rounded-2xl ${borderCls} ${
-                focused ? 'shadow-black/60' : 'opacity-[0.97]'
-            } ${bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''}`}
+            className={`flex flex-col overflow-hidden border shadow-2xl ${
+                narrow ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'
+            } ${borderCls} ${focused ? 'shadow-black/60' : 'opacity-[0.97]'} ${
+                bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''
+            }`}
             style={style}
             onMouseDown={onFocus}
         >
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentStyle.bar} z-10 rounded-l-2xl`} />
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentStyle.bar} z-10 ${narrow ? '' : 'rounded-l-2xl'}`} />
             <div
-                className="h-10 shrink-0 flex items-center gap-2 pl-3 pr-1.5 border-b border-white/12 bg-gradient-to-r from-black/70 to-black/40 cursor-default backdrop-blur-md"
+                className={`shrink-0 flex items-center gap-2 pl-3 pr-1 border-b border-white/12 bg-gradient-to-r from-black/70 to-black/40 cursor-default ${
+                    narrow ? 'h-11 min-h-[44px]' : 'h-10'
+                }`}
                 onPointerDown={(e) => {
                     if (narrow || maximized || bento) return;
                     drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
@@ -696,7 +761,9 @@ function OsWindowFrame({
                 }}
             >
                 <OsIconTile app={app} size="sm" open={focused} />
-                <span className="text-[12px] text-white font-semibold truncate flex-1 tracking-tight">{title}</span>
+                <span className="text-[12px] sm:text-[13px] text-white font-semibold truncate flex-1 tracking-tight">
+                    {title}
+                </span>
                 <div className="flex items-center gap-0.5 shrink-0">
                     {!narrow && (
                         <button
@@ -706,7 +773,7 @@ function OsWindowFrame({
                                 e.stopPropagation();
                                 onSnap('hero');
                             }}
-                            className="w-8 h-8 rounded-lg text-[11px] text-white/50 hover:bg-white/12 hover:text-white transition-colors"
+                            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-[11px] text-white/50 hover:bg-white/12 hover:text-white transition-colors touch-manipulation"
                         >
                             ⊞
                         </button>
@@ -718,21 +785,23 @@ function OsWindowFrame({
                             e.stopPropagation();
                             onMinimize();
                         }}
-                        className="w-8 h-8 rounded-lg text-white/60 hover:bg-white/12 text-base leading-none transition-colors"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-base leading-none transition-colors touch-manipulation"
                     >
                         –
                     </button>
-                    <button
-                        type="button"
-                        title="Maximize"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onMaximize();
-                        }}
-                        className="w-8 h-8 rounded-lg text-white/60 hover:bg-white/12 text-[11px] transition-colors"
-                    >
-                        □
-                    </button>
+                    {!narrow && (
+                        <button
+                            type="button"
+                            title="Maximize"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onMaximize();
+                            }}
+                            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-[11px] transition-colors touch-manipulation"
+                        >
+                            □
+                        </button>
+                    )}
                     <button
                         type="button"
                         title="Close"
@@ -740,13 +809,15 @@ function OsWindowFrame({
                             e.stopPropagation();
                             onClose();
                         }}
-                        className="w-8 h-8 rounded-lg text-white/70 hover:bg-red-500 hover:text-white text-base leading-none transition-colors"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/70 hover:bg-red-500 hover:text-white text-base leading-none transition-colors touch-manipulation"
                     >
                         ×
                     </button>
                 </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden bg-[#0c0e14]">{children}</div>
+            <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto bg-[#0c0e14] overscroll-contain">
+                {children}
+            </div>
         </div>
     );
 }

@@ -188,12 +188,15 @@ export function OsAppButton({
     label,
     open = false,
     large = false,
+    compact = false,
     onClick,
 }: {
     app: OsAppId;
     label?: string;
     open?: boolean;
     large?: boolean;
+    /** Tighter tiles for phone Start grids */
+    compact?: boolean;
     onClick: () => void;
 }) {
     const meta = getAppIconMeta(app);
@@ -202,12 +205,23 @@ export function OsAppButton({
         <button
             type="button"
             onClick={onClick}
-            className={`group flex flex-col items-center justify-center gap-1.5 rounded-2xl border bg-white/[0.05] hover:bg-white/[0.1] transition-all active:scale-[0.94] duration-150 ${
+            className={`group flex flex-col items-center justify-center gap-1 sm:gap-1.5 rounded-2xl border bg-white/[0.05] hover:bg-white/[0.1] transition-all active:scale-[0.94] duration-150 touch-manipulation select-none w-full ${
                 open ? `${a.soft} border` : 'border-white/12 hover:border-white/25'
-            } ${large ? 'min-h-[92px] p-3' : 'min-h-[76px] p-2'}`}
+            } ${
+                large
+                    ? 'min-h-[92px] p-3'
+                    : compact
+                      ? 'min-h-[72px] sm:min-h-[80px] p-1.5 sm:p-2'
+                      : 'min-h-[80px] sm:min-h-[76px] p-2'
+            }`}
         >
-            <OsIconTile app={app} size={large ? 'lg' : 'md'} open={open} className="group-hover:scale-105 transition-transform duration-150" />
-            <span className="text-[11px] font-medium text-white/90 group-hover:text-white text-center leading-tight px-0.5">
+            <OsIconTile
+                app={app}
+                size={large ? 'lg' : compact ? 'md' : 'md'}
+                open={open}
+                className="motion-safe:group-hover:scale-105 transition-transform duration-150 [@media(hover:none)]:group-hover:scale-100"
+            />
+            <span className="text-[10px] sm:text-[11px] font-medium text-white/90 group-hover:text-white text-center leading-tight px-0.5 line-clamp-2">
                 {label ?? meta.label}
             </span>
             {open && <span className={`h-0.5 w-4 rounded-full ${a.bar}`} />}
@@ -222,12 +236,15 @@ export function OsTaskbarItem({
     focused,
     minimized,
     onClick,
+    iconOnly = false,
 }: {
     app: OsAppId;
     title: string;
     focused: boolean;
     minimized?: boolean;
     onClick: () => void;
+    /** Phone dock: icon-first, 44px min hit */
+    iconOnly?: boolean;
 }) {
     const accent = getAppAccent(app);
     const a = ACCENT_STYLES[accent];
@@ -235,7 +252,13 @@ export function OsTaskbarItem({
         <button
             type="button"
             onClick={onClick}
-            className={`relative h-10 pl-1.5 pr-2.5 rounded-xl text-[11px] truncate max-w-[160px] border transition-all duration-150 flex items-center gap-2 shrink-0 active:scale-[0.96] ${
+            title={title}
+            aria-label={title}
+            className={`relative rounded-xl text-[11px] border transition-all duration-150 flex items-center justify-center gap-2 shrink-0 active:scale-[0.96] touch-manipulation select-none ${
+                iconOnly
+                    ? 'min-w-[44px] min-h-[44px] h-11 w-11 p-0'
+                    : 'h-10 min-h-[40px] pl-1.5 pr-2.5 max-w-[160px]'
+            } ${
                 focused && !minimized
                     ? `bg-white/14 border-white/20 text-white ${a.glow}`
                     : minimized
@@ -243,8 +266,8 @@ export function OsTaskbarItem({
                       : 'border-transparent text-white/70 hover:bg-white/10 hover:text-white'
             }`}
         >
-            <OsIconTile app={app} size="sm" open={focused && !minimized} />
-            <span className="truncate hidden sm:inline font-medium">{title}</span>
+            <OsIconTile app={app} size={iconOnly ? 'md' : 'sm'} open={focused && !minimized} />
+            {!iconOnly && <span className="truncate hidden sm:inline font-medium">{title}</span>}
             <span
                 className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all ${
                     focused && !minimized ? `w-5 ${a.bar}` : minimized ? 'w-1.5 bg-white/25' : `w-2 ${a.bar}/70`
@@ -274,14 +297,18 @@ export function OsHomeCard({
         <button
             type="button"
             onClick={onClick}
-            className={`group relative text-left rounded-2xl border border-white/12 bg-black/50 hover:bg-black/60 backdrop-blur-md p-3.5 sm:p-4 transition-all active:scale-[0.98] shadow-lg overflow-hidden ${
-                a.soft.split(' ')[0]
-            } hover:border-opacity-80 ${span || ''}`}
+            className={`group relative text-left rounded-2xl border border-white/12 bg-black/50 sm:bg-black/50 hover:bg-black/60 backdrop-blur-md p-3 sm:p-4 transition-all active:scale-[0.98] shadow-lg overflow-hidden min-h-[100px] sm:min-h-[104px] touch-manipulation select-none w-full ${
+                a.soft
+            } ${span || ''}`}
         >
             <span className={`absolute left-0 top-0 bottom-0 w-1 ${a.bar}`} />
-            <OsIconTile app={app} size="lg" className="mb-2.5 group-hover:scale-105 transition-transform" />
+            <OsIconTile
+                app={app}
+                size="lg"
+                className="mb-2 sm:mb-2.5 motion-safe:group-hover:scale-105 transition-transform [@media(hover:none)]:group-hover:scale-100"
+            />
             <span className="block text-sm sm:text-base font-semibold text-white tracking-tight">{title}</span>
-            <span className="block text-[12px] text-white/70 mt-0.5 leading-snug">{blurb}</span>
+            <span className="block text-[11px] sm:text-[12px] text-white/70 mt-0.5 leading-snug line-clamp-2">{blurb}</span>
         </button>
     );
 }
