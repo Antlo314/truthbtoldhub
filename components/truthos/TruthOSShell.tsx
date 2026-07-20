@@ -2,13 +2,12 @@
 
 /**
  * Truth.OS — Windows × Bento desktop shell.
- * Bottom taskbar, Start menu, snap windows. No 3D required.
+ * Colored icons, sharp glass chrome, real open/press states.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     useTruthOs,
-    APP_META,
     type OsAppId,
     type BentoSlot,
     detectDevice,
@@ -19,47 +18,54 @@ import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import AuthModal from '@/components/AuthModal';
+import {
+    OsAppButton,
+    OsHomeCard,
+    OsIconTile,
+    OsTaskbarItem,
+    ACCENT_STYLES,
+    getAppAccent,
+} from './OsIcon';
 
 type DockItem = {
     app: OsAppId;
     label: string;
-    emoji: string;
     adminOnly?: boolean;
     guestOk?: boolean;
 };
 
 /** Hut home + utilities (no Forge / Wayfinder) */
 const APPS: DockItem[] = [
-    { app: 'truth', label: 'Guide', emoji: '✦', guestOk: true },
-    { app: 'ledger', label: 'Ledger', emoji: '▣' },
-    { app: 'soul', label: 'Soul', emoji: '◉' },
-    { app: 'arcade', label: 'Arcade', emoji: '▷' },
-    { app: 'offering', label: 'Offering', emoji: '◇' },
-    { app: 'archive', label: 'Hall', emoji: '☰', guestOk: true },
-    { app: 'library', label: 'Library', emoji: '▤', guestOk: true },
-    { app: 'visions', label: 'Visions', emoji: '◈', guestOk: true },
-    { app: 'updates', label: 'Updates', emoji: '◎', guestOk: true },
-    { app: 'files', label: 'Files', emoji: '📁', guestOk: true },
-    { app: 'calculator', label: 'Calc', emoji: '🔢', guestOk: true },
-    { app: 'paint', label: 'Paint', emoji: '🎨', guestOk: true },
-    { app: 'notepad', label: 'Notepad', emoji: '📝', guestOk: true },
-    { app: 'account', label: 'Account', emoji: '☺' },
-    { app: 'settings', label: 'Settings', emoji: '⚙', guestOk: true },
-    { app: 'chamber', label: 'Leave', emoji: '🚪', guestOk: true },
-    { app: 'admin', label: 'Admin', emoji: '✱', adminOnly: true },
+    { app: 'truth', label: 'Guide', guestOk: true },
+    { app: 'ledger', label: 'Ledger' },
+    { app: 'soul', label: 'Soul' },
+    { app: 'arcade', label: 'Arcade' },
+    { app: 'offering', label: 'Offering' },
+    { app: 'archive', label: 'Hall', guestOk: true },
+    { app: 'library', label: 'Library', guestOk: true },
+    { app: 'visions', label: 'Visions', guestOk: true },
+    { app: 'updates', label: 'Updates', guestOk: true },
+    { app: 'files', label: 'Files', guestOk: true },
+    { app: 'calculator', label: 'Calc', guestOk: true },
+    { app: 'paint', label: 'Paint', guestOk: true },
+    { app: 'notepad', label: 'Notepad', guestOk: true },
+    { app: 'account', label: 'Account' },
+    { app: 'settings', label: 'Settings', guestOk: true },
+    { app: 'chamber', label: 'Leave', guestOk: true },
+    { app: 'admin', label: 'Admin', adminOnly: true },
 ];
 
 /** Hut stations shown as home-screen bento cards */
-const HUT_HOME: { app: OsAppId; emoji: string; title: string; blurb: string; span?: string }[] = [
-    { app: 'truth', emoji: '✦', title: 'Truth Guide', blurb: 'AI brother · scripture · OS help', span: 'sm:col-span-2 sm:row-span-2' },
-    { app: 'ledger', emoji: '▣', title: 'Ledger', blurb: 'Daily Word · souls' },
-    { app: 'soul', emoji: '◉', title: 'Soul', blurb: 'Vessel · identity' },
-    { app: 'arcade', emoji: '▷', title: 'Arcade', blurb: 'Games · scores' },
-    { app: 'archive', emoji: '☰', title: 'The Hall', blurb: 'Community chat' },
-    { app: 'library', emoji: '▤', title: 'Library', blurb: 'Scrolls · study' },
-    { app: 'visions', emoji: '◈', title: 'Visions', blurb: 'Roads · cinema' },
-    { app: 'offering', emoji: '◇', title: 'Offering', blurb: 'Sustain the work' },
-    { app: 'updates', emoji: '◎', title: 'Updates', blurb: 'Dispatches' },
+const HUT_HOME: { app: OsAppId; title: string; blurb: string; span?: string }[] = [
+    { app: 'truth', title: 'Truth Guide', blurb: 'AI brother · scripture · OS help', span: 'sm:col-span-2 sm:row-span-2' },
+    { app: 'ledger', title: 'Ledger', blurb: 'Daily Word · souls' },
+    { app: 'soul', title: 'Soul', blurb: 'Vessel · identity' },
+    { app: 'arcade', title: 'Arcade', blurb: 'Games · scores' },
+    { app: 'archive', title: 'The Hall', blurb: 'Community chat' },
+    { app: 'library', title: 'Library', blurb: 'Scrolls · study' },
+    { app: 'visions', title: 'Visions', blurb: 'Roads · cinema' },
+    { app: 'offering', title: 'Offering', blurb: 'Sustain the work' },
+    { app: 'updates', title: 'Updates', blurb: 'Dispatches' },
 ];
 
 const BOOT_LINES = [
@@ -79,41 +85,6 @@ const BENTO_CLASS: Record<BentoSlot, string> = {
     float: '',
     max: 'col-span-full row-span-full',
 };
-
-function AppTile({
-    emoji,
-    label,
-    accent,
-    onClick,
-    large,
-}: {
-    emoji: string;
-    label: string;
-    accent?: string;
-    onClick: () => void;
-    large?: boolean;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`group flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.09] hover:border-emerald-400/30 transition-all active:scale-[0.98] ${
-                large ? 'min-h-[88px] p-3' : 'min-h-[72px] p-2'
-            }`}
-        >
-            <span
-                className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/[0.02] border border-white/10 shadow-inner ${
-                    large ? 'w-12 h-12 text-xl' : 'w-10 h-10 text-lg'
-                } ${accent || ''}`}
-            >
-                {emoji}
-            </span>
-            <span className="text-[11px] text-white/80 group-hover:text-white text-center leading-tight px-1">
-                {label}
-            </span>
-        </button>
-    );
-}
 
 export default function TruthOSShell({
     onLogout,
@@ -263,20 +234,24 @@ export default function TruthOSShell({
         );
     }
 
+    const openAppIds = new Set(windows.map((w) => w.app));
+
     return (
-        <div className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#0a0c12]">
-            {/* Wallpaper */}
+        <div className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#07090f]">
+            {/* Wallpaper — lighter wash so color stays sharp */}
             <div
-                className="pointer-events-none absolute inset-0 bg-cover bg-center"
+                className="pointer-events-none absolute inset-0 bg-cover bg-center scale-105"
                 style={{ backgroundImage: 'url(/truthos/os-wallpaper.jpg)' }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.18),transparent_55%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.12),transparent_50%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/75" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.04]"
+                className="pointer-events-none absolute inset-0 opacity-[0.06]"
                 style={{
                     backgroundImage:
-                        'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-                    backgroundSize: '56px 56px',
+                        'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+                    backgroundSize: '48px 48px',
                 }}
             />
 
@@ -298,21 +273,21 @@ export default function TruthOSShell({
                         <div className="max-w-5xl mx-auto space-y-4 pb-4">
                             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-400/80 font-mono">
+                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono font-semibold">
                                         Truth.OS · Home
                                     </p>
-                                    <h1 className="text-2xl sm:text-3xl font-semibold text-white mt-1 tracking-tight">
+                                    <h1 className="text-2xl sm:text-3xl font-semibold text-white mt-1 tracking-tight drop-shadow-md">
                                         The Hut
                                     </h1>
-                                    <p className="text-sm text-white/55 mt-1 max-w-lg">
+                                    <p className="text-sm text-white/75 mt-1 max-w-lg leading-relaxed">
                                         Everything that lived in the Hut is here — open a card. No 3D required.
                                     </p>
                                 </div>
-                                <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-3.5 py-3 shrink-0">
-                                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-400/70 font-mono">
+                                <div className="rounded-2xl border border-white/15 bg-black/55 backdrop-blur-xl px-3.5 py-3 shrink-0 shadow-xl ring-1 ring-white/5">
+                                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-300/90 font-mono">
                                         {email ? 'Signed in' : 'Guest'}
                                     </p>
-                                    <p className="text-[12px] text-white/70 mt-0.5 max-w-[200px]">
+                                    <p className="text-[12px] text-white/80 mt-0.5 max-w-[200px]">
                                         {email
                                             ? email
                                             : 'Sign in for Ledger, Soul, Arcade & more.'}
@@ -324,7 +299,7 @@ export default function TruthOSShell({
                                                 setAuthPrompt(true);
                                                 sacredUi.click();
                                             }}
-                                            className="mt-2 w-full py-2 rounded-xl bg-white text-black text-[11px] font-semibold min-h-[40px]"
+                                            className="mt-2 w-full py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-black text-[11px] font-bold min-h-[40px] shadow-[0_0_20px_rgba(52,211,153,0.35)]"
                                         >
                                             Sign in with Google
                                         </button>
@@ -337,52 +312,40 @@ export default function TruthOSShell({
                                 {HUT_HOME.filter(
                                     (c) => !APPS.find((a) => a.app === c.app)?.adminOnly || isAdmin,
                                 ).map((card) => (
-                                    <button
+                                    <OsHomeCard
                                         key={card.app}
-                                        type="button"
+                                        app={card.app}
+                                        title={card.title}
+                                        blurb={card.blurb}
+                                        span={card.span}
                                         onClick={() => launch(card.app)}
-                                        className={`group text-left rounded-2xl border border-white/10 bg-black/40 hover:bg-black/55 hover:border-emerald-400/35 backdrop-blur-md p-3.5 sm:p-4 transition-all active:scale-[0.98] shadow-lg ${
-                                            card.span || ''
-                                        }`}
-                                    >
-                                        <span className="text-2xl sm:text-3xl block mb-2 group-hover:scale-105 transition-transform origin-left">
-                                            {card.emoji}
-                                        </span>
-                                        <span className="block text-sm sm:text-base font-semibold text-white">
-                                            {card.title}
-                                        </span>
-                                        <span className="block text-[11px] text-white/45 mt-0.5 leading-snug">
-                                            {card.blurb}
-                                        </span>
-                                    </button>
+                                    />
                                 ))}
                             </div>
 
                             {/* Utilities strip */}
                             <div>
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-white/35 font-mono mb-2 px-0.5">
+                                <p className="text-[9px] uppercase tracking-[0.3em] text-white/55 font-mono mb-2 px-0.5 font-semibold">
                                     System tools
                                 </p>
                                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                                     {(
                                         [
-                                            ['files', '📁', 'Files'],
-                                            ['calculator', '🔢', 'Calc'],
-                                            ['paint', '🎨', 'Paint'],
-                                            ['notepad', '📝', 'Notes'],
-                                            ['settings', '⚙', 'Settings'],
-                                            ['chamber', '🚪', 'Leave'],
+                                            ['files', 'Files'],
+                                            ['calculator', 'Calc'],
+                                            ['paint', 'Paint'],
+                                            ['notepad', 'Notes'],
+                                            ['settings', 'Settings'],
+                                            ['chamber', 'Leave'],
                                         ] as const
-                                    ).map(([app, emoji, label]) => (
-                                        <button
+                                    ).map(([app, label]) => (
+                                        <OsAppButton
                                             key={app}
-                                            type="button"
+                                            app={app}
+                                            label={label}
+                                            open={openAppIds.has(app)}
                                             onClick={() => launch(app)}
-                                            className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] py-3 px-2 flex flex-col items-center gap-1 min-h-[72px]"
-                                        >
-                                            <span className="text-lg">{emoji}</span>
-                                            <span className="text-[10px] text-white/70">{label}</span>
-                                        </button>
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -405,7 +368,6 @@ export default function TruthOSShell({
                                     <OsWindowFrame
                                         title={w.title}
                                         app={w.app}
-                                        emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
                                         x={w.x}
                                         y={w.y}
                                         w={w.w}
@@ -442,7 +404,6 @@ export default function TruthOSShell({
                                         key={w.id}
                                         title={w.title}
                                         app={w.app}
-                                        emoji={APPS.find((a) => a.app === w.app)?.emoji ?? '▣'}
                                         x={w.x}
                                         y={w.y}
                                         w={w.w}
@@ -474,16 +435,16 @@ export default function TruthOSShell({
                     <motion.div
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,380px)] max-h-[min(70vh,560px)] rounded-2xl border border-white/12 bg-[#12151c]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col"
+                        className="absolute bottom-2 left-2 sm:left-3 z-50 w-[min(100%-1rem,400px)] max-h-[min(70vh,560px)] rounded-2xl border border-white/15 bg-[#0f1219]/96 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/10"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3 shrink-0">
-                            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black">
+                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3 shrink-0 bg-gradient-to-r from-emerald-500/10 to-cyan-500/5">
+                            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black shadow-[0_0_20px_rgba(52,211,153,0.4)] ring-1 ring-white/30">
                                 T
                             </span>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 font-mono">Start</p>
-                                <p className="text-sm text-white font-medium mt-0.5 truncate">
+                                <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-300/80 font-mono font-semibold">Start</p>
+                                <p className="text-sm text-white font-semibold mt-0.5 truncate">
                                     {email || 'Guest · sign in for full Hut'}
                                 </p>
                             </div>
@@ -491,7 +452,7 @@ export default function TruthOSShell({
                                 <button
                                     type="button"
                                     onClick={() => setAuthPrompt(true)}
-                                    className="shrink-0 text-[10px] px-2.5 py-1.5 rounded-lg bg-white text-black font-semibold"
+                                    className="shrink-0 text-[10px] px-2.5 py-1.5 rounded-lg bg-white text-black font-bold"
                                 >
                                     Google
                                 </button>
@@ -499,22 +460,23 @@ export default function TruthOSShell({
                         </div>
                         <div className="p-3 grid grid-cols-3 gap-2 overflow-y-auto flex-1">
                             {visibleApps.map((d) => (
-                                <AppTile
+                                <OsAppButton
                                     key={d.app}
-                                    emoji={d.emoji}
+                                    app={d.app}
                                     label={d.label}
+                                    open={openAppIds.has(d.app)}
                                     onClick={() => launch(d.app)}
                                 />
                             ))}
                         </div>
-                        <div className="p-2 border-t border-white/10 space-y-1 shrink-0">
+                        <div className="p-2 border-t border-white/10 space-y-1 shrink-0 bg-black/30">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento');
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-white/60 hover:bg-white/8 min-h-[44px]"
+                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-white/75 hover:bg-white/10 hover:text-white min-h-[44px] font-medium"
                             >
                                 Layout · {layoutMode === 'bento' ? 'Bento snap' : 'Free float'}
                             </button>
@@ -526,7 +488,7 @@ export default function TruthOSShell({
                                         enterChamber();
                                         sacredUi.click();
                                     }}
-                                    className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-emerald-300/80 hover:bg-emerald-500/10 min-h-[44px]"
+                                    className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-emerald-300 hover:bg-emerald-500/15 min-h-[44px] font-medium"
                                 >
                                     Enter 3D Chamber (optional)
                                 </button>
@@ -537,7 +499,7 @@ export default function TruthOSShell({
                                     onLogout();
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-red-300/80 hover:bg-red-500/10 min-h-[44px]"
+                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-red-300 hover:bg-red-500/15 min-h-[44px] font-medium"
                             >
                                 Sign out
                             </button>
@@ -546,13 +508,13 @@ export default function TruthOSShell({
                 )}
             </div>
 
-            {/* Bottom taskbar — taller on mobile + safe area */}
+            {/* Bottom taskbar */}
             <footer
-                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1 px-2 border-t border-white/10 bg-black/85 backdrop-blur-xl"
+                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1.5 px-2 border-t border-white/15 bg-black/80 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
                 style={{
-                    minHeight: '3.5rem',
-                    paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))',
-                    paddingTop: '0.35rem',
+                    minHeight: '3.65rem',
+                    paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom, 0px))',
+                    paddingTop: '0.4rem',
                 }}
             >
                 <button
@@ -563,11 +525,13 @@ export default function TruthOSShell({
                         if (next) hubAudio.osStartMenu();
                         else sacredUi.click();
                     }}
-                    className={`h-10 px-3 rounded-xl flex items-center gap-2 text-[13px] font-semibold transition-colors min-w-[44px] ${
-                        startOpen ? 'bg-emerald-500/20 text-white border border-emerald-400/30' : 'text-white/80 hover:bg-white/10 border border-transparent'
+                    className={`h-10 px-3 rounded-xl flex items-center gap-2 text-[13px] font-bold transition-all active:scale-95 min-w-[44px] ${
+                        startOpen
+                            ? 'bg-emerald-500/25 text-white border border-emerald-400/40 shadow-[0_0_16px_rgba(52,211,153,0.25)]'
+                            : 'text-white/90 hover:bg-white/12 border border-white/10'
                     }`}
                 >
-                    <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-[11px] font-black text-black flex items-center justify-center">
+                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-[12px] font-black text-black flex items-center justify-center shadow-[0_0_12px_rgba(52,211,153,0.4)] ring-1 ring-white/30">
                         T
                     </span>
                     <span className="hidden sm:inline">Start</span>
@@ -580,48 +544,40 @@ export default function TruthOSShell({
                             enterChamber();
                             sacredUi.access();
                         }}
-                        className="h-10 px-3 rounded-xl flex items-center gap-1.5 text-[11px] font-semibold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-300/40 min-w-[44px] shadow-[0_0_20px_rgba(52,211,153,0.25)]"
+                        className="h-10 px-3 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-200/50 min-w-[44px] shadow-[0_0_20px_rgba(52,211,153,0.3)] active:scale-95"
                         title="Leave terminal — enter 3D world"
                     >
-                        <span aria-hidden>🚪</span>
+                        <OsIconTile app="chamber" size="sm" />
                         <span className="hidden sm:inline">Leave terminal</span>
                     </button>
                 )}
-                <div className="w-px h-7 bg-white/10 mx-1" />
-                <div className="flex-1 flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
-                    {windows.map((w) => {
-                        const emoji = APPS.find((a) => a.app === w.app)?.emoji ?? '▣';
-                        return (
-                            <button
-                                key={w.id}
-                                type="button"
-                                onClick={() => {
-                                    if (w.minimized || focusId !== w.id) focusWindow(w.id);
-                                    else minimizeWindow(w.id);
-                                    sacredUi.click();
-                                }}
-                                className={`h-10 pl-2 pr-3 rounded-xl text-[11px] truncate max-w-[150px] border transition-colors flex items-center gap-1.5 shrink-0 ${
-                                    focusId === w.id && !w.minimized
-                                        ? 'bg-white/12 border-white/15 text-white'
-                                        : 'border-transparent text-white/50 hover:bg-white/8'
-                                }`}
-                            >
-                                <span className="text-sm">{emoji}</span>
-                                <span className="truncate hidden xs:inline sm:inline">{w.title}</span>
-                            </button>
-                        );
-                    })}
+                <div className="w-px h-7 bg-white/15 mx-0.5" />
+                <div className="flex-1 flex items-center gap-1.5 overflow-x-auto min-w-0 no-scrollbar">
+                    {windows.map((w) => (
+                        <OsTaskbarItem
+                            key={w.id}
+                            app={w.app}
+                            title={w.title}
+                            focused={focusId === w.id}
+                            minimized={w.minimized}
+                            onClick={() => {
+                                if (w.minimized || focusId !== w.id) focusWindow(w.id);
+                                else minimizeWindow(w.id);
+                                sacredUi.click();
+                            }}
+                        />
+                    ))}
                 </div>
-                <div className="flex items-center gap-2 px-2 shrink-0">
+                <div className="flex items-center gap-2.5 px-2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-10">
                     {isAdmin && (
-                        <span className="text-[9px] uppercase tracking-widest text-rose-400/90 hidden md:inline">
+                        <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden md:inline">
                             Admin
                         </span>
                     )}
-                    <span className="text-[10px] font-mono text-white/45 hidden sm:inline">
+                    <span className="text-[11px] font-mono text-white/75 hidden sm:inline font-medium tabular-nums">
                         {clock.split(' · ')[0]}
                     </span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]" title="Online" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80]" title="Online" />
                 </div>
             </footer>
 
@@ -644,7 +600,6 @@ export default function TruthOSShell({
 function OsWindowFrame({
     title,
     app,
-    emoji,
     x,
     y,
     w,
@@ -663,7 +618,6 @@ function OsWindowFrame({
 }: {
     title: string;
     app: OsAppId;
-    emoji: string;
     x: number;
     y: number;
     w: number;
@@ -682,12 +636,11 @@ function OsWindowFrame({
 }) {
     const drag = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
     const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
-    const accent =
-        app === 'admin'
-            ? 'border-rose-500/40'
-            : focused
-              ? 'border-emerald-500/35'
-              : 'border-white/12';
+    const accentId = getAppAccent(app);
+    const accentStyle = ACCENT_STYLES[accentId];
+    const borderCls = focused
+        ? `border-white/20 ring-1 ${accentStyle.ring}`
+        : 'border-white/12';
 
     const style: React.CSSProperties =
         bento || maximized || narrow
@@ -700,7 +653,7 @@ function OsWindowFrame({
                   width: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(w, (typeof window !== 'undefined' ? window.innerWidth : w) - 24),
                   height: bento && !maximized && !narrow ? '100%' : maximized || narrow ? undefined : Math.min(h, (typeof window !== 'undefined' ? window.innerHeight : h) - 100),
                   zIndex: z,
-                  background: '#0e1016',
+                  background: '#0c0e14',
               }
             : {
                   position: 'absolute',
@@ -709,23 +662,22 @@ function OsWindowFrame({
                   width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
                   height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
                   zIndex: z,
-                  background: '#0e1016',
+                  background: '#0c0e14',
               };
 
     return (
         <div
-            className={`flex flex-col overflow-hidden border shadow-2xl rounded-2xl ${accent} ${
-                focused ? 'shadow-black/50' : 'opacity-95'
+            className={`flex flex-col overflow-hidden border shadow-2xl rounded-2xl ${borderCls} ${
+                focused ? 'shadow-black/60' : 'opacity-[0.97]'
             } ${bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''}`}
             style={style}
             onMouseDown={onFocus}
         >
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentStyle.bar} z-10 rounded-l-2xl`} />
             <div
-                className="h-10 shrink-0 flex items-center gap-2 px-2 border-b border-white/10 bg-black/50 cursor-default"
+                className="h-10 shrink-0 flex items-center gap-2 pl-3 pr-1.5 border-b border-white/12 bg-gradient-to-r from-black/70 to-black/40 cursor-default backdrop-blur-md"
                 onPointerDown={(e) => {
                     if (narrow || maximized || bento) return;
-                    const el = e.currentTarget.parentElement;
-                    if (!el) return;
                     drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
                     const move = (ev: PointerEvent) => {
                         if (!drag.current) return;
@@ -743,9 +695,9 @@ function OsWindowFrame({
                     window.addEventListener('pointerup', up);
                 }}
             >
-                <span className="text-sm pl-1">{emoji}</span>
-                <span className="text-[12px] text-white/85 font-medium truncate flex-1">{title}</span>
-                <div className="flex items-center gap-1 shrink-0">
+                <OsIconTile app={app} size="sm" open={focused} />
+                <span className="text-[12px] text-white font-semibold truncate flex-1 tracking-tight">{title}</span>
+                <div className="flex items-center gap-0.5 shrink-0">
                     {!narrow && (
                         <button
                             type="button"
@@ -754,44 +706,47 @@ function OsWindowFrame({
                                 e.stopPropagation();
                                 onSnap('hero');
                             }}
-                            className="w-7 h-7 rounded-md text-[10px] text-white/40 hover:bg-white/10 hover:text-white"
+                            className="w-8 h-8 rounded-lg text-[11px] text-white/50 hover:bg-white/12 hover:text-white transition-colors"
                         >
                             ⊞
                         </button>
                     )}
                     <button
                         type="button"
+                        title="Minimize"
                         onClick={(e) => {
                             e.stopPropagation();
                             onMinimize();
                         }}
-                        className="w-7 h-7 rounded-md text-white/50 hover:bg-white/10 text-sm leading-none"
+                        className="w-8 h-8 rounded-lg text-white/60 hover:bg-white/12 text-base leading-none transition-colors"
                     >
                         –
                     </button>
                     <button
                         type="button"
+                        title="Maximize"
                         onClick={(e) => {
                             e.stopPropagation();
                             onMaximize();
                         }}
-                        className="w-7 h-7 rounded-md text-white/50 hover:bg-white/10 text-[10px]"
+                        className="w-8 h-8 rounded-lg text-white/60 hover:bg-white/12 text-[11px] transition-colors"
                     >
                         □
                     </button>
                     <button
                         type="button"
+                        title="Close"
                         onClick={(e) => {
                             e.stopPropagation();
                             onClose();
                         }}
-                        className="w-7 h-7 rounded-md text-white/50 hover:bg-red-500/30 hover:text-red-200 text-sm leading-none"
+                        className="w-8 h-8 rounded-lg text-white/70 hover:bg-red-500 hover:text-white text-base leading-none transition-colors"
                     >
                         ×
                     </button>
                 </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden bg-[#0e1016]">{children}</div>
+            <div className="flex-1 min-h-0 overflow-hidden bg-[#0c0e14]">{children}</div>
         </div>
     );
 }
