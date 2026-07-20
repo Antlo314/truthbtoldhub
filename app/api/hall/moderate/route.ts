@@ -165,11 +165,15 @@ export async function POST(req: Request) {
         }
 
         if (action === 'remove' && !serviceKey) {
-            // Without service role, author can soft-hide optimistically only if admin RPC works
-            await userClient.rpc('soft_delete_hall_message', {
-                _message_id: messageId,
-                _reason: `gemini:${reason}`,
-            }).catch(() => null);
+            // Without service role, try Architect RPC (only works for admin callers)
+            try {
+                await userClient.rpc('soft_delete_hall_message', {
+                    _message_id: messageId,
+                    _reason: `gemini:${reason}`,
+                });
+            } catch {
+                /* best-effort */
+            }
             return NextResponse.json({
                 status: 'flagged',
                 action: 'remove',
