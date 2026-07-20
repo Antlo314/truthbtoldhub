@@ -9,6 +9,7 @@ import SoulMirrorMesh from './SoulMirrorMesh';
 import Fireplace from './Fireplace';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import { FURN, OPENING, SHELL } from './houseMap';
+import CinemaScreen from './CinemaScreen';
 
 const SEGS = 12;
 
@@ -621,18 +622,10 @@ export default function HouseGeometry({
             {/* ── EAST WING ── */}
             <Desk pos={[FURN.studyDesk.x, 0, FURN.studyDesk.z]} sh={sh} rich={rich} m={m} chairSign={1} />
             <WallBookcase wallX={13.4} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
-            {/* Cinema — against outer east wall, chairs clear of doorway */}
+            {/* Cinema — frame + live screen (uploaded MP4s via CinemaScreen) */}
             <MatBox pos={[12.55, 0.4, 7.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
             <MatBox pos={[12.6, 1.65, 7.0]} size={[0.1, 1.55, 2.4]} material={m.black} shadows={sh} />
-            <mesh position={[12.5, 1.65, 7.0]} rotation={[0, -Math.PI / 2, 0]}>
-                <planeGeometry args={[2.15, 1.3]} />
-                <meshStandardMaterial
-                    color="#0a0a12"
-                    emissive="#7c3aed"
-                    emissiveIntensity={rich ? 0.65 : 0.45}
-                    toneMapped={false}
-                />
-            </mesh>
+            <CinemaScreen low={low} />
             <AccentChair x={FURN.cinemaChairA.x} z={FURN.cinemaChairA.z} sh={sh} m={m} rotY={-Math.PI / 2} />
             <AccentChair x={FURN.cinemaChairB.x} z={FURN.cinemaChairB.z} sh={sh} m={m} rotY={-Math.PI / 2} />
             {/* Cinema rug */}

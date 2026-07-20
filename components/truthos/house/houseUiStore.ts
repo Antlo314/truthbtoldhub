@@ -20,11 +20,17 @@ type HouseUiState = {
     walkthroughOpen: boolean;
     walkthroughStep: number;
     soonMessage: string | null;
+    /** House cinema — active film id from HOUSE_FILMS */
+    cinemaFilmId: string | null;
+    cinemaPlaying: boolean;
     openPanel: (id: HousePanelId) => void;
     closePanel: () => void;
     setWalkthrough: (open: boolean, step?: number) => void;
     nextWalkthrough: () => void;
     setSoonMessage: (msg: string | null) => void;
+    playCinemaFilm: (id: string) => void;
+    setCinemaPlaying: (playing: boolean) => void;
+    stopCinema: () => void;
 };
 
 const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v7';
@@ -51,6 +57,8 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     walkthroughOpen: false,
     walkthroughStep: 0,
     soonMessage: null,
+    cinemaFilmId: null,
+    cinemaPlaying: false,
 
     openPanel: (id) => set({ panel: id }),
     closePanel: () => set({ panel: null }),
@@ -62,6 +70,10 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
         const step = get().walkthroughStep + 1;
         set({ walkthroughStep: step });
     },
+
+    playCinemaFilm: (id) => set({ cinemaFilmId: id, cinemaPlaying: true }),
+    setCinemaPlaying: (playing) => set({ cinemaPlaying: playing }),
+    stopCinema: () => set({ cinemaPlaying: false, cinemaFilmId: null }),
 }));
 
 export const WALKTHROUGH_STEPS = [

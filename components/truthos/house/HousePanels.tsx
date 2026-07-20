@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
+import CinemaPanel from './CinemaPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { hubAudio } from '@/lib/truthos/hubAudio';
@@ -22,7 +23,7 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
 });
 
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade'>,
+    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
@@ -36,12 +37,6 @@ const PANEL_META: Record<
         accent: 'text-fuchsia-300',
         src: '/codex',
         blurb: 'Memory and whispers.',
-    },
-    cinema: {
-        title: 'Cinema',
-        accent: 'text-rose-300',
-        src: '/cinema',
-        blurb: 'Transmissions and film.',
     },
     hall: {
         title: 'The Hall',
@@ -227,6 +222,7 @@ export default function HousePanels() {
     if (panel === 'studio') return <StudioNative onClose={onClose} />;
     if (panel === 'wayfinder') return <WayfinderNative onClose={onClose} />;
     if (panel === 'arcade') return <ArcadePanel onClose={onClose} />;
+    if (panel === 'cinema') return <CinemaPanel onClose={onClose} />;
     if (panel in PANEL_META) {
         return <FramePanel id={panel as keyof typeof PANEL_META} onClose={onClose} />;
     }
