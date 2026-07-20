@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import { ArchiveMessage, ArchiveReaction } from '@/lib/store/useArchiveStore';
 import { QUICK_EMOJI, groupReactions, tierColor, DEFAULT_AVATAR, relativeTime } from '@/lib/archive/access';
-import { Trash2, Pencil, Reply, Pin, PinOff, SmilePlus, Check, X, CornerDownRight } from 'lucide-react';
+import { Trash2, Pencil, Reply, Pin, PinOff, SmilePlus, Check, X, CornerDownRight, RotateCcw } from 'lucide-react';
 
 interface MessageBubbleProps {
     message: ArchiveMessage;
     isGrouped?: boolean;
     reactions?: ArchiveReaction[];
     myId?: string;
-    canModerate?: boolean;   // delete any (Architect or Moderator)
+    canModerate?: boolean;   // Architect soft-delete
     canPin?: boolean;        // staff (Architects + Moderators) pin power
     onDelete?: () => void;
+    onRestore?: () => void;
     onSaveEdit?: (content: string) => void;
     onReact?: (emoji: string) => void;
     onUnreact?: (emoji: string) => void;
@@ -24,13 +25,14 @@ interface MessageBubbleProps {
 export default function MessageBubble({
     message, isGrouped = false, reactions = [], myId,
     canModerate = false, canPin = false,
-    onDelete, onSaveEdit, onReact, onUnreact, onReply, onPinToggle, onOpenProfile,
+    onDelete, onRestore, onSaveEdit, onReact, onUnreact, onReply, onPinToggle, onOpenProfile,
 }: MessageBubbleProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(message.content);
     const [showEmoji, setShowEmoji] = useState(false);
 
     const isMine = myId && message.author_id === myId;
+    const isDeleted = Boolean(message.deleted_at);
     const grouped = groupReactions(reactions, myId);
     const timestamp = new Date(message.created_at);
     const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -73,18 +75,23 @@ export default function MessageBubble({
                     <Reply className="w-4 h-4" />
                 </button>
             )}
-            {isMine && (
+            {isMine && !isDeleted && (
                 <button onClick={() => { setDraft(message.content); setEditing(true); }} title="Edit" className="p-1.5 text-zinc-400 hover:text-aether-gold hover:bg-white/5 transition-colors">
                     <Pencil className="w-4 h-4" />
                 </button>
             )}
-            {canPin && (
+            {canPin && !isDeleted && onPinToggle && (
                 <button onClick={onPinToggle} title={message.pinned ? 'Unpin' : 'Pin'} className="p-1.5 text-zinc-400 hover:text-aether-gold hover:bg-white/5 transition-colors">
                     {message.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
                 </button>
             )}
-            {(isMine || canModerate) && (
-                <button onClick={onDelete} title="Purge" className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+            {canModerate && isDeleted && onRestore && (
+                <button onClick={onRestore} title="Restore" className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors">
+                    <RotateCcw className="w-4 h-4" />
+                </button>
+            )}
+            {canModerate && !isDeleted && onDelete && (
+                <button onClick={onDelete} title="Remove (Architect)" className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
                     <Trash2 className="w-4 h-4" />
                 </button>
             )}
@@ -137,6 +144,14 @@ export default function MessageBubble({
                 </button>
             </div>
         </div>
+    ) : isDeleted ? (
+        <div className="break-words text-[14px] leading-relaxed text-zinc-500 font-mono tracking-tight whitespace-pre-wrap pr-4 opacity-70">
+            <span className="line-through decoration-red-500/40">{message.content}</span>
+            <span className="block text-[9px] text-red-400/80 mt-1 select-none font-mono uppercase tracking-wider">
+                Removed{message.deletion_reason?.startsWith('gemini') ? ' · Sentinel' : ' · Architect'}
+                {message.deletion_reason ? ` · ${message.deletion_reason.replace(/^gemini:/, '')}` : ''}
+            </span>
+        </div>
     ) : (
         <div className="break-words text-[14px] leading-relaxed text-zinc-200 font-mono tracking-tight whitespace-pre-wrap pr-4">
             {message.content}
@@ -144,11 +159,12 @@ export default function MessageBubble({
         </div>
     );
 
-    const pinnedRing = message.pinned ? 'bg-aether-gold/[0.04] border-l-2 border-aether-gold/40' : '';
+    const pinnedRing = message.pinned && !isDeleted ? 'bg-aether-gold/[0.04] border-l-2 border-aether-gold/40' : '';
+    const deletedRing = isDeleted ? 'bg-red-500/[0.04] border-l-2 border-red-500/30' : '';
 
     if (isGrouped) {
         return (
-            <div className={`flex flex-col mt-0.5 hover:bg-white/[0.03] -mx-4 px-4 py-0.5 group relative transition-colors ${pinnedRing}`}>
+            <div className={`flex flex-col mt-0.5 hover:bg-white/[0.03] -mx-4 px-4 py-0.5 group relative transition-colors ${pinnedRing} ${deletedRing}`}>
                 {ReplyPreview}
                 <div className="flex">
                     <div className="w-[50px] shrink-0 text-center select-none pt-0.5">
@@ -167,8 +183,8 @@ export default function MessageBubble({
     }
 
     return (
-        <div className={`flex flex-col mt-5 hover:bg-white/[0.03] -mx-4 px-4 py-1.5 group relative transition-colors ${pinnedRing}`}>
-            {message.pinned && (
+        <div className={`flex flex-col mt-5 hover:bg-white/[0.03] -mx-4 px-4 py-1.5 group relative transition-colors ${pinnedRing} ${deletedRing}`}>
+            {message.pinned && !isDeleted && (
                 <div className="flex items-center gap-1 ml-[50px] mb-0.5 text-[8px] font-mono uppercase tracking-widest text-aether-gold/70">
                     <Pin className="w-2.5 h-2.5" /> Pinned by an Architect
                 </div>

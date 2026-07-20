@@ -38,12 +38,27 @@ export default function ChatArea() {
     const workspaceChannels = activeWorkspaceId ? (channels[activeWorkspaceId] || []) : [];
     const activeChannel = workspaceChannels.find((c) => c.id === activeChannelId);
     const channelMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
-    const pinnedMessages = useMemo(() => channelMessages.filter((m) => m.pinned), [channelMessages]);
 
     const activeMembers = activeWorkspaceId ? (members[activeWorkspaceId] || []) : [];
     const myRole = myId ? activeMembers.find((m) => m.user_id === myId)?.role : null;
     const isAdmin = architect || myRole === 'Admin';                 // can post in locked halls
-    const canModerate = isAdmin || myRole === 'Moderator';           // delete-any + pin
+    const canModerate = isAdmin || myRole === 'Moderator';           // pin (not delete)
+    /** Only Architects soft-delete / restore Hall messages */
+    const canDelete = architect;
+
+    // Non-admins only see live messages; Architects also see soft-deleted (restore UI)
+    const visibleMessages = useMemo(
+        () => (canDelete ? channelMessages : channelMessages.filter((m) => !m.deleted_at)),
+        [channelMessages, canDelete],
+    );
+    const pinnedMessages = useMemo(
+        () => visibleMessages.filter((m) => m.pinned && !m.deleted_at),
+        [visibleMessages],
+    );
+    const deletedCount = useMemo(
+        () => channelMessages.filter((m) => m.deleted_at).length,
+        [channelMessages],
+    );
 
     const iAmBanned = myId ? bannedUserIds.has(myId) : false;
     // Treat a stamped workspace Admin as an Architect for posting gates, so the
@@ -54,7 +69,7 @@ export default function ChatArea() {
     // Scroll to bottom on new messages
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [channelMessages.length]);
+    }, [visibleMessages.length]);
 
     // Slowmode countdown ticker
     useEffect(() => {
@@ -108,6 +123,9 @@ export default function ChatArea() {
                 pinned: m.pinned,
                 pinned_by: m.pinned_by,
                 pinned_at: m.pinned_at,
+                deleted_at: m.deleted_at ?? null,
+                deleted_by: m.deleted_by ?? null,
+                deletion_reason: m.deletion_reason ?? null,
                 author: m.author || { display_name: 'Anonymous' },
             }));
             // resolve reply previews from the loaded set
@@ -140,6 +158,11 @@ export default function ChatArea() {
                     reply_to_id: payload.new.reply_to_id,
                     created_at: payload.new.created_at,
                     pinned: payload.new.pinned,
+                    pinned_by: payload.new.pinned_by,
+                    pinned_at: payload.new.pinned_at,
+                    deleted_at: payload.new.deleted_at ?? null,
+                    deleted_by: payload.new.deleted_by ?? null,
+                    deletion_reason: payload.new.deletion_reason ?? null,
                     author: prof || { display_name: 'Anonymous' },
                     reply_to: buildReplyPreview(current, payload.new.reply_to_id),
                 });
@@ -152,6 +175,9 @@ export default function ChatArea() {
                     pinned: payload.new.pinned,
                     pinned_by: payload.new.pinned_by,
                     pinned_at: payload.new.pinned_at,
+                    deleted_at: payload.new.deleted_at ?? null,
+                    deleted_by: payload.new.deleted_by ?? null,
+                    deletion_reason: payload.new.deletion_reason ?? null,
                 });
             })
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'archive_messages', filter: `channel_id=eq.${activeChannelId}` }, (payload) => {
@@ -227,7 +253,11 @@ export default function ChatArea() {
                 .select('id, created_at')
                 .single();
             if (error) throw error;
-            if (data) updateMessage(tempId, { id: data.id, created_at: data.created_at, optimistic: false });
+            if (data) {
+                updateMessage(tempId, { id: data.id, created_at: data.created_at, optimistic: false });
+                // Gemini Hall Sentinel — soft-delete if inappropriate
+                void runModeration(data.id, content);
+            }
             lastSentAt.current = Date.now();
             if (slow > 0 && !architect) setCooldown(slow);
         } catch (err: any) {
@@ -246,15 +276,103 @@ export default function ChatArea() {
         }
     };
 
+    const runModeration = async (messageId: string, content: string) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) return;
+            const res = await fetch('/api/hall/moderate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ messageId, content }),
+            });
+            const json = await res.json().catch(() => ({}));
+            if (json?.action === 'remove') {
+                updateMessage(messageId, {
+                    deleted_at: new Date().toISOString(),
+                    deletion_reason: json.reason ? `gemini:${json.reason}` : 'gemini:policy',
+                });
+            }
+        } catch {
+            /* moderation is best-effort */
+        }
+    };
+
     const handleDelete = async (id: string) => {
-        deleteMessage(id);
-        if (id.startsWith('temp-')) return;
-        await supabase.from('archive_messages').delete().eq('id', id);
+        if (!canDelete) return;
+        if (id.startsWith('temp-')) {
+            deleteMessage(id);
+            return;
+        }
+        // Soft-delete only — Architect RPC keeps the row for restore
+        updateMessage(id, {
+            deleted_at: new Date().toISOString(),
+            deleted_by: myId || null,
+            deletion_reason: 'admin',
+        });
+        const { error } = await supabase.rpc('soft_delete_hall_message', {
+            _message_id: id,
+            _reason: 'admin',
+        });
+        if (error) {
+            // fallback if RPC not migrated yet
+            const { error: e2 } = await supabase
+                .from('archive_messages')
+                .update({
+                    deleted_at: new Date().toISOString(),
+                    deleted_by: myId,
+                    deletion_reason: 'admin',
+                })
+                .eq('id', id);
+            if (e2) {
+                updateMessage(id, { deleted_at: null, deleted_by: null, deletion_reason: null });
+                setSendError('Could not remove message — only Architects may purge the Hall.');
+                setTimeout(() => setSendError(null), 4000);
+            }
+        }
+    };
+
+    const handleRestore = async (id: string) => {
+        if (!canDelete) return;
+        updateMessage(id, { deleted_at: null, deleted_by: null, deletion_reason: null });
+        const { error } = await supabase.rpc('restore_hall_message', { _message_id: id });
+        if (error) {
+            const { error: e2 } = await supabase
+                .from('archive_messages')
+                .update({ deleted_at: null, deleted_by: null, deletion_reason: null })
+                .eq('id', id);
+            if (e2) {
+                setSendError('Could not restore message.');
+                setTimeout(() => setSendError(null), 4000);
+            }
+        }
+    };
+
+    const handleRestoreAll = async () => {
+        if (!canDelete || !activeChannelId) return;
+        const { data, error } = await supabase.rpc('restore_all_hall_messages', {
+            _channel_id: activeChannelId,
+        });
+        if (error) {
+            setSendError('Restore-all failed — run hall_soft_delete_moderation.sql in Supabase.');
+            setTimeout(() => setSendError(null), 5000);
+            return;
+        }
+        const list = useArchiveStore.getState().messages[activeChannelId] || [];
+        for (const m of list) {
+            if (m.deleted_at) updateMessage(m.id, { deleted_at: null, deleted_by: null, deletion_reason: null });
+        }
+        setSendError(`Restored ${data ?? 0} message(s) in this chamber.`);
+        setTimeout(() => setSendError(null), 4000);
     };
 
     const handleEdit = async (id: string, content: string) => {
         updateMessage(id, { content, is_edited: true });
         await supabase.from('archive_messages').update({ content }).eq('id', id);
+        // re-moderate edits
+        void runModeration(id, content);
     };
 
     const handleReact = async (messageId: string, emoji: string) => {
@@ -318,6 +436,16 @@ export default function ChatArea() {
                     </>
                 )}
                 <div className="ml-auto flex items-center gap-2">
+                    {canDelete && deletedCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleRestoreAll}
+                            title="Restore all soft-deleted in this chamber"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-[9px] font-mono font-bold uppercase tracking-wider"
+                        >
+                            Restore {deletedCount}
+                        </button>
+                    )}
                     {pinnedMessages.length > 0 && (
                         <button onClick={() => setShowPins((v) => !v)} title="Pinned" className={`flex items-center gap-1.5 px-2.5 py-1 rounded border transition-colors ${showPins ? 'bg-aether-gold/15 border-aether-gold/30 text-aether-gold' : 'bg-white/5 border-white/10 text-zinc-400 hover:text-aether-gold'}`}>
                             <Pin className="w-3 h-3" />
@@ -363,9 +491,10 @@ export default function ChatArea() {
                     </div>
                     <div className="w-full h-px bg-white/5 my-6" />
 
-                    {channelMessages.map((msg, idx) => {
-                        const prev = channelMessages[idx - 1];
-                        const isGrouped = !!prev && prev.author_id === msg.author_id && !msg.reply_to_id &&
+                    {visibleMessages.map((msg, idx) => {
+                        const prev = visibleMessages[idx - 1];
+                        const isGrouped = !!prev && !msg.deleted_at && !prev.deleted_at
+                            && prev.author_id === msg.author_id && !msg.reply_to_id &&
                             (new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60000);
                         return (
                             <MessageBubble
@@ -374,14 +503,15 @@ export default function ChatArea() {
                                 isGrouped={isGrouped}
                                 reactions={reactions[msg.id]}
                                 myId={myId}
-                                canModerate={canModerate}
+                                canModerate={canDelete}
                                 canPin={canModerate}
-                                onDelete={() => handleDelete(msg.id)}
+                                onDelete={canDelete && !msg.deleted_at ? () => handleDelete(msg.id) : undefined}
+                                onRestore={canDelete && msg.deleted_at ? () => handleRestore(msg.id) : undefined}
                                 onSaveEdit={(content) => handleEdit(msg.id, content)}
                                 onReact={(emoji) => handleReact(msg.id, emoji)}
                                 onUnreact={(emoji) => handleUnreact(msg.id, emoji)}
-                                onReply={() => setReplyingTo(msg)}
-                                onPinToggle={() => handlePinToggle(msg)}
+                                onReply={msg.deleted_at ? undefined : () => setReplyingTo(msg)}
+                                onPinToggle={msg.deleted_at ? undefined : () => handlePinToggle(msg)}
                                 onOpenProfile={(uid) => setProfileId(uid)}
                             />
                         );

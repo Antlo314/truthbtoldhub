@@ -47,6 +47,10 @@ export interface ArchiveMessage {
     pinned?: boolean;
     pinned_by?: string | null;
     pinned_at?: string | null;
+    /** Soft-delete — Architect / Gemini; row kept for restore */
+    deleted_at?: string | null;
+    deleted_by?: string | null;
+    deletion_reason?: string | null;
     author?: MessageAuthor;
     reply_to?: ReplyPreview | null;
     optimistic?: boolean;
