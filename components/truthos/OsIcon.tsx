@@ -5,6 +5,7 @@
  * Lucide glyphs for sharpness; one component for dock, Start, home, windows.
  */
 import type { OsAppId } from './truthOsStore';
+import { OsGlyph } from './OsGlyph';
 import {
     Activity,
     BookOpen,
@@ -162,12 +163,17 @@ export function getAppIconMeta(app: OsAppId) {
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 const SIZE: Record<Size, { box: string; icon: number }> = {
-    sm: { box: 'w-8 h-8 rounded-[10px]', icon: 15 },
-    md: { box: 'w-10 h-10 rounded-[12px]', icon: 18 },
-    lg: { box: 'w-12 h-12 rounded-[14px]', icon: 22 },
-    xl: { box: 'w-14 h-14 rounded-2xl', icon: 26 },
+    sm: { box: 'w-8 h-8 rounded-[10px]', icon: 17 },
+    md: { box: 'w-10 h-10 rounded-[13px]', icon: 22 },
+    lg: { box: 'w-12 h-12 rounded-[15px]', icon: 27 },
+    xl: { box: 'w-14 h-14 rounded-[18px]', icon: 32 },
 };
 
+/**
+ * App tile — a physical, moulded key rather than a flat gradient square:
+ * a lit top bevel, a shadowed bottom lip, a hairline rim, a soft coloured
+ * cast shadow, and a glossy sweep across the upper third.
+ */
 export function OsIconTile({
     app,
     size = 'md',
@@ -179,21 +185,29 @@ export function OsIconTile({
     open?: boolean;
     className?: string;
 }) {
-    const { Icon, accent } = getAppIconMeta(app);
+    const { accent } = getAppIconMeta(app);
     const a = ACCENT_STYLES[accent];
     const s = SIZE[size];
     return (
         <span
-            className={`relative inline-flex items-center justify-center ${s.box} bg-gradient-to-br ${a.tile} text-white ${a.glow} ring-1 ${open ? a.ring : 'ring-white/25'} shadow-inner ${className}`}
+            className={`relative inline-flex items-center justify-center shrink-0 ${s.box} bg-gradient-to-br ${a.tile} text-white ${a.glow} ring-1 ${open ? a.ring : 'ring-black/25'} ${className}`}
             style={{
-                boxShadow: open
-                    ? undefined
-                    : 'inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.2)',
+                boxShadow: [
+                    'inset 0 1.5px 0 rgba(255,255,255,0.55)',
+                    'inset 0 -2px 3px rgba(0,0,0,0.32)',
+                    'inset 2px 0 3px rgba(255,255,255,0.12)',
+                    'inset -2px 0 3px rgba(0,0,0,0.18)',
+                    '0 2px 5px rgba(0,0,0,0.42)',
+                ].join(', '),
             }}
         >
-            <Icon size={s.icon} strokeWidth={2.25} className="drop-shadow-sm" aria-hidden />
-            {/* specular */}
-            <span className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-white/25 via-transparent to-transparent opacity-80" />
+            <span className="relative z-10 flex items-center justify-center">
+                <OsGlyph app={app} size={s.icon} />
+            </span>
+            {/* glossy sweep across the upper third */}
+            <span className="pointer-events-none absolute inset-x-0 top-0 h-[42%] rounded-t-[inherit] bg-gradient-to-b from-white/35 to-transparent" />
+            {/* bottom colour bounce */}
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[28%] rounded-b-[inherit] bg-gradient-to-t from-black/22 to-transparent" />
         </span>
     );
 }
