@@ -250,12 +250,15 @@ const FLOWER_COLORS = ['#f0abfc', '#fda4af', '#fcd34d', '#e2e8f0', '#c4b5fd', '#
 /** [x, z, y] — y raised on the garden beds */
 const FLOWER_CLUSTERS: [number, number, number][] = [
     [-2.7, 15.7, 0.12],
-    [3.9, 17.2, 0.12],
+    [5.6, 16.6, 0.12],
     [-5.4, 18.0, 0.12],
     [-5.5, -16.2, 0.34],
     [4.8, -15.8, 0.34],
     [6.8, -14.0, 0.12],
     [-8.0, -14.5, 0.12],
+    [5.3, 13.4, 0.12], // beside the porch
+    [2.0, 20.3, 0.12], // inside the front gate
+    [-4.0, 17.6, 0.12], // around the birdbath
 ];
 
 /** Instanced grass tufts + flower patches — desktop only (2 draw calls) */
@@ -281,11 +284,12 @@ function Meadow({ m }: { m: HouseMaterials }) {
             const x = -17 + rnd() * 34;
             const z = -20.6 + rnd() * 41.2;
             if (Math.abs(x) < 14.4 && Math.abs(z) < 13.4) continue; // house + margin
-            if (Math.abs(x) < 1.7 && z > 12) continue; // front walk
+            if (Math.abs(x - 3.5) < 1.6 && z > 12) continue; // front walk
             if (x > -4.6 && x < -1.9 && z < -12.6) continue; // back walk
             if (Math.abs(Math.abs(x) - 15.2) < 1.0) continue; // side paths
             if (Math.hypot(x - 0.15, z + 16.8) < 1.5) continue; // fire pit
             if (Math.abs(x) < 1.9 && z < -18.2) continue; // gate path
+            if (x < -11.9 && z < -16.9) continue; // garden shed
             const sc = 0.7 + rnd() * 0.9;
             const sy = 0.75 + rnd();
             dummy.position.set(x, 0.15 * sy, z);
@@ -325,14 +329,14 @@ function Meadow({ m }: { m: HouseMaterials }) {
     );
 }
 
-/** Flat stepping-stone discs — back step → fire pit, front path → bench */
+/** Flat stepping-stone discs — back step → fire pit, front walk → bench */
 const STEPPING_STONES: [number, number][] = [
     [-2.8, -14.1],
     [-2.15, -14.9],
     [-1.4, -15.55],
     [-0.65, -16.1],
-    [1.5, 15.3],
-    [2.2, 15.75],
+    [2.3, 15.9],
+    [1.5, 16.15],
 ];
 
 function Gate({ x, z, m, sh }: { x: number; z: number; m: HouseMaterials; sh: boolean }) {
@@ -367,9 +371,9 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
                 <primitive object={m.grass} attach="material" />
             </mesh>
 
-            {/* Front path from porch south */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, groundY + 0.015, 16.5]} receiveShadow={sh}>
-                <planeGeometry args={[2.2, 8.5]} />
+            {/* Front path — porch to the front gate */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3.5, groundY + 0.015, 17.3]} receiveShadow={sh}>
+                <planeGeometry args={[2.2, 8.2]} />
                 <primitive object={m.path} attach="material" />
             </mesh>
             {/* Side path strips (wrap feel) */}
@@ -391,14 +395,56 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
                 <primitive object={m.path} attach="material" />
             </mesh>
 
-            {/* Property fence (skip center north for gate visual) */}
-            <FenceRun from={[-17.5, 21.4]} to={[17.5, 21.4]} posts={low ? 8 : 14} m={m} sh={sh} />
+            {/* Property fence — front run split at the new front gate */}
+            <FenceRun from={[-17.5, 21.4]} to={[2.2, 21.4]} posts={low ? 6 : 10} m={m} sh={sh} />
+            <FenceRun from={[4.8, 21.4]} to={[17.5, 21.4]} posts={low ? 4 : 7} m={m} sh={sh} />
             <FenceRun from={[-17.5, -21.4]} to={[-1.6, -21.4]} posts={low ? 5 : 8} m={m} sh={sh} />
             <FenceRun from={[1.6, -21.4]} to={[17.5, -21.4]} posts={low ? 5 : 8} m={m} sh={sh} />
             <FenceRun from={[-17.5, -21.4]} to={[-17.5, 21.4]} posts={low ? 8 : 14} m={m} sh={sh} />
             <FenceRun from={[17.5, -21.4]} to={[17.5, 21.4]} posts={low ? 8 : 14} m={m} sh={sh} />
 
             <Gate x={0} z={-21.35} m={m} sh={sh} />
+            {/* Front gate at the walk */}
+            <Gate x={YARD.frontGate.x} z={YARD.frontGate.z} m={m} sh={sh} />
+
+            {/* Mailbox beside the front gate */}
+            <group position={[YARD.mailbox.x, 0, YARD.mailbox.z]} rotation={[0, -0.2, 0]}>
+                <MatCyl pos={[0, 0.5, 0]} r={0.05} h={1.0} material={m.woodDark} shadows={sh} segs={6} />
+                <MatBox pos={[0, 1.12, 0]} size={[0.32, 0.28, 0.5]} material={m.metal} shadows={sh} />
+                <MatBox pos={[0, 1.12, -0.26]} size={[0.3, 0.26, 0.03]} material={m.metalDark} shadows={false} />
+                <MatBox pos={[0.18, 1.28, 0.1]} size={[0.03, 0.18, 0.04]} material={m.ember} shadows={false} />
+            </group>
+
+            {/* Birdbath in the west front yard */}
+            <group position={[YARD.birdbath.x, 0, YARD.birdbath.z]}>
+                <MatCyl pos={[0, 0.42, 0]} r={0.12} h={0.84} material={m.stone} shadows={sh} segs={low ? 8 : 12} />
+                <MatCyl pos={[0, 0.88, 0]} r={0.42} h={0.09} material={m.stone} shadows={sh} segs={low ? 10 : 16} />
+                <MatCyl pos={[0, 0.93, 0]} r={0.34} h={0.02} material={m.glassTint} shadows={false} segs={low ? 10 : 16} />
+            </group>
+
+            {/* Garden shed — back NW corner */}
+            <group position={[YARD.shed.x, 0, YARD.shed.z]}>
+                <MatBox pos={[0, 0.05, 0]} size={[2.9, 0.1, 2.4]} material={m.concrete} shadows={false} />
+                {/* Walls (door on the south face, panel closed) */}
+                <MatBox pos={[0, 1.0, -1.1]} size={[2.8, 1.9, 0.1]} material={m.wood} shadows={sh} />
+                <MatBox pos={[-0.925, 1.0, 1.1]} size={[0.95, 1.9, 0.1]} material={m.wood} shadows={sh} />
+                <MatBox pos={[0.925, 1.0, 1.1]} size={[0.95, 1.9, 0.1]} material={m.wood} shadows={sh} />
+                <MatBox pos={[-1.35, 1.0, 0]} size={[0.1, 1.9, 2.3]} material={m.wood} shadows={sh} />
+                <MatBox pos={[1.35, 1.0, 0]} size={[0.1, 1.9, 2.3]} material={m.wood} shadows={sh} />
+                {/* Closed door leaf + handle */}
+                <MatBox pos={[0, 0.92, 1.12]} size={[0.85, 1.72, 0.06]} material={m.woodDark} shadows={sh} />
+                <MatCyl pos={[0.28, 0.95, 1.17]} r={0.03} h={0.05} material={m.gold} shadows={false} segs={6} />
+                {/* Mono-pitch roof */}
+                <group rotation={[0.14, 0, 0]}>
+                    <MatBox pos={[0, 2.12, 0]} size={[3.15, 0.1, 2.75]} material={m.woodDark} shadows={sh} />
+                </group>
+            </group>
+
+            {/* Back patio behind the garden door */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-3.25, groundY + 0.018, -14.0]} receiveShadow={sh}>
+                <planeGeometry args={[3.4, 2.6]} />
+                <primitive object={m.stone} attach="material" />
+            </mesh>
 
             {/* Front yard props */}
             <Bench x={YARD.benchFront.x} z={YARD.benchFront.z} rotY={-0.35} sh={sh} m={m} />

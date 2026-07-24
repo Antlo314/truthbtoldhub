@@ -47,23 +47,30 @@ function doorSpans(r: WallRun): [number, number][] {
     return spans.filter(([a, b]) => b - a > 0.05);
 }
 
-/** Emissive cove strips — living + bedroom ceiling perimeter (cheap, no lights) */
+/** Emissive cove strips — living + bedroom + foyer ceiling perimeter (no lights) */
 const COVE: { x: number; z: number; w: number; d: number }[] = [
+    // Living
     { x: 0, z: -11.85, w: 11.2, d: 0.08 },
     { x: 0, z: -1.55, w: 11.2, d: 0.08 },
     { x: -5.98, z: -6.7, w: 0.08, d: 10.2 },
     { x: 5.98, z: -6.7, w: 0.08, d: 10.2 },
-    { x: 0, z: 3.72, w: 11.2, d: 0.08 },
-    { x: 0, z: 11.9, w: 11.2, d: 0.08 },
+    // Bedroom (west of the divider)
+    { x: -2.25, z: 3.72, w: 7.4, d: 0.08 },
+    { x: -2.25, z: 11.9, w: 7.4, d: 0.08 },
     { x: -5.98, z: 7.8, w: 0.08, d: 8.1 },
+    { x: 1.48, z: 7.8, w: 0.08, d: 8.1 },
+    // Foyer (east of the divider)
+    { x: 3.95, z: 3.72, w: 4.0, d: 0.08 },
+    { x: 3.95, z: 11.9, w: 4.0, d: 0.08 },
     { x: 5.98, z: 7.8, w: 0.08, d: 8.1 },
+    { x: 1.92, z: 7.8, w: 0.08, d: 8.1 },
 ];
 
 const SCONCES: { pos: [number, number, number]; rotY: number }[] = [
     { pos: [2.6, 1.95, -1.04], rotY: 0 }, // hall, living partition face
     { pos: [-2.6, 1.95, -1.04], rotY: 0 },
-    { pos: [1.85, 1.95, 2.99], rotY: Math.PI }, // hall, bedroom partition face (clear of doorway)
-    { pos: [-1.85, 1.95, 2.99], rotY: Math.PI },
+    { pos: [-1.85, 1.95, 2.99], rotY: Math.PI }, // hall, flanking the foyer opening
+    { pos: [5.0, 1.95, 2.99], rotY: Math.PI },
     { pos: [-5.35, 2.05, 12.32], rotY: Math.PI }, // bedroom S wall
     { pos: [-0.55, 2.05, 12.32], rotY: Math.PI }, // bedroom, above east nightstand
     { pos: [-13.62, 1.9, -1.5], rotY: Math.PI / 2 }, // library W wall
@@ -331,12 +338,12 @@ export default function HouseTrim({
             {!low && <Chandelier x={-1.2} z={6.6} m={m} low={low} lit={false} small />}
 
             {/* ── Porch lights (exterior faces beside doors) ── */}
-            <PorchLight pos={[1.75, 2.1, 12.7]} rotY={0} m={m} />
-            <PorchLight pos={[-1.75, 2.1, 12.7]} rotY={0} m={m} />
+            <PorchLight pos={[2.1, 2.1, 12.7]} rotY={0} m={m} />
+            <PorchLight pos={[4.9, 2.1, 12.7]} rotY={0} m={m} />
             <PorchLight pos={[-4.75, 2.1, -12.7]} rotY={Math.PI} m={m} />
             {!low && (
                 <>
-                    <pointLight position={[0, 2.0, 13.3]} intensity={0.75} distance={6} color="#ffcf8f" decay={2} />
+                    <pointLight position={[3.5, 2.0, 13.3]} intensity={0.75} distance={6} color="#ffcf8f" decay={2} />
                     <pointLight position={[-3.25, 2.0, -13.3]} intensity={0.7} distance={6} color="#ffcf8f" decay={2} />
                 </>
             )}

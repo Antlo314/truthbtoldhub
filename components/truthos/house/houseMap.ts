@@ -59,10 +59,14 @@ export const SHELL = {
  * Clear gap width = 2 * halfW; must stay free of furniture colliders.
  */
 export const OPENING = {
-    front: { x: 0, halfW: 0.95, z: 12.5 },
+    /** Front door now opens into the FOYER (east of the bedroom divider) */
+    front: { x: 3.5, halfW: 0.95, z: 12.5 },
     back: { x: -3.25, halfW: 1.05, z: -12.5 },
     living: { z: -1.15, halfW: 1.65 },
-    bedroom: { z: 3.1, halfW: 1.4 },
+    /** Hall band ↔ foyer opening (moved east of the bedroom divider) */
+    foyer: { z: 3.1, x: 3.15, halfW: 1.2 },
+    /** Bedroom door in the foyer divider x=1.7 */
+    bedroomDoor: { x: 1.7, z0: 5.85, z1: 7.35 },
     /** West wing grand arch (hall band ↔ community hall wing) */
     westWing: { x: -6.2, z0: -1.04, z1: 2.99 },
     /** East wing grand arch (hall band ↔ study wing) */
@@ -113,11 +117,10 @@ export const WIN = { w: 1.35, h: 1.15, sill: 1.145, head: 2.295 } as const;
 
 /** Real glazed windows — holes in the shell, transparent glass, yard visible */
 export const WINDOWS: { wall: 'N' | 'S' | 'W' | 'E'; c: number; curtains?: boolean }[] = [
-    { wall: 'N', c: 3.9, curtains: true }, // living
+    { wall: 'N', c: 3.9 }, // kitchen (sink under the window — no curtains)
     { wall: 'N', c: -9.6 }, // library
     { wall: 'N', c: 10.2 }, // studio
     { wall: 'S', c: -3.9, curtains: true }, // bedroom
-    { wall: 'S', c: 3.05, curtains: true }, // bedroom SE
     { wall: 'S', c: -9.8 }, // hall wing
     { wall: 'W', c: -9.6 }, // library
     { wall: 'W', c: 7.6 }, // hall wing
@@ -131,9 +134,12 @@ const winsOn = (wall: 'N' | 'S' | 'W' | 'E') =>
 
 /**
  * The floor plan. Rooms:
- *   Living (center-N) · Library (NW) · Study wing (NE, study+studio)
- *   Hall band (center) · Community hall wing (W) · Bedroom (center-S) · Cinema (SE)
+ *   Living+Kitchen (center-N) · Library (NW) · Study wing (NE, study+studio)
+ *   Hall band (center) · Community hall wing (W)
+ *   Bedroom (SW, private — its own door) · Foyer/office (S-center, front door)
+ *   Cinema (SE)
  * Every doorway ≥1.4 m clear; wings open through ~4 m arches; all corners flush.
+ * The front door opens into the FOYER (never straight into the bedroom).
  */
 export const WALL_RUNS: WallRun[] = [
     // ── Exterior shell ──
@@ -163,10 +169,16 @@ export const WALL_RUNS: WallRun[] = [
         ],
     },
 
-    // ── Cross wall z=3.1 (bedroom north wall) — west partition to east shell ──
+    // ── Cross wall z=3.1 — hall band opens into the FOYER (east of divider) ──
     {
         axis: 'x', at: 3.1, from: -6.31, to: SHELL.east, t: SHELL.partT, trim: 'both',
-        holes: [{ c: 0, hw: OPENING.bedroom.halfW, sill: 0, head: 2.55 }], // hall band ↔ bedroom
+        holes: [{ c: OPENING.foyer.x, hw: OPENING.foyer.halfW, sill: 0, head: 2.55 }],
+    },
+
+    // ── Foyer/bedroom divider x=1.7 — the bedroom is private now ──
+    {
+        axis: 'z', at: 1.7, from: 2.99, to: SHELL.south, t: SHELL.partT, trim: 'both',
+        holes: [{ c: 6.6, hw: 0.75, sill: 0, head: 2.35 }], // bedroom door off the foyer
     },
 
     // ── West partition x=-6.2 — north shell to south shell ──
@@ -183,7 +195,7 @@ export const WALL_RUNS: WallRun[] = [
         axis: 'z', at: 6.2, from: SHELL.north, to: SHELL.south, t: SHELL.partT, trim: 'both',
         holes: [
             { c: 0.975, hw: 2.015, sill: 0, head: 2.75 }, // grand arch → study wing
-            { c: 6.85, hw: 1.4, sill: 0, head: 2.55 }, // bedroom ↔ cinema
+            { c: 6.85, hw: 1.4, sill: 0, head: 2.55 }, // foyer ↔ cinema
         ],
     },
 ];
@@ -225,7 +237,7 @@ export const SPAWN_YAW = Math.PI;
 export const FIREPLACE = { x: 0, z: -11.55, y: 0.9 };
 
 /** Front door threshold (south foyer) — walk-through open */
-export const FRONT_DOOR = { x: 0, z: 12.35 };
+export const FRONT_DOOR = { x: 3.5, z: 12.35 };
 /** Back door offset west of fireplace so fire stays hero */
 export const BACK_DOOR = { x: -3.25, z: -12.35 };
 
@@ -233,14 +245,19 @@ export const BACK_DOOR = { x: -3.25, z: -12.35 };
 export const FURN = {
     sofa: { x: 0, z: -6.0 },
     coffee: { x: 0.15, z: -8.35 },
-    media: { x: 5.82, z: -7.8 }, // flush against east partition living face
-    offering: { x: -5.85, z: -6.5 }, // flush against west partition living face
+    media: { x: 5.77, z: -7.8 }, // flush against east partition living face
+    offering: { x: -5.71, z: -6.5 }, // flush against west partition living face
     chair: { x: 2.9, z: -7.5 },
-    bed: { x: -2.0, z: 11.35 }, // headboard against the south wall
-    desk: { x: 4.35, z: 9.55 }, // SE bedroom, north of cinema door band
-    deskChair: { x: 4.15, z: 10.4 }, // room side of desk (south, toward bed)
+    bed: { x: -4.93, z: 8.6 }, // headboard against the west partition (solid wall, no window)
+    dresser: { x: -3.9, z: 11.95 }, // under the bedroom south window
+    wardrobe: { x: -1.3, z: 3.62 }, // bedroom north wall
+    desk: { x: 4.35, z: 9.55 }, // foyer/office work corner
+    deskChair: { x: 4.15, z: 10.4 }, // room side of desk
     mirror: { x: 5.95, z: 9.35 },
-    wayfinder: { x: 2.55, z: 0.4 },
+    wayfinder: { x: -2.55, z: 0.4 }, // hall band, west of the foyer opening
+    dining: { x: 3.6, z: -9.7 }, // round table by the kitchen
+    kitchenRun: { x: 3.75, z: -11.95 }, // base cabinets along living north wall
+    fridge: { x: 5.66, z: -11.9 },
     libraryChair: { x: -11.2, z: -4.6 },
     libraryTable: { x: -10.4, z: -3.5 },
     studyDesk: { x: 9.4, z: -3.5 },
@@ -270,13 +287,17 @@ export const YARD = {
         { x: -1.5, z: -18.5, r: 0.38 },
         { x: 3.2, z: -19.2, r: 0.32 },
     ],
-    benchFront: { x: 2.9, z: 16.2 },
+    benchFront: { x: 0.6, z: 16.4 }, // beside the walk, not on it
     benchBack: { x: 2.4, z: -14.6 },
-    lanternL: { x: -1.35, z: 14.6 },
-    lanternR: { x: 1.35, z: 14.6 },
+    lanternL: { x: 2.15, z: 14.9 }, // flank the relocated front walk
+    lanternR: { x: 4.85, z: 14.9 },
     bedW: { x: -5.5, z: -16.2 },
     bedE: { x: 4.8, z: -15.8 },
     firePit: { x: 0.15, z: -16.8 },
+    shed: { x: -13.6, z: -18.4 }, // garden shed, back NW corner
+    mailbox: { x: 5.6, z: 20.6 },
+    birdbath: { x: -4.8, z: 16.8 },
+    frontGate: { x: 3.5, z: 21.4 },
 } as const;
 
 /**
@@ -288,7 +309,7 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'front_door',
         label: 'Front door',
         hint: 'Porch · front yard open',
-        position: [0, 1.2, 11.15],
+        position: [3.5, 1.2, 11.15],
         radius: 1.15,
         action: {
             type: 'soon',
@@ -310,7 +331,7 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'front_bench',
         label: 'Porch bench',
         hint: 'Rest · look out',
-        position: [2.9, 0.55, 16.2],
+        position: [0.6, 0.55, 16.4],
         radius: 1.05,
         action: {
             type: 'soon',
@@ -332,8 +353,8 @@ export const HOTSPOTS: Hotspot[] = [
         id: 'wayfinder',
         label: 'Wall map',
         hint: 'Roads · temporarily down',
-        // Hall console off spine (path |x|<1.2 clear)
-        position: [2.55, 1.15, 0.95],
+        // Hall console west of the foyer opening (spine to the opening stays clear)
+        position: [-2.55, 1.15, 0.95],
         radius: 1.05,
         action: { type: 'panel', panel: 'wayfinder' },
     },
@@ -443,9 +464,9 @@ export type Collider = { x: number; z: number; hx: number; hz: number };
 export const COLLIDERS: Collider[] = [
     // Walls (generated: shell + partitions, door gaps open, windows solid)
     ...WALL_RUNS.flatMap(wallColliders),
-    // Jambs
-    { x: -1.1, z: 12.25, hx: 0.32, hz: 0.2 },
-    { x: 1.1, z: 12.25, hx: 0.32, hz: 0.2 },
+    // Jambs (front door relocated to the foyer)
+    { x: 2.45, z: 12.25, hx: 0.32, hz: 0.2 },
+    { x: 4.55, z: 12.25, hx: 0.32, hz: 0.2 },
     { x: -4.2, z: -12.25, hx: 0.32, hz: 0.2 },
     { x: -2.3, z: -12.25, hx: 0.32, hz: 0.2 },
     // Living furniture
@@ -457,10 +478,18 @@ export const COLLIDERS: Collider[] = [
     { x: 0, z: -11.9, hx: 1.5, hz: 0.4 },
     { x: -1.6, z: -11.55, hx: 0.25, hz: 0.5 },
     { x: 1.6, z: -11.55, hx: 0.25, hz: 0.5 },
-    // Bedroom
-    { x: FURN.bed.x, z: FURN.bed.z, hx: 1.2, hz: 0.95 },
-    { x: -3.45, z: 11.35, hx: 0.3, hz: 0.3 },
-    { x: -0.55, z: 11.35, hx: 0.3, hz: 0.3 },
+    // Kitchen + dining (living NE)
+    { x: FURN.kitchenRun.x, z: FURN.kitchenRun.z, hx: 1.48, hz: 0.36 },
+    { x: FURN.fridge.x, z: FURN.fridge.z, hx: 0.42, hz: 0.42 },
+    { x: FURN.dining.x, z: FURN.dining.z, hx: 0.62, hz: 0.62 },
+    { x: 2.75, z: -9.45, hx: 0.28, hz: 0.28 },
+    { x: 4.45, z: -9.95, hx: 0.28, hz: 0.28 },
+    // Bedroom (bed against the west partition — clear of window + curtains)
+    { x: FURN.bed.x, z: FURN.bed.z, hx: 1.16, hz: 0.95 },
+    { x: -5.79, z: 7.3, hx: 0.3, hz: 0.3 },
+    { x: -5.79, z: 9.9, hx: 0.3, hz: 0.3 },
+    { x: FURN.dresser.x, z: FURN.dresser.z, hx: 0.78, hz: 0.28 },
+    { x: FURN.wardrobe.x, z: FURN.wardrobe.z, hx: 0.78, hz: 0.31 },
     { x: FURN.desk.x, z: FURN.desk.z, hx: 0.95, hz: 0.42 },
     { x: FURN.deskChair.x, z: FURN.deskChair.z, hx: 0.32, hz: 0.32 },
     { x: FURN.mirror.x, z: FURN.mirror.z, hx: 0.16, hz: 0.5 },
@@ -481,16 +510,24 @@ export const COLLIDERS: Collider[] = [
     { x: FURN.studio.x, z: FURN.studio.z, hx: 1.05, hz: 0.55 },
     { x: FURN.studioStool.x, z: FURN.studioStool.z, hx: 0.28, hz: 0.28 },
     { x: FURN.wayfinder.x, z: FURN.wayfinder.z, hx: 0.55, hz: 0.28 },
-    // Decor enhancements (floor lamp · potted plants · porch planters)
+    // Decor enhancements (floor lamp · potted plants · porch planters + posts)
     { x: 2.1, z: -5.9, hx: 0.22, hz: 0.22 },
-    { x: 5.5, z: -11.65, hx: 0.3, hz: 0.3 },
+    { x: -5.55, z: -11.65, hx: 0.3, hz: 0.3 },
     { x: -5.75, z: 4.0, hx: 0.3, hz: 0.3 },
     { x: 13.15, z: 11.7, hx: 0.3, hz: 0.3 },
-    { x: 2.15, z: 13.35, hx: 0.26, hz: 0.26 },
-    { x: -2.15, z: 13.35, hx: 0.26, hz: 0.26 },
-    // Fence
+    { x: 1.55, z: 13.4, hx: 0.26, hz: 0.26 },
+    { x: 5.45, z: 13.4, hx: 0.26, hz: 0.26 },
+    { x: 2.35, z: 13.95, hx: 0.14, hz: 0.14 },
+    { x: 4.65, z: 13.95, hx: 0.14, hz: 0.14 },
+    // Outdoor structures — shed · mailbox · birdbath · front gate leaf
+    { x: YARD.shed.x, z: YARD.shed.z, hx: 1.5, hz: 1.25 },
+    { x: YARD.mailbox.x, z: YARD.mailbox.z, hx: 0.18, hz: 0.18 },
+    { x: YARD.birdbath.x, z: YARD.birdbath.z, hx: 0.3, hz: 0.3 },
+    { x: YARD.frontGate.x, z: YARD.frontGate.z, hx: 1.45, hz: 0.16 },
+    // Fence (front run split around the gate)
     { x: 0, z: -21.55, hx: 18.0, hz: 0.18 },
-    { x: 0, z: 21.55, hx: 18.0, hz: 0.18 },
+    { x: -7.9, z: 21.55, hx: 10.1, hz: 0.18 },
+    { x: 11.4, z: 21.55, hx: 6.6, hz: 0.18 },
     { x: -17.75, z: 0, hx: 0.18, hz: 21.7 },
     { x: 17.75, z: 0, hx: 0.18, hz: 21.7 },
     { x: -1.35, z: -21.35, hx: 0.22, hz: 0.28 },
