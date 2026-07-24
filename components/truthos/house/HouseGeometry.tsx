@@ -8,7 +8,7 @@ import type * as THREE from 'three';
 import SoulMirrorMesh from './SoulMirrorMesh';
 import Fireplace from './Fireplace';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
-import { FURN, OPENING, SHELL } from './houseMap';
+import { FURN, WALL_H, WALL_RUNS, type WallRun } from './houseMap';
 import CinemaScreen from './CinemaScreen';
 import HouseTrim from './HouseTrim';
 
@@ -56,18 +56,40 @@ function MatCyl({
     );
 }
 
-function Wall({
-    pos,
-    size,
-    m,
-    sh,
-}: {
-    pos: [number, number, number];
-    size: [number, number, number];
-    m: HouseMaterials;
-    sh: boolean;
-}) {
-    return <MatBox pos={pos} size={size} material={m.plaster} shadows={sh} />;
+/**
+ * Builds a wall run from houseMap WALL_RUNS: full-height segments between
+ * holes, sill bands under windows, header bands over doors/windows/arches.
+ * Colliders derive from the same data, so what you see is what blocks you.
+ */
+function RunWall({ run, m, sh }: { run: WallRun; m: HouseMaterials; sh: boolean }) {
+    const H = WALL_H;
+    const parts: { c: number; half: number; y: number; h: number }[] = [];
+    const holes = [...run.holes].sort((a, b) => a.c - b.c);
+    let cur = run.from;
+    for (const hl of holes) {
+        const a = cur;
+        const b = hl.c - hl.hw;
+        if (b - a > 0.02) parts.push({ c: (a + b) / 2, half: (b - a) / 2, y: H / 2, h: H });
+        if (hl.sill > 0.02) parts.push({ c: hl.c, half: hl.hw, y: hl.sill / 2, h: hl.sill });
+        if (hl.head < H - 0.02)
+            parts.push({ c: hl.c, half: hl.hw, y: (H + hl.head) / 2, h: H - hl.head });
+        cur = hl.c + hl.hw;
+    }
+    if (run.to - cur > 0.02)
+        parts.push({ c: (cur + run.to) / 2, half: (run.to - cur) / 2, y: H / 2, h: H });
+    return (
+        <group>
+            {parts.map((p, i) => (
+                <MatBox
+                    key={i}
+                    pos={run.axis === 'x' ? [p.c, p.y, run.at] : [run.at, p.y, p.c]}
+                    size={run.axis === 'x' ? [p.half * 2, p.h, run.t] : [run.t, p.h, p.half * 2]}
+                    material={m.plaster}
+                    shadows={sh}
+                />
+            ))}
+        </group>
+    );
 }
 
 /**
@@ -410,90 +432,23 @@ export default function HouseGeometry({
                 <primitive object={m.tile} attach="material" />
             </mesh>
 
-            {/* Outer walls — N/S split for open back + front doors (attach to SHELL) */}
-            {/* North: back door gap OPENING.back */}
-            <Wall pos={[-9.05, 1.55, SHELL.north]} size={[9.5, 3.1, SHELL.wallT]} m={m} sh={sh} />
-            <Wall pos={[5.8, 1.55, SHELL.north]} size={[16.0, 3.1, SHELL.wallT]} m={m} sh={sh} />
-            {/* South: front door gap OPENING.front */}
-            <Wall pos={[-7.375, 1.55, SHELL.south]} size={[12.85, 3.1, SHELL.wallT]} m={m} sh={sh} />
-            <Wall pos={[7.375, 1.55, SHELL.south]} size={[12.85, 3.1, SHELL.wallT]} m={m} sh={sh} />
-            <Wall pos={[SHELL.west, 1.55, 0]} size={[SHELL.wallT, 3.1, floorD]} m={m} sh={sh} />
-            <Wall pos={[SHELL.east, 1.55, 0]} size={[SHELL.wallT, 3.1, floorD]} m={m} sh={sh} />
+            {/* ── Walls — generated from WALL_RUNS (mesh ≡ colliders ≡ trim) ──
+                Full-height rooms, flush corners, real window + door openings. */}
+            {WALL_RUNS.map((r, i) => (
+                <RunWall key={i} run={r} m={m} sh={sh} />
+            ))}
 
             {rich &&
                 [-9, -4.5, 0, 4.5, 9].map((bz) => (
                     <MatBox key={bz} pos={[0, 2.95, bz]} size={[26, 0.12, 0.18]} material={m.wood} shadows={false} />
                 ))}
 
-            {/* ── Interior partitions: shell-to-shell, only OPENING gaps ── */}
-            {/* Living entry z=-1.15: gap ±1.65 — west/east segments reach outer walls */}
-            <Wall
-                pos={[-(13.8 + OPENING.living.halfW) / 2, 1.4, OPENING.living.z]}
-                size={[13.8 - OPENING.living.halfW, 2.8, SHELL.partT]}
-                m={m}
-                sh={sh}
-            />
-            <Wall
-                pos={[(13.8 + OPENING.living.halfW) / 2, 1.4, OPENING.living.z]}
-                size={[13.8 - OPENING.living.halfW, 2.8, SHELL.partT]}
-                m={m}
-                sh={sh}
-            />
-
-            {/* Bedroom partition z=3.1: gap ±1.4 — reaches shell */}
-            <Wall
-                pos={[-(13.8 + OPENING.bedroom.halfW) / 2, 1.4, OPENING.bedroom.z]}
-                size={[13.8 - OPENING.bedroom.halfW, 2.8, SHELL.partT]}
-                m={m}
-                sh={sh}
-            />
-            <Wall
-                pos={[(13.8 + OPENING.bedroom.halfW) / 2, 1.4, OPENING.bedroom.z]}
-                size={[13.8 - OPENING.bedroom.halfW, 2.8, SHELL.partT]}
-                m={m}
-                sh={sh}
-            />
-
-            {/* West partition x=-6.2: library gap — reaches N/S shell */}
-            <Wall
-                pos={[OPENING.westWing.x, 1.4, (SHELL.north + OPENING.westWing.z0) / 2]}
-                size={[SHELL.partT, 2.8, OPENING.westWing.z0 - SHELL.north]}
-                m={m}
-                sh={sh}
-            />
-            <Wall
-                pos={[OPENING.westWing.x, 1.4, (OPENING.westWing.z1 + SHELL.south) / 2]}
-                size={[SHELL.partT, 2.8, SHELL.south - OPENING.westWing.z1]}
-                m={m}
-                sh={sh}
-            />
-
-            {/* East partition x=6.2: hall gap + cinema gap — reaches N/S shell */}
-            <Wall
-                pos={[OPENING.eastHall.x, 1.4, (SHELL.north + OPENING.eastHall.z0) / 2]}
-                size={[SHELL.partT, 2.8, OPENING.eastHall.z0 - SHELL.north]}
-                m={m}
-                sh={sh}
-            />
-            <Wall
-                pos={[OPENING.cinema.x, 1.4, (OPENING.eastHall.z1 + OPENING.cinema.z0) / 2]}
-                size={[SHELL.partT, 2.8, OPENING.cinema.z0 - OPENING.eastHall.z1]}
-                m={m}
-                sh={sh}
-            />
-            <Wall
-                pos={[OPENING.cinema.x, 1.4, (OPENING.cinema.z1 + SHELL.south) / 2]}
-                size={[SHELL.partT, 2.8, SHELL.south - OPENING.cinema.z1]}
-                m={m}
-                sh={sh}
-            />
-
             {/* Front opening (south) — exterior only, no door leaf */}
             <MatBox pos={[-1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[1.15, 1.4, 12.25]} size={[0.45, 2.8, 0.25]} material={m.wood} shadows={sh} />
             <MatBox pos={[0, 2.7, 12.25]} size={[2.5, 0.25, 0.3]} material={m.wood} shadows={sh} />
-            {/* Domain plate on foyer side wall (not in walk path) */}
-            <group position={[-2.35, 1.55, 11.9]} rotation={[0, Math.PI / 2, 0]}>
+            {/* Domain plate — flush on the foyer south wall */}
+            <group position={[-2.35, 1.55, 12.28]} rotation={[0, Math.PI, 0]}>
                 <MatBox pos={[0, 0, 0.02]} size={[0.9, 1.15, 0.06]} material={m.woodDark} shadows={false} />
                 <mesh position={[0, 0, 0.06]}>
                     <planeGeometry args={[0.78, 1.0]} />
@@ -525,25 +480,25 @@ export default function HouseGeometry({
             </group>
 
             {/* Esoteric wall art (one-liners only) */}
-            {/* Living west wall */}
-            <group position={[-5.0, 1.65, -9.2]} rotation={[0, Math.PI / 2, 0]}>
+            {/* Living — flush on west partition east face */}
+            <group position={[-6.03, 1.65, -9.2]} rotation={[0, Math.PI / 2, 0]}>
                 <MatBox pos={[0, 0, 0.02]} size={[1.05, 0.85, 0.06]} material={m.woodDark} shadows={false} />
                 <mesh position={[0, 0, 0.06]}>
                     <planeGeometry args={[0.92, 0.72]} />
                     <primitive object={m.artAsWithin} attach="material" />
                 </mesh>
             </group>
-            {/* Hall north face of bedroom partition */}
-            <group position={[-3.6, 1.7, 2.95]}>
+            {/* Hall — flush on bedroom partition north face, facing the hall */}
+            <group position={[-3.6, 1.7, 2.96]} rotation={[0, Math.PI, 0]}>
                 <MatBox pos={[0, 0, 0.02]} size={[1.05, 0.85, 0.06]} material={m.woodDark} shadows={false} />
                 <mesh position={[0, 0, 0.06]}>
                     <planeGeometry args={[0.92, 0.72]} />
                     <primitive object={m.artUnnamed} attach="material" />
                 </mesh>
             </group>
-            {/* Bedroom west-ish wall strip */}
+            {/* Bedroom — flush on west partition east face */}
             {!low && (
-                <group position={[-5.0, 1.7, 7.5]} rotation={[0, Math.PI / 2, 0]}>
+                <group position={[-6.03, 1.7, 7.5]} rotation={[0, Math.PI / 2, 0]}>
                     <MatBox pos={[0, 0, 0.02]} size={[0.95, 0.75, 0.06]} material={m.woodDark} shadows={false} />
                     <mesh position={[0, 0, 0.06]}>
                         <planeGeometry args={[0.82, 0.62]} />
@@ -568,37 +523,37 @@ export default function HouseGeometry({
                 </>
             )}
 
-            {/* ── BEDROOM (bed left of center, desk SE, path to mirror clear) ── */}
+            {/* ── BEDROOM (headboard against the south wall — no floating bed) ── */}
             <group>
                 {/* Platform + mattress */}
-                <MatBox pos={[-2.0, 0.28, 10.0]} size={[2.35, 0.32, 1.85]} material={m.woodDark} shadows={sh} />
-                <MatBox pos={[-2.0, 0.52, 10.0]} size={[2.2, 0.18, 1.7]} material={m.fabric} shadows={sh} />
-                {/* Headboard on south wall */}
-                <MatBox pos={[-2.0, 1.05, 10.85]} size={[2.4, 1.05, 0.12]} material={m.wood} shadows={sh} />
-                <MatBox pos={[-2.0, 1.05, 10.78]} size={[2.15, 0.85, 0.06]} material={m.fabricLight} shadows={false} />
+                <MatBox pos={[-2.0, 0.28, 11.35]} size={[2.35, 0.32, 1.85]} material={m.woodDark} shadows={sh} />
+                <MatBox pos={[-2.0, 0.52, 11.35]} size={[2.2, 0.18, 1.7]} material={m.fabric} shadows={sh} />
+                {/* Headboard flush on south wall */}
+                <MatBox pos={[-2.0, 1.05, 12.2]} size={[2.4, 1.05, 0.12]} material={m.wood} shadows={sh} />
+                <MatBox pos={[-2.0, 1.05, 12.13]} size={[2.15, 0.85, 0.06]} material={m.fabricLight} shadows={false} />
                 {/* Pillows */}
-                <MatBox pos={[-2.55, 0.72, 10.45]} size={[0.55, 0.18, 0.35]} material={m.fabricLight} shadows={false} />
-                <MatBox pos={[-1.45, 0.72, 10.45]} size={[0.55, 0.18, 0.35]} material={m.fabricLight} shadows={false} />
+                <MatBox pos={[-2.55, 0.72, 11.8]} size={[0.55, 0.18, 0.35]} material={m.fabricLight} shadows={false} />
+                <MatBox pos={[-1.45, 0.72, 11.8]} size={[0.55, 0.18, 0.35]} material={m.fabricLight} shadows={false} />
                 {/* Foot rail */}
-                <MatBox pos={[-2.0, 0.45, 9.1]} size={[2.3, 0.2, 0.08]} material={m.wood} shadows={false} />
+                <MatBox pos={[-2.0, 0.45, 10.45]} size={[2.3, 0.2, 0.08]} material={m.wood} shadows={false} />
                 {/* Legs */}
                 {[
-                    [-2.95, 9.2],
-                    [-1.05, 9.2],
-                    [-2.95, 10.7],
-                    [-1.05, 10.7],
+                    [-2.95, 10.55],
+                    [-1.05, 10.55],
+                    [-2.95, 12.05],
+                    [-1.05, 12.05],
                 ].map(([lx, lz], i) => (
                     <MatCyl key={i} pos={[lx, 0.1, lz]} r={0.045} h={0.18} material={m.woodDark} shadows={false} segs={6} />
                 ))}
             </group>
-            <Nightstand x={-3.45} z={10.0} sh={sh} m={m} />
-            <Nightstand x={-0.55} z={10.0} sh={sh} m={m} />
+            <Nightstand x={-3.45} z={11.35} sh={sh} m={m} />
+            <Nightstand x={-0.55} z={11.35} sh={sh} m={m} />
             {/* Work corner SE — north of cinema door band (z 5.45–8.25) so doorway stays clear */}
             <Desk pos={[FURN.desk.x, 0, FURN.desk.z]} sh={sh} rich={rich} m={m} monitor chairSign={1} />
             <SoulMirrorMesh low={low} rich={rich} mats={m} />
 
-            {/* ── LIBRARY (deep west — clear of west-wing opening) ── */}
-            <WallBookcase wallX={-13.4} wallZ={-5.0} width={4.8} face="west" sh={sh} rich={rich} m={m} low={low} />
+            {/* ── LIBRARY (bookcase hugs the west wall face) ── */}
+            <WallBookcase wallX={-13.6} wallZ={-5.0} width={4.8} face="west" sh={sh} rich={rich} m={m} low={low} />
             <AccentChair x={FURN.libraryChair.x} z={FURN.libraryChair.z} sh={sh} m={m} rotY={Math.PI / 2} />
             <ConsoleTable x={FURN.libraryTable.x} z={FURN.libraryTable.z} sh={sh} m={m} />
             <MatBox
@@ -622,7 +577,7 @@ export default function HouseGeometry({
 
             {/* ── EAST WING ── */}
             <Desk pos={[FURN.studyDesk.x, 0, FURN.studyDesk.z]} sh={sh} rich={rich} m={m} chairSign={1} />
-            <WallBookcase wallX={13.4} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
+            <WallBookcase wallX={13.6} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
             {/* Cinema — frame + live screen (uploaded MP4s via CinemaScreen) */}
             <MatBox pos={[12.55, 0.4, 7.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
             <MatBox pos={[12.6, 1.65, 7.0]} size={[0.1, 1.55, 2.4]} material={m.black} shadows={sh} />

@@ -99,49 +99,16 @@ function Fireflies() {
     return <points geometry={cloud.geometry} material={mat} frustumCulled={false} />;
 }
 
-/** Subtle additive moonlight shafts leaning in from three windows */
-const SHAFTS: { pos: [number, number, number]; rotY: number }[] = [
-    { pos: [3.9, 1.7, -12.31], rotY: 0 }, // living N window
-    { pos: [-3.9, 1.7, 12.31], rotY: Math.PI }, // bedroom S window
-    { pos: [-13.61, 1.7, -9.6], rotY: Math.PI / 2 }, // library W window
-];
-
-function MoonShafts() {
-    const mat = useMemo(
-        () =>
-            new THREE.MeshBasicMaterial({
-                color: '#8fa5ff',
-                transparent: true,
-                opacity: 0.055,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.DoubleSide,
-                fog: false,
-            }),
-        [],
-    );
-    return (
-        <group>
-            {SHAFTS.map((s, i) => (
-                <group key={i} position={s.pos} rotation={[0, s.rotY, 0]}>
-                    <mesh position={[0, -0.75, 1.15]} rotation={[0.5, 0, 0]} material={mat}>
-                        <planeGeometry args={[1.35, 3.1]} />
-                    </mesh>
-                    <mesh position={[0, -0.7, 1.0]} rotation={[0.5, 0, 0]} material={mat}>
-                        <planeGeometry args={[0.9, 2.8]} />
-                    </mesh>
-                </group>
-            ))}
-        </group>
-    );
-}
+/*
+ * Moonlight shafts removed — windows are now real openings with transparent
+ * glass, so the actual sky/moon show through instead of faked light planes.
+ */
 
 export default function HouseAtmosphere() {
     return (
         <group>
             <DustMotes />
             <Fireflies />
-            <MoonShafts />
         </group>
     );
 }

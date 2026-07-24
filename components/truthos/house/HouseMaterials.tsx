@@ -33,7 +33,6 @@ export function useHouseMaterials(low = false) {
         const artAsWithinMap = makeHouseMap('artAsWithin', { low });
         const artStillMap = makeHouseMap('artStillPoint', { low });
         const artUnnamedMap = makeHouseMap('artUnnamed', { low });
-        const nightGlassMap = makeHouseMap('nightGlass', { low });
         const skyMap = makeHouseMap('skyNight', { low });
         const moonMap = makeHouseMap('moon', { low });
 
@@ -96,15 +95,20 @@ export function useHouseMaterials(low = false) {
             artAsWithin: mk(artAsWithinMap, '#ffffff', { roughness: 0.7 }, 0.4),
             artStillPoint: mk(artStillMap, '#ffffff', { roughness: 0.7 }, 0.4),
             artUnnamed: mk(artUnnamedMap, '#ffffff', { roughness: 0.7 }, 0.4),
-            /** Emissive night-sky window pane — glows like moonlit glass */
-            nightGlass: new THREE.MeshStandardMaterial({
-                map: nightGlassMap,
-                emissive: '#aabdff',
-                emissiveMap: nightGlassMap,
-                emissiveIntensity: low ? 0.85 : 0.7,
-                roughness: 0.14,
-                metalness: 0.3,
-                envMapIntensity: 1.1,
+            /**
+             * Real window glass — transparent pane, the yard/sky/moon show
+             * through the actual wall opening. Faint tint + sheen so the
+             * glass itself still reads at grazing angles.
+             */
+            windowGlass: new THREE.MeshStandardMaterial({
+                color: '#cfe2f4',
+                transparent: true,
+                opacity: 0.16,
+                roughness: 0.06,
+                metalness: 0.35,
+                envMapIntensity: 1.35,
+                side: THREE.DoubleSide,
+                depthWrite: false,
             }),
             /** Gradient sky dome — BackSide, unfogged so the horizon reads */
             sky: new THREE.MeshBasicMaterial({

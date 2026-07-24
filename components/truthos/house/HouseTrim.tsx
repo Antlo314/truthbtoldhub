@@ -1,15 +1,17 @@
 'use client';
 
 /**
- * Architectural finish layer — baseboards, crown molding, night windows with
- * emissive glass + curtains, wall sconces, ceiling cove strips, chandeliers,
- * porch lights. Mounted from HouseGeometry so it shares one material set.
+ * Architectural finish layer — baseboards, crown molding, REAL glazed windows
+ * (transparent panes set into actual wall openings — the yard, sky dome and
+ * moon show through), wall sconces, ceiling cove strips, chandeliers, porch
+ * lights. Mounted from HouseGeometry so it shares one material set.
  *
- * Wall face math: exterior shell walls are 0.35 thick on SHELL lines (faces at
- * ±0.175), partitions are 0.22 thick (faces at ±0.11). Trim sits ~0.03 proud.
+ * Baseboards + crown derive from WALL_RUNS (same data as meshes/colliders),
+ * so trim always follows the walls exactly.
  */
 import type * as THREE from 'three';
 import type { HouseMaterials } from './HouseMaterials';
+import { WALL_RUNS, WINDOWS, WIN, SHELL, type WallRun } from './houseMap';
 
 function MatBox({
     pos,
@@ -30,94 +32,58 @@ function MatBox({
     );
 }
 
-type TrimRun = { x: number; z: number; w: number; d: number };
-
 const BB = 0.06;
 
-/** Exterior walls + horizontal partitions (rendered on every tier) */
-const BASE_CORE: TrimRun[] = [
-    // North shell (split at back door)
-    { x: -8.96, z: -12.29, w: 9.3, d: BB },
-    { x: 5.71, z: -12.29, w: 15.8, d: BB },
-    // South shell (split at front door)
-    { x: -7.285, z: 12.29, w: 12.65, d: BB },
-    { x: 7.285, z: 12.29, w: 12.65, d: BB },
-    // West / east shell
-    { x: -13.59, z: 0, w: BB, d: 24.55 },
-    { x: 13.59, z: 0, w: BB, d: 24.55 },
-    // Living partition z=-1.15, both faces
-    { x: -7.62, z: -1.29, w: 11.9, d: BB },
-    { x: 7.62, z: -1.29, w: 11.9, d: BB },
-    { x: -7.62, z: -1.01, w: 11.9, d: BB },
-    { x: 7.62, z: -1.01, w: 11.9, d: BB },
-    // Bedroom partition z=3.1, both faces
-    { x: -7.5, z: 2.96, w: 12.2, d: BB },
-    { x: 7.5, z: 2.96, w: 12.2, d: BB },
-    { x: -7.5, z: 3.24, w: 12.2, d: BB },
-    { x: 7.5, z: 3.24, w: 12.2, d: BB },
-];
-
-/** Vertical partitions x=±6.2 — desktop only (draw-call budget on mobile) */
-const BASE_EXTRA: TrimRun[] = [
-    { x: -6.34, z: -7.17, w: BB, d: 10.2 },
-    { x: -6.06, z: -7.17, w: BB, d: 10.2 },
-    { x: -6.34, z: 7.92, w: BB, d: 8.7 },
-    { x: -6.06, z: 7.92, w: BB, d: 8.7 },
-    { x: 6.06, z: -7.57, w: BB, d: 9.4 },
-    { x: 6.34, z: -7.57, w: BB, d: 9.4 },
-    { x: 6.06, z: 3.8, w: BB, d: 3.3 },
-    { x: 6.34, z: 3.8, w: BB, d: 3.3 },
-    { x: 6.06, z: 10.27, w: BB, d: 4.0 },
-    { x: 6.34, z: 10.27, w: BB, d: 4.0 },
-];
+/** Wall spans between door openings (baseboard + crown runs) */
+function doorSpans(r: WallRun): [number, number][] {
+    const doors = r.holes.filter((h) => h.sill < 0.01).sort((a, b) => a.c - b.c);
+    const spans: [number, number][] = [];
+    let cur = r.from;
+    for (const d of doors) {
+        spans.push([cur, d.c - d.hw]);
+        cur = d.c + d.hw;
+    }
+    spans.push([cur, r.to]);
+    return spans.filter(([a, b]) => b - a > 0.05);
+}
 
 /** Emissive cove strips — living + bedroom ceiling perimeter (cheap, no lights) */
-const COVE: TrimRun[] = [
+const COVE: { x: number; z: number; w: number; d: number }[] = [
     { x: 0, z: -11.85, w: 11.2, d: 0.08 },
     { x: 0, z: -1.55, w: 11.2, d: 0.08 },
-    { x: -5.68, z: -6.7, w: 0.08, d: 10.2 },
-    { x: 5.68, z: -6.7, w: 0.08, d: 10.2 },
+    { x: -5.98, z: -6.7, w: 0.08, d: 10.2 },
+    { x: 5.98, z: -6.7, w: 0.08, d: 10.2 },
     { x: 0, z: 3.72, w: 11.2, d: 0.08 },
     { x: 0, z: 11.9, w: 11.2, d: 0.08 },
-    { x: -5.68, z: 7.8, w: 0.08, d: 8.1 },
-    { x: 5.68, z: 7.8, w: 0.08, d: 8.1 },
-];
-
-type WindowSpec = {
-    pos: [number, number, number];
-    rotY: number;
-    curtains?: boolean;
-    /** Rendered on mobile too */
-    core?: boolean;
-};
-
-const WINDOWS: WindowSpec[] = [
-    { pos: [3.9, 1.72, -12.31], rotY: 0, curtains: true, core: true }, // living N
-    { pos: [-9.6, 1.72, -12.31], rotY: 0 }, // library N
-    { pos: [10.2, 1.72, -12.31], rotY: 0 }, // studio N
-    { pos: [-3.9, 1.72, 12.31], rotY: Math.PI, curtains: true, core: true }, // bedroom S
-    { pos: [3.05, 1.72, 12.31], rotY: Math.PI, curtains: true }, // bedroom S-E
-    { pos: [-9.8, 1.72, 12.31], rotY: Math.PI }, // SW room
-    { pos: [-13.61, 1.72, -9.6], rotY: Math.PI / 2, core: true }, // library W
-    { pos: [-13.61, 1.72, 7.6], rotY: Math.PI / 2 }, // NW room
-    { pos: [13.61, 1.72, -1.2], rotY: -Math.PI / 2 }, // study E
-    { pos: [13.61, 1.72, 10.4], rotY: -Math.PI / 2, core: true }, // cinema E
+    { x: -5.98, z: 7.8, w: 0.08, d: 8.1 },
+    { x: 5.98, z: 7.8, w: 0.08, d: 8.1 },
 ];
 
 const SCONCES: { pos: [number, number, number]; rotY: number }[] = [
-    { pos: [2.6, 1.95, -1.04], rotY: 0 }, // hall, living partition face (z=-1.04)
+    { pos: [2.6, 1.95, -1.04], rotY: 0 }, // hall, living partition face
     { pos: [-2.6, 1.95, -1.04], rotY: 0 },
-    { pos: [1.35, 1.95, 2.99], rotY: Math.PI }, // hall, bedroom partition face (z=2.99)
-    { pos: [-1.35, 1.95, 2.99], rotY: Math.PI },
-    { pos: [-5.35, 2.05, 12.32], rotY: Math.PI }, // bedroom S wall, west of window+curtains
+    { pos: [1.85, 1.95, 2.99], rotY: Math.PI }, // hall, bedroom partition face (clear of doorway)
+    { pos: [-1.85, 1.95, 2.99], rotY: Math.PI },
+    { pos: [-5.35, 2.05, 12.32], rotY: Math.PI }, // bedroom S wall
     { pos: [-0.55, 2.05, 12.32], rotY: Math.PI }, // bedroom, above east nightstand
     { pos: [-13.62, 1.9, -1.5], rotY: Math.PI / 2 }, // library W wall
     { pos: [6.31, 1.95, 9.5], rotY: Math.PI / 2 }, // cinema room, partition face
 ];
 
+/** World transform per exterior wall — local +z faces the room interior */
+const WALL_XFORM: Record<
+    'N' | 'S' | 'W' | 'E',
+    (c: number) => { pos: [number, number, number]; rotY: number }
+> = {
+    N: (c) => ({ pos: [c, 1.72, SHELL.north], rotY: 0 }),
+    S: (c) => ({ pos: [c, 1.72, SHELL.south], rotY: Math.PI }),
+    W: (c) => ({ pos: [SHELL.west, 1.72, c], rotY: Math.PI / 2 }),
+    E: (c) => ({ pos: [SHELL.east, 1.72, c], rotY: -Math.PI / 2 }),
+};
+
 function CurtainPanel({ x, y, h, m, sh }: { x: number; y: number; h: number; m: HouseMaterials; sh: boolean }) {
     return (
-        <group position={[x, y, 0.1]}>
+        <group position={[x, y, 0.3]}>
             <MatBox pos={[-0.13, 0, 0]} size={[0.13, h, 0.05]} material={m.fabric} shadows={sh} />
             <MatBox pos={[0, 0, 0.028]} size={[0.13, h, 0.05]} material={m.fabricLight} />
             <MatBox pos={[0.13, 0, -0.012]} size={[0.13, h, 0.05]} material={m.fabric} />
@@ -125,11 +91,13 @@ function CurtainPanel({ x, y, h, m, sh }: { x: number; y: number; h: number; m: 
     );
 }
 
-function NightWindow({
+/**
+ * Real glazed window — sits in an actual hole cut through the shell wall.
+ * Transparent pane at the wall center; casing wraps the cut on both faces.
+ */
+function GlazedWindow({
     pos,
     rotY,
-    w = 1.35,
-    h = 1.15,
     curtains = false,
     m,
     sh,
@@ -137,35 +105,41 @@ function NightWindow({
 }: {
     pos: [number, number, number];
     rotY: number;
-    w?: number;
-    h?: number;
     curtains?: boolean;
     m: HouseMaterials;
     sh: boolean;
     low: boolean;
 }) {
-    const ft = 0.075;
+    const w = WIN.w;
+    const h = WIN.h;
+    const caseD = SHELL.wallT + 0.07; // pokes past both wall faces
     const panelH = h + 0.75;
     const rodY = h / 2 + 0.24;
     return (
         <group position={pos} rotation={[0, rotY, 0]}>
-            {/* Night-sky pane */}
+            {/* Transparent pane — the real outdoors shows through */}
             <mesh>
                 <planeGeometry args={[w, h]} />
-                <primitive object={m.nightGlass} attach="material" />
+                <primitive object={m.windowGlass} attach="material" />
             </mesh>
-            {/* Mullions */}
-            <MatBox pos={[0, 0, 0.015]} size={[0.045, h, 0.03]} material={m.woodDark} />
-            <MatBox pos={[0, 0, 0.015]} size={[w, 0.045, 0.03]} material={m.woodDark} />
-            {/* Frame */}
-            <MatBox pos={[0, h / 2 + ft / 2, 0.02]} size={[w + ft * 2, ft, 0.1]} material={m.wood} />
-            <MatBox pos={[-(w / 2 + ft / 2), 0, 0.02]} size={[ft, h, 0.1]} material={m.wood} />
-            <MatBox pos={[w / 2 + ft / 2, 0, 0.02]} size={[ft, h, 0.1]} material={m.wood} />
-            {/* Sill */}
-            <MatBox pos={[0, -(h / 2 + 0.035), 0.05]} size={[w + 0.34, 0.07, 0.18]} material={m.wood} shadows={sh} />
+            {/* Mullion cross */}
+            <MatBox pos={[0, 0, 0]} size={[0.05, h, 0.06]} material={m.woodDark} />
+            <MatBox pos={[0, 0, 0]} size={[w, 0.05, 0.06]} material={m.woodDark} />
+            {/* Casing around the cut (both faces) */}
+            <MatBox pos={[0, h / 2 + 0.03, 0]} size={[w + 0.26, 0.1, caseD]} material={m.wood} />
+            <MatBox pos={[0, -(h / 2 + 0.025), 0]} size={[w + 0.26, 0.09, caseD]} material={m.wood} />
+            <MatBox pos={[-(w / 2 + 0.03), 0, 0]} size={[0.1, h + 0.2, caseD]} material={m.wood} />
+            <MatBox pos={[w / 2 + 0.03, 0, 0]} size={[0.1, h + 0.2, caseD]} material={m.wood} />
+            {/* Interior sill ledge */}
+            <MatBox
+                pos={[0, -(h / 2 + 0.035), 0.14]}
+                size={[w + 0.4, 0.07, 0.24]}
+                material={m.wood}
+                shadows={sh}
+            />
             {curtains && !low && (
                 <>
-                    <mesh position={[0, rodY, 0.1]} rotation={[0, 0, Math.PI / 2]}>
+                    <mesh position={[0, rodY, 0.28]} rotation={[0, 0, Math.PI / 2]}>
                         <cylinderGeometry args={[0.022, 0.022, w + 1.15, 6]} />
                         <primitive object={m.gold} attach="material" />
                     </mesh>
@@ -280,35 +254,46 @@ export default function HouseTrim({
 }) {
     return (
         <group>
-            {/* ── Baseboards ── */}
-            {BASE_CORE.map((r, i) => (
-                <MatBox
-                    key={`bb-${i}`}
-                    pos={[r.x, 0.075, r.z]}
-                    size={[r.w, 0.15, r.d]}
-                    material={m.woodDark}
-                />
-            ))}
-            {!low &&
-                BASE_EXTRA.map((r, i) => (
-                    <MatBox
-                        key={`bbe-${i}`}
-                        pos={[r.x, 0.075, r.z]}
-                        size={[r.w, 0.15, r.d]}
-                        material={m.woodDark}
-                    />
-                ))}
+            {/* ── Baseboards — generated from WALL_RUNS, both faces where interior ── */}
+            {WALL_RUNS.flatMap((r, ri) =>
+                doorSpans(r).flatMap(([a, b], si) => {
+                    const c = (a + b) / 2;
+                    const len = b - a;
+                    const sides = r.trim === 'both' ? [1, -1] : r.trim === '+' ? [1] : [-1];
+                    return sides.map((s) => {
+                        const off = r.at + s * (r.t / 2 + 0.03);
+                        return (
+                            <MatBox
+                                key={`bb-${ri}-${si}-${s}`}
+                                pos={r.axis === 'x' ? [c, 0.075, off] : [off, 0.075, c]}
+                                size={r.axis === 'x' ? [len, 0.15, BB] : [BB, 0.15, len]}
+                                material={m.woodDark}
+                            />
+                        );
+                    });
+                }),
+            )}
 
-            {/* ── Crown molding — exterior shell only (partitions stop at 2.8) ── */}
+            {/* ── Crown molding — walls now reach the ceiling, so crown every run ── */}
             {rich &&
-                BASE_CORE.slice(0, 6).map((r, i) => (
-                    <MatBox
-                        key={`cr-${i}`}
-                        pos={[r.x, 2.99, r.z]}
-                        size={[r.w === BB ? 0.1 : r.w, 0.14, r.d === BB ? 0.1 : r.d]}
-                        material={m.wood}
-                    />
-                ))}
+                WALL_RUNS.flatMap((r, ri) =>
+                    doorSpans(r).map(([a, b], si) => {
+                        const c = (a + b) / 2;
+                        const len = b - a;
+                        return (
+                            <MatBox
+                                key={`cr-${ri}-${si}`}
+                                pos={r.axis === 'x' ? [c, 3.0, r.at] : [r.at, 3.0, c]}
+                                size={
+                                    r.axis === 'x'
+                                        ? [len, 0.13, r.t + 0.1]
+                                        : [r.t + 0.1, 0.13, len]
+                                }
+                                material={m.wood}
+                            />
+                        );
+                    }),
+                )}
 
             {/* ── Ceiling cove strips (emissive, no lights) ── */}
             {COVE.map((r, i) => (
@@ -320,18 +305,21 @@ export default function HouseTrim({
                 />
             ))}
 
-            {/* ── Night windows ── */}
-            {WINDOWS.filter((w) => !low || w.core).map((w, i) => (
-                <NightWindow
-                    key={`win-${i}`}
-                    pos={w.pos}
-                    rotY={w.rotY}
-                    curtains={w.curtains}
-                    m={m}
-                    sh={sh}
-                    low={low}
-                />
-            ))}
+            {/* ── Real glazed windows (all tiers — the holes are always there) ── */}
+            {WINDOWS.map((w, i) => {
+                const t = WALL_XFORM[w.wall](w.c);
+                return (
+                    <GlazedWindow
+                        key={`win-${i}`}
+                        pos={t.pos}
+                        rotY={t.rotY}
+                        curtains={w.curtains}
+                        m={m}
+                        sh={sh}
+                        low={low}
+                    />
+                );
+            })}
 
             {/* ── Wall sconces ── */}
             {SCONCES.map((s, i) => (

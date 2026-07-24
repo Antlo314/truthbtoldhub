@@ -63,10 +63,152 @@ export const OPENING = {
     back: { x: -3.25, halfW: 1.05, z: -12.5 },
     living: { z: -1.15, halfW: 1.65 },
     bedroom: { z: 3.1, halfW: 1.4 },
-    westWing: { x: -6.2, z0: -2.05, z1: 3.55 },
-    eastHall: { x: 6.2, z0: -2.85, z1: 2.15 },
+    /** West wing grand arch (hall band ↔ community hall wing) */
+    westWing: { x: -6.2, z0: -1.04, z1: 2.99 },
+    /** East wing grand arch (hall band ↔ study wing) */
+    eastHall: { x: 6.2, z0: -1.04, z1: 2.99 },
     cinema: { x: 6.2, z0: 5.45, z1: 8.25 },
+    /** Library doors: from living room + from hall wing */
+    libraryDoor: { x: -6.2, z0: -5.95, z1: -4.45 },
+    libraryHall: { z: -1.15, x0: -10.6, x1: -9.2 },
 } as const;
+
+/* ────────────────────────────────────────────────────────────────
+ * WALL SYSTEM — single source of truth.
+ * Every wall is a run with holes (doors reach the floor, windows
+ * float). Meshes, colliders, and baseboards all derive from this,
+ * so geometry and collision can never drift apart.
+ * ──────────────────────────────────────────────────────────────── */
+
+export type WallHole = {
+    /** Center along the run axis */
+    c: number;
+    /** Half-width along the run axis */
+    hw: number;
+    /** Bottom of the hole (0 = door, >0 = window sill) */
+    sill: number;
+    /** Top of the hole (header band fills up to ceiling) */
+    head: number;
+};
+
+export type WallRun = {
+    /** Axis the wall runs along */
+    axis: 'x' | 'z';
+    /** Constant coordinate on the perpendicular axis */
+    at: number;
+    from: number;
+    to: number;
+    /** Thickness */
+    t: number;
+    holes: WallHole[];
+    /** Which faces get baseboard trim: both | positive side | negative side */
+    trim: 'both' | '+' | '-';
+};
+
+/** Ceiling height — all walls now rise floor-to-ceiling (flush, no gaps) */
+export const WALL_H = 3.1;
+
+/** Window standard: 1.35w × 1.15h, sill 1.145, header 2.295 (center y 1.72) */
+export const WIN = { w: 1.35, h: 1.15, sill: 1.145, head: 2.295 } as const;
+
+/** Real glazed windows — holes in the shell, transparent glass, yard visible */
+export const WINDOWS: { wall: 'N' | 'S' | 'W' | 'E'; c: number; curtains?: boolean }[] = [
+    { wall: 'N', c: 3.9, curtains: true }, // living
+    { wall: 'N', c: -9.6 }, // library
+    { wall: 'N', c: 10.2 }, // studio
+    { wall: 'S', c: -3.9, curtains: true }, // bedroom
+    { wall: 'S', c: 3.05, curtains: true }, // bedroom SE
+    { wall: 'S', c: -9.8 }, // hall wing
+    { wall: 'W', c: -9.6 }, // library
+    { wall: 'W', c: 7.6 }, // hall wing
+    { wall: 'E', c: -1.2 }, // study
+    { wall: 'E', c: 10.4 }, // cinema
+];
+
+const winHole = (c: number): WallHole => ({ c, hw: WIN.w / 2, sill: WIN.sill, head: WIN.head });
+const winsOn = (wall: 'N' | 'S' | 'W' | 'E') =>
+    WINDOWS.filter((w) => w.wall === wall).map((w) => winHole(w.c));
+
+/**
+ * The floor plan. Rooms:
+ *   Living (center-N) · Library (NW) · Study wing (NE, study+studio)
+ *   Hall band (center) · Community hall wing (W) · Bedroom (center-S) · Cinema (SE)
+ * Every doorway ≥1.4 m clear; wings open through ~4 m arches; all corners flush.
+ */
+export const WALL_RUNS: WallRun[] = [
+    // ── Exterior shell ──
+    {
+        axis: 'x', at: SHELL.north, from: SHELL.west, to: SHELL.east, t: SHELL.wallT, trim: '+',
+        holes: [
+            { c: OPENING.back.x, hw: OPENING.back.halfW, sill: 0, head: 2.55 },
+            ...winsOn('N'),
+        ],
+    },
+    {
+        axis: 'x', at: SHELL.south, from: SHELL.west, to: SHELL.east, t: SHELL.wallT, trim: '-',
+        holes: [
+            { c: OPENING.front.x, hw: OPENING.front.halfW, sill: 0, head: 2.55 },
+            ...winsOn('S'),
+        ],
+    },
+    { axis: 'z', at: SHELL.west, from: SHELL.north, to: SHELL.south, t: SHELL.wallT, trim: '+', holes: winsOn('W') },
+    { axis: 'z', at: SHELL.east, from: SHELL.north, to: SHELL.south, t: SHELL.wallT, trim: '-', holes: winsOn('E') },
+
+    // ── Cross wall z=-1.15 (living/library south wall) — west shell to east partition ──
+    {
+        axis: 'x', at: -1.15, from: SHELL.west, to: 6.31, t: SHELL.partT, trim: 'both',
+        holes: [
+            { c: -9.9, hw: 0.7, sill: 0, head: 2.35 }, // library ↔ hall wing door
+            { c: 0, hw: OPENING.living.halfW, sill: 0, head: 2.55 }, // living ↔ hall band
+        ],
+    },
+
+    // ── Cross wall z=3.1 (bedroom north wall) — west partition to east shell ──
+    {
+        axis: 'x', at: 3.1, from: -6.31, to: SHELL.east, t: SHELL.partT, trim: 'both',
+        holes: [{ c: 0, hw: OPENING.bedroom.halfW, sill: 0, head: 2.55 }], // hall band ↔ bedroom
+    },
+
+    // ── West partition x=-6.2 — north shell to south shell ──
+    {
+        axis: 'z', at: -6.2, from: SHELL.north, to: SHELL.south, t: SHELL.partT, trim: 'both',
+        holes: [
+            { c: -5.2, hw: 0.75, sill: 0, head: 2.35 }, // library ↔ living door
+            { c: 0.975, hw: 2.015, sill: 0, head: 2.75 }, // grand arch → hall wing
+        ],
+    },
+
+    // ── East partition x=6.2 — north shell to south shell ──
+    {
+        axis: 'z', at: 6.2, from: SHELL.north, to: SHELL.south, t: SHELL.partT, trim: 'both',
+        holes: [
+            { c: 0.975, hw: 2.015, sill: 0, head: 2.75 }, // grand arch → study wing
+            { c: 6.85, hw: 1.4, sill: 0, head: 2.55 }, // bedroom ↔ cinema
+        ],
+    },
+];
+
+/** Colliders derive from runs — only door holes (sill=0) are passable */
+function wallColliders(r: WallRun): Collider[] {
+    const doors = r.holes.filter((h) => h.sill < 0.01).sort((a, b) => a.c - b.c);
+    const spans: [number, number][] = [];
+    let cur = r.from;
+    for (const d of doors) {
+        spans.push([cur, d.c - d.hw]);
+        cur = d.c + d.hw;
+    }
+    spans.push([cur, r.to]);
+    return spans
+        .filter(([a, b]) => b - a > 0.02)
+        .map(([a, b]) => {
+            const c = (a + b) / 2;
+            const half = (b - a) / 2;
+            const ht = r.t / 2 + 0.03;
+            return r.axis === 'x'
+                ? { x: c, z: r.at, hx: half, hz: ht }
+                : { x: r.at, z: c, hx: ht, hz: half };
+        });
+}
 
 /** Min free path width (m) through openings — player R 0.34 + margin */
 export const PATH_CLEAR = 1.15;
@@ -91,10 +233,10 @@ export const BACK_DOOR = { x: -3.25, z: -12.35 };
 export const FURN = {
     sofa: { x: 0, z: -6.0 },
     coffee: { x: 0.15, z: -8.35 },
-    media: { x: 5.55, z: -7.8 }, // against east living face of partition
-    offering: { x: -5.55, z: -6.5 }, // against west living face of partition
+    media: { x: 5.82, z: -7.8 }, // flush against east partition living face
+    offering: { x: -5.85, z: -6.5 }, // flush against west partition living face
     chair: { x: 2.9, z: -7.5 },
-    bed: { x: -2.0, z: 10.0 },
+    bed: { x: -2.0, z: 11.35 }, // headboard against the south wall
     desk: { x: 4.35, z: 9.55 }, // SE bedroom, north of cinema door band
     deskChair: { x: 4.15, z: 10.4 }, // room side of desk (south, toward bed)
     mirror: { x: 5.95, z: 9.35 },
@@ -295,30 +437,12 @@ export const HOTSPOTS: Hotspot[] = [
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
 /**
- * Walls + furniture + yard colliders (must match HouseGeometry / YardGeometry).
- * Interior partitions span shell-to-shell with only OPENING gaps.
+ * Walls + furniture + yard colliders (walls derive from WALL_RUNS — the same
+ * data that builds the meshes, so collision always matches what you see).
  */
 export const COLLIDERS: Collider[] = [
-    // Outer shell (doors open)
-    { x: -9.05, z: -12.5, hx: 4.75, hz: 0.22 },
-    { x: 5.8, z: -12.5, hx: 8.0, hz: 0.22 },
-    { x: -7.375, z: 12.5, hx: 6.425, hz: 0.22 },
-    { x: 7.375, z: 12.5, hx: 6.425, hz: 0.22 },
-    { x: -13.8, z: 0, hx: 0.22, hz: 12.6 },
-    { x: 13.8, z: 0, hx: 0.22, hz: 12.6 },
-    // Living entry z=-1.15 gap +/-1.65 — reach shell
-    { x: -7.725, z: -1.15, hx: 6.075, hz: 0.14 },
-    { x: 7.725, z: -1.15, hx: 6.075, hz: 0.14 },
-    // Bedroom z=3.1 gap +/-1.4 — reach shell
-    { x: -7.6, z: 3.1, hx: 6.2, hz: 0.14 },
-    { x: 7.6, z: 3.1, hx: 6.2, hz: 0.14 },
-    // West partition x=-6.2 library gap — reach N/S shell
-    { x: -6.2, z: -7.275, hx: 0.14, hz: 5.225 },
-    { x: -6.2, z: 8.025, hx: 0.14, hz: 4.475 },
-    // East partition x=6.2 hall + cinema gaps — reach N/S shell
-    { x: 6.2, z: -7.675, hx: 0.14, hz: 4.825 },
-    { x: 6.2, z: 3.8, hx: 0.14, hz: 1.65 },
-    { x: 6.2, z: 10.375, hx: 0.14, hz: 2.125 },
+    // Walls (generated: shell + partitions, door gaps open, windows solid)
+    ...WALL_RUNS.flatMap(wallColliders),
     // Jambs
     { x: -1.1, z: 12.25, hx: 0.32, hz: 0.2 },
     { x: 1.1, z: 12.25, hx: 0.32, hz: 0.2 },
@@ -335,13 +459,13 @@ export const COLLIDERS: Collider[] = [
     { x: 1.6, z: -11.55, hx: 0.25, hz: 0.5 },
     // Bedroom
     { x: FURN.bed.x, z: FURN.bed.z, hx: 1.2, hz: 0.95 },
-    { x: -3.45, z: 10.0, hx: 0.3, hz: 0.3 },
-    { x: -0.55, z: 10.0, hx: 0.3, hz: 0.3 },
+    { x: -3.45, z: 11.35, hx: 0.3, hz: 0.3 },
+    { x: -0.55, z: 11.35, hx: 0.3, hz: 0.3 },
     { x: FURN.desk.x, z: FURN.desk.z, hx: 0.95, hz: 0.42 },
     { x: FURN.deskChair.x, z: FURN.deskChair.z, hx: 0.32, hz: 0.32 },
     { x: FURN.mirror.x, z: FURN.mirror.z, hx: 0.16, hz: 0.5 },
-    // Library
-    { x: -13.0, z: -5.0, hx: 0.38, hz: 2.4 },
+    // Library (bookcase hugs the west wall)
+    { x: -13.37, z: -5.0, hx: 0.27, hz: 2.4 },
     { x: FURN.libraryChair.x, z: FURN.libraryChair.z, hx: 0.42, hz: 0.42 },
     { x: FURN.libraryTable.x, z: FURN.libraryTable.z, hx: 0.42, hz: 0.4 },
     // Hall arch
@@ -350,7 +474,7 @@ export const COLLIDERS: Collider[] = [
     // Study / cinema / studio
     { x: FURN.studyDesk.x, z: FURN.studyDesk.z, hx: 0.9, hz: 0.5 },
     { x: FURN.studyChair.x, z: FURN.studyChair.z, hx: 0.32, hz: 0.32 },
-    { x: 13.0, z: -5.2, hx: 0.32, hz: 1.5 },
+    { x: 13.37, z: -5.2, hx: 0.27, hz: 1.5 },
     { x: 12.55, z: 7.0, hx: 0.28, hz: 1.2 },
     { x: FURN.cinemaChairA.x, z: FURN.cinemaChairA.z, hx: 0.38, hz: 0.38 },
     { x: FURN.cinemaChairB.x, z: FURN.cinemaChairB.z, hx: 0.38, hz: 0.38 },
