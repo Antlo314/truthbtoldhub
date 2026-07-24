@@ -70,12 +70,19 @@ export type OsNotification = {
 
 export type OsFlyout = 'quick' | 'calendar' | 'notifications' | 'widgets' | null;
 
+/** Full-screen system overlays that own the keyboard while open */
+export type OsOverlay = 'palette' | 'switcher' | 'shortcuts' | null;
+
 type OsTheme = {
     wallpaper: string;
     accent: OsAccentId;
     /** 0.55 – 1 screen brightness */
     brightness: number;
     nightLight: boolean;
+    /** 0 – 1 system volume */
+    volume: number;
+    /** Silences toasts; notifications still land in the centre */
+    doNotDisturb: boolean;
 };
 
 const DEFAULT_THEME: OsTheme = {
@@ -83,6 +90,8 @@ const DEFAULT_THEME: OsTheme = {
     accent: 'emerald',
     brightness: 1,
     nightLight: false,
+    volume: 0.7,
+    doNotDisturb: false,
 };
 
 function loadTheme(): OsTheme {
@@ -105,6 +114,21 @@ function persistTheme(t: OsTheme) {
     }
 }
 
+/** Merge a theme patch into state and persist the whole theme */
+function patchTheme(current: OsTheme, patch: Partial<OsTheme>): Partial<OsTheme> {
+    const next: OsTheme = {
+        wallpaper: current.wallpaper,
+        accent: current.accent,
+        brightness: current.brightness,
+        nightLight: current.nightLight,
+        volume: current.volume,
+        doNotDisturb: current.doNotDisturb,
+        ...patch,
+    };
+    persistTheme(next);
+    return patch;
+}
+
 let noteSeq = 1;
 
 type OsSystemState = OsTheme & {
@@ -121,6 +145,11 @@ type OsSystemState = OsTheme & {
     setAccent: (a: OsAccentId) => void;
     setBrightness: (v: number) => void;
     setNightLight: (v: boolean) => void;
+    setVolume: (v: number) => void;
+    setDoNotDisturb: (v: boolean) => void;
+
+    overlay: OsOverlay;
+    setOverlay: (o: OsOverlay) => void;
 
     notify: (n: { title: string; body?: string; accent?: OsAccentId; toast?: boolean }) => void;
     dismissToast: (id: string) => void;
@@ -142,38 +171,28 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
     taskView: false,
     locked: false,
     ctxMenu: null,
+    overlay: null,
 
-    setWallpaper: (id) =>
-        set((s) => {
-            const next = { wallpaper: id, accent: s.accent, brightness: s.brightness, nightLight: s.nightLight };
-            persistTheme(next);
-            return { wallpaper: id };
-        }),
-    setAccent: (a) =>
-        set((s) => {
-            persistTheme({ wallpaper: s.wallpaper, accent: a, brightness: s.brightness, nightLight: s.nightLight });
-            return { accent: a };
-        }),
+    setWallpaper: (id) => set((s) => patchTheme(s, { wallpaper: id })),
+    setAccent: (a) => set((s) => patchTheme(s, { accent: a })),
     setBrightness: (v) =>
-        set((s) => {
-            const b = Math.min(1, Math.max(0.55, v));
-            persistTheme({ wallpaper: s.wallpaper, accent: s.accent, brightness: b, nightLight: s.nightLight });
-            return { brightness: b };
-        }),
-    setNightLight: (v) =>
-        set((s) => {
-            persistTheme({ wallpaper: s.wallpaper, accent: s.accent, brightness: s.brightness, nightLight: v });
-            return { nightLight: v };
-        }),
+        set((s) => patchTheme(s, { brightness: Math.min(1, Math.max(0.55, v)) })),
+    setNightLight: (v) => set((s) => patchTheme(s, { nightLight: v })),
+    setVolume: (v) => set((s) => patchTheme(s, { volume: Math.min(1, Math.max(0, v)) })),
+    setDoNotDisturb: (v) => set((s) => patchTheme(s, { doNotDisturb: v })),
+
+    setOverlay: (o) => set({ overlay: o, flyout: null, ctxMenu: null }),
 
     notify: ({ title, body, accent, toast = true }) => {
         const id = `n${noteSeq++}_${Date.now().toString(36)}`;
-        const note: OsNotification = { id, title, body, accent, at: Date.now(), toast };
+        // Do-not-disturb silences the popup but still files the notification
+        const popup = toast && !get().doNotDisturb;
+        const note: OsNotification = { id, title, body, accent, at: Date.now(), toast: popup };
         set((s) => ({
             notifications: [note, ...s.notifications].slice(0, 40),
-            toastIds: toast ? [...s.toastIds, id] : s.toastIds,
+            toastIds: popup ? [...s.toastIds, id] : s.toastIds,
         }));
-        if (toast) {
+        if (popup) {
             setTimeout(() => get().dismissToast(id), 5200);
         }
     },

@@ -26,7 +26,9 @@ export type OsAppId =
     | 'photos'
     | 'clock'
     | 'taskmgr'
-    | 'browser';
+    | 'browser'
+    | 'music'
+    | 'tasks';
 
 export type BentoSlot =
     | 'hero'
@@ -36,6 +38,23 @@ export type BentoSlot =
     | 'd'
     | 'float'
     | 'max';
+
+/**
+ * Opening payload — lets one app hand a document to another
+ * (Files → Notepad, Files → Photos, palette → Browser route).
+ * Serializable only, so sessions can be restored from localStorage.
+ */
+export type OsAppPayload = {
+    /** Virtual-FS node id, when opening a saved document */
+    nodeId?: string;
+    /** Display name for the window title */
+    name?: string;
+    /** Inline text / data URL / route */
+    content?: string;
+};
+
+/** Apps that can have several windows open at once */
+export const MULTI_INSTANCE = new Set<OsAppId>(['notepad', 'terminal', 'browser', 'photos']);
 
 /** Apps that require a signed-in session */
 export const PROTECTED_APPS = new Set<OsAppId>([
@@ -67,7 +86,13 @@ export type OsWindow = {
     minimized?: boolean;
     maximized?: boolean;
     snap: BentoSlot;
+    /** Virtual desktop this window lives on */
+    desktop: number;
+    payload?: OsAppPayload;
 };
+
+export const DESKTOP_COUNT = 4;
+const SESSION_KEY = 'truthos_session_v1';
 
 type TruthOsState = {
     /** room / device-lock kept for legacy BedroomStage + HouseExperience */
@@ -81,6 +106,13 @@ type TruthOsState = {
     sessionEmail: string | null;
     authPrompt: boolean;
     pendingApp: OsAppId | null;
+    /** Active virtual desktop (0-indexed) */
+    desktop: number;
+    /** Most-recently-used window ids, newest first — drives the Ctrl+Tab switcher */
+    mru: string[];
+    /** Taskbar-pinned apps */
+    pinned: OsAppId[];
+
     enterOs: () => void;
     /** @deprecated legacy house computer flow */
     openDevice: () => void;
@@ -88,7 +120,7 @@ type TruthOsState = {
     closeToRoom: () => void;
     setSessionEmail: (email: string | null) => void;
     setAuthPrompt: (v: boolean) => void;
-    openApp: (app: OsAppId) => void;
+    openApp: (app: OsAppId, opts?: { payload?: OsAppPayload; newInstance?: boolean }) => void;
     closeWindow: (id: string) => void;
     focusWindow: (id: string) => void;
     moveWindow: (id: string, x: number, y: number) => void;
@@ -101,6 +133,14 @@ type TruthOsState = {
     setStartOpen: (v: boolean) => void;
     setLayoutMode: (m: 'bento' | 'float') => void;
     clearDesktop: () => void;
+
+    setDesktop: (i: number) => void;
+    moveWindowToDesktop: (id: string, i: number) => void;
+    togglePin: (app: OsAppId) => void;
+    /** Windows on the active desktop, MRU-ordered (for the switcher) */
+    mruWindows: () => OsWindow[];
+    saveSession: () => void;
+    restoreSession: () => void;
 };
 
 export const APP_META: Record<
@@ -130,6 +170,8 @@ export const APP_META: Record<
     clock: { title: 'Clock & Calendar', w: 420, h: 520, label: 'Clock', accent: 'sky' },
     taskmgr: { title: 'Task Manager', w: 560, h: 480, label: 'Tasks', accent: 'amber' },
     browser: { title: 'Sanctum Browser', w: 820, h: 560, label: 'Browser', accent: 'cyan' },
+    music: { title: 'Music', w: 620, h: 500, label: 'Music', accent: 'violet' },
+    tasks: { title: 'To-Do', w: 520, h: 560, label: 'To-Do', accent: 'gold' },
 };
 
 /** Preferred bento slot order when opening apps */
@@ -145,6 +187,21 @@ function nextFreeSlot(windows: OsWindow[]): BentoSlot {
 
 let winSeq = 1;
 
+/** Push an id to the front of the MRU list */
+function bumpMru(mru: string[], id: string): string[] {
+    return [id, ...mru.filter((m) => m !== id)];
+}
+
+type StoredSession = {
+    v: 1;
+    desktop: number;
+    pinned: OsAppId[];
+    windows: Pick<
+        OsWindow,
+        'app' | 'x' | 'y' | 'w' | 'h' | 'minimized' | 'maximized' | 'snap' | 'desktop'
+    >[];
+};
+
 export const useTruthOs = create<TruthOsState>((set, get) => ({
     phase: 'os',
     windows: [],
@@ -156,6 +213,9 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
     sessionEmail: null,
     authPrompt: false,
     pendingApp: null,
+    desktop: 0,
+    mru: [],
+    pinned: ['truth', 'browser', 'files', 'terminal'],
 
     enterOs: () => set({ phase: 'os', bootDone: false, startOpen: false }),
     openDevice: () => set({ phase: 'device-lock' }),
@@ -164,6 +224,7 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
             phase: 'room',
             windows: [],
             focusId: null,
+            mru: [],
             bootDone: false,
             startOpen: false,
             pendingApp: null,
@@ -174,10 +235,12 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
     setBootDone: (v) => set({ bootDone: v }),
     setStartOpen: (v) => set({ startOpen: v }),
     setLayoutMode: (m) => set({ layoutMode: m }),
-    clearDesktop: () =>
-        set({ windows: [], focusId: null, startOpen: false, pendingApp: null }),
+    clearDesktop: () => {
+        set({ windows: [], focusId: null, mru: [], startOpen: false, pendingApp: null });
+        get().saveSession();
+    },
 
-    openApp: (app) => {
+    openApp: (app, opts) => {
         const meta = APP_META[app];
         const email = get().sessionEmail;
         const needsAuth = PROTECTED_APPS.has(app) || meta.protected;
@@ -186,64 +249,83 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
             return;
         }
 
-        const existing = get().windows.find((w) => w.app === app);
-        if (existing) {
-            set((s) => ({
-                windows: s.windows.map((w) =>
-                    w.id === existing.id ? { ...w, minimized: false } : w,
-                ),
-                startOpen: false,
-                authPrompt: false,
-                pendingApp: null,
-            }));
-            get().focusWindow(existing.id);
-            return;
+        const desktop = get().desktop;
+        const wantsNew = opts?.newInstance || (opts?.payload && MULTI_INSTANCE.has(app));
+
+        if (!wantsNew) {
+            // Focus an existing window of this app — pull it to this desktop if elsewhere
+            const existing = get().windows.find((w) => w.app === app);
+            if (existing) {
+                set((s) => ({
+                    windows: s.windows.map((w) =>
+                        w.id === existing.id ? { ...w, minimized: false, desktop } : w,
+                    ),
+                    startOpen: false,
+                    authPrompt: false,
+                    pendingApp: null,
+                }));
+                get().focusWindow(existing.id);
+                return;
+            }
         }
 
         const z = get().zTop + 1;
         const id = `w${winSeq++}`;
         const n = get().windows.length;
+        const phone = detectDevice() === 'phone';
         const snap =
-            get().layoutMode === 'bento' && detectDevice() === 'desktop'
-                ? nextFreeSlot(get().windows)
+            get().layoutMode === 'bento' && !phone
+                ? nextFreeSlot(get().windows.filter((w) => w.desktop === desktop))
                 : 'float';
 
         const win: OsWindow = {
             id,
             app,
-            title: meta.title,
+            title: opts?.payload?.name ? `${opts.payload.name} — ${meta.label}` : meta.title,
             x: 48 + (n % 4) * 28,
             y: 40 + (n % 3) * 24,
             w: meta.w,
             h: meta.h,
             z,
             snap,
-            maximized: detectDevice() === 'phone',
+            desktop,
+            maximized: phone,
+            payload: opts?.payload,
         };
-        set({
-            windows: [...get().windows, win],
+        set((s) => ({
+            windows: [...s.windows, win],
             focusId: id,
+            mru: bumpMru(s.mru, id),
             zTop: z,
             startOpen: false,
             authPrompt: false,
             pendingApp: null,
-        });
+        }));
+        get().saveSession();
     },
 
-    closeWindow: (id) =>
-        set((s) => ({
-            windows: s.windows.filter((w) => w.id !== id),
-            focusId:
-                s.focusId === id
-                    ? s.windows.find((w) => w.id !== id)?.id ?? null
-                    : s.focusId,
-        })),
+    closeWindow: (id) => {
+        set((s) => {
+            const mru = s.mru.filter((m) => m !== id);
+            const rest = s.windows.filter((w) => w.id !== id);
+            return {
+                windows: rest,
+                mru,
+                focusId:
+                    s.focusId === id
+                        ? mru.find((m) => rest.some((w) => w.id === m)) ?? null
+                        : s.focusId,
+            };
+        });
+        get().saveSession();
+    },
 
     focusWindow: (id) => {
         const z = get().zTop + 1;
         set((s) => ({
             focusId: id,
             zTop: z,
+            mru: bumpMru(s.mru, id),
             windows: s.windows.map((w) => (w.id === id ? { ...w, z, minimized: false } : w)),
         }));
     },
@@ -304,4 +386,114 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
             ),
             layoutMode: snap === 'float' ? 'float' : 'bento',
         })),
+
+    setDesktop: (i) => {
+        const next = Math.max(0, Math.min(DESKTOP_COUNT - 1, i));
+        set({ desktop: next, startOpen: false });
+        // Focus the top window of the desktop we just landed on
+        const top = get()
+            .mru.map((id) => get().windows.find((w) => w.id === id))
+            .find((w): w is OsWindow => !!w && w.desktop === next && !w.minimized);
+        set({ focusId: top?.id ?? null });
+        get().saveSession();
+    },
+
+    moveWindowToDesktop: (id, i) => {
+        const next = Math.max(0, Math.min(DESKTOP_COUNT - 1, i));
+        set((s) => ({
+            windows: s.windows.map((w) => (w.id === id ? { ...w, desktop: next } : w)),
+        }));
+        get().saveSession();
+    },
+
+    togglePin: (app) => {
+        set((s) => ({
+            pinned: s.pinned.includes(app)
+                ? s.pinned.filter((p) => p !== app)
+                : [...s.pinned, app],
+        }));
+        get().saveSession();
+    },
+
+    mruWindows: () => {
+        const { windows, mru, desktop } = get();
+        const onDesk = windows.filter((w) => w.desktop === desktop);
+        const ordered = mru
+            .map((id) => onDesk.find((w) => w.id === id))
+            .filter((w): w is OsWindow => !!w);
+        // Anything not yet in the MRU list (shouldn't happen) goes last
+        return [...ordered, ...onDesk.filter((w) => !mru.includes(w.id))];
+    },
+
+    saveSession: () => {
+        if (typeof window === 'undefined') return;
+        const { windows, desktop, pinned } = get();
+        const data: StoredSession = {
+            v: 1,
+            desktop,
+            pinned,
+            windows: windows
+                // Never restore a transient/auth-gated surface into a cold boot
+                .filter((w) => w.app !== 'chamber' && !PROTECTED_APPS.has(w.app))
+                .map((w) => ({
+                    app: w.app,
+                    x: w.x,
+                    y: w.y,
+                    w: w.w,
+                    h: w.h,
+                    minimized: w.minimized,
+                    maximized: w.maximized,
+                    snap: w.snap,
+                    desktop: w.desktop,
+                })),
+        };
+        try {
+            localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+        } catch {
+            /* private mode */
+        }
+    },
+
+    restoreSession: () => {
+        if (typeof window === 'undefined') return;
+        let data: StoredSession | null = null;
+        try {
+            const raw = localStorage.getItem(SESSION_KEY);
+            if (raw) data = JSON.parse(raw) as StoredSession;
+        } catch {
+            return;
+        }
+        if (!data || data.v !== 1 || !Array.isArray(data.windows)) return;
+
+        const phone = detectDevice() === 'phone';
+        let z = get().zTop;
+        const windows: OsWindow[] = [];
+        for (const s of data.windows) {
+            const meta = APP_META[s.app];
+            if (!meta) continue; // app removed since the session was saved
+            z += 1;
+            windows.push({
+                id: `w${winSeq++}`,
+                app: s.app,
+                title: meta.title,
+                x: s.x,
+                y: s.y,
+                w: s.w,
+                h: s.h,
+                z,
+                snap: s.snap ?? 'float',
+                desktop: Math.max(0, Math.min(DESKTOP_COUNT - 1, s.desktop ?? 0)),
+                minimized: s.minimized,
+                maximized: phone ? true : s.maximized,
+            });
+        }
+        set({
+            windows,
+            zTop: z,
+            desktop: Math.max(0, Math.min(DESKTOP_COUNT - 1, data.desktop ?? 0)),
+            pinned: Array.isArray(data.pinned) && data.pinned.length ? data.pinned : get().pinned,
+            mru: windows.map((w) => w.id).reverse(),
+            focusId: windows.length ? windows[windows.length - 1].id : null,
+        });
+    },
 }));

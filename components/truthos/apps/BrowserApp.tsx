@@ -39,10 +39,11 @@ function normalize(raw: string): { internal: string | null; external: string | n
     return { internal: `/${t.replace(/^\/+/, '')}`, external: null };
 }
 
-export function BrowserApp() {
-    const [stack, setStack] = useState<string[]>([HOME_PATH]);
+export function BrowserApp({ initialPath }: { initialPath?: string } = {}) {
+    const start = initialPath && initialPath.startsWith('/') ? initialPath : HOME_PATH;
+    const [stack, setStack] = useState<string[]>([start]);
     const [idx, setIdx] = useState(0);
-    const [bar, setBar] = useState(HOME_PATH);
+    const [bar, setBar] = useState(start);
     const [reloadKey, setReloadKey] = useState(0);
     const frameRef = useRef<HTMLIFrameElement>(null);
     const current = stack[idx];

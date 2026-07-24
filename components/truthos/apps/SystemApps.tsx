@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { useTruthOs, type OsAppId } from '../truthOsStore';
 
 const FS_KEY = 'truthos_vfs_v1';
 
@@ -170,37 +171,68 @@ export function CalculatorApp() {
 
 /* ─── Notepad ────────────────────────────────────────────── */
 
-export function NotepadApp() {
+/**
+ * Notepad — a scratchpad by default, or a real editor bound to a file in the
+ * virtual file system when Files (or the command palette) opens a document.
+ */
+export function NotepadApp({ nodeId, name }: { nodeId?: string; name?: string } = {}) {
+    const bound = !!nodeId;
     const [text, setText] = useState(() => {
         try {
+            if (nodeId) {
+                const node = loadFs().find((n) => n.id === nodeId);
+                return node?.content ?? '';
+            }
             return localStorage.getItem('truthos_notepad') || 'Truth.OS Notepad\n\n';
         } catch {
             return '';
         }
     });
+    const [saved, setSaved] = useState(true);
 
     useEffect(() => {
-        try {
-            localStorage.setItem('truthos_notepad', text);
-        } catch {
-            /* */
-        }
-    }, [text]);
+        setSaved(false);
+        const t = setTimeout(() => {
+            try {
+                if (nodeId) {
+                    const nodes = loadFs();
+                    const i = nodes.findIndex((n) => n.id === nodeId);
+                    if (i >= 0) {
+                        nodes[i] = { ...nodes[i], content: text, updatedAt: Date.now() };
+                        saveFs(nodes);
+                    }
+                } else {
+                    localStorage.setItem('truthos_notepad', text);
+                }
+            } catch {
+                /* */
+            }
+            setSaved(true);
+        }, 400);
+        return () => clearTimeout(t);
+    }, [text, nodeId]);
 
     return (
         <Panel>
-            <div className="shrink-0 px-3 py-2 border-b border-white/10 flex items-center justify-between">
-                <p className="text-[10px] uppercase tracking-widest text-white/40 font-mono">Notepad</p>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setText('');
-                        sacredUi.click();
-                    }}
-                    className="text-[10px] text-white/50 hover:text-white"
-                >
-                    Clear
-                </button>
+            <div className="shrink-0 px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2">
+                <p className="text-[10px] uppercase tracking-widest text-white/40 font-mono truncate">
+                    {bound ? name || 'Document' : 'Notepad'}
+                </p>
+                <div className="flex items-center gap-3 shrink-0">
+                    <span className={`text-[9px] font-mono ${saved ? 'text-emerald-400/70' : 'text-amber-400/80'}`}>
+                        {saved ? 'saved' : 'saving…'}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setText('');
+                            sacredUi.click();
+                        }}
+                        className="text-[10px] text-white/50 hover:text-white"
+                    >
+                        Clear
+                    </button>
+                </div>
             </div>
             <textarea
                 value={text}
@@ -561,6 +593,24 @@ export function FileExplorerApp() {
                 </ul>
                 <div className="sm:col-span-2 p-3 overflow-y-auto text-xs text-zinc-400 border-t sm:border-t-0">
                     {!preview && <p className="font-mono text-zinc-600">Select a file to preview. Double-click folders to open. Cut/Copy then Paste to move or duplicate.</p>}
+                    {preview && (
+                        <div className="flex items-center gap-2 mb-2.5">
+                            <p className="text-[11px] text-white/80 font-medium truncate flex-1">{preview.name}</p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const target: OsAppId = preview.kind === 'png' ? 'photos' : 'notepad';
+                                    useTruthOs.getState().openApp(target, {
+                                        payload: { nodeId: preview.id, name: preview.name },
+                                    });
+                                    sacredUi.click();
+                                }}
+                                className="shrink-0 px-2.5 py-1.5 rounded-lg border border-sky-400/35 bg-sky-500/15 text-sky-100 text-[10px] font-semibold hover:bg-sky-500/25 min-h-[32px] touch-manipulation"
+                            >
+                                Open in {preview.kind === 'png' ? 'Photos' : 'Notepad'}
+                            </button>
+                        </div>
+                    )}
                     {preview?.kind === 'png' && preview.content && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={preview.content} alt={preview.name} className="w-full rounded-lg border border-white/10" />

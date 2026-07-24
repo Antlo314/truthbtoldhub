@@ -22,6 +22,8 @@ import {
     Image,
     Images,
     Library,
+    ListChecks,
+    Music,
     Newspaper,
     Palette,
     Settings,
@@ -145,6 +147,8 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: s
     clock: { Icon: Clock, accent: 'sky', label: 'Clock' },
     taskmgr: { Icon: Activity, accent: 'amber', label: 'Tasks' },
     browser: { Icon: Globe, accent: 'cyan', label: 'Browser' },
+    music: { Icon: Music, accent: 'violet', label: 'Music' },
+    tasks: { Icon: ListChecks, accent: 'gold', label: 'To-Do' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {

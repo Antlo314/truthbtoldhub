@@ -9,7 +9,7 @@ import AvatarCanvas from '@/components/game/AvatarCanvas';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import TruthGuideApp from './TruthGuideApp';
-import type { OsAppId } from '../truthOsStore';
+import type { OsAppId, OsAppPayload } from '../truthOsStore';
 import { APP_META } from '../truthOsStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { loadSettings, applyMusicSetting, saveSettings } from '@/lib/game/settings';
@@ -523,18 +523,25 @@ export function SettingsApp({
                                 Truth.OS
                             </p>
                             <p className="text-2xl text-white font-semibold mt-1">
-                                3.0 · 2026 edition
+                                3.5 · 2026 edition
                             </p>
                             <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                                Bento Aero window manager · snap layouts · task view · notification
-                                center · quick settings · widgets · lock screen.
+                                Command palette · 4 workspaces · MRU window switcher · session
+                                restore · snap layouts · task view · notification centre · quick
+                                settings · widgets · lock screen.
+                            </p>
+                            <p className="text-[11px] text-emerald-300/80 mt-2 font-mono">
+                                Ctrl+K search · Ctrl+/ shortcuts
                             </p>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <StatChip label="Kernel" value="soulsh 1.2" />
+                            <StatChip label="Kernel" value="soulsh 1.3" />
                             <StatChip label="Compositor" value="Aura" />
-                            <StatChip label="Programs" value="23 installed" />
-                            <StatChip label="Build" value="2026.07" />
+                            <StatChip
+                                label="Programs"
+                                value={`${Object.keys(APP_META).length} installed`}
+                            />
+                            <StatChip label="Workspaces" value="4" />
                         </div>
                         <p className="text-[10px] text-zinc-600 leading-relaxed">
                             Truth B Told Hub — the desktop is the Hut. Everything here also lives in
@@ -551,6 +558,8 @@ export type OsAppContext = {
     onLogout: () => void;
     onExit?: () => void;
     onEnterChamber: () => void;
+    /** Document / route handed over by Files, Photos or the command palette */
+    payload?: OsAppPayload;
 };
 
 export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
@@ -592,7 +601,7 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
         case 'paint':
             return <PaintApp />;
         case 'notepad':
-            return <NotepadApp />;
+            return <NotepadApp nodeId={ctx.payload?.nodeId} name={ctx.payload?.name} />;
         case 'terminal':
             return <TerminalApp />;
         case 'media':
@@ -604,7 +613,7 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
         case 'taskmgr':
             return <TaskManagerApp />;
         case 'browser':
-            return <BrowserApp />;
+            return <BrowserApp initialPath={ctx.payload?.content} />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:

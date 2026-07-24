@@ -9,16 +9,21 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     Bell,
+    BellOff,
     Expand,
     Image as ImageIcon,
+    Keyboard,
     LayoutGrid,
     Lock,
+    Search,
     Moon,
     Music,
     Newspaper,
     Power,
     RefreshCw,
     Sun,
+    Volume2,
+    VolumeX,
     X,
 } from 'lucide-react';
 import { useTruthOs, type OsAppId } from './truthOsStore';
@@ -29,6 +34,7 @@ import { loadSettings, saveSettings, applyMusicSetting } from '@/lib/game/settin
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 function timeAgo(at: number): string {
     const s = Math.max(1, Math.round((Date.now() - at) / 1000));
@@ -167,9 +173,13 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
         brightness,
         nightLight,
         accent,
+        volume,
+        doNotDisturb,
         setBrightness,
         setNightLight,
         setAccent,
+        setVolume,
+        setDoNotDisturb,
         setLocked,
         setFlyout,
     } = useOsSystem();
@@ -215,6 +225,15 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
                         }}
                     />
                     <QuickToggle
+                        active={doNotDisturb}
+                        label="Do not disturb"
+                        icon={<BellOff size={15} />}
+                        onClick={() => {
+                            setDoNotDisturb(!doNotDisturb);
+                            sacredUi.click();
+                        }}
+                    />
+                    <QuickToggle
                         active={fs}
                         label="Fullscreen"
                         icon={<Expand size={15} />}
@@ -247,6 +266,30 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
                         max={100}
                         value={Math.round(brightness * 100)}
                         onChange={(e) => setBrightness(Number(e.target.value) / 100)}
+                        className="w-full accent-emerald-400 h-6 touch-manipulation"
+                    />
+                </div>
+
+                {/* Volume */}
+                <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-[0.25em] text-white/50 font-mono flex items-center gap-1.5">
+                            {volume === 0 ? <VolumeX size={12} /> : <Volume2 size={12} />} Volume
+                        </span>
+                        <span className="text-[11px] text-white/70 tabular-nums">
+                            {Math.round(volume * 100)}%
+                        </span>
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={Math.round(volume * 100)}
+                        onChange={(e) => {
+                            const v = Number(e.target.value) / 100;
+                            setVolume(v);
+                            hubAudio.setMaster(v);
+                        }}
                         className="w-full accent-emerald-400 h-6 touch-manipulation"
                     />
                 </div>
@@ -556,11 +599,14 @@ export function OsContextMenu({
     const setTaskView = useOsSystem((s) => s.setTaskView);
     const setLocked = useOsSystem((s) => s.setLocked);
     const setWallpaper = useOsSystem((s) => s.setWallpaper);
+    const setOverlay = useOsSystem((s) => s.setOverlay);
     const wallpaper = useOsSystem((s) => s.wallpaper);
 
     if (!ctxMenu) return null;
 
     const items: { label: string; icon: React.ReactNode; run: () => void }[] = [
+        { label: 'Command palette', icon: <Search size={13} />, run: () => setOverlay('palette') },
+        { label: 'Task view', icon: <Expand size={13} />, run: () => setTaskView(true) },
         {
             label: 'Next wallpaper',
             icon: <ImageIcon size={13} />,
@@ -570,7 +616,7 @@ export function OsContextMenu({
             },
         },
         { label: 'Personalize', icon: <LayoutGrid size={13} />, run: onOpenSettings },
-        { label: 'Task view', icon: <Expand size={13} />, run: () => setTaskView(true) },
+        { label: 'Keyboard shortcuts', icon: <Keyboard size={13} />, run: () => setOverlay('shortcuts') },
         { label: 'Lock', icon: <Lock size={13} />, run: () => setLocked(true) },
         { label: 'Restart Truth.OS', icon: <RefreshCw size={13} />, run: onRestart },
     ];
