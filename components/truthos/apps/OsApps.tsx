@@ -27,6 +27,8 @@ import {
 import { MediaPlayerApp, PhotosApp } from './MediaApps';
 import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
+import { MusicApp } from './MusicApp';
+import { TasksApp } from './TasksApp';
 import { useOsSystem, OS_WALLPAPERS, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
 
@@ -614,6 +616,10 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <TaskManagerApp />;
         case 'browser':
             return <BrowserApp initialPath={ctx.payload?.content} />;
+        case 'music':
+            return <MusicApp />;
+        case 'tasks':
+            return <TasksApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:
