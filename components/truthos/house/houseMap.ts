@@ -357,6 +357,13 @@ export const COLLIDERS: Collider[] = [
     { x: FURN.studio.x, z: FURN.studio.z, hx: 1.05, hz: 0.55 },
     { x: FURN.studioStool.x, z: FURN.studioStool.z, hx: 0.28, hz: 0.28 },
     { x: FURN.wayfinder.x, z: FURN.wayfinder.z, hx: 0.55, hz: 0.28 },
+    // Decor enhancements (floor lamp · potted plants · porch planters)
+    { x: 2.1, z: -5.9, hx: 0.22, hz: 0.22 },
+    { x: 5.5, z: -11.65, hx: 0.3, hz: 0.3 },
+    { x: -5.75, z: 4.0, hx: 0.3, hz: 0.3 },
+    { x: 13.15, z: 11.7, hx: 0.3, hz: 0.3 },
+    { x: 2.15, z: 13.35, hx: 0.26, hz: 0.26 },
+    { x: -2.15, z: 13.35, hx: 0.26, hz: 0.26 },
     // Fence
     { x: 0, z: -21.55, hx: 18.0, hz: 0.18 },
     { x: 0, z: 21.55, hx: 18.0, hz: 0.18 },

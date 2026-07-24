@@ -29,7 +29,25 @@ export type HouseSkinId =
     | 'artDomain'
     | 'artAsWithin'
     | 'artStillPoint'
-    | 'artUnnamed';
+    | 'artUnnamed'
+    | 'nightGlass'
+    | 'skyNight'
+    | 'moon';
+
+/**
+ * Deterministic PRNG (mulberry32) for scatter placement — stable across
+ * renders so instanced props never jump between frames/mounts.
+ */
+export function seededRng(seed: number): () => number {
+    let a = seed >>> 0;
+    return () => {
+        a += 0x6d2b79f5;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
 
 type SkinOpts = { repeat?: [number, number]; low?: boolean };
 
@@ -201,31 +219,118 @@ function paintPlaster(ctx: CanvasRenderingContext2D, s: number, purple = false) 
 }
 
 function paintRug(ctx: CanvasRenderingContext2D, s: number) {
-    ctx.fillStyle = '#4a2018';
+    // Deep burgundy field with soft pile mottling
+    ctx.fillStyle = '#3c1a14';
     ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 500; i++) {
+        const bright = Math.random() > 0.55;
+        ctx.fillStyle = bright
+            ? `rgba(190,120,80,${0.03 + Math.random() * 0.04})`
+            : `rgba(0,0,0,${0.03 + Math.random() * 0.05})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 2 + Math.random() * 5, 1 + Math.random() * 2);
+    }
+    // Diagonal field lattice (clipped to the inner field)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(s * 0.15, s * 0.15, s * 0.7, s * 0.7);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(140,60,40,0.5)';
+    ctx.lineWidth = 1.2;
+    for (let i = -10; i <= 10; i++) {
+        const o = i * (s / 10);
+        ctx.beginPath();
+        ctx.moveTo(o, 0);
+        ctx.lineTo(o + s, s);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(o + s, 0);
+        ctx.lineTo(o, s);
+        ctx.stroke();
+    }
+    ctx.restore();
+    // Triple border — gold band, violet inlay, fine gold rule
     ctx.strokeStyle = '#c9a227';
-    ctx.lineWidth = s * 0.04;
-    ctx.strokeRect(s * 0.08, s * 0.08, s * 0.84, s * 0.84);
-    ctx.lineWidth = s * 0.015;
-    ctx.strokeRect(s * 0.14, s * 0.14, s * 0.72, s * 0.72);
-    // field pattern
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            if ((i + j) % 2 === 0) {
-                ctx.fillStyle = 'rgba(120,40,30,0.25)';
-                ctx.fillRect((i / 8) * s * 0.7 + s * 0.15, (j / 8) * s * 0.7 + s * 0.15, s * 0.08, s * 0.08);
-            }
+    ctx.lineWidth = s * 0.035;
+    ctx.strokeRect(s * 0.05, s * 0.05, s * 0.9, s * 0.9);
+    ctx.strokeStyle = '#6d5aa8';
+    ctx.lineWidth = s * 0.014;
+    ctx.strokeRect(s * 0.095, s * 0.095, s * 0.81, s * 0.81);
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = s * 0.008;
+    ctx.strokeRect(s * 0.13, s * 0.13, s * 0.74, s * 0.74);
+    // Border guls — small diamonds marching along the band
+    ctx.fillStyle = 'rgba(201,162,39,0.8)';
+    const step = s / 9;
+    for (let i = 1; i < 9; i++) {
+        for (const [gx, gy] of [
+            [i * step, s * 0.075],
+            [i * step, s * 0.925],
+            [s * 0.075, i * step],
+            [s * 0.925, i * step],
+        ] as const) {
+            ctx.beginPath();
+            ctx.moveTo(gx, gy - s * 0.012);
+            ctx.lineTo(gx + s * 0.012, gy);
+            ctx.lineTo(gx, gy + s * 0.012);
+            ctx.lineTo(gx - s * 0.012, gy);
+            ctx.closePath();
+            ctx.fill();
         }
     }
+    // Center medallion — dark halo, petal ring, concentric rings, gold heart
+    const cx = s / 2;
+    const cy = s / 2;
+    const halo = ctx.createRadialGradient(cx, cy, s * 0.02, cx, cy, s * 0.24);
+    halo.addColorStop(0, 'rgba(38,16,12,0.95)');
+    halo.addColorStop(1, 'rgba(38,16,12,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(cx - s * 0.25, cy - s * 0.25, s * 0.5, s * 0.5);
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    for (let p = 0; p < 8; p++) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate((p / 8) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.ellipse(0, -s * 0.13, s * 0.028, s * 0.075, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = s * 0.01;
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.155, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#8a6fc8';
+    ctx.lineWidth = s * 0.006;
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.085, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = '#2a120e';
     ctx.beginPath();
-    ctx.ellipse(s / 2, s / 2, s * 0.2, s * 0.26, 0, 0, Math.PI * 2);
+    ctx.arc(cx, cy, s * 0.055, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.fillStyle = 'rgba(201,162,39,0.85)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.018, 0, Math.PI * 2);
+    ctx.fill();
+    // Corner quarter-rosettes
+    ctx.strokeStyle = 'rgba(201,162,39,0.6)';
+    ctx.lineWidth = s * 0.008;
+    for (const [ox, oy] of [
+        [s * 0.15, s * 0.15],
+        [s * 0.85, s * 0.15],
+        [s * 0.15, s * 0.85],
+        [s * 0.85, s * 0.85],
+    ] as const) {
+        for (let r = 1; r <= 3; r++) {
+            ctx.beginPath();
+            ctx.arc(ox, oy, r * s * 0.03, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+    // Pile shading rows
     for (let y = 0; y < s; y += 2) {
-        ctx.fillStyle = `rgba(0,0,0,${0.03 + (y % 4) * 0.01})`;
+        ctx.fillStyle = `rgba(0,0,0,${0.025 + (y % 4) * 0.008})`;
         ctx.fillRect(0, y, s, 1);
     }
 }
@@ -592,6 +697,132 @@ function paintEsoteric(
     ctx.fillText(line2, s / 2, s * 0.72);
 }
 
+/** Window pane at night — deep blue gradient, stars, moon glow, treeline */
+function paintNightGlass(ctx: CanvasRenderingContext2D, s: number) {
+    const g = ctx.createLinearGradient(0, 0, 0, s);
+    g.addColorStop(0, '#0a1030');
+    g.addColorStop(0.45, '#131a44');
+    g.addColorStop(0.8, '#26224f');
+    g.addColorStop(1, '#38305c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    // Stars in the upper sky
+    for (let i = 0; i < 90; i++) {
+        const x = Math.random() * s;
+        const y = Math.random() * s * 0.72;
+        const r = 0.4 + Math.random() * 1.3;
+        ctx.fillStyle = `rgba(226,232,255,${0.3 + Math.random() * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // Moon glow + disc
+    const mg = ctx.createRadialGradient(s * 0.72, s * 0.2, 2, s * 0.72, s * 0.2, s * 0.3);
+    mg.addColorStop(0, 'rgba(200,215,255,0.5)');
+    mg.addColorStop(1, 'rgba(200,215,255,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0, 0, s, s);
+    ctx.fillStyle = 'rgba(238,242,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(s * 0.72, s * 0.2, s * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    // Silhouetted treeline along the bottom
+    ctx.fillStyle = 'rgba(8,10,20,0.85)';
+    for (let x = 0; x < s; x += 7) {
+        const h = s * 0.06 + Math.sin(x * 0.15) * s * 0.02 + Math.random() * s * 0.035;
+        ctx.fillRect(x, s - h, 7, h);
+    }
+    // Faint glass sheen diagonal
+    const sheen = ctx.createLinearGradient(0, 0, s, s);
+    sheen.addColorStop(0.3, 'rgba(255,255,255,0)');
+    sheen.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+    sheen.addColorStop(0.7, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, s, s);
+}
+
+/** Sky dome gradient — zenith→horizon band at v≈0.5, dark under-horizon */
+function paintSkyNight(ctx: CanvasRenderingContext2D, s: number) {
+    const g = ctx.createLinearGradient(0, 0, 0, s);
+    g.addColorStop(0, '#04040c');
+    g.addColorStop(0.24, '#0b0a1e');
+    g.addColorStop(0.4, '#181440');
+    g.addColorStop(0.48, '#31255a');
+    g.addColorStop(0.52, '#241c3e');
+    g.addColorStop(0.6, '#151024');
+    g.addColorStop(1, '#0e0a18');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    // Nebula wisps
+    for (let i = 0; i < 10; i++) {
+        const x = Math.random() * s;
+        const y = Math.random() * s * 0.42;
+        const rg = ctx.createRadialGradient(x, y, 2, x, y, 30 + Math.random() * 60);
+        rg.addColorStop(0, 'rgba(120,90,200,0.06)');
+        rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg;
+        ctx.fillRect(0, 0, s, s);
+    }
+    // Stars, denser toward the zenith
+    for (let i = 0; i < 240; i++) {
+        const y = Math.pow(Math.random(), 1.5) * s * 0.46;
+        const x = Math.random() * s;
+        const r = 0.3 + Math.random() * 1.1;
+        ctx.fillStyle = `rgba(220,228,255,${0.2 + Math.random() * 0.55})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // Warm horizon glow band
+    const hg = ctx.createLinearGradient(0, s * 0.44, 0, s * 0.54);
+    hg.addColorStop(0, 'rgba(255,180,120,0)');
+    hg.addColorStop(0.6, 'rgba(210,150,130,0.1)');
+    hg.addColorStop(1, 'rgba(120,80,90,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(0, s * 0.42, s, s * 0.14);
+    // Dither noise to hide gradient banding at low res
+    for (let i = 0; i < 320; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${0.008 + Math.random() * 0.014})`;
+        ctx.fillRect(Math.random() * s, Math.random() * s, 1, 1);
+    }
+}
+
+/** Moon sprite — transparent bg, halo, cratered disc */
+function paintMoon(ctx: CanvasRenderingContext2D, s: number) {
+    ctx.clearRect(0, 0, s, s);
+    const cx = s / 2;
+    const cy = s / 2;
+    const r = s * 0.3;
+    const halo = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, s * 0.5);
+    halo.addColorStop(0, 'rgba(190,205,255,0.35)');
+    halo.addColorStop(0.55, 'rgba(150,160,230,0.12)');
+    halo.addColorStop(1, 'rgba(120,130,210,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, s, s);
+    const disc = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+    disc.addColorStop(0, '#fdfdff');
+    disc.addColorStop(0.7, '#dbe2f8');
+    disc.addColorStop(1, '#a8b2dc');
+    ctx.fillStyle = disc;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    for (let i = 0; i < 14; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.random() * r * 0.72;
+        const px = cx + Math.cos(a) * d;
+        const py = cy + Math.sin(a) * d;
+        const pr = r * (0.05 + Math.random() * 0.09);
+        ctx.fillStyle = `rgba(140,150,190,${0.12 + Math.random() * 0.15})`;
+        ctx.beginPath();
+        ctx.arc(px, py, pr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+}
+
 /** Grayscale roughness companion for a color map (adds micro-depth under light) */
 export function makeRoughnessMap(
     colorTex: THREE.Texture,
@@ -690,6 +921,12 @@ export function makeHouseMap(id: HouseSkinId, opts: SkinOpts = {}): THREE.Canvas
             return canvasTex('h_artUnnamed', size, (c, s) =>
                 paintEsoteric(c, s, 'Name nothing.', 'Become the witness.', 'teal'),
             );
+        case 'nightGlass':
+            return canvasTex('h_nightGlass', size, paintNightGlass, rep);
+        case 'skyNight':
+            return canvasTex('h_skyNight', size, paintSkyNight, [1, 1]);
+        case 'moon':
+            return canvasTex('h_moon', size, paintMoon, [1, 1]);
         default:
             return canvasTex('h_wood', size, (c, s) => paintWood(c, s, false), rep);
     }

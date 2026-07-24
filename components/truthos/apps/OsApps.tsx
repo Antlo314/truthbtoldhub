@@ -24,6 +24,11 @@ import {
     NotepadApp,
     PaintApp,
 } from './SystemApps';
+import { MediaPlayerApp, PhotosApp } from './MediaApps';
+import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
+import { BrowserApp } from './BrowserApp';
+import { useOsSystem, OS_WALLPAPERS, ACCENT_HEX } from '../osSystemStore';
+import type { OsAccentId } from '../OsIcon';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
@@ -358,6 +363,13 @@ export function SettingsApp({
     onEnterChamber?: () => void;
 }) {
     const [music, setMusic] = useState(() => loadSettings().music);
+    const [tab, setTab] = useState<'personal' | 'system' | 'about'>('personal');
+    const wallpaper = useOsSystem((s) => s.wallpaper);
+    const accent = useOsSystem((s) => s.accent);
+    const nightLight = useOsSystem((s) => s.nightLight);
+    const setWallpaper = useOsSystem((s) => s.setWallpaper);
+    const setAccent = useOsSystem((s) => s.setAccent);
+    const setNightLight = useOsSystem((s) => s.setNightLight);
 
     const toggleMusic = () => {
         const next = !music;
@@ -367,45 +379,171 @@ export function SettingsApp({
         sacredUi.click();
     };
 
-    return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Settings" sub="System · desktop" accent="text-zinc-500" />
-            <button
-                type="button"
-                onClick={toggleMusic}
-                className="w-full py-3 rounded-xl border border-white/10 text-left px-4 text-sm text-zinc-200 hover:bg-white/5 flex justify-between items-center min-h-[44px]"
-            >
-                <span>Music</span>
-                <span
-                    className={
-                        music
-                            ? 'text-emerald-400 text-xs uppercase tracking-widest'
-                            : 'text-zinc-600 text-xs uppercase tracking-widest'
-                    }
-                >
-                    {music ? 'On' : 'Off'}
-                </span>
-            </button>
-            {onEnterChamber && (
-                <button
-                    type="button"
-                    onClick={onEnterChamber}
-                    className="w-full py-3 rounded-xl border border-emerald-500/25 text-left px-4 text-sm text-emerald-200/90 hover:bg-emerald-500/10 min-h-[44px]"
-                >
-                    Leave terminal → 3D world
-                </button>
+    const Row = ({
+        label,
+        value,
+        onClick,
+        danger,
+    }: {
+        label: string;
+        value?: string;
+        onClick: () => void;
+        danger?: boolean;
+    }) => (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`w-full py-3 rounded-xl border text-left px-4 text-sm flex justify-between items-center min-h-[46px] touch-manipulation ${
+                danger
+                    ? 'border-red-500/30 text-red-300/90 hover:bg-red-500/10'
+                    : 'border-white/10 text-zinc-200 hover:bg-white/5'
+            }`}
+        >
+            <span>{label}</span>
+            {value && (
+                <span className="text-xs uppercase tracking-widest text-emerald-400">{value}</span>
             )}
-            <button
-                type="button"
-                onClick={onLogout}
-                className="w-full py-3 rounded-xl border border-red-500/30 text-left px-4 text-sm text-red-300/90 hover:bg-red-500/10 min-h-[44px]"
-            >
-                Sign out of Truth.OS
-            </button>
-            <p className="text-[10px] text-zinc-600 pt-2 leading-relaxed">
-                Layout: Windows-style taskbar + modern Bento windows. Protected apps require Google or email sign-in.
-            </p>
-        </Panel>
+        </button>
+    );
+
+    return (
+        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[300px]">
+            <div className="shrink-0 flex border-b border-white/10">
+                {(
+                    [
+                        ['personal', 'Personalize'],
+                        ['system', 'System'],
+                        ['about', 'About'],
+                    ] as const
+                ).map(([id, label]) => (
+                    <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                            setTab(id);
+                            sacredUi.click();
+                        }}
+                        className={`flex-1 py-2.5 text-[11px] font-semibold uppercase tracking-wider transition-colors min-h-[42px] touch-manipulation ${
+                            tab === id
+                                ? 'text-emerald-300 border-b-2 border-emerald-400 bg-emerald-500/5'
+                                : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+                {tab === 'personal' && (
+                    <>
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 font-mono mb-2">
+                                Wallpaper
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {OS_WALLPAPERS.map((wp) => (
+                                    <button
+                                        key={wp.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setWallpaper(wp.id);
+                                            sacredUi.click();
+                                        }}
+                                        className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all touch-manipulation ${
+                                            wallpaper === wp.id
+                                                ? 'border-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.35)]'
+                                                : 'border-white/10 hover:border-white/30'
+                                        }`}
+                                    >
+                                        <span
+                                            className="absolute inset-0 bg-cover bg-center"
+                                            style={{ backgroundImage: wp.css.startsWith('url') ? wp.css : undefined, background: wp.css.startsWith('url') ? undefined : wp.css }}
+                                        />
+                                        <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-[9px] text-white/95 bg-gradient-to-t from-black/85 to-transparent text-left truncate">
+                                            {wp.name}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-zinc-600 mt-2">
+                                Tip: the Photos app can set any gallery image as wallpaper.
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 font-mono mb-2">
+                                Accent color
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {(Object.keys(ACCENT_HEX) as OsAccentId[]).map((a) => (
+                                    <button
+                                        key={a}
+                                        type="button"
+                                        title={a}
+                                        onClick={() => {
+                                            setAccent(a);
+                                            sacredUi.click();
+                                        }}
+                                        className={`w-9 h-9 min-w-[36px] rounded-full border-2 transition-transform active:scale-90 touch-manipulation ${
+                                            accent === a
+                                                ? 'border-white scale-110 shadow-lg'
+                                                : 'border-white/20 hover:scale-105'
+                                        }`}
+                                        style={{ background: ACCENT_HEX[a] }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
+                {tab === 'system' && (
+                    <div className="space-y-2.5">
+                        <Row label="Music" value={music ? 'On' : 'Off'} onClick={toggleMusic} />
+                        <Row
+                            label="Night light"
+                            value={nightLight ? 'On' : 'Off'}
+                            onClick={() => {
+                                setNightLight(!nightLight);
+                                sacredUi.click();
+                            }}
+                        />
+                        {onEnterChamber && (
+                            <Row label="Leave terminal → 3D world" onClick={onEnterChamber} />
+                        )}
+                        <Row label="Sign out of Truth.OS" danger onClick={onLogout} />
+                        <p className="text-[10px] text-zinc-600 pt-2 leading-relaxed">
+                            Protected apps require Google or email sign-in. Wallpaper, accent, and
+                            brightness persist on this device.
+                        </p>
+                    </div>
+                )}
+                {tab === 'about' && (
+                    <div className="space-y-3">
+                        <div className="rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 to-cyan-500/5 p-4">
+                            <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono">
+                                Truth.OS
+                            </p>
+                            <p className="text-2xl text-white font-semibold mt-1">
+                                3.0 · 2026 edition
+                            </p>
+                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
+                                Bento Aero window manager · snap layouts · task view · notification
+                                center · quick settings · widgets · lock screen.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <StatChip label="Kernel" value="soulsh 1.2" />
+                            <StatChip label="Compositor" value="Aura" />
+                            <StatChip label="Programs" value="23 installed" />
+                            <StatChip label="Build" value="2026.07" />
+                        </div>
+                        <p className="text-[10px] text-zinc-600 leading-relaxed">
+                            Truth B Told Hub — the desktop is the Hut. Everything here also lives in
+                            the 3D chamber.
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -455,6 +593,18 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <PaintApp />;
         case 'notepad':
             return <NotepadApp />;
+        case 'terminal':
+            return <TerminalApp />;
+        case 'media':
+            return <MediaPlayerApp />;
+        case 'photos':
+            return <PhotosApp />;
+        case 'clock':
+            return <ClockApp />;
+        case 'taskmgr':
+            return <TaskManagerApp />;
+        case 'browser':
+            return <BrowserApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:

@@ -20,7 +20,13 @@ export type OsAppId =
     | 'account'
     | 'settings'
     | 'admin'
-    | 'chamber';
+    | 'chamber'
+    | 'terminal'
+    | 'media'
+    | 'photos'
+    | 'clock'
+    | 'taskmgr'
+    | 'browser';
 
 export type BentoSlot =
     | 'hero'
@@ -86,6 +92,8 @@ type TruthOsState = {
     closeWindow: (id: string) => void;
     focusWindow: (id: string) => void;
     moveWindow: (id: string, x: number, y: number) => void;
+    /** Set exact rect (used by resize handles + edge/quarter snapping) */
+    setRect: (id: string, rect: { x?: number; y?: number; w?: number; h?: number }) => void;
     minimizeWindow: (id: string) => void;
     toggleMaximize: (id: string) => void;
     setSnap: (id: string, snap: BentoSlot) => void;
@@ -113,9 +121,15 @@ export const APP_META: Record<
     paint: { title: 'Paint', w: 700, h: 520, label: 'Paint', accent: 'pink' },
     notepad: { title: 'Notepad', w: 520, h: 440, label: 'Notepad', accent: 'zinc' },
     account: { title: 'Account', w: 440, h: 480, label: 'Account', accent: 'cyan', protected: true },
-    settings: { title: 'Settings', w: 400, h: 400, label: 'Settings', accent: 'zinc' },
+    settings: { title: 'Settings', w: 560, h: 540, label: 'Settings', accent: 'zinc' },
     admin: { title: 'Admin Console', w: 560, h: 560, label: 'Admin', accent: 'rose', protected: true },
     chamber: { title: 'Leave Terminal', w: 480, h: 360, label: 'Leave Terminal', accent: 'emerald' },
+    terminal: { title: 'Terminal', w: 620, h: 440, label: 'Terminal', accent: 'emerald' },
+    media: { title: 'Media Player', w: 760, h: 540, label: 'Media', accent: 'violet' },
+    photos: { title: 'Photos', w: 680, h: 520, label: 'Photos', accent: 'pink' },
+    clock: { title: 'Clock & Calendar', w: 420, h: 520, label: 'Clock', accent: 'sky' },
+    taskmgr: { title: 'Task Manager', w: 560, h: 480, label: 'Tasks', accent: 'amber' },
+    browser: { title: 'Sanctum Browser', w: 820, h: 560, label: 'Browser', accent: 'cyan' },
 };
 
 /** Preferred bento slot order when opening apps */
@@ -238,6 +252,25 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
         set((s) => ({
             windows: s.windows.map((w) =>
                 w.id === id ? { ...w, x, y, maximized: false, snap: 'float' } : w,
+            ),
+            layoutMode: 'float',
+        })),
+
+    setRect: (id, rect) =>
+        set((s) => ({
+            windows: s.windows.map((w) =>
+                w.id === id
+                    ? {
+                          ...w,
+                          x: rect.x ?? w.x,
+                          y: rect.y ?? w.y,
+                          w: Math.max(280, rect.w ?? w.w),
+                          h: Math.max(200, rect.h ?? w.h),
+                          maximized: false,
+                          minimized: false,
+                          snap: 'float',
+                      }
+                    : w,
             ),
             layoutMode: 'float',
         })),

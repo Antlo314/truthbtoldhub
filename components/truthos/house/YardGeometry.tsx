@@ -4,9 +4,10 @@
  * Front + back yards · side wrap · fence · atmosphere props.
  * Procedural only — matches house free-material style.
  */
-import type { ReactNode } from 'react';
-import type * as THREE from 'three';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import * as THREE from 'three';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
+import { seededRng } from './houseSkins';
 import { YARD } from './houseMap';
 
 function MatBox({
@@ -223,6 +224,117 @@ function FirePit({ x, z, m, sh, low }: { x: number; z: number; m: HouseMaterials
     );
 }
 
+/** Gradient sky sphere + moon sprite — gives the yard a real horizon */
+function SkyDome({ m, low }: { m: HouseMaterials; low: boolean }) {
+    return (
+        <group>
+            {/* Radius 42: worst-case cam-to-far-side ≈ 42+28 < mobile far 72 */}
+            <mesh frustumCulled={false}>
+                <sphereGeometry args={[42, low ? 20 : 32, low ? 12 : 18]} />
+                <primitive object={m.sky} attach="material" />
+            </mesh>
+            <mesh
+                position={[-19, 24, -26]}
+                onUpdate={(self: THREE.Mesh) => self.lookAt(0, 3, 0)}
+            >
+                <planeGeometry args={[8, 8]} />
+                <primitive object={m.moon} attach="material" />
+            </mesh>
+        </group>
+    );
+}
+
+const TUFT_COUNT = 180;
+const FLOWER_COUNT = 84;
+const FLOWER_COLORS = ['#f0abfc', '#fda4af', '#fcd34d', '#e2e8f0', '#c4b5fd', '#93c5fd'];
+/** [x, z, y] — y raised on the garden beds */
+const FLOWER_CLUSTERS: [number, number, number][] = [
+    [-2.7, 15.7, 0.12],
+    [3.9, 17.2, 0.12],
+    [-5.4, 18.0, 0.12],
+    [-5.5, -16.2, 0.34],
+    [4.8, -15.8, 0.34],
+    [6.8, -14.0, 0.12],
+    [-8.0, -14.5, 0.12],
+];
+
+/** Instanced grass tufts + flower patches — desktop only (2 draw calls) */
+function Meadow({ m }: { m: HouseMaterials }) {
+    const tuftGeo = useMemo(() => new THREE.ConeGeometry(0.055, 0.3, 4), []);
+    const flowerGeo = useMemo(() => new THREE.SphereGeometry(0.05, 6, 4), []);
+    const flowerMat = useMemo(
+        () => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.65 }),
+        [],
+    );
+    const tuftRef = useRef<THREE.InstancedMesh>(null);
+    const flowerRef = useRef<THREE.InstancedMesh>(null);
+
+    useLayoutEffect(() => {
+        const tufts = tuftRef.current;
+        const flowers = flowerRef.current;
+        if (!tufts || !flowers) return;
+        const rnd = seededRng(4242);
+        const dummy = new THREE.Object3D();
+        let placed = 0;
+        let guard = 0;
+        while (placed < TUFT_COUNT && guard++ < TUFT_COUNT * 40) {
+            const x = -17 + rnd() * 34;
+            const z = -20.6 + rnd() * 41.2;
+            if (Math.abs(x) < 14.4 && Math.abs(z) < 13.4) continue; // house + margin
+            if (Math.abs(x) < 1.7 && z > 12) continue; // front walk
+            if (x > -4.6 && x < -1.9 && z < -12.6) continue; // back walk
+            if (Math.abs(Math.abs(x) - 15.2) < 1.0) continue; // side paths
+            if (Math.hypot(x - 0.15, z + 16.8) < 1.5) continue; // fire pit
+            if (Math.abs(x) < 1.9 && z < -18.2) continue; // gate path
+            const sc = 0.7 + rnd() * 0.9;
+            const sy = 0.75 + rnd();
+            dummy.position.set(x, 0.15 * sy, z);
+            dummy.rotation.set(0, rnd() * Math.PI, 0);
+            dummy.scale.set(sc, sy, sc);
+            dummy.updateMatrix();
+            tufts.setMatrixAt(placed, dummy.matrix);
+            placed++;
+        }
+        tufts.count = placed;
+        tufts.instanceMatrix.needsUpdate = true;
+
+        const color = new THREE.Color();
+        for (let i = 0; i < FLOWER_COUNT; i++) {
+            const [cx, cz, cy] = FLOWER_CLUSTERS[i % FLOWER_CLUSTERS.length];
+            const sc = 0.7 + rnd() * 0.7;
+            dummy.position.set(
+                cx + (rnd() - 0.5) * 1.5,
+                cy + 0.05 + rnd() * 0.08,
+                cz + (rnd() - 0.5) * 1.1,
+            );
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(sc, sc * 0.75, sc);
+            dummy.updateMatrix();
+            flowers.setMatrixAt(i, dummy.matrix);
+            flowers.setColorAt(i, color.set(FLOWER_COLORS[i % FLOWER_COLORS.length]));
+        }
+        flowers.instanceMatrix.needsUpdate = true;
+        if (flowers.instanceColor) flowers.instanceColor.needsUpdate = true;
+    }, []);
+
+    return (
+        <group>
+            <instancedMesh ref={tuftRef} args={[tuftGeo, m.leaf, TUFT_COUNT]} frustumCulled={false} receiveShadow />
+            <instancedMesh ref={flowerRef} args={[flowerGeo, flowerMat, FLOWER_COUNT]} frustumCulled={false} />
+        </group>
+    );
+}
+
+/** Flat stepping-stone discs — back step → fire pit, front path → bench */
+const STEPPING_STONES: [number, number][] = [
+    [-2.8, -14.1],
+    [-2.15, -14.9],
+    [-1.4, -15.55],
+    [-0.65, -16.1],
+    [1.5, 15.3],
+    [2.2, 15.75],
+];
+
 function Gate({ x, z, m, sh }: { x: number; z: number; m: HouseMaterials; sh: boolean }) {
     return (
         <group position={[x, 0, z]}>
@@ -246,6 +358,9 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
 
     return (
         <group>
+            {/* Sky dome + moon — horizon instead of flat fog color */}
+            <SkyDome m={m} low={low} />
+
             {/* Base grass under whole property */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, groundY, 0]} receiveShadow={sh}>
                 <planeGeometry args={[36, 44]} />
@@ -305,6 +420,22 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             <GardenBed x={YARD.bedE.x} z={YARD.bedE.z} w={1.9} d={1.0} m={m} sh={sh} />
             <FirePit x={YARD.firePit.x} z={YARD.firePit.z} m={m} sh={sh} low={low} />
             <Bench x={YARD.benchBack.x} z={YARD.benchBack.z} rotY={Math.PI * 0.85} sh={sh} m={m} />
+
+            {/* Stepping stones — flat, walkable, no colliders */}
+            {STEPPING_STONES.map(([sx, sz], i) => (
+                <MatCyl
+                    key={`ss-${i}`}
+                    pos={[sx, 0.03, sz]}
+                    r={0.3 + (i % 3) * 0.04}
+                    h={0.06}
+                    material={m.path}
+                    shadows={false}
+                    segs={low ? 8 : 10}
+                />
+            ))}
+
+            {/* Instanced grass tufts + flower patches (desktop) */}
+            {!low && <Meadow m={m} />}
 
             {/* Soft outdoor fill (desktop) */}
             {!low && (

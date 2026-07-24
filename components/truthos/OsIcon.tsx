@@ -6,22 +6,28 @@
  */
 import type { OsAppId } from './truthOsStore';
 import {
+    Activity,
     BookOpen,
     Calculator,
+    Clapperboard,
+    Clock,
     DoorOpen,
     FileText,
     FolderOpen,
     Gamepad2,
     Gift,
+    Globe,
     Hash,
     Heart,
     Image,
+    Images,
     Library,
     Newspaper,
     Palette,
     Settings,
     Shield,
     Sparkles,
+    SquareTerminal,
     User,
     Users,
     type LucideIcon,
@@ -133,6 +139,12 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: s
     settings: { Icon: Settings, accent: 'zinc', label: 'Settings' },
     admin: { Icon: Shield, accent: 'rose', label: 'Admin' },
     chamber: { Icon: DoorOpen, accent: 'emerald', label: 'Leave' },
+    terminal: { Icon: SquareTerminal, accent: 'emerald', label: 'Terminal' },
+    media: { Icon: Clapperboard, accent: 'violet', label: 'Media' },
+    photos: { Icon: Images, accent: 'pink', label: 'Photos' },
+    clock: { Icon: Clock, accent: 'sky', label: 'Clock' },
+    taskmgr: { Icon: Activity, accent: 'amber', label: 'Tasks' },
+    browser: { Icon: Globe, accent: 'cyan', label: 'Browser' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {

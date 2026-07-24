@@ -10,6 +10,7 @@ import Fireplace from './Fireplace';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import { FURN, OPENING, SHELL } from './houseMap';
 import CinemaScreen from './CinemaScreen';
+import HouseTrim from './HouseTrim';
 
 const SEGS = 12;
 
@@ -662,6 +663,8 @@ export default function HouseGeometry({
                 <primitive object={m.concrete} attach="material" />
             </mesh>
 
+            {/* Architectural finish — trim, windows, sconces, chandeliers */}
+            <HouseTrim m={m} low={low} sh={sh} rich={rich} />
         </group>
     );
 }

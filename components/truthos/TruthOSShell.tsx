@@ -1,11 +1,22 @@
 'use client';
 
 /**
- * Truth.OS — Windows × Bento desktop shell.
- * Colored icons, sharp glass chrome, real open/press states.
+ * Truth.OS — 2026-grade desktop shell.
+ * Windows-class chrome: Start with search, snap layouts, task view,
+ * notification center, quick settings, calendar, widgets, lock screen,
+ * desktop icons, Aero edge-snap — atop the Bento window manager.
  */
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+    Bell,
+    LayoutPanelLeft,
+    Power,
+    RefreshCw,
+    Search,
+    Settings2,
+    SquareStack,
+} from 'lucide-react';
 import {
     useTruthOs,
     type OsAppId,
@@ -23,9 +34,19 @@ import {
     OsHomeCard,
     OsIconTile,
     OsTaskbarItem,
-    ACCENT_STYLES,
-    getAppAccent,
 } from './OsIcon';
+import OsWindowFrame from './OsWindowFrame';
+import { useOsSystem, getWallpaper } from './osSystemStore';
+import {
+    OsCalendarFlyout,
+    OsContextMenu,
+    OsLockScreen,
+    OsNotificationCenter,
+    OsQuickSettings,
+    OsTaskView,
+    OsToasts,
+    OsWidgetsPanel,
+} from './OsSystemUI';
 
 type DockItem = {
     app: OsAppId;
@@ -34,7 +55,7 @@ type DockItem = {
     guestOk?: boolean;
 };
 
-/** Hut home + utilities (no Forge / Wayfinder) */
+/** Hut home + full 2026 program suite */
 const APPS: DockItem[] = [
     { app: 'truth', label: 'Guide', guestOk: true },
     { app: 'ledger', label: 'Ledger' },
@@ -45,7 +66,13 @@ const APPS: DockItem[] = [
     { app: 'library', label: 'Library', guestOk: true },
     { app: 'visions', label: 'Visions', guestOk: true },
     { app: 'updates', label: 'Updates', guestOk: true },
+    { app: 'browser', label: 'Browser', guestOk: true },
+    { app: 'media', label: 'Media', guestOk: true },
+    { app: 'photos', label: 'Photos', guestOk: true },
+    { app: 'terminal', label: 'Terminal', guestOk: true },
     { app: 'files', label: 'Files', guestOk: true },
+    { app: 'clock', label: 'Clock', guestOk: true },
+    { app: 'taskmgr', label: 'Tasks', guestOk: true },
     { app: 'calculator', label: 'Calc', guestOk: true },
     { app: 'paint', label: 'Paint', guestOk: true },
     { app: 'notepad', label: 'Notepad', guestOk: true },
@@ -63,16 +90,31 @@ const HUT_HOME: { app: OsAppId; title: string; blurb: string; span?: string }[] 
     { app: 'arcade', title: 'Arcade', blurb: 'Games · scores' },
     { app: 'archive', title: 'The Hall', blurb: 'Community chat' },
     { app: 'library', title: 'Library', blurb: 'Scrolls · study' },
+    { app: 'media', title: 'Media Player', blurb: 'Cutscene reels' },
     { app: 'visions', title: 'Visions', blurb: 'Roads · cinema' },
     { app: 'offering', title: 'Offering', blurb: 'Sustain the work' },
     { app: 'updates', title: 'Updates', blurb: 'Dispatches' },
 ];
 
+/** Desktop shortcut rail (visible behind windows, desktop only) */
+const DESKTOP_ICONS: OsAppId[] = [
+    'truth',
+    'browser',
+    'files',
+    'media',
+    'photos',
+    'terminal',
+    'arcade',
+    'settings',
+];
+
 const BOOT_LINES = [
-    'Truth.OS BIOS · firmware OK',
+    'Truth.OS UEFI · firmware OK',
     'mounting soul_fs…',
+    'starting aura compositor…',
     'loading bento window manager…',
     'network · encrypted channel',
+    'system services · notifications · widgets',
     'desktop session ready',
 ];
 
@@ -108,6 +150,7 @@ export default function TruthOSShell({
         closeWindow,
         focusWindow,
         moveWindow,
+        setRect,
         minimizeWindow,
         toggleMaximize,
         setSnap,
@@ -117,13 +160,33 @@ export default function TruthOSShell({
         setAuthPrompt,
         enterOs,
         setLayoutMode,
+        clearDesktop,
     } = useTruthOs();
 
+    const flyout = useOsSystem((s) => s.flyout);
+    const taskView = useOsSystem((s) => s.taskView);
+    const locked = useOsSystem((s) => s.locked);
+    const ctxMenu = useOsSystem((s) => s.ctxMenu);
+    const wallpaperId = useOsSystem((s) => s.wallpaper);
+    const brightness = useOsSystem((s) => s.brightness);
+    const nightLight = useOsSystem((s) => s.nightLight);
+    const notifications = useOsSystem((s) => s.notifications);
+    const setFlyout = useOsSystem((s) => s.setFlyout);
+    const toggleFlyout = useOsSystem((s) => s.toggleFlyout);
+    const setTaskView = useOsSystem((s) => s.setTaskView);
+    const setCtxMenu = useOsSystem((s) => s.setCtxMenu);
+    const notify = useOsSystem((s) => s.notify);
+
     const [bootLine, setBootLine] = useState(0);
+    const [bootKey, setBootKey] = useState(0);
     const [clock, setClock] = useState('');
     const [phone, setPhone] = useState(() => detectDevice() === 'phone');
+    const [query, setQuery] = useState('');
+    const welcomed = useRef(-1);
     const email = sessionEmail;
     const isAdmin = isAdminEmail(email);
+    const wallpaper = getWallpaper(wallpaperId);
+    const unread = notifications.filter((n) => !n.read).length;
 
     // Recompute phone layout on resize / rotate
     useEffect(() => {
@@ -137,8 +200,10 @@ export default function TruthOSShell({
         };
     }, []);
 
+    // Boot sequence (re-runs on restart via bootKey)
     useEffect(() => {
         enterOs();
+        setBootLine(0);
         hubAudio.osBootStart();
         let i = 0;
         const reduce =
@@ -162,10 +227,22 @@ export default function TruthOSShell({
                     sacredUi.access();
                 }, 160);
             }
-        }, 120);
+        }, 110);
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [bootKey]);
+
+    // Welcome toast once per boot
+    useEffect(() => {
+        if (bootDone && welcomed.current !== bootKey) {
+            welcomed.current = bootKey;
+            notify({
+                title: 'Truth.OS 3.0 ready',
+                body: 'Snap layouts, task view, widgets and a full program suite are live. Press Start.',
+                accent: 'emerald',
+            });
+        }
+    }, [bootDone, bootKey, notify]);
 
     useEffect(() => {
         const tick = () => {
@@ -194,25 +271,58 @@ export default function TruthOSShell({
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                if (startOpen) setStartOpen(false);
+                if (ctxMenu) setCtxMenu(null);
+                else if (taskView) setTaskView(false);
+                else if (flyout) setFlyout(null);
+                else if (startOpen) setStartOpen(false);
                 else if (authPrompt) setAuthPrompt(false);
             }
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+            if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'k')) {
                 e.preventDefault();
                 setStartOpen(!startOpen);
+                setFlyout(null);
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Tab') {
+                e.preventDefault();
+                setTaskView(!taskView);
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [startOpen, authPrompt, setStartOpen, setAuthPrompt]);
+    }, [startOpen, authPrompt, flyout, taskView, ctxMenu, setStartOpen, setAuthPrompt, setFlyout, setTaskView, setCtxMenu]);
 
     const visibleApps = APPS.filter((a) => !a.adminOnly || isAdmin);
+    const filteredApps = query.trim()
+        ? visibleApps.filter(
+              (a) =>
+                  a.label.toLowerCase().includes(query.trim().toLowerCase()) ||
+                  a.app.includes(query.trim().toLowerCase()),
+          )
+        : visibleApps;
     const openWindows = windows.filter((w) => !w.minimized);
     const useBento = layoutMode === 'bento' && !phone;
 
     const launch = (app: OsAppId) => {
         openApp(app);
+        setFlyout(null);
+        setQuery('');
         hubAudio.osWindowOpen();
+        sacredUi.click();
+    };
+
+    const restartOs = () => {
+        clearDesktop();
+        setFlyout(null);
+        setTaskView(false);
+        setBootDone(false);
+        setBootKey((k) => k + 1);
+        sacredUi.access();
+    };
+
+    const showDesktop = () => {
+        windows.forEach((w) => {
+            if (!w.minimized) minimizeWindow(w.id);
+        });
         sacredUi.click();
     };
 
@@ -226,7 +336,7 @@ export default function TruthOSShell({
                         </span>
                         <div>
                             <p className="text-[10px] tracking-[0.4em] text-[#2d6b35]">TRUTH.OS</p>
-                            <p className="text-[11px] text-emerald-400/50">v2.0 · Windows × Bento</p>
+                            <p className="text-[11px] text-emerald-400/50">v3.0 · 2026 edition</p>
                         </div>
                     </div>
                     {BOOT_LINES.slice(0, bootLine).map((m, i) => (
@@ -258,13 +368,13 @@ export default function TruthOSShell({
                 } as CSSProperties
             }
         >
-            {/* Wallpaper — no scale zoom on phone (sharper + cheaper) */}
+            {/* Wallpaper — themeable (Settings / Photos / right-click) */}
             <div
-                className={`pointer-events-none absolute inset-0 bg-cover bg-center ${phone ? '' : 'scale-105'}`}
-                style={{ backgroundImage: 'url(/truthos/os-wallpaper.jpg)' }}
+                className={`pointer-events-none absolute inset-0 bg-cover bg-center transition-[background-image] duration-300 ${phone ? '' : 'scale-105'}`}
+                style={{ backgroundImage: wallpaper.css }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.18),transparent_55%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.12),transparent_50%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.14),transparent_55%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.1),transparent_50%)]" />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/75" />
             <div
                 className="pointer-events-none absolute inset-0 opacity-[0.06] max-sm:opacity-[0.04]"
@@ -281,8 +391,39 @@ export default function TruthOSShell({
                 style={{ paddingBottom: 'var(--os-taskbar)' }}
                 onClick={() => {
                     if (startOpen) setStartOpen(false);
+                    if (flyout) setFlyout(null);
+                    if (ctxMenu) setCtxMenu(null);
+                }}
+                onContextMenu={(e) => {
+                    if (phone) return;
+                    // Only trap right-click on the empty desktop, not inside windows
+                    if ((e.target as HTMLElement).closest('[data-os-window]')) return;
+                    e.preventDefault();
+                    setStartOpen(false);
+                    setCtxMenu({ x: e.clientX, y: e.clientY });
                 }}
             >
+                {/* Desktop shortcut rail — behind windows, desktop only */}
+                {!phone && openWindows.length > 0 && (
+                    <div className="absolute left-2 top-2 z-[2] flex flex-col gap-1 w-[76px]">
+                        {DESKTOP_ICONS.map((app) => (
+                            <button
+                                key={app}
+                                type="button"
+                                onDoubleClick={() => launch(app)}
+                                onClick={() => launch(app)}
+                                className="group flex flex-col items-center gap-1 rounded-xl p-1.5 hover:bg-white/10 border border-transparent hover:border-white/15 transition-colors"
+                                title={app}
+                            >
+                                <OsIconTile app={app} size="md" open={openAppIds.has(app)} />
+                                <span className="text-[9px] text-white/85 drop-shadow-md leading-tight capitalize">
+                                    {app === 'taskmgr' ? 'Tasks' : app}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* HOME: Hut bento (always under windows) */}
                 {openWindows.length === 0 && (
                     <div
@@ -294,19 +435,23 @@ export default function TruthOSShell({
                                 paddingBottom: '1.5rem',
                             } as CSSProperties
                         }
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (flyout) setFlyout(null);
+                            if (ctxMenu) setCtxMenu(null);
+                        }}
                     >
                         <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-8">
                             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono font-semibold">
-                                        Truth.OS · Home
+                                        Truth.OS 3.0 · Home
                                     </p>
                                     <h1 className="text-xl sm:text-3xl font-semibold text-white mt-1 tracking-tight drop-shadow-md">
                                         The Hut
                                     </h1>
                                     <p className="text-[13px] sm:text-sm text-white/75 mt-1 max-w-lg leading-relaxed line-clamp-2 sm:line-clamp-none">
-                                        Open a card to launch an app. Everything from the Hut lives here.
+                                        Open a card to launch a program. Right-click the desktop or explore the tray for more.
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-white/15 bg-black/55 sm:backdrop-blur-xl backdrop-blur-md px-3.5 py-3 shrink-0 shadow-xl ring-1 ring-white/5 w-full sm:w-auto">
@@ -349,15 +494,21 @@ export default function TruthOSShell({
                                 ))}
                             </div>
 
-                            {/* Utilities strip */}
+                            {/* Programs strip */}
                             <div>
                                 <p className="text-[9px] uppercase tracking-[0.3em] text-white/55 font-mono mb-2 px-0.5 font-semibold">
-                                    System tools
+                                    Programs
                                 </p>
-                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                                     {(
                                         [
+                                            ['browser', 'Browser'],
+                                            ['media', 'Media'],
+                                            ['photos', 'Photos'],
+                                            ['terminal', 'Terminal'],
                                             ['files', 'Files'],
+                                            ['clock', 'Clock'],
+                                            ['taskmgr', 'Tasks'],
                                             ['calculator', 'Calc'],
                                             ['paint', 'Paint'],
                                             ['notepad', 'Notes'],
@@ -382,12 +533,16 @@ export default function TruthOSShell({
 
                 {/* Window layer */}
                 {useBento && openWindows.length > 0 ? (
-                    <div className="absolute inset-0 z-[5] p-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr">
+                    <div
+                        className="absolute inset-x-0 top-0 z-[5] p-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr pointer-events-none"
+                        style={{ bottom: 'var(--os-taskbar)' }}
+                    >
                         <AnimatePresence>
                             {openWindows.map((w) => (
                                 <div
                                     key={w.id}
-                                    className={`${BENTO_CLASS[w.snap] || ''} min-h-0 ${
+                                    data-os-window
+                                    className={`${BENTO_CLASS[w.snap] || ''} min-h-0 pointer-events-auto ${
                                         w.snap === 'float' ? 'relative' : ''
                                     }`}
                                     style={{ zIndex: w.z }}
@@ -413,6 +568,7 @@ export default function TruthOSShell({
                                         onMaximize={() => toggleMaximize(w.id)}
                                         onMove={(x, y) => moveWindow(w.id, x, y)}
                                         onSnap={(s) => setSnap(w.id, s)}
+                                        onRect={(r) => setRect(w.id, r)}
                                     >
                                         {renderOsApp(w.app, {
                                             onLogout,
@@ -425,7 +581,10 @@ export default function TruthOSShell({
                     </div>
                 ) : (
                     openWindows.length > 0 && (
-                        <div className="absolute inset-0 z-[5]">
+                        <div
+                            className="absolute inset-x-0 top-0 z-[5] pointer-events-none [&>*]:pointer-events-auto"
+                            style={{ bottom: 'var(--os-taskbar)' }}
+                        >
                             <AnimatePresence>
                                 {openWindows.map((w) => (
                                     <OsWindowFrame
@@ -442,11 +601,15 @@ export default function TruthOSShell({
                                         bento={false}
                                         phone={phone}
                                         onFocus={() => focusWindow(w.id)}
-                                        onClose={() => closeWindow(w.id)}
+                                        onClose={() => {
+                                            closeWindow(w.id);
+                                            hubAudio.osWindowClose();
+                                        }}
                                         onMinimize={() => minimizeWindow(w.id)}
                                         onMaximize={() => toggleMaximize(w.id)}
                                         onMove={(x, y) => moveWindow(w.id, x, y)}
                                         onSnap={(s) => setSnap(w.id, s)}
+                                        onRect={(r) => setRect(w.id, r)}
                                     >
                                         {renderOsApp(w.app, {
                                             onLogout,
@@ -466,8 +629,8 @@ export default function TruthOSShell({
                         animate={{ opacity: 1, y: 0 }}
                         className={`absolute z-50 border border-white/15 bg-[#0f1219]/97 shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/10 max-sm:backdrop-blur-md sm:backdrop-blur-2xl ${
                             phone
-                                ? 'left-0 right-0 bottom-0 max-h-[min(78dvh,560px)] rounded-t-3xl rounded-b-none border-b-0'
-                                : 'bottom-2 left-2 sm:left-3 w-[min(100%-1rem,400px)] max-h-[min(70vh,560px)] rounded-2xl'
+                                ? 'left-0 right-0 bottom-0 max-h-[min(78dvh,600px)] rounded-t-3xl rounded-b-none border-b-0'
+                                : 'bottom-2 left-2 sm:left-3 w-[min(100%-1rem,460px)] max-h-[min(74vh,620px)] rounded-2xl'
                         }`}
                         style={
                             (phone
@@ -496,13 +659,40 @@ export default function TruthOSShell({
                                 </button>
                             )}
                         </div>
+                        {/* Search */}
+                        <div className="px-3 pt-3 pb-1 shrink-0">
+                            <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-white/12 bg-white/[0.06] focus-within:border-emerald-400/50">
+                                <Search size={14} className="text-white/40 shrink-0" />
+                                <input
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && filteredApps.length > 0) {
+                                            launch(filteredApps[0].app);
+                                        }
+                                    }}
+                                    autoFocus={!phone}
+                                    className="flex-1 min-w-0 bg-transparent outline-none text-[13px] text-white placeholder:text-white/35"
+                                    placeholder="Search programs…"
+                                />
+                                {query && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuery('')}
+                                        className="text-white/40 hover:text-white text-xs px-1"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                         <div
                             className={`p-3 grid gap-2 overflow-y-auto flex-1 overscroll-contain ${
-                                phone ? 'grid-cols-4' : 'grid-cols-3'
+                                phone ? 'grid-cols-4' : 'grid-cols-4'
                             }`}
                             style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
                         >
-                            {visibleApps.map((d) => (
+                            {filteredApps.map((d) => (
                                 <OsAppButton
                                     key={d.app}
                                     app={d.app}
@@ -512,17 +702,22 @@ export default function TruthOSShell({
                                     onClick={() => launch(d.app)}
                                 />
                             ))}
+                            {filteredApps.length === 0 && (
+                                <p className="col-span-full text-center text-[12px] text-white/40 py-6">
+                                    No programs match “{query}”.
+                                </p>
+                            )}
                         </div>
-                        <div className="p-2 border-t border-white/10 space-y-1 shrink-0 bg-black/30">
+                        <div className="p-2 border-t border-white/10 flex items-center gap-1 shrink-0 bg-black/30">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento');
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-white/75 hover:bg-white/10 hover:text-white min-h-[44px] font-medium"
+                                className="flex-1 text-left px-3 py-2.5 rounded-xl text-[11px] text-white/75 hover:bg-white/10 hover:text-white min-h-[44px] font-medium"
                             >
-                                Layout · {layoutMode === 'bento' ? 'Bento snap' : 'Free float'}
+                                Layout · {layoutMode === 'bento' ? 'Bento' : 'Float'}
                             </button>
                             {onEnterChamber && (
                                 <button
@@ -532,24 +727,69 @@ export default function TruthOSShell({
                                         enterChamber();
                                         sacredUi.click();
                                     }}
-                                    className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-emerald-300 hover:bg-emerald-500/15 min-h-[44px] font-medium"
+                                    className="flex-1 text-left px-3 py-2.5 rounded-xl text-[11px] text-emerald-300 hover:bg-emerald-500/15 min-h-[44px] font-medium"
                                 >
-                                    Enter 3D Chamber (optional)
+                                    3D Chamber
                                 </button>
                             )}
                             <button
                                 type="button"
+                                title="Restart Truth.OS"
+                                onClick={() => {
+                                    setStartOpen(false);
+                                    restartOs();
+                                }}
+                                className="w-11 h-11 min-w-[44px] rounded-xl text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center touch-manipulation"
+                            >
+                                <RefreshCw size={15} />
+                            </button>
+                            <button
+                                type="button"
+                                title="Sign out"
                                 onClick={() => {
                                     onLogout();
                                     sacredUi.click();
                                 }}
-                                className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] text-red-300 hover:bg-red-500/15 min-h-[44px] font-medium"
+                                className="w-11 h-11 min-w-[44px] rounded-xl text-red-300/80 hover:bg-red-500/15 hover:text-red-200 flex items-center justify-center touch-manipulation"
                             >
-                                Sign out
+                                <Power size={15} />
                             </button>
                         </div>
                     </motion.div>
                 )}
+
+                {/* System flyouts */}
+                <AnimatePresence>
+                    {flyout === 'quick' && <OsQuickSettings key="quick" phone={phone} />}
+                    {flyout === 'calendar' && <OsCalendarFlyout key="cal" phone={phone} />}
+                    {flyout === 'notifications' && (
+                        <OsNotificationCenter key="notes" phone={phone} />
+                    )}
+                    {flyout === 'widgets' && (
+                        <OsWidgetsPanel key="widgets" phone={phone} onLaunch={launch} />
+                    )}
+                </AnimatePresence>
+
+                {/* Task view */}
+                <AnimatePresence>
+                    {taskView && (
+                        <OsTaskView
+                            onPick={(id) => {
+                                setTaskView(false);
+                                focusWindow(id);
+                            }}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Desktop context menu */}
+                <OsContextMenu
+                    onOpenSettings={() => launch('settings')}
+                    onRestart={restartOs}
+                />
+
+                {/* Toasts */}
+                <OsToasts />
             </div>
 
             {/* Bottom taskbar — dock height matches --os-taskbar */}
@@ -567,6 +807,7 @@ export default function TruthOSShell({
                     onClick={() => {
                         const next = !startOpen;
                         setStartOpen(next);
+                        setFlyout(null);
                         if (next) hubAudio.osStartMenu();
                         else sacredUi.click();
                     }}
@@ -581,6 +822,37 @@ export default function TruthOSShell({
                     </span>
                     <span className="hidden sm:inline">Start</span>
                 </button>
+                <button
+                    type="button"
+                    title="Task view (Ctrl+Tab)"
+                    onClick={() => {
+                        setTaskView(!taskView);
+                        sacredUi.click();
+                    }}
+                    className={`h-11 min-h-[44px] min-w-[44px] px-2 rounded-xl flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
+                        taskView
+                            ? 'bg-white/15 text-white border border-white/25'
+                            : 'text-white/70 hover:bg-white/10 border border-transparent'
+                    }`}
+                >
+                    <SquareStack size={17} />
+                </button>
+                <button
+                    type="button"
+                    title="Widgets"
+                    onClick={() => {
+                        setStartOpen(false);
+                        toggleFlyout('widgets');
+                        sacredUi.click();
+                    }}
+                    className={`h-11 min-h-[44px] min-w-[44px] px-2 rounded-xl hidden sm:flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
+                        flyout === 'widgets'
+                            ? 'bg-white/15 text-white border border-white/25'
+                            : 'text-white/70 hover:bg-white/10 border border-transparent'
+                    }`}
+                >
+                    <LayoutPanelLeft size={17} />
+                </button>
                 {onEnterChamber && (
                     <button
                         type="button"
@@ -593,7 +865,7 @@ export default function TruthOSShell({
                         title="Leave terminal — enter 3D world"
                     >
                         <OsIconTile app="chamber" size="sm" />
-                        <span className="hidden sm:inline">Leave terminal</span>
+                        <span className="hidden lg:inline">Leave terminal</span>
                     </button>
                 )}
                 <div className="w-px h-7 bg-white/15 mx-0.5 shrink-0" />
@@ -617,18 +889,96 @@ export default function TruthOSShell({
                         />
                     ))}
                 </div>
-                <div className="flex items-center gap-2 px-2 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-11 min-h-[44px]">
+                {/* System tray */}
+                <div className="flex items-center gap-0.5 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-11 min-h-[44px] px-1">
                     {isAdmin && (
-                        <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden md:inline">
+                        <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden lg:inline px-1">
                             Admin
                         </span>
                     )}
-                    <span className="text-[11px] font-mono text-white/75 hidden md:inline font-medium tabular-nums">
-                        {clock.split(' · ')[0]}
-                    </span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80]" title="Online" />
+                    <button
+                        type="button"
+                        title="Quick settings"
+                        onClick={() => {
+                            setStartOpen(false);
+                            toggleFlyout('quick');
+                            sacredUi.click();
+                        }}
+                        className={`h-9 min-w-[36px] px-1.5 rounded-lg flex items-center justify-center transition-colors touch-manipulation ${
+                            flyout === 'quick' ? 'bg-white/15 text-white' : 'text-white/65 hover:bg-white/10'
+                        }`}
+                    >
+                        <Settings2 size={15} />
+                    </button>
+                    <button
+                        type="button"
+                        title="Notifications"
+                        onClick={() => {
+                            setStartOpen(false);
+                            toggleFlyout('notifications');
+                            sacredUi.click();
+                        }}
+                        className={`relative h-9 min-w-[36px] px-1.5 rounded-lg flex items-center justify-center transition-colors touch-manipulation ${
+                            flyout === 'notifications'
+                                ? 'bg-white/15 text-white'
+                                : 'text-white/65 hover:bg-white/10'
+                        }`}
+                    >
+                        <Bell size={15} />
+                        {unread > 0 && (
+                            <span className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center ring-1 ring-black/60">
+                                {unread > 9 ? '9+' : unread}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        title="Calendar"
+                        onClick={() => {
+                            setStartOpen(false);
+                            toggleFlyout('calendar');
+                            sacredUi.click();
+                        }}
+                        className={`h-9 px-2 rounded-lg items-center justify-center hidden md:flex transition-colors touch-manipulation ${
+                            flyout === 'calendar' ? 'bg-white/15' : 'hover:bg-white/10'
+                        }`}
+                    >
+                        <span className="text-[11px] font-mono text-white/75 font-medium tabular-nums">
+                            {clock.split(' · ')[0]}
+                        </span>
+                    </button>
+                    <span
+                        className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80] mx-1"
+                        title="Online"
+                    />
                 </div>
+                {/* Show desktop sliver */}
+                <button
+                    type="button"
+                    title="Show desktop"
+                    onClick={showDesktop}
+                    className="hidden sm:block w-2 h-11 min-h-[44px] rounded-sm border-l border-white/15 hover:bg-white/15 transition-colors shrink-0"
+                />
             </footer>
+
+            {/* Screen filters — brightness + night light */}
+            {brightness < 1 && (
+                <div
+                    className="pointer-events-none absolute inset-0 z-[85] bg-black"
+                    style={{ opacity: (1 - brightness) * 0.85 }}
+                />
+            )}
+            {nightLight && (
+                <div
+                    className="pointer-events-none absolute inset-0 z-[85]"
+                    style={{ background: 'rgba(255, 147, 41, 0.10)' }}
+                />
+            )}
+
+            {/* Lock screen */}
+            <AnimatePresence>
+                {locked && <OsLockScreen wallpaperCss={wallpaper.css} />}
+            </AnimatePresence>
 
             <AuthModal
                 isOpen={authPrompt}
@@ -642,182 +992,6 @@ export default function TruthOSShell({
                     });
                 }}
             />
-        </div>
-    );
-}
-
-function OsWindowFrame({
-    title,
-    app,
-    x,
-    y,
-    w,
-    h,
-    z,
-    maximized,
-    focused,
-    bento,
-    phone = false,
-    children,
-    onFocus,
-    onClose,
-    onMinimize,
-    onMaximize,
-    onMove,
-    onSnap,
-}: {
-    title: string;
-    app: OsAppId;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    z: number;
-    maximized: boolean;
-    focused: boolean;
-    bento: boolean;
-    phone?: boolean;
-    children: ReactNode;
-    onFocus: () => void;
-    onClose: () => void;
-    onMinimize: () => void;
-    onMaximize: () => void;
-    onMove: (x: number, y: number) => void;
-    onSnap: (s: BentoSlot) => void;
-}) {
-    const drag = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
-    const narrow = phone || (typeof window !== 'undefined' && window.innerWidth < 768);
-    const accentId = getAppAccent(app);
-    const accentStyle = ACCENT_STYLES[accentId];
-    const borderCls = focused
-        ? `border-white/20 ring-1 ${accentStyle.ring}`
-        : 'border-white/12';
-    const fillScreen = (maximized || narrow) && !(bento && !maximized && !narrow);
-
-    const style: CSSProperties = fillScreen
-        ? {
-              position: 'absolute',
-              left: narrow ? 0 : 8,
-              right: narrow ? 0 : 8,
-              top: narrow
-                  ? 'max(0px, env(safe-area-inset-top, 0px))'
-                  : 8,
-              bottom: 'var(--os-taskbar, 3.65rem)',
-              width: undefined,
-              height: undefined,
-              zIndex: z,
-              background: '#0c0e14',
-          }
-        : bento && !maximized && !narrow
-          ? {
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                zIndex: z,
-                background: '#0c0e14',
-            }
-          : {
-                position: 'absolute',
-                left: x,
-                top: y,
-                width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
-                height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
-                zIndex: z,
-                background: '#0c0e14',
-            };
-
-    return (
-        <div
-            className={`flex flex-col overflow-hidden border shadow-2xl ${
-                narrow ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'
-            } ${borderCls} ${focused ? 'shadow-black/60' : 'opacity-[0.97]'} ${
-                bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''
-            }`}
-            style={style}
-            onMouseDown={onFocus}
-        >
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentStyle.bar} z-10 ${narrow ? '' : 'rounded-l-2xl'}`} />
-            <div
-                className={`shrink-0 flex items-center gap-2 pl-3 pr-1 border-b border-white/12 bg-gradient-to-r from-black/70 to-black/40 cursor-default ${
-                    narrow ? 'h-11 min-h-[44px]' : 'h-10'
-                }`}
-                onPointerDown={(e) => {
-                    if (narrow || maximized || bento) return;
-                    drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
-                    const move = (ev: PointerEvent) => {
-                        if (!drag.current) return;
-                        onMove(
-                            drag.current.sx + (ev.clientX - drag.current.ox),
-                            drag.current.sy + (ev.clientY - drag.current.oy),
-                        );
-                    };
-                    const up = () => {
-                        drag.current = null;
-                        window.removeEventListener('pointermove', move);
-                        window.removeEventListener('pointerup', up);
-                    };
-                    window.addEventListener('pointermove', move);
-                    window.addEventListener('pointerup', up);
-                }}
-            >
-                <OsIconTile app={app} size="sm" open={focused} />
-                <span className="text-[12px] sm:text-[13px] text-white font-semibold truncate flex-1 tracking-tight">
-                    {title}
-                </span>
-                <div className="flex items-center gap-0.5 shrink-0">
-                    {!narrow && (
-                        <button
-                            type="button"
-                            title="Snap bento"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSnap('hero');
-                            }}
-                            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-[11px] text-white/50 hover:bg-white/12 hover:text-white transition-colors touch-manipulation"
-                        >
-                            ⊞
-                        </button>
-                    )}
-                    <button
-                        type="button"
-                        title="Minimize"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onMinimize();
-                        }}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-base leading-none transition-colors touch-manipulation"
-                    >
-                        –
-                    </button>
-                    {!narrow && (
-                        <button
-                            type="button"
-                            title="Maximize"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onMaximize();
-                            }}
-                            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-[11px] transition-colors touch-manipulation"
-                        >
-                            □
-                        </button>
-                    )}
-                    <button
-                        type="button"
-                        title="Close"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClose();
-                        }}
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/70 hover:bg-red-500 hover:text-white text-base leading-none transition-colors touch-manipulation"
-                    >
-                        ×
-                    </button>
-                </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto bg-[#0c0e14] overscroll-contain">
-                {children}
-            </div>
         </div>
     );
 }

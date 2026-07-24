@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
 import YardGeometry from './YardGeometry';
 import HouseDecor from './HouseDecor';
+import HouseAtmosphere from './HouseAtmosphere';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
 import LocalPlayerBody, { type PlayerPose } from './LocalPlayerBody';
@@ -144,7 +145,7 @@ export default function HouseCanvas({
                         <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.55} color="#fbbf24" distance={8} decay={2} />
                         <pointLight position={[0, 2.35, -8.2]} intensity={2.3} color="#22c55e" distance={12} decay={2} />
                         <pointLight position={[-6.5, 2.0, -4.4]} intensity={1.4} color="#e8d5b0" distance={10} decay={2} />
-                        <pointLight position={[0, 2.5, 6.2]} intensity={1.05} color="#ffffff" distance={11} decay={2} />
+                        <pointLight position={[0, 2.5, 6.2]} intensity={1.1} color="#ffdfb8" distance={11} decay={2} />
                         <pointLight position={[8.2, 1.9, 1.25]} intensity={1.6} color="#c084fc" distance={9} decay={2} />
                         <pointLight position={[-7.4, 1.25, 3.6]} intensity={1.55} color="#ff8a3d" distance={7} decay={2} />
                         <pointLight position={[7.6, 1.55, -7.0]} intensity={1.35} color="#fb923c" distance={6} decay={2} />
@@ -171,6 +172,8 @@ export default function HouseCanvas({
                 <YardGeometry low={mobile} />
                 <HouseGeometry low={mobile} cinematic={!mobile} />
                 <HouseDecor low={mobile} />
+                {/* Dust motes · fireflies · moon shafts — desktop only */}
+                {!mobile && <HouseAtmosphere />}
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
                 {/* Vessel body — mirror-only layer */}
                 <LocalPlayerBody avatar={avatar} pose={localPose} />

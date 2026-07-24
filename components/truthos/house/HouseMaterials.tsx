@@ -33,6 +33,9 @@ export function useHouseMaterials(low = false) {
         const artAsWithinMap = makeHouseMap('artAsWithin', { low });
         const artStillMap = makeHouseMap('artStillPoint', { low });
         const artUnnamedMap = makeHouseMap('artUnnamed', { low });
+        const nightGlassMap = makeHouseMap('nightGlass', { low });
+        const skyMap = makeHouseMap('skyNight', { low });
+        const moonMap = makeHouseMap('moon', { low });
 
         const mk = (
             map: THREE.Texture,
@@ -93,6 +96,45 @@ export function useHouseMaterials(low = false) {
             artAsWithin: mk(artAsWithinMap, '#ffffff', { roughness: 0.7 }, 0.4),
             artStillPoint: mk(artStillMap, '#ffffff', { roughness: 0.7 }, 0.4),
             artUnnamed: mk(artUnnamedMap, '#ffffff', { roughness: 0.7 }, 0.4),
+            /** Emissive night-sky window pane — glows like moonlit glass */
+            nightGlass: new THREE.MeshStandardMaterial({
+                map: nightGlassMap,
+                emissive: '#aabdff',
+                emissiveMap: nightGlassMap,
+                emissiveIntensity: low ? 0.85 : 0.7,
+                roughness: 0.14,
+                metalness: 0.3,
+                envMapIntensity: 1.1,
+            }),
+            /** Gradient sky dome — BackSide, unfogged so the horizon reads */
+            sky: new THREE.MeshBasicMaterial({
+                map: skyMap,
+                side: THREE.BackSide,
+                fog: false,
+                depthWrite: false,
+            }),
+            /** Moon sprite plane — additive-free transparent disc + halo */
+            moon: new THREE.MeshBasicMaterial({
+                map: moonMap,
+                transparent: true,
+                fog: false,
+                depthWrite: false,
+                toneMapped: false,
+            }),
+            /** Ceiling cove strip — cheap emissive, no light objects */
+            cove: new THREE.MeshStandardMaterial({
+                color: '#2a2440',
+                emissive: '#b6a4ff',
+                emissiveIntensity: 0.85,
+                toneMapped: false,
+            }),
+            /** Warm bulb / lamp core */
+            bulbWarm: new THREE.MeshStandardMaterial({
+                color: '#fff3d6',
+                emissive: '#ffcf8a',
+                emissiveIntensity: 1.5,
+                toneMapped: false,
+            }),
             ember: new THREE.MeshStandardMaterial({
                 color: '#ff6b2c',
                 emissive: '#ff6b2c',
