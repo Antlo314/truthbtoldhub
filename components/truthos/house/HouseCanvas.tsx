@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, Stars } from '@react-three/drei';
+import DayNightCycle from './DayNightCycle';
+import LampGroup from './LampGroup';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
 import YardGeometry from './YardGeometry';
@@ -115,28 +117,13 @@ export default function HouseCanvas({
                     <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
                 )}
 
-                <hemisphereLight args={[mobile ? '#d8e0ff' : '#c8d4ff', mobile ? '#3a3048' : '#2a2038', mobile ? 1.15 : 0.5]} />
-                <ambientLight intensity={mobile ? 1.15 : 0.38} color={mobile ? '#f0eaf8' : '#e0d8f0'} />
+                {/* Sun, ambient and hemisphere are owned by the day/night cycle
+                    so there is one place the time of day is expressed. */}
+                <DayNightCycle mobile={mobile} shadows={!mobile} />
 
-                <directionalLight
-                    position={[6, 9, 4]}
-                    intensity={mobile ? 1.65 : 1.45}
-                    color="#ffffff"
-                    castShadow={!mobile}
-                    shadow-mapSize-width={mobile ? 512 : 1024}
-                    shadow-mapSize-height={mobile ? 512 : 1024}
-                />
-                {mobile && (
-                    <directionalLight position={[-4, 6, -2]} intensity={0.55} color="#c4b5fd" />
-                )}
-                {!mobile && (
-                    <>
-                        <directionalLight position={[-5, 5, -3]} intensity={0.4} color="#9b7cff" />
-                        <directionalLight position={[0, 3, 8]} intensity={0.3} color="#ffc9a0" />
-                    </>
-                )}
-
-                {/* Zone practicals — pull color from textured materials */}
+                {/* Zone practicals — pull color from textured materials.
+                    Wrapped so daylight dims them instead of them burning at noon. */}
+                <LampGroup>
                 <pointLight position={[3.55, 1.4, 4.9]} intensity={mobile ? 2.8 : 3.1} color="#4ade80" distance={mobile ? 9 : 11} decay={2} />
                 <pointLight position={[0, 1.75, -4.2]} intensity={mobile ? 2.3 : 2.4} color="#22d3ee" distance={9} decay={2} />
                 <pointLight position={[3.15, 1.7, 8.5]} intensity={mobile ? 1.9 : 1.85} color="#c8dcf0" distance={7} decay={2} />
@@ -168,6 +155,7 @@ export default function HouseCanvas({
                         <pointLight position={[2, 1.6, -3]} intensity={1.3} color="#ffffff" distance={9} decay={2} />
                     </>
                 )}
+                </LampGroup>
 
                 <YardGeometry low={mobile} />
                 <HouseGeometry low={mobile} cinematic={!mobile} />

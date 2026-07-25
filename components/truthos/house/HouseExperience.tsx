@@ -29,6 +29,7 @@ import HousePanels from './HousePanels';
 import HouseMobileControls from './HouseMobileControls';
 import HouseHints from './HouseHints';
 import HouseCinematicChrome from './HouseCinematicChrome';
+import WorldHud from './WorldHud';
 import { useHouseImmersion } from './useHouseImmersion';
 import { markVisited } from './stationProgress';
 
@@ -474,6 +475,9 @@ export default function HouseExperience({
                     </div>
                 </div>
             )}
+
+            {/* Persistent world readout: identity, clock, weather, skills */}
+            <WorldHud visible={showHud} compact={isMobile} />
 
             {showHud && (
                 <>
