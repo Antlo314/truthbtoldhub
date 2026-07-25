@@ -29,8 +29,9 @@ import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
 import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
-import { useOsSystem, OS_WALLPAPERS, ACCENT_HEX } from '../osSystemStore';
+import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
+import { Lock } from 'lucide-react';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
@@ -372,6 +373,8 @@ export function SettingsApp({
     const setWallpaper = useOsSystem((s) => s.setWallpaper);
     const setAccent = useOsSystem((s) => s.setAccent);
     const setNightLight = useOsSystem((s) => s.setNightLight);
+    const snapshot = useOsSystem((s) => s.snapshot);
+    const unlockedCount = OS_WALLPAPERS.filter((w) => isUnlocked(w, snapshot)).length;
 
     const toggleMusic = () => {
         const next = !music;
@@ -440,33 +443,64 @@ export function SettingsApp({
                     <>
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 font-mono mb-2">
-                                Wallpaper
+                                Wallpaper · {unlockedCount} of {OS_WALLPAPERS.length}
                             </p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {OS_WALLPAPERS.map((wp) => (
-                                    <button
-                                        key={wp.id}
-                                        type="button"
-                                        onClick={() => {
-                                            setWallpaper(wp.id);
-                                            sacredUi.click();
-                                        }}
-                                        className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all touch-manipulation ${
-                                            wallpaper === wp.id
-                                                ? 'border-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.35)]'
-                                                : 'border-white/10 hover:border-white/30'
-                                        }`}
-                                    >
-                                        <span
-                                            className="absolute inset-0 bg-cover bg-center"
-                                            style={{ backgroundImage: wp.css.startsWith('url') ? wp.css : undefined, background: wp.css.startsWith('url') ? undefined : wp.css }}
-                                        />
-                                        <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-[9px] text-white/95 bg-gradient-to-t from-black/85 to-transparent text-left truncate">
-                                            {wp.name}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
+                            {WALLPAPER_FAMILIES.map((fam) => {
+                                const inFam = OS_WALLPAPERS.filter((w) => w.family === fam);
+                                if (!inFam.length) return null;
+                                return (
+                                    <div key={fam} className="mb-3">
+                                        <p className="text-[9px] uppercase tracking-[0.22em] text-zinc-600 font-mono mb-1.5">
+                                            {fam}
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {inFam.map((wp) => {
+                                                const open = isUnlocked(wp, snapshot);
+                                                const preview = resolveWallpaper(wp.id).css;
+                                                return (
+                                                    <button
+                                                        key={wp.id}
+                                                        type="button"
+                                                        disabled={!open}
+                                                        title={open ? wp.name : `Locked — ${wp.unlock?.label ?? ''}`}
+                                                        onClick={() => {
+                                                            setWallpaper(wp.id);
+                                                            // Keep the desktop coherent with the art
+                                                            setAccent(wp.accent);
+                                                            sacredUi.click();
+                                                        }}
+                                                        className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all touch-manipulation ${
+                                                            wallpaper === wp.id
+                                                                ? 'border-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.35)]'
+                                                                : open
+                                                                  ? 'border-white/10 hover:border-white/30'
+                                                                  : 'border-white/5 cursor-not-allowed'
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`absolute inset-0 ${open ? '' : 'blur-[2px] opacity-35 saturate-50'}`}
+                                                            style={{ background: preview }}
+                                                        />
+                                                        {!open && (
+                                                            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center">
+                                                                <Lock size={14} className="text-white/80" />
+                                                                <span className="text-[9px] text-white/80 leading-tight">
+                                                                    {wp.unlock?.label}
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                        {open && (
+                                                            <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-[9px] text-white/95 bg-gradient-to-t from-black/85 to-transparent text-left truncate">
+                                                                {wp.name}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                             <p className="text-[10px] text-zinc-600 mt-2">
                                 Tip: the Photos app can set any gallery image as wallpaper.
                             </p>

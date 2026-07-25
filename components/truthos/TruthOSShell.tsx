@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     Bell,
+    Flame,
     LayoutPanelLeft,
     Power,
     RefreshCw,
@@ -40,7 +41,9 @@ import {
     OsTaskbarItem,
 } from './OsIcon';
 import OsWindowFrame from './OsWindowFrame';
-import { useOsSystem, getWallpaper } from './osSystemStore';
+import { useOsSystem } from './osSystemStore';
+import { resolveWallpaper } from './osWallpapers';
+import { useOsGameBridge } from './useOsGameBridge';
 import {
     OsCalendarFlyout,
     OsContextMenu,
@@ -195,7 +198,9 @@ export default function TruthOSShell({
     const notify = useOsSystem((s) => s.notify);
     const overlay = useOsSystem((s) => s.overlay);
     const setOverlay = useOsSystem((s) => s.setOverlay);
+    const snapshot = useOsSystem((s) => s.snapshot);
 
+    const [hour, setHour] = useState(() => new Date().getHours());
     const [bootLine, setBootLine] = useState(0);
     const [bootKey, setBootKey] = useState(0);
     const [clock, setClock] = useState('');
@@ -212,7 +217,7 @@ export default function TruthOSShell({
     const restored = useRef(false);
     const email = sessionEmail;
     const isAdmin = isAdminEmail(email);
-    const wallpaper = getWallpaper(wallpaperId);
+    const wallpaper = resolveWallpaper(wallpaperId, hour);
     const unread = notifications.filter((n) => !n.read).length;
 
     // Recompute phone layout on resize / rotate
@@ -281,7 +286,10 @@ export default function TruthOSShell({
             );
         };
         tick();
-        const t = setInterval(tick, 15000);
+        const t = setInterval(() => {
+            tick();
+            setHour(new Date().getHours());
+        }, 15000);
         return () => clearInterval(t);
     }, []);
 
@@ -294,6 +302,9 @@ export default function TruthOSShell({
         });
         return () => sub.subscription.unsubscribe();
     }, [setSessionEmail]);
+
+    // Mirror live game progress into the OS (gates wallpapers, feeds widgets)
+    useOsGameBridge(bootDone);
 
     // Restore the previous session once the desktop is up
     useEffect(() => {
@@ -549,8 +560,8 @@ export default function TruthOSShell({
         >
             {/* Wallpaper — themeable (Settings / Photos / right-click) */}
             <div
-                className={`pointer-events-none absolute inset-0 bg-cover bg-center transition-[background-image] duration-300 ${phone ? '' : 'scale-105'}`}
-                style={{ backgroundImage: wallpaper.css }}
+                className={`pointer-events-none absolute inset-0 ${phone ? '' : 'scale-105'}`}
+                style={{ background: wallpaper.css }}
             />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.14),transparent_55%)]" />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.1),transparent_50%)]" />
@@ -1264,6 +1275,25 @@ export default function TruthOSShell({
                     ))}
                 </div>
                 {/* System tray */}
+                {/* Live game readout — this OS runs inside the world */}
+                {email && snapshot.soulPower > 0 && (
+                    <button
+                        type="button"
+                        title={`Soul power ${snapshot.soulPower}${snapshot.tier ? ` · ${snapshot.tier}` : ''} — open Journey`}
+                        onClick={() => launch('journey')}
+                        className="hidden md:flex items-center gap-1.5 shrink-0 h-11 min-h-[44px] px-2.5 rounded-xl border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/20 transition-colors touch-manipulation"
+                    >
+                        <Flame size={14} className="text-amber-300" />
+                        <span className="text-[11px] font-mono text-amber-100 tabular-nums font-medium">
+                            {snapshot.soulPower}
+                        </span>
+                        {snapshot.tier && (
+                            <span className="text-[9px] uppercase tracking-widest text-amber-300/80 hidden lg:inline">
+                                {snapshot.tier}
+                            </span>
+                        )}
+                    </button>
+                )}
                 <div className="flex items-center gap-0.5 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-11 min-h-[44px] px-1">
                     {isAdmin && (
                         <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden lg:inline px-1">

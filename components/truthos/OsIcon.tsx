@@ -22,6 +22,8 @@ import {
     Heart,
     Image,
     Images,
+    Backpack,
+    Compass,
     Library,
     ListChecks,
     Music,
@@ -150,6 +152,8 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: s
     browser: { Icon: Globe, accent: 'cyan', label: 'Browser' },
     music: { Icon: Music, accent: 'violet', label: 'Music' },
     tasks: { Icon: ListChecks, accent: 'gold', label: 'To-Do' },
+    journey: { Icon: Compass, accent: 'amber', label: 'Journey' },
+    vault: { Icon: Backpack, accent: 'violet', label: 'Vault' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {

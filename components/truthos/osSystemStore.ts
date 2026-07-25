@@ -8,53 +8,18 @@
  */
 import { create } from 'zustand';
 import type { OsAccentId } from './OsIcon';
+import { EMPTY_SNAPSHOT as EMPTY_SNAP, type GameSnapshot as Snap } from './osWallpapers';
 
 const THEME_KEY = 'truthos_theme_v3';
 
-export type OsWallpaper = {
-    id: string;
-    name: string;
-    /** CSS background-image value (url(...) or gradient) */
-    css: string;
-    /** Small preview CSS (same as css unless a lighter preview is wanted) */
-    kind: 'image' | 'gradient';
-};
-
-export const OS_WALLPAPERS: OsWallpaper[] = [
-    { id: 'aurora', name: 'Sanctum Aurora', css: 'url(/truthos/os-wallpaper.jpg)', kind: 'image' },
-    { id: 'hut', name: 'Hut Interior', css: 'url(/brand/hut-interior-cinematic.jpg)', kind: 'image' },
-    { id: 'hall', name: 'The Hall', css: 'url(/brand/bg-hall.jpg)', kind: 'image' },
-    { id: 'portal', name: 'Portal', css: 'url(/brand/bg-portal.jpg)', kind: 'image' },
-    { id: 'sanctuary', name: 'Hut Sanctuary', css: 'url(/brand/bg-hut-sanctuary.jpg)', kind: 'image' },
-    { id: 'void', name: 'Awakening Void', css: 'url(/brand/bg-awakening-void.jpg)', kind: 'image' },
-    { id: 'source', name: 'Return to Source', css: 'url(/brand/keyart-return-source.jpg)', kind: 'image' },
-    {
-        id: 'emerald-flow',
-        name: 'Emerald Flow',
-        css: 'linear-gradient(135deg, #022c22 0%, #064e3b 35%, #0e7490 80%, #155e75 100%)',
-        kind: 'gradient',
-    },
-    {
-        id: 'midnight',
-        name: 'Midnight Glass',
-        css: 'linear-gradient(160deg, #020617 0%, #0f172a 45%, #1e1b4b 100%)',
-        kind: 'gradient',
-    },
-    {
-        id: 'ember',
-        name: 'Ember Dusk',
-        css: 'linear-gradient(150deg, #1c1917 0%, #451a03 55%, #7c2d12 100%)',
-        kind: 'gradient',
-    },
-];
-
-export function getWallpaper(id: string): OsWallpaper {
-    if (id.startsWith('custom:')) {
-        const url = id.slice('custom:'.length);
-        return { id, name: 'Custom', css: `url(${url})`, kind: 'image' };
-    }
-    return OS_WALLPAPERS.find((w) => w.id === id) ?? OS_WALLPAPERS[0];
-}
+export type { OsWallpaper, GameSnapshot } from './osWallpapers';
+export {
+    OS_WALLPAPERS,
+    WALLPAPER_FAMILIES,
+    isUnlocked,
+    resolveWallpaper,
+    EMPTY_SNAPSHOT,
+} from './osWallpapers';
 
 export type OsNotification = {
     id: string;
@@ -151,6 +116,10 @@ type OsSystemState = OsTheme & {
     overlay: OsOverlay;
     setOverlay: (o: OsOverlay) => void;
 
+    /** Live game progress, mirrored in so the OS can gate + display it */
+    snapshot: Snap;
+    setSnapshot: (s: Snap) => void;
+
     notify: (n: { title: string; body?: string; accent?: OsAccentId; toast?: boolean }) => void;
     dismissToast: (id: string) => void;
     markAllRead: () => void;
@@ -172,6 +141,7 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
     locked: false,
     ctxMenu: null,
     overlay: null,
+    snapshot: EMPTY_SNAP,
 
     setWallpaper: (id) => set((s) => patchTheme(s, { wallpaper: id })),
     setAccent: (a) => set((s) => patchTheme(s, { accent: a })),
@@ -182,6 +152,7 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
     setDoNotDisturb: (v) => set((s) => patchTheme(s, { doNotDisturb: v })),
 
     setOverlay: (o) => set({ overlay: o, flyout: null, ctxMenu: null }),
+    setSnapshot: (snap) => set({ snapshot: snap }),
 
     notify: ({ title, body, accent, toast = true }) => {
         const id = `n${noteSeq++}_${Date.now().toString(36)}`;

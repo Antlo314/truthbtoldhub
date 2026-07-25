@@ -336,6 +336,43 @@ const TasksG: Glyph = () => (
     </>
 );
 
+const JourneyG: Glyph = () => (
+    <>
+        <circle cx="12" cy="12" r="10.2" fill="currentColor" />
+        <circle cx="12" cy="12" r="10.2" {...LIT} />
+        <circle cx="12" cy="12" r="8.3" fill="currentColor" />
+        <circle cx="12" cy="12" r="8.3" {...DARK} />
+        {/* Needle: lit north half, shadowed south half */}
+        <path {...LIT} d="M12 12 16.4 7.6 13.7 13.2Z" />
+        <path fill="#fff" fillOpacity={0.75} d="M12 12 7.6 16.4 10.3 10.8Z" />
+        <circle cx="12" cy="12" r="1.15" fill="currentColor" />
+        {[0, 90, 180, 270].map((a) => (
+            <rect
+                key={a}
+                x="11.5"
+                y="2.5"
+                width="1"
+                height="1.9"
+                rx="0.5"
+                {...LIT}
+                transform={`rotate(${a} 12 12)`}
+            />
+        ))}
+    </>
+);
+
+const VaultG: Glyph = () => (
+    <>
+        {/* Pack body with a lid flap and buckles */}
+        <path fill="currentColor" d="M5 9.4a5.6 5.6 0 0 1 5.6-5.6h2.8A5.6 5.6 0 0 1 19 9.4v9.4a2.8 2.8 0 0 1-2.8 2.8H7.8A2.8 2.8 0 0 1 5 18.8Z" />
+        <path {...LIT} d="M8.6 4.6a5.6 5.6 0 0 1 2-.8v3.6a2 2 0 0 0 4 0V3.8c.72.15 1.4.42 2 .8v2.9a4 4 0 0 1-8 0Z" />
+        <path {...DARK} d="M5 11.6h14v4.2H5Z" />
+        <rect x="9.4" y="12.4" width="5.2" height="2.6" rx="0.8" {...LIT} />
+        <rect x="7.2" y="17.6" width="2.2" height="1.7" rx="0.6" {...LIT} />
+        <rect x="14.6" y="17.6" width="2.2" height="1.7" rx="0.6" {...LIT} />
+    </>
+);
+
 /* ── registry ───────────────────────────────────────────── */
 
 const GLYPHS: Record<OsAppId, Glyph> = {
@@ -364,6 +401,8 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     browser: BrowserG,
     music: MusicG,
     tasks: TasksG,
+    journey: JourneyG,
+    vault: VaultG,
 };
 
 export function OsGlyph({ app, size = 20 }: { app: OsAppId; size?: number }) {
