@@ -188,6 +188,22 @@ function mottle(
     ctx.drawImage(buf[0], 0, 0, s, s);
 }
 
+/**
+ * Quantised light/dark fill styles. Building a fresh `rgba()` string per speck
+ * dominates the cost of the noise passes (millions of chars parsed by the CSS
+ * colour parser); eight alpha steps are indistinguishable in noise and let the
+ * canvas reuse parsed colours.
+ */
+function gritPalette(light: RGB, dark: RGB, alpha: number): string[] {
+    const pal: string[] = [];
+    for (let i = 0; i < 8; i++) {
+        const a = alpha * (0.3 + (i / 7) * 1.05);
+        pal.push(rgba(light, a));
+        pal.push(rgba(dark, a));
+    }
+    return pal;
+}
+
 /** Fine grit / tooth — the micro-contrast that stops a surface looking flat. */
 function grit(
     ctx: CanvasRenderingContext2D,
@@ -200,8 +216,9 @@ function grit(
     maxH = 2,
     alpha = 0.09,
 ): void {
+    const pal = gritPalette(light, dark, alpha);
     for (let i = 0; i < count; i++) {
-        ctx.fillStyle = rgba(rnd() > 0.5 ? light : dark, alpha * (0.3 + rnd()));
+        ctx.fillStyle = pal[Math.floor(rnd() * pal.length) % pal.length];
         ctx.fillRect(rnd() * s, rnd() * s, 1 + rnd() * maxW, 1 + rnd() * maxH);
     }
 }
@@ -225,8 +242,9 @@ function gritIn(
     maxH = 2,
     alpha = 0.09,
 ): void {
+    const pal = gritPalette(light, dark, alpha);
     for (let i = 0; i < count; i++) {
-        ctx.fillStyle = rgba(rnd() > 0.5 ? light : dark, alpha * (0.3 + rnd()));
+        ctx.fillStyle = pal[Math.floor(rnd() * pal.length) % pal.length];
         ctx.fillRect(x + rnd() * w, y + rnd() * h, 1 + rnd() * maxW, 1 + rnd() * maxH);
     }
 }
@@ -956,11 +974,14 @@ function paintRug(ctx: CanvasRenderingContext2D, s: number) {
         }
     }
     // Knotted pile: individual tufts catching light at slightly different angles
-    const tufts = areaCount(s, 9000);
+    const tufts = areaCount(s, 8000);
+    const tuftPal: string[] = [];
+    for (let i = 0; i < 6; i++) {
+        const a = 0.05 + (i / 5) * 0.13;
+        tuftPal.push(rgba([214, 158, 112], a), rgba([126, 58, 40], a), rgba([18, 6, 6], a));
+    }
     for (let i = 0; i < tufts; i++) {
-        const up = rnd();
-        const col: RGB = up > 0.62 ? [214, 158, 112] : up > 0.3 ? [126, 58, 40] : [18, 6, 6];
-        ctx.fillStyle = rgba(col, 0.05 + rnd() * 0.13);
+        ctx.fillStyle = tuftPal[Math.floor(rnd() * tuftPal.length) % tuftPal.length];
         ctx.fillRect(rnd() * s, rnd() * s, 1 + rnd() * 1.6, 1 + rnd() * 1.2);
     }
     // Pile lay — fine rows of shadow between knot courses
