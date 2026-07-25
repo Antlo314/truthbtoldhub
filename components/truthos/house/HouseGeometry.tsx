@@ -444,10 +444,20 @@ export default function HouseGeometry({
                 <planeGeometry args={[7.2, 6.4]} />
                 <primitive object={m.rug} attach="material" />
             </mesh>
-            {/* Bedroom area rug under bed */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4.4, 0.01, 8.6]} receiveShadow={sh}>
-                <planeGeometry args={[3.4, 3.0]} />
-                <primitive object={m.tile} attach="material" />
+            {/* Bedroom is carpeted wall to wall */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.2, 0.01, 7.75]} receiveShadow={sh}>
+                <planeGeometry args={[7.7, 9.1]} />
+                <primitive object={m.carpet} attach="material" />
+            </mesh>
+            {/* Library keeps darker boards */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-9.9, 0.008, -6.7]} receiveShadow={sh}>
+                <planeGeometry args={[7.3, 11.0]} />
+                <primitive object={m.woodFloorDark} attach="material" />
+            </mesh>
+            {/* Foyer entry laid in marble */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3.95, 0.009, 7.75]} receiveShadow={sh}>
+                <planeGeometry args={[4.2, 9.1]} />
+                <primitive object={m.marble} attach="material" />
             </mesh>
 
             {/* ── Walls — generated from WALL_RUNS (mesh ≡ colliders ≡ trim) ──
@@ -590,7 +600,7 @@ export default function HouseGeometry({
             {/* ── KITCHEN (living NE — counters on the north wall, sink under window) ── */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4.2, 0.014, -10.7]} receiveShadow={sh}>
                 <planeGeometry args={[3.9, 3.4]} />
-                <primitive object={m.tile} attach="material" />
+                <primitive object={m.tileKitchen} attach="material" />
             </mesh>
             {/* Base run: stove · sink under the window · cabinet (CC0 models) */}
             <HouseProp model="kitchenStove" position={[3.0, 0, -11.9]} rotation={[0, Math.PI, 0]}>

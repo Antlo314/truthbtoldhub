@@ -28,6 +28,10 @@ export function useHouseMaterials(low = false) {
         const dirtMap = makeHouseMap('dirt', { repeat: [4, 4], low });
         const screenMap = makeHouseMap('screen', { repeat: [1, 1], low });
         const tileMap = makeHouseMap('tile', { repeat: [8, 8], low });
+        const tileKitchenMap = makeHouseMap('tileKitchen', { repeat: [4, 3.5], low });
+        const carpetMap = makeHouseMap('carpet', { repeat: [5, 4.5], low });
+        const woodFloorDarkMap = makeHouseMap('woodFloorDark', { repeat: [6, 6], low });
+        const marbleMap = makeHouseMap('marble', { repeat: [2.5, 3], low });
         const concreteMap = makeHouseMap('concrete', { repeat: [5, 5], low });
         const artDomainMap = makeHouseMap('artDomain', { low });
         const artAsWithinMap = makeHouseMap('artAsWithin', { low });
@@ -85,6 +89,11 @@ export function useHouseMaterials(low = false) {
                 toneMapped: false,
             }, 0.22),
             tile: mk(tileMap, '#a898b8', { roughness: 0.5, metalness: 0.14 }, 0.48),
+            /** Per-room flooring — kitchen tile, bedroom carpet, library boards, entry marble */
+            tileKitchen: mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5),
+            carpet: mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9),
+            woodFloorDark: mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74),
+            marble: mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3),
             concrete: mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72),
             artDomain: mk(artDomainMap, '#ffffff', {
                 roughness: 0.55,
