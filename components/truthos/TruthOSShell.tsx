@@ -34,12 +34,9 @@ import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import AuthModal from '@/components/AuthModal';
-import {
-    OsAppButton,
-    OsHomeCard,
-    OsIconTile,
-    OsTaskbarItem,
-} from './OsIcon';
+import { OsAppButton, OsIconTile, OsTaskbarItem } from './OsIcon';
+import OsHome from './OsHome';
+import OsAmbient from './OsAmbient';
 import OsWindowFrame from './OsWindowFrame';
 import { useOsSystem } from './osSystemStore';
 import { resolveWallpaper } from './osWallpapers';
@@ -93,20 +90,6 @@ const APPS: DockItem[] = [
     { app: 'settings', label: 'Settings', guestOk: true },
     { app: 'chamber', label: 'Leave', guestOk: true },
     { app: 'admin', label: 'Admin', adminOnly: true },
-];
-
-/** Hut stations shown as home-screen bento cards */
-const HUT_HOME: { app: OsAppId; title: string; blurb: string; span?: string }[] = [
-    { app: 'truth', title: 'Truth Guide', blurb: 'AI brother · scripture · OS help', span: 'sm:col-span-2 sm:row-span-2' },
-    { app: 'ledger', title: 'Ledger', blurb: 'Daily Word · souls' },
-    { app: 'soul', title: 'Soul', blurb: 'Vessel · identity' },
-    { app: 'arcade', title: 'Arcade', blurb: 'Games · scores' },
-    { app: 'archive', title: 'The Hall', blurb: 'Community chat' },
-    { app: 'library', title: 'Library', blurb: 'Scrolls · study' },
-    { app: 'media', title: 'Media Player', blurb: 'Cutscene reels' },
-    { app: 'visions', title: 'Visions', blurb: 'Roads · cinema' },
-    { app: 'offering', title: 'Offering', blurb: 'Sustain the work' },
-    { app: 'updates', title: 'Updates', blurb: 'Dispatches' },
 ];
 
 /** Desktop shortcut rail (visible behind windows, desktop only) */
@@ -201,6 +184,7 @@ export default function TruthOSShell({
     const overlay = useOsSystem((s) => s.overlay);
     const setOverlay = useOsSystem((s) => s.setOverlay);
     const snapshot = useOsSystem((s) => s.snapshot);
+    const accent = useOsSystem((s) => s.accent);
 
     const [hour, setHour] = useState(() => new Date().getHours());
     const [bootLine, setBootLine] = useState(0);
@@ -565,17 +549,9 @@ export default function TruthOSShell({
                 className={`pointer-events-none absolute inset-0 ${phone ? '' : 'scale-105'}`}
                 style={{ background: wallpaper.css }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_50%_0%,rgba(16,185,129,0.14),transparent_55%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_80%_20%,rgba(56,189,248,0.1),transparent_50%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/75" />
-            <div
-                className="pointer-events-none absolute inset-0 opacity-[0.06] max-sm:opacity-[0.04]"
-                style={{
-                    backgroundImage:
-                        'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-                    backgroundSize: '48px 48px',
-                }}
-            />
+            {/* Living layer: drifting aurora, parallax, grain */}
+            <OsAmbient accent={accent} phone={phone} />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 
             {/* Desktop workspace (above taskbar) */}
             <div
@@ -617,7 +593,7 @@ export default function TruthOSShell({
                     </div>
                 )}
 
-                {/* HOME: Hut bento (always under windows) */}
+                {/* HOME (always under windows) */}
                 {openWindows.length === 0 && (
                     <div
                         className="absolute inset-0 z-[1] overflow-y-auto overscroll-contain p-3 sm:p-5"
@@ -634,95 +610,16 @@ export default function TruthOSShell({
                             if (ctxMenu) setCtxMenu(null);
                         }}
                     >
-                        <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-8">
-                            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono font-semibold">
-                                        Truth.OS 3.0 · Home
-                                    </p>
-                                    <h1 className="text-xl sm:text-3xl font-semibold text-white mt-1 tracking-tight drop-shadow-md">
-                                        The Hut
-                                    </h1>
-                                    <p className="text-[13px] sm:text-sm text-white/75 mt-1 max-w-lg leading-relaxed line-clamp-2 sm:line-clamp-none">
-                                        Open a card to launch a program. Right-click the desktop or explore the tray for more.
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl border border-white/15 bg-black/55 sm:backdrop-blur-xl backdrop-blur-md px-3.5 py-3 shrink-0 shadow-xl ring-1 ring-white/5 w-full sm:w-auto">
-                                    <p className="text-[9px] uppercase tracking-[0.28em] text-emerald-300/90 font-mono">
-                                        {email ? 'Signed in' : 'Guest'}
-                                    </p>
-                                    <p className="text-[12px] text-white/80 mt-0.5 max-w-[240px] sm:max-w-[200px] truncate">
-                                        {email
-                                            ? email
-                                            : 'Sign in for Ledger, Soul, Arcade & more.'}
-                                    </p>
-                                    {!email && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setAuthPrompt(true);
-                                                sacredUi.click();
-                                            }}
-                                            className="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-black text-[12px] font-bold min-h-[44px] shadow-[0_0_20px_rgba(52,211,153,0.35)] touch-manipulation"
-                                        >
-                                            Sign in with Google
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Hut stations bento */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 auto-rows-[minmax(100px,auto)]">
-                                {HUT_HOME.filter(
-                                    (c) => !APPS.find((a) => a.app === c.app)?.adminOnly || isAdmin,
-                                ).map((card) => (
-                                    <OsHomeCard
-                                        key={card.app}
-                                        app={card.app}
-                                        title={card.title}
-                                        blurb={card.blurb}
-                                        span={phone ? undefined : card.span}
-                                        onClick={() => launch(card.app)}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Programs strip */}
-                            <div>
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-white/55 font-mono mb-2 px-0.5 font-semibold">
-                                    Programs
-                                </p>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                                    {(
-                                        [
-                                            ['browser', 'Browser'],
-                                            ['media', 'Media'],
-                                            ['music', 'Music'],
-                                            ['photos', 'Photos'],
-                                            ['tasks', 'To-Do'],
-                                            ['terminal', 'Terminal'],
-                                            ['files', 'Files'],
-                                            ['clock', 'Clock'],
-                                            ['taskmgr', 'Tasks'],
-                                            ['calculator', 'Calc'],
-                                            ['paint', 'Paint'],
-                                            ['notepad', 'Notes'],
-                                            ['settings', 'Settings'],
-                                            ['chamber', 'Leave'],
-                                        ] as const
-                                    ).map(([app, label]) => (
-                                        <OsAppButton
-                                            key={app}
-                                            app={app}
-                                            label={label}
-                                            open={openAppIds.has(app)}
-                                            compact={phone}
-                                            onClick={() => launch(app)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                        <OsHome
+                            email={email}
+                            isAdmin={isAdmin}
+                            phone={phone}
+                            onLaunch={launch}
+                            onSignIn={() => {
+                                setAuthPrompt(true);
+                                sacredUi.click();
+                            }}
+                        />
                     </div>
                 )}
 
