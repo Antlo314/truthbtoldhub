@@ -29,6 +29,8 @@ import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
 import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
+import { VaultApp } from './VaultApp';
+import { JourneyApp } from './JourneyApp';
 import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
 import { Lock } from 'lucide-react';
@@ -654,6 +656,10 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <MusicApp />;
         case 'tasks':
             return <TasksApp />;
+        case 'vault':
+            return <VaultApp />;
+        case 'journey':
+            return <JourneyApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:

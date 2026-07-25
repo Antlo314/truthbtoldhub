@@ -69,6 +69,8 @@ const APPS: DockItem[] = [
     { app: 'truth', label: 'Guide', guestOk: true },
     { app: 'ledger', label: 'Ledger' },
     { app: 'soul', label: 'Soul' },
+    { app: 'journey', label: 'Journey' },
+    { app: 'vault', label: 'Vault' },
     { app: 'arcade', label: 'Arcade' },
     { app: 'offering', label: 'Offering' },
     { app: 'archive', label: 'Hall', guestOk: true },
