@@ -3,8 +3,15 @@ import { NextResponse, NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static assets that live under public/ (e.g. /cineworks/poster1.png)
-  if (/\.(?:png|jpe?g|gif|webp|svg|ico|mp3|mp4|woff2?|css|js|json|txt|html|wasm|unityweb)$/i.test(pathname)) {
+  // Allow static assets that live under public/ (e.g. /cineworks/poster1.png).
+  // 3D model + audio formats must be listed here too: anything missing falls
+  // through to the auth redirect below and silently returns the app's HTML
+  // instead of the asset, which makes models look "loaded" but parse as junk.
+  if (
+    /\.(?:png|jpe?g|gif|webp|avif|svg|ico|mp3|wav|ogg|m4a|mp4|webm|woff2?|ttf|otf|css|js|mjs|json|txt|html|wasm|unityweb|glb|gltf|bin|hdr|exr|ktx2|draco)$/i.test(
+      pathname,
+    )
+  ) {
     return NextResponse.next();
   }
 

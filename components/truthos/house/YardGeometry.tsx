@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import { YARD } from './houseMap';
+import HouseProp from './HouseProp';
 
 function MatBox({
     pos,
@@ -452,13 +453,34 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             <LanternPost x={YARD.lanternR.x} z={YARD.lanternR.z} sh={sh} m={m} lit={!low} />
 
             {/* Trees clear of house shell (canopy margin ≥1m past walls at ±13.8 / ±12.5) */}
-            {YARD.trees.map((t, i) =>
-                low && i >= 4 ? null : (
-                    <Tree key={`t-${i}`} x={t.x} z={t.z} scale={0.9 + (i % 3) * 0.08} sh={sh} m={m} low={low} />
-                ),
-            )}
+            {YARD.trees.map((t, i) => {
+                if (low && i >= 4) return null;
+                // Rotate each tree so a small kit doesn't read as copy-paste
+                const kind = ['treeDefault', 'treeOak', 'treeDetailed'][i % 3];
+                return (
+                    <HouseProp
+                        key={`t-${i}`}
+                        model={kind}
+                        position={[t.x, 0, t.z]}
+                        rotation={[0, (i * 1.37) % (Math.PI * 2), 0]}
+                        shadows={sh}
+                    >
+                        <Tree x={t.x} z={t.z} scale={0.9 + (i % 3) * 0.08} sh={sh} m={m} low={low} />
+                    </HouseProp>
+                );
+            })}
             {YARD.bushes.map((b, i) =>
-                low && i >= 3 ? null : <Bush key={`b-${i}`} x={b.x} z={b.z} scale={0.7 + b.r} m={m} />,
+                low && i >= 3 ? null : (
+                    <HouseProp
+                        key={`b-${i}`}
+                        model="bush"
+                        position={[b.x, 0, b.z]}
+                        rotation={[0, (i * 2.11) % (Math.PI * 2), 0]}
+                        shadows={sh}
+                    >
+                        <Bush x={b.x} z={b.z} scale={0.7 + b.r} m={m} />
+                    </HouseProp>
+                ),
             )}
 
             {/* Back yard */}

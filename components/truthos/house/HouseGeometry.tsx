@@ -11,6 +11,7 @@ import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import { FURN, WALL_H, WALL_RUNS, type WallRun } from './houseMap';
 import CinemaScreen from './CinemaScreen';
 import HouseTrim from './HouseTrim';
+import HouseProp from './HouseProp';
 
 const SEGS = 12;
 
@@ -540,13 +541,37 @@ export default function HouseGeometry({
                 </group>
             )}
 
-            {/* ── LIVING — clear side aisles to back door (x≈-3.25) ── */}
-            <StagedSofa x={FURN.sofa.x} z={FURN.sofa.z} sh={sh} m={m} />
-            <CoffeeTable x={FURN.coffee.x} z={FURN.coffee.z} sh={sh} m={m} />
-            <MediaWall x={FURN.media.x} z={FURN.media.z} sh={sh} m={m} rich={rich} />
+            {/* ── LIVING — clear side aisles to back door (x≈-3.25) ──
+                Each prop is a CC0 model that falls back to its procedural mesh. */}
+            <HouseProp model="sofa" position={[FURN.sofa.x, 0, FURN.sofa.z]} rotation={[0, Math.PI, 0]}>
+                <StagedSofa x={FURN.sofa.x} z={FURN.sofa.z} sh={sh} m={m} />
+            </HouseProp>
+            <HouseProp model="coffeeTable" position={[FURN.coffee.x, 0, FURN.coffee.z]}>
+                <CoffeeTable x={FURN.coffee.x} z={FURN.coffee.z} sh={sh} m={m} />
+            </HouseProp>
+            <HouseProp
+                model="mediaConsole"
+                position={[FURN.media.x, 0, FURN.media.z]}
+                rotation={[0, -Math.PI / 2, 0]}
+            >
+                <MediaWall x={FURN.media.x} z={FURN.media.z} sh={sh} m={m} rich={rich} />
+            </HouseProp>
+            <HouseProp
+                model="television"
+                position={[FURN.media.x - 0.16, 0.62, FURN.media.z]}
+                rotation={[0, -Math.PI / 2, 0]}
+            >
+                <group />
+            </HouseProp>
             {/* Offering against west living partition face */}
             <ConsoleTable x={FURN.offering.x} z={FURN.offering.z} sh={sh} m={m} rotY={Math.PI / 2} />
-            <AccentChair x={FURN.chair.x} z={FURN.chair.z} sh={sh} m={m} rotY={-0.9} />
+            <HouseProp
+                model="accentChair"
+                position={[FURN.chair.x, 0, FURN.chair.z]}
+                rotation={[0, -0.9 + Math.PI, 0]}
+            >
+                <AccentChair x={FURN.chair.x} z={FURN.chair.z} sh={sh} m={m} rotY={-0.9} />
+            </HouseProp>
             <Fireplace mats={m} low={low} rich={rich} />
             {/* Mantel accents */}
             {rich && (
@@ -561,6 +586,16 @@ export default function HouseGeometry({
                 <planeGeometry args={[3.9, 3.4]} />
                 <primitive object={m.tile} attach="material" />
             </mesh>
+            {/* Base run: stove · sink under the window · cabinet (CC0 models) */}
+            <HouseProp model="kitchenStove" position={[3.0, 0, -11.9]} rotation={[0, Math.PI, 0]}>
+                <group />
+            </HouseProp>
+            <HouseProp model="kitchenSink" position={[3.9, 0, -11.9]} rotation={[0, Math.PI, 0]}>
+                <group />
+            </HouseProp>
+            <HouseProp model="kitchenCabinet" position={[4.76, 0, -11.9]} rotation={[0, Math.PI, 0]}>
+                <group />
+            </HouseProp>
             {/* Base cabinets + stone counter top */}
             <MatBox pos={[3.75, 0.45, -11.95]} size={[2.9, 0.9, 0.66]} material={m.woodDark} shadows={sh} />
             <MatBox pos={[3.75, 0.93, -11.93]} size={[3.0, 0.06, 0.74]} material={m.stone} shadows={sh} />
@@ -582,15 +617,23 @@ export default function HouseGeometry({
             <MatBox pos={[2.85, 2.2, -12.14]} size={[0.62, 0.7, 0.36]} material={m.wood} shadows={sh} />
             <MatBox pos={[4.925, 2.2, -12.14]} size={[0.55, 0.7, 0.36]} material={m.wood} shadows={sh} />
             {/* Fridge */}
-            <MatBox pos={[5.66, 1.0, -11.9]} size={[0.78, 2.0, 0.78]} material={m.metal} shadows={sh} />
-            <MatBox pos={[5.30, 1.25, -11.62]} size={[0.05, 0.7, 0.06]} material={m.metalDark} shadows={false} />
+            <HouseProp model="fridge" position={[5.55, 0, -11.9]} rotation={[0, Math.PI, 0]}>
+                <>
+                    <MatBox pos={[5.66, 1.0, -11.9]} size={[0.78, 2.0, 0.78]} material={m.metal} shadows={sh} />
+                    <MatBox pos={[5.30, 1.25, -11.62]} size={[0.05, 0.7, 0.06]} material={m.metalDark} shadows={false} />
+                </>
+            </HouseProp>
             {/* Dining nook — pedestal table + two chairs */}
             <MatCyl pos={[3.6, 0.76, -9.7]} r={0.6} h={0.05} material={m.wood} shadows={sh} segs={rich ? 18 : 12} />
             <MatCyl pos={[3.6, 0.38, -9.7]} r={0.09} h={0.72} material={m.woodDark} shadows={false} segs={8} />
             <MatCyl pos={[3.6, 0.03, -9.7]} r={0.32} h={0.06} material={m.woodDark} shadows={false} segs={12} />
             {rich && <MatCyl pos={[3.6, 0.83, -9.7]} r={0.14} h={0.1} material={m.gold} shadows={false} segs={8} />}
-            <DiningChair x={2.75} z={-9.45} rotY={1.86} m={m} sh={sh} />
-            <DiningChair x={4.45} z={-9.95} rotY={-1.29} m={m} sh={sh} />
+            <HouseProp model="diningChair" position={[2.75, 0, -9.45]} rotation={[0, 1.86, 0]}>
+                <DiningChair x={2.75} z={-9.45} rotY={1.86} m={m} sh={sh} />
+            </HouseProp>
+            <HouseProp model="diningChair" position={[4.45, 0, -9.95]} rotation={[0, -1.29, 0]}>
+                <DiningChair x={4.45} z={-9.95} rotY={-1.29} m={m} sh={sh} />
+            </HouseProp>
             {/* Pendant over the table */}
             {rich && (
                 <group position={[3.6, 0, -9.7]}>
@@ -631,8 +674,12 @@ export default function HouseGeometry({
                     <MatCyl key={i} pos={[lx, 0.1, lz]} r={0.045} h={0.18} material={m.woodDark} shadows={false} segs={6} />
                 ))}
             </group>
-            <Nightstand x={-5.79} z={7.3} sh={sh} m={m} />
-            <Nightstand x={-5.79} z={9.9} sh={sh} m={m} />
+            <HouseProp model="nightstand" position={[-5.79, 0, 7.3]}>
+                <Nightstand x={-5.79} z={7.3} sh={sh} m={m} />
+            </HouseProp>
+            <HouseProp model="nightstand" position={[-5.79, 0, 9.9]}>
+                <Nightstand x={-5.79} z={9.9} sh={sh} m={m} />
+            </HouseProp>
             {/* Dresser under the south window (below the sill) */}
             <MatBox pos={[-3.9, 0.5, 11.95]} size={[1.5, 1.0, 0.52]} material={m.wood} shadows={sh} />
             <MatBox pos={[-3.9, 1.03, 11.95]} size={[1.56, 0.05, 0.56]} material={m.woodDark} shadows={false} />
@@ -679,7 +726,12 @@ export default function HouseGeometry({
             </group>
 
             {/* ── EAST WING ── */}
-            <Desk pos={[FURN.studyDesk.x, 0, FURN.studyDesk.z]} sh={sh} rich={rich} m={m} chairSign={1} />
+            <HouseProp model="desk" position={[FURN.studyDesk.x, 0, FURN.studyDesk.z]}>
+                <Desk pos={[FURN.studyDesk.x, 0, FURN.studyDesk.z]} sh={sh} rich={rich} m={m} chairSign={1} />
+            </HouseProp>
+            <HouseProp model="deskChair" position={[FURN.studyChair.x, 0, FURN.studyChair.z]} rotation={[0, Math.PI, 0]}>
+                <group />
+            </HouseProp>
             <WallBookcase wallX={13.6} wallZ={-5.2} width={3.0} face="east" sh={sh} rich={rich} m={m} low={low} />
             {/* Cinema — frame + live screen (uploaded MP4s via CinemaScreen) */}
             <MatBox pos={[12.55, 0.4, 7.0]} size={[0.48, 0.7, 2.3]} material={m.woodDark} shadows={sh} />
