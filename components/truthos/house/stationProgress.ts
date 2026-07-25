@@ -46,6 +46,7 @@ export const STATION_LABELS: Record<HotspotId, string> = {
     back_door: 'Back door',
     front_bench: 'Porch bench',
     back_gate: 'Garden gate',
+    mailbox: 'Mailbox',
     fireplace: 'Fireplace',
 };
 

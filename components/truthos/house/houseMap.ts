@@ -23,7 +23,8 @@ export type HotspotId =
     | 'back_door'
     | 'front_bench'
     | 'back_gate'
-    | 'fireplace';
+    | 'fireplace'
+    | 'mailbox';
 
 export type Hotspot = {
     id: HotspotId;
@@ -327,6 +328,15 @@ export const HOTSPOTS: Hotspot[] = [
             type: 'soon',
             message: 'The back door is open. The garden waits on the other side.',
         },
+    },
+    {
+        id: 'mailbox',
+        label: 'Mailbox',
+        hint: "Today's paper",
+        // Beside the front gate, on the walk out to the street
+        position: [YARD.mailbox.x, 1.1, YARD.mailbox.z - 0.9],
+        radius: 1.15,
+        action: { type: 'panel', panel: 'news' },
     },
     {
         id: 'front_bench',

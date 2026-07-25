@@ -10,6 +10,7 @@ import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import { YARD } from './houseMap';
 import HouseProp from './HouseProp';
+import { usePaperWaiting } from './usePaperWaiting';
 
 function MatBox({
     pos,
@@ -386,6 +387,8 @@ function Gate({ x, z, m, sh }: { x: number; z: number; m: HouseMaterials; sh: bo
 }
 
 export default function YardGeometry({ low = false }: { low?: boolean }) {
+    // Flag stands while today's edition hasn't been read
+    const paperWaiting = usePaperWaiting();
     const m = useHouseMaterials(low);
     const sh = !low;
 
@@ -439,12 +442,23 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             {/* Front gate at the walk */}
             <Gate x={YARD.frontGate.x} z={YARD.frontGate.z} m={m} sh={sh} />
 
-            {/* Mailbox beside the front gate */}
+            {/* Mailbox beside the front gate — today's paper is in it.
+                The flag stands up while an edition is unread, which is the
+                only cue the player gets that the world moved overnight. */}
             <group position={[YARD.mailbox.x, 0, YARD.mailbox.z]} rotation={[0, -0.2, 0]}>
                 <MatCyl pos={[0, 0.5, 0]} r={0.05} h={1.0} material={m.woodDark} shadows={sh} segs={6} />
                 <MatBox pos={[0, 1.12, 0]} size={[0.32, 0.28, 0.5]} material={m.metal} shadows={sh} />
                 <MatBox pos={[0, 1.12, -0.26]} size={[0.3, 0.26, 0.03]} material={m.metalDark} shadows={false} />
-                <MatBox pos={[0.18, 1.28, 0.1]} size={[0.03, 0.18, 0.04]} material={m.ember} shadows={false} />
+                {/* Signal flag — up when unread */}
+                <group position={[0.18, 1.2, 0.06]} rotation={[0, 0, paperWaiting ? 0 : -1.35]}>
+                    <MatCyl pos={[0, 0.1, 0]} r={0.012} h={0.2} material={m.metalDark} shadows={false} segs={5} />
+                    <MatBox pos={[0, 0.2, 0]} size={[0.03, 0.1, 0.09]} material={m.ember} shadows={false} />
+                </group>
+                {/* Rolled paper poking out of the slot */}
+                <group position={[0, 1.1, 0.3]} rotation={[Math.PI / 2, 0, 0.25]}>
+                    <MatCyl pos={[0, 0, 0]} r={0.055} h={0.34} material={m.book} shadows={false} segs={8} />
+                    <MatCyl pos={[0, 0.005, 0]} r={0.03} h={0.35} material={m.fabricLight} shadows={false} segs={6} />
+                </group>
             </group>
 
             {/* Birdbath in the west front yard */}

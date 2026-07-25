@@ -9,6 +9,7 @@ import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
 import CinemaPanel from './CinemaPanel';
+import NewspaperPanel from './NewspaperPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { hubAudio } from '@/lib/truthos/hubAudio';
@@ -23,7 +24,7 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
 });
 
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema'>,
+    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema' | 'news'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
@@ -223,6 +224,7 @@ export default function HousePanels() {
     if (panel === 'wayfinder') return <WayfinderNative onClose={onClose} />;
     if (panel === 'arcade') return <ArcadePanel onClose={onClose} />;
     if (panel === 'cinema') return <CinemaPanel onClose={onClose} />;
+    if (panel === 'news') return <NewspaperPanel onClose={onClose} />;
     if (panel in PANEL_META) {
         return <FramePanel id={panel as keyof typeof PANEL_META} onClose={onClose} />;
     }

@@ -13,7 +13,8 @@ export type HousePanelId =
     | 'hall'
     | 'offering'
     | 'studio'
-    | 'arcade';
+    | 'arcade'
+    | 'news';
 
 type HouseUiState = {
     panel: HousePanelId | null;
