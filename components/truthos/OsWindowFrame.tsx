@@ -6,7 +6,7 @@
  * maximize button for Windows-11-style snap layouts, 8-way resize.
  */
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { BentoSlot, OsAppId } from './truthOsStore';
 import { ACCENT_STYLES, OsIconTile, getAppAccent } from './OsIcon';
 
@@ -104,6 +104,8 @@ export default function OsWindowFrame({
     const [layoutsOpen, setLayoutsOpen] = useState(false);
     const layoutsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const reduceMotion = useReducedMotion();
+    const [dragging, setDragging] = useState(false);
     const narrow = phone || (typeof window !== 'undefined' && window.innerWidth < 768);
     const accentId = getAppAccent(app);
     const accentStyle = ACCENT_STYLES[accentId];
@@ -218,10 +220,15 @@ export default function OsWindowFrame({
             <motion.div
                 ref={frameRef}
                 data-os-window
-                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.965, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                transition={{ duration: 0.16, ease: 'easeOut' }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 8 }}
+                transition={
+                    reduceMotion
+                        ? { duration: 0.12 }
+                        : // Spring reads as weight rather than a timed fade
+                          { type: 'spring', stiffness: 520, damping: 38, mass: 0.7 }
+                }
                 className={`flex flex-col overflow-hidden border shadow-2xl ${
                     narrow ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'
                 } ${borderCls} ${focused ? 'shadow-black/60' : 'opacity-[0.97]'} ${
@@ -243,6 +250,7 @@ export default function OsWindowFrame({
                     onPointerDown={(e) => {
                         if (narrow || maximized || bento) return;
                         drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
+                        setDragging(true);
                         const move = (ev: PointerEvent) => {
                             if (!drag.current) return;
                             onMove(
@@ -260,6 +268,7 @@ export default function OsWindowFrame({
                         };
                         const up = () => {
                             drag.current = null;
+                            setDragging(false);
                             window.removeEventListener('pointermove', move);
                             window.removeEventListener('pointerup', up);
                             const zone = edgeZoneRef.current;
