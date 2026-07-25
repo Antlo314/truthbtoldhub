@@ -131,6 +131,26 @@ export const HOUSE_MODELS: Record<string, ModelEntry> = {
     fenceGate: kenney('fence_gate', { w: 2.6 }),
 };
 
+/* ── Neighbourhood ──────────────────────────────────────────
+ * Kenney City Kit (Suburban) + Car Kit, both CC0. Houses are fitted by
+ * height per plot in townMap, so the entry omits `fit` and the call site
+ * supplies it — a row of different models still reads as a row of houses.
+ */
+const TOWN_LICENCE = 'Kenney City Kit Suburban / Car Kit (kenney.nl) — CC0';
+for (const t of 'abcdefghijklmnopqrstu'.split('')) {
+    HOUSE_MODELS[`town_${t}`] = {
+        url: `/models/town/building-type-${t}.glb`,
+        licence: 'CC0',
+        source: TOWN_LICENCE,
+    };
+}
+HOUSE_MODELS.carA = { url: '/models/town/sedan.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { w: 4.3 } };
+HOUSE_MODELS.carB = { url: '/models/town/suv-luxury.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { w: 4.7 } };
+HOUSE_MODELS.carC = { url: '/models/town/hatchback-sports.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { w: 4.1 } };
+HOUSE_MODELS.carD = { url: '/models/town/sedan-sports.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { w: 4.4 } };
+HOUSE_MODELS.townTree = { url: '/models/town/tree-large.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { h: 6.5 } };
+HOUSE_MODELS.planter = { url: '/models/town/planter.glb', licence: 'CC0', source: TOWN_LICENCE, fit: { w: 1.6 } };
+
 /** Attribution lines for every non-CC0, non-original model actually in use */
 export function requiredCredits(): string[] {
     return Object.values(HOUSE_MODELS)

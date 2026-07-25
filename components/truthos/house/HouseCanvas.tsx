@@ -4,6 +4,8 @@ import { useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, Stars } from '@react-three/drei';
 import DayNightCycle from './DayNightCycle';
+import TownGeometry from './TownGeometry';
+import Neighbours from './Neighbours';
 import LampGroup from './LampGroup';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
@@ -156,6 +158,10 @@ export default function HouseCanvas({
                     </>
                 )}
                 </LampGroup>
+
+                {/* The neighbourhood beyond the fence */}
+                <TownGeometry low={mobile} />
+                <Neighbours low={mobile} />
 
                 <YardGeometry low={mobile} />
                 <HouseGeometry low={mobile} cinematic={!mobile} />

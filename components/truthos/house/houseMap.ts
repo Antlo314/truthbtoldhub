@@ -5,6 +5,7 @@
  */
 
 import type { HousePanelId } from './houseUiStore';
+import { TOWN_COLLIDERS } from './townMap';
 
 export type HotspotId =
     | 'computer'
@@ -38,10 +39,10 @@ export type Hotspot = {
 
 /** Interior shell ~±13.8 · yards extend beyond N/S doors · side wrap for full loop */
 export const HOUSE_BOUNDS = {
-    minX: -17.6,
-    maxX: 17.6,
-    minZ: -21.4,
-    maxZ: 21.4,
+    minX: -96,
+    maxX: 96,
+    minZ: -30,
+    maxZ: 54,
 };
 
 /** Outer shell planes + partition thickness (single source for mesh + colliders) */
@@ -523,7 +524,10 @@ export const COLLIDERS: Collider[] = [
     { x: YARD.shed.x, z: YARD.shed.z, hx: 1.5, hz: 1.25 },
     { x: YARD.mailbox.x, z: YARD.mailbox.z, hx: 0.18, hz: 0.18 },
     { x: YARD.birdbath.x, z: YARD.birdbath.z, hx: 0.3, hz: 0.3 },
-    { x: YARD.frontGate.x, z: YARD.frontGate.z, hx: 1.45, hz: 0.16 },
+    // Front gate stands open — only its posts block, so the walk to the
+    // street stays passable. A solid leaf here would fence the player in.
+    { x: YARD.frontGate.x - 1.3, z: YARD.frontGate.z, hx: 0.16, hz: 0.16 },
+    { x: YARD.frontGate.x + 1.3, z: YARD.frontGate.z, hx: 0.16, hz: 0.16 },
     // Fence (front run split around the gate)
     { x: 0, z: -21.55, hx: 18.0, hz: 0.18 },
     { x: -7.9, z: 21.55, hx: 10.1, hz: 0.18 },
@@ -542,6 +546,8 @@ export const COLLIDERS: Collider[] = [
     { x: YARD.firePit.x, z: YARD.firePit.z, hx: 0.72, hz: 0.72 },
     ...YARD.trees.map((t) => ({ x: t.x, z: t.z, hx: t.r, hz: t.r })),
     ...YARD.bushes.map((b) => ({ x: b.x, z: b.z, hx: b.r, hz: b.r })),
+    // Neighbourhood beyond the fence — houses, parked cars, street lamps
+    ...TOWN_COLLIDERS,
 ];
 
 const PLAYER_R = 0.34;
