@@ -330,6 +330,37 @@ function Meadow({ m }: { m: HouseMaterials }) {
     );
 }
 
+/**
+ * Modelled exterior dressing. Every entry is clear of the walk paths, the
+ * house footprint and the fire-pit ring, so nothing blocks a route the
+ * player actually uses.
+ */
+const EXTERIOR_SCATTER: { model: string; x: number; z: number; r: number }[] = [
+    // Front garden — either side of the walk to the gate
+    { model: 'rock', x: -6.4, z: 15.2, r: 0.4 },
+    { model: 'stone', x: -7.6, z: 18.4, r: 1.9 },
+    { model: 'bushSmall', x: -7.2, z: 13.6, r: 0.0 },
+    { model: 'bushLarge', x: 7.4, z: 15.4, r: 2.2 },
+    { model: 'flowerPurple', x: -4.2, z: 16.2, r: 0.0 },
+    { model: 'flowerYellow', x: -5.2, z: 17.1, r: 0.7 },
+    { model: 'flowerRed', x: 6.2, z: 17.2, r: 1.2 },
+    { model: 'grassTuft', x: 8.6, z: 13.9, r: 0.5 },
+    { model: 'grassLarge', x: -9.4, z: 14.8, r: 2.7 },
+    // Back garden — around the fire circle and beds
+    { model: 'rock', x: -3.4, z: -18.6, r: 1.1 },
+    { model: 'stone', x: 4.2, z: -18.9, r: 0.3 },
+    { model: 'bushSmall', x: -8.6, z: -15.4, r: 0.9 },
+    { model: 'bushLarge', x: 8.2, z: -16.2, r: 2.4 },
+    { model: 'flowerYellow', x: -6.6, z: -17.8, r: 0.0 },
+    { model: 'flowerPurple', x: 6.4, z: -18.4, r: 1.6 },
+    { model: 'grassLarge', x: -10.6, z: -13.4, r: 0.8 },
+    { model: 'grassTuft', x: 10.2, z: -14.2, r: 2.1 },
+    // Side runs
+    { model: 'bushSmall', x: -16.2, z: 4.2, r: 0.6 },
+    { model: 'grassTuft', x: 16.4, z: -3.6, r: 1.4 },
+    { model: 'rock', x: 16.6, z: 10.4, r: 2.0 },
+];
+
 /** Flat stepping-stone discs — back step → fire pit, front walk → bench */
 const STEPPING_STONES: [number, number][] = [
     [-2.8, -14.1],
@@ -456,7 +487,7 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             {YARD.trees.map((t, i) => {
                 if (low && i >= 4) return null;
                 // Rotate each tree so a small kit doesn't read as copy-paste
-                const kind = ['treeDefault', 'treeOak', 'treeDetailed'][i % 3];
+                const kind = ['treeDefault', 'treeOak', 'treeDetailed', 'treeFat'][i % 4];
                 return (
                     <HouseProp
                         key={`t-${i}`}
@@ -487,6 +518,12 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
             <GardenBed x={YARD.bedW.x} z={YARD.bedW.z} w={2.2} d={1.1} m={m} sh={sh} />
             <GardenBed x={YARD.bedE.x} z={YARD.bedE.z} w={1.9} d={1.0} m={m} sh={sh} />
             <FirePit x={YARD.firePit.x} z={YARD.firePit.z} m={m} sh={sh} low={low} />
+            <HouseProp model="campfire" position={[YARD.firePit.x, 0.24, YARD.firePit.z]}>
+                <group />
+            </HouseProp>
+            <HouseProp model="logStack" position={[2.1, 0, -17.7]} rotation={[0, 0.4, 0]}>
+                <group />
+            </HouseProp>
             <Bench x={YARD.benchBack.x} z={YARD.benchBack.z} rotY={Math.PI * 0.85} sh={sh} m={m} />
 
             {/* Stepping stones — flat, walkable, no colliders */}
@@ -501,6 +538,22 @@ export default function YardGeometry({ low = false }: { low?: boolean }) {
                     segs={low ? 8 : 10}
                 />
             ))}
+
+            {/* Hero scatter — modelled rocks, tufts and blooms at chosen spots.
+                Hand-placed rather than mass-instanced so the draw-call cost
+                stays fixed; the instanced Meadow below still carries volume. */}
+            {!low &&
+                EXTERIOR_SCATTER.map((it, i) => (
+                    <HouseProp
+                        key={`sc-${i}`}
+                        model={it.model}
+                        position={[it.x, 0, it.z]}
+                        rotation={[0, it.r, 0]}
+                        shadows={false}
+                    >
+                        <group />
+                    </HouseProp>
+                ))}
 
             {/* Instanced grass tufts + flower patches (desktop) */}
             {!low && <Meadow m={m} />}

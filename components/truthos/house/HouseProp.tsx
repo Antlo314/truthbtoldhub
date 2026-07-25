@@ -94,14 +94,41 @@ export const HOUSE_MODELS: Record<string, ModelEntry> = {
     keyboard: kenney('computerKeyboard', { w: 0.42 }),
     bookcase: kenney('bookcaseOpen', { h: 2.4 }),
 
+    // ── Interior dressing ──
+    bookcaseClosed: kenney('bookcaseClosedWide', { h: 2.2 }),
+    booksStack: kenney('books', { w: 0.28 }),
+    tableLamp: kenney('lampRoundTable', { h: 0.52 }),
+    coffeeMachine: kenney('kitchenCoffeeMachine', { h: 0.34 }),
+    rangeHood: kenney('hoodModern', { w: 0.9 }),
+    kitchenDrawers: kenney('kitchenCabinetDrawer', { h: 0.9 }),
+    barStool: kenney('stoolBar', { h: 0.72 }),
+    trashcan: kenney('trashcan', { h: 0.62 }),
+    mouse: kenney('computerMouse', { w: 0.11 }),
+    bedsideTable: kenney('cabinetBedDrawerTable', { w: 0.6 }),
+    throwPillow: kenney('pillow', { w: 0.44 }),
+    rugRect: kenney('rugRectangle', { w: 3.2 }),
+    rugRoundSm: kenney('rugRound', { w: 2.2 }),
+
     // ── Yard ──
     treeDefault: kenney('tree_default', { h: 4.2 }),
     treeOak: kenney('tree_oak', { h: 3.8 }),
     treeDetailed: kenney('tree_detailed', { h: 3.6 }),
+    treeFat: kenney('tree_fat', { h: 3.4 }),
     bush: kenney('plant_bushDetailed', { w: 1.1 }),
+    bushSmall: kenney('plant_bush', { w: 0.8 }),
+    bushLarge: kenney('plant_bushLarge', { w: 0.95 }),
     flowerPurple: kenney('flower_purpleA', { h: 0.45 }),
     flowerRed: kenney('flower_redA', { h: 0.45 }),
+    flowerYellow: kenney('flower_yellowA', { h: 0.42 }),
+    grassTuft: kenney('grass', { h: 0.4 }),
+    grassLarge: kenney('grass_large', { h: 0.5 }),
+    rock: kenney('rock_smallA', { w: 0.7 }),
+    stone: kenney('stone_smallA', { w: 0.6 }),
     logStack: kenney('log_stack', { w: 1.1 }),
+    campfire: kenney('campfire_logs', { w: 1.1 }),
+    fencePanel: kenney('fence_simple', { w: 2.0 }),
+    fenceCorner: kenney('fence_corner', { w: 2.0 }),
+    fenceGate: kenney('fence_gate', { w: 2.6 }),
 };
 
 /** Attribution lines for every non-CC0, non-original model actually in use */
