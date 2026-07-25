@@ -5,7 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, Stars } from '@react-three/drei';
 import DayNightCycle from './DayNightCycle';
 import TownGeometry from './TownGeometry';
-import Neighbours from './Neighbours';
+import DistantScenery from './DistantScenery';
 import LampGroup from './LampGroup';
 import * as THREE from 'three';
 import HouseGeometry from './HouseGeometry';
@@ -91,7 +91,7 @@ export default function HouseCanvas({
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
-                    far: mobile ? 72 : 130,
+                    far: mobile ? 340 : 620,
                     position: [4.55, 1.62, 6.35],
                 }}
                 onCreated={({ gl, camera }) => {
@@ -159,9 +159,9 @@ export default function HouseCanvas({
                 )}
                 </LampGroup>
 
-                {/* The neighbourhood beyond the fence */}
+                {/* The neighbourhood beyond the fence, and the land past it */}
                 <TownGeometry low={mobile} />
-                <Neighbours low={mobile} />
+                <DistantScenery low={mobile} />
 
                 <YardGeometry low={mobile} />
                 <HouseGeometry low={mobile} cinematic={!mobile} />

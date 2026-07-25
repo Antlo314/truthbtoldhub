@@ -96,8 +96,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.45,
         skyTint: [42, 46, 84],
         fogColor: [18, 16, 34],
-        fogNear: 16,
-        fogFar: 54,
+        fogNear: 30,
+        fogFar: 210,
     },
     {
         at: 5.2, // first light
@@ -110,8 +110,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.6,
         skyTint: [120, 88, 120],
         fogColor: [70, 52, 72],
-        fogNear: 14,
-        fogFar: 50,
+        fogNear: 26,
+        fogFar: 235,
     },
     {
         at: 7, // sunrise
@@ -124,8 +124,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.8,
         skyTint: [196, 150, 148],
         fogColor: [150, 128, 132],
-        fogNear: 20,
-        fogFar: 70,
+        fogNear: 42,
+        fogFar: 330,
     },
     {
         at: 12, // noon
@@ -138,8 +138,8 @@ const KEYS: Key[] = [
         hemiIntensity: 1.0,
         skyTint: [150, 194, 255],
         fogColor: [176, 200, 232],
-        fogNear: 30,
-        fogFar: 120,
+        fogNear: 70,
+        fogFar: 470,
     },
     {
         at: 17.5, // late afternoon
@@ -152,8 +152,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.82,
         skyTint: [206, 166, 158],
         fogColor: [162, 136, 134],
-        fogNear: 24,
-        fogFar: 88,
+        fogNear: 52,
+        fogFar: 380,
     },
     {
         at: 19.6, // sunset
@@ -166,8 +166,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.6,
         skyTint: [132, 88, 106],
         fogColor: [72, 50, 64],
-        fogNear: 16,
-        fogFar: 58,
+        fogNear: 32,
+        fogFar: 250,
     },
     {
         at: 21.5, // nightfall
@@ -180,8 +180,8 @@ const KEYS: Key[] = [
         hemiIntensity: 0.47,
         skyTint: [50, 52, 92],
         fogColor: [22, 20, 40],
-        fogNear: 16,
-        fogFar: 54,
+        fogNear: 30,
+        fogFar: 214,
     },
     { ...({} as Key), at: 24 }, // filled below — wraps to the 0h key
 ];
@@ -317,8 +317,8 @@ const WEATHER_CHAIN: Record<Weather, Weather[]> = {
 };
 
 export const useWorldTime = create<WorldTimeState>((set, get) => ({
-    // Start mid-morning so a first-time visitor sees the world lit
-    hour: 9.5,
+    // Open at dusk — lamps warming, sun low, the horizon at its best
+    hour: 18.9,
     dayLength: DEFAULT_DAY_LENGTH,
     paused: false,
     weather: 'clear',
