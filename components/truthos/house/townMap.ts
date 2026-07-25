@@ -138,24 +138,34 @@ export const ROUTES: Route[] = [
     ],
 ];
 
-/** Character models available for neighbours */
-export const PEOPLE = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+
+/** All 18 Kenney blocky characters are available as neighbours */
+export const PEOPLE = 'abcdefghijklmnopqr'.split('');
 
 /**
  * Neighbour roster. Fixed rather than random so the same faces walk the same
- * beats every visit — a neighbourhood you can learn.
+ * beats every visit — a neighbourhood you can learn. Speeds are deliberately
+ * uneven; the walk clip is time-scaled to match, so nobody skates.
  */
 export const NEIGHBOURS: { person: string; route: number; speed: number; offset: number }[] = [
-    { person: 'a', route: 0, speed: 1.25, offset: 0 },
-    { person: 'c', route: 0, speed: 1.05, offset: 0.55 },
-    { person: 'e', route: 1, speed: 1.35, offset: 0.2 },
-    { person: 'g', route: 1, speed: 1.15, offset: 0.7 },
+    { person: 'a', route: 0, speed: 1.25, offset: 0.0 },
+    { person: 'c', route: 0, speed: 1.05, offset: 0.34 },
+    { person: 'k', route: 0, speed: 1.32, offset: 0.68 },
+    { person: 'e', route: 1, speed: 1.35, offset: 0.15 },
+    { person: 'g', route: 1, speed: 1.12, offset: 0.55 },
+    { person: 'p', route: 1, speed: 0.98, offset: 0.82 },
     { person: 'b', route: 2, speed: 1.2, offset: 0.1 },
-    { person: 'i', route: 2, speed: 0.95, offset: 0.6 },
-    { person: 'd', route: 3, speed: 1.3, offset: 0.35 },
-    { person: 'f', route: 3, speed: 1.1, offset: 0.85 },
-    { person: 'h', route: 4, speed: 1.0, offset: 0.15 },
-    { person: 'j', route: 4, speed: 1.18, offset: 0.65 },
+    { person: 'i', route: 2, speed: 0.95, offset: 0.45 },
+    { person: 'm', route: 2, speed: 1.28, offset: 0.78 },
+    { person: 'd', route: 3, speed: 1.3, offset: 0.22 },
+    { person: 'f', route: 3, speed: 1.08, offset: 0.6 },
+    { person: 'q', route: 3, speed: 1.18, offset: 0.88 },
+    { person: 'h', route: 4, speed: 1.0, offset: 0.12 },
+    { person: 'j', route: 4, speed: 1.22, offset: 0.5 },
+    { person: 'n', route: 4, speed: 1.06, offset: 0.85 },
+    { person: 'l', route: 0, speed: 1.15, offset: 0.5 },
+    { person: 'o', route: 2, speed: 1.1, offset: 0.28 },
+    { person: 'r', route: 3, speed: 1.26, offset: 0.42 },
 ];
 
 export type Box = { x: number; z: number; hx: number; hz: number };
