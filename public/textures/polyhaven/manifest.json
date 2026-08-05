@@ -1,0 +1,114 @@
+{
+  "woodFloor": {
+    "slug": "wood_floor_deck",
+    "maps": {
+      "diff": "/textures/polyhaven/woodFloor_diff.jpg",
+      "nor": "/textures/polyhaven/woodFloor_nor.jpg",
+      "rough": "/textures/polyhaven/woodFloor_rough.jpg"
+    }
+  },
+  "woodDark": {
+    "slug": "dark_wood",
+    "maps": {
+      "diff": "/textures/polyhaven/woodDark_diff.jpg",
+      "nor": "/textures/polyhaven/woodDark_nor.jpg",
+      "rough": "/textures/polyhaven/woodDark_rough.jpg"
+    }
+  },
+  "plaster": {
+    "slug": "painted_plaster_wall",
+    "maps": {
+      "diff": "/textures/polyhaven/plaster_diff.jpg",
+      "nor": "/textures/polyhaven/plaster_nor.jpg",
+      "rough": "/textures/polyhaven/plaster_rough.jpg"
+    }
+  },
+  "stone": {
+    "slug": "stone_brick_wall_001",
+    "maps": {
+      "diff": "/textures/polyhaven/stone_diff.jpg",
+      "nor": "/textures/polyhaven/stone_nor.jpg",
+      "rough": "/textures/polyhaven/stone_rough.jpg"
+    }
+  },
+  "fabric": {
+    "slug": "fabric_pattern_07",
+    "maps": {
+      "diff": "/textures/polyhaven/fabric_diff.jpg",
+      "nor": "/textures/polyhaven/fabric_nor.jpg",
+      "rough": "/textures/polyhaven/fabric_rough.jpg"
+    }
+  },
+  "leather": {
+    "slug": "brown_leather",
+    "maps": {
+      "diff": "/textures/polyhaven/leather_diff.jpg",
+      "nor": "/textures/polyhaven/leather_nor.jpg",
+      "rough": "/textures/polyhaven/leather_rough.jpg"
+    }
+  },
+  "rug": {
+    "slug": "fabric_pattern_05",
+    "maps": {
+      "diff": "/textures/polyhaven/rug_diff.jpg",
+      "nor": "/textures/polyhaven/rug_nor.jpg",
+      "rough": "/textures/polyhaven/rug_rough.jpg"
+    }
+  },
+  "carpet": {
+    "slug": "curly_teddy_natural",
+    "maps": {
+      "diff": "/textures/polyhaven/carpet_diff.jpg",
+      "nor": "/textures/polyhaven/carpet_nor.jpg",
+      "rough": "/textures/polyhaven/carpet_rough.jpg"
+    }
+  },
+  "marble": {
+    "slug": "marble_01",
+    "maps": {
+      "diff": "/textures/polyhaven/marble_diff.jpg",
+      "nor": "/textures/polyhaven/marble_nor.jpg",
+      "rough": "/textures/polyhaven/marble_rough.jpg"
+    }
+  },
+  "grass": {
+    "slug": "grass_medium_01",
+    "maps": {
+      "diff": "/textures/polyhaven/grass_diff.jpg",
+      "nor": "/textures/polyhaven/grass_nor.jpg",
+      "rough": "/textures/polyhaven/grass_rough.jpg"
+    }
+  },
+  "path": {
+    "slug": "stone_tiles_02",
+    "maps": {
+      "diff": "/textures/polyhaven/path_diff.jpg",
+      "nor": "/textures/polyhaven/path_nor.jpg",
+      "rough": "/textures/polyhaven/path_rough.jpg"
+    }
+  },
+  "dirt": {
+    "slug": "brown_mud_leaves_01",
+    "maps": {
+      "diff": "/textures/polyhaven/dirt_diff.jpg",
+      "nor": "/textures/polyhaven/dirt_nor.jpg",
+      "rough": "/textures/polyhaven/dirt_rough.jpg"
+    }
+  },
+  "tile": {
+    "slug": "large_grey_tiles",
+    "maps": {
+      "diff": "/textures/polyhaven/tile_diff.jpg",
+      "nor": "/textures/polyhaven/tile_nor.jpg",
+      "rough": "/textures/polyhaven/tile_rough.jpg"
+    }
+  },
+  "concrete": {
+    "slug": "concrete_wall_004",
+    "maps": {
+      "diff": "/textures/polyhaven/concrete_diff.jpg",
+      "nor": "/textures/polyhaven/concrete_nor.jpg",
+      "rough": "/textures/polyhaven/concrete_rough.jpg"
+    }
+  }
+}

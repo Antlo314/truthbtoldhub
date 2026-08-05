@@ -58,16 +58,66 @@ export function useHouseMaterials(low = false) {
             });
         };
 
+        /**
+         * Progressive photo upgrade — CC0 PBR scans from Poly Haven
+         * (public/textures/polyhaven, pulled by scripts/fetch-polyhaven.mjs).
+         *
+         * The procedural canvas map paints frame one; the photo diffuse,
+         * normal and roughness swap in as each file arrives, so realism is
+         * an enhancement, never a loading screen. A missing file simply
+         * leaves the procedural look — the same graceful path `low` takes,
+         * which skips photos entirely (phones keep their small textures).
+         *
+         * The saturated art-direction tints were designed to colour NEUTRAL
+         * procedural maps; a photo already carries its own colour, so the
+         * tint eases most of the way to white on arrival — most for floors,
+         * least for the branded purple plaster.
+         */
+        const texLoader = new THREE.TextureLoader();
+        const photo = (
+            mat: THREE.MeshStandardMaterial,
+            key: string,
+            repeat: [number, number],
+            o: { normalScale?: number; keepTint?: number; aniso?: number } = {},
+        ) => {
+            if (low) return mat;
+            const wire = (slot: 'map' | 'normalMap' | 'roughnessMap', file: string, srgb = false) => {
+                texLoader.load(
+                    file,
+                    (t) => {
+                        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+                        t.repeat.set(repeat[0], repeat[1]);
+                        t.anisotropy = o.aniso ?? 8;
+                        if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+                        mat[slot] = t;
+                        if (slot === 'map') {
+                            mat.color.lerp(new THREE.Color('#ffffff'), 1 - (o.keepTint ?? 0.25));
+                        }
+                        mat.needsUpdate = true;
+                    },
+                    undefined,
+                    () => {
+                        /* keep the procedural look */
+                    },
+                );
+            };
+            wire('map', `/textures/polyhaven/${key}_diff.jpg`, true);
+            wire('normalMap', `/textures/polyhaven/${key}_nor.jpg`);
+            wire('roughnessMap', `/textures/polyhaven/${key}_rough.jpg`);
+            mat.normalScale.set(o.normalScale ?? 0.8, o.normalScale ?? 0.8);
+            return mat;
+        };
+
         return {
             wood: mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62),
-            woodDark: mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68),
-            woodFloor: mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72),
-            stone: mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78),
-            plaster: mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52),
-            rug: mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85),
-            fabric: mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72),
+            woodDark: photo(mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68), 'woodDark', [2.5, 2.5], { normalScale: 0.6, keepTint: 0.3 }),
+            woodFloor: photo(mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72), 'woodFloor', [10, 10], { normalScale: 0.7, aniso: 12, keepTint: 0.18 }),
+            stone: photo(mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78), 'stone', [6, 3.5], { normalScale: 1.0, keepTint: 0.2 }),
+            plaster: photo(mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52), 'plaster', [5, 3.5], { normalScale: 0.5, keepTint: 0.5 }),
+            rug: photo(mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85), 'rug', [2.5, 2.5], { normalScale: 0.7, keepTint: 0.4 }),
+            fabric: photo(mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72), 'fabric', [3, 3], { normalScale: 0.7, keepTint: 0.45 }),
             fabricLight: mk(fabricLightMap, '#bca8d4', { roughness: 0.9 }, 0.68),
-            leather: mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58),
+            leather: photo(mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58), 'leather', [2.5, 2.5], { normalScale: 0.8, keepTint: 0.25 }),
             metal: mk(metalMap, '#ccd0d8', { roughness: 0.24, metalness: 0.82 }, 0.38),
             metalDark: mk(metalDarkMap, '#8a8a98', { roughness: 0.34, metalness: 0.74 }, 0.42),
             gold: mk(goldMap, '#ffe08a', {
@@ -78,9 +128,9 @@ export function useHouseMaterials(low = false) {
             }, 0.32),
             book: mk(bookMap, '#d0b0c0', { roughness: 0.8 }, 0.55),
             leaf: mk(leafMap, '#88c898', { roughness: 0.88 }, 0.6),
-            grass: mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82),
-            path: mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75),
-            dirt: mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88),
+            grass: photo(mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82), 'grass', [14, 14], { normalScale: 0.9, aniso: 12, keepTint: 0.3 }),
+            path: photo(mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75), 'path', [6, 10], { normalScale: 1.0, keepTint: 0.15 }),
+            dirt: photo(mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88), 'dirt', [4, 4], { normalScale: 0.9, keepTint: 0.25 }),
             screen: mk(screenMap, '#88e8f8', {
                 roughness: 0.16,
                 metalness: 0.28,
@@ -88,13 +138,13 @@ export function useHouseMaterials(low = false) {
                 emissiveIntensity: 0.55,
                 toneMapped: false,
             }, 0.22),
-            tile: mk(tileMap, '#a898b8', { roughness: 0.5, metalness: 0.14 }, 0.48),
+            tile: photo(mk(tileMap, '#a898b8', { roughness: 0.5, metalness: 0.14 }, 0.48), 'tile', [8, 8], { normalScale: 0.5, keepTint: 0.35 }),
             /** Per-room flooring — kitchen tile, bedroom carpet, library boards, entry marble */
-            tileKitchen: mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5),
-            carpet: mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9),
-            woodFloorDark: mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74),
-            marble: mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3),
-            concrete: mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72),
+            tileKitchen: photo(mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5), 'tile', [4, 3.5], { normalScale: 0.45, keepTint: 0.25 }),
+            carpet: photo(mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9), 'carpet', [5, 4.5], { normalScale: 0.8, keepTint: 0.4 }),
+            woodFloorDark: photo(mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74), 'woodDark', [6, 6], { normalScale: 0.7, aniso: 12, keepTint: 0.35 }),
+            marble: photo(mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3), 'marble', [2.5, 3], { normalScale: 0.3, aniso: 12, keepTint: 0.12 }),
+            concrete: photo(mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72), 'concrete', [5, 5], { normalScale: 0.7, keepTint: 0.3 }),
             artDomain: mk(artDomainMap, '#ffffff', {
                 roughness: 0.55,
                 metalness: 0.12,
