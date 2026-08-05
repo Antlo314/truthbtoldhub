@@ -38,6 +38,8 @@ import { OsAppButton, OsIconTile, OsTaskbarItem } from './OsIcon';
 import OsHome from './OsHome';
 import OsAmbient from './OsAmbient';
 import OsWindowFrame from './OsWindowFrame';
+import OsDock from './OsDock';
+import OsMenuBar from './OsMenuBar';
 import { useOsSystem } from './osSystemStore';
 import { resolveWallpaper } from './osWallpapers';
 import { useOsGameBridge } from './useOsGameBridge';
@@ -206,15 +208,19 @@ export default function TruthOSShell({
     const wallpaper = resolveWallpaper(wallpaperId, hour);
     const unread = notifications.filter((n) => !n.read).length;
 
-    // Recompute phone layout on resize / rotate
+    // Recompute phone layout on resize / rotate — and on visibility, because
+    // a tab restored in the BACKGROUND mounts at innerWidth 0, classifies as
+    // a phone, and no resize ever fires when the window finally shows.
     useEffect(() => {
         const sync = () => setPhone(detectDevice() === 'phone');
         sync();
         window.addEventListener('resize', sync);
         window.addEventListener('orientationchange', sync);
+        document.addEventListener('visibilitychange', sync);
         return () => {
             window.removeEventListener('resize', sync);
             window.removeEventListener('orientationchange', sync);
+            document.removeEventListener('visibilitychange', sync);
         };
     }, []);
 
@@ -503,30 +509,19 @@ export default function TruthOSShell({
     };
 
     if (!bootDone) {
+        // Apple-style boot: black void, the mark, one thin progress bar.
+        // The old UEFI console lines still drive the timing — they are just
+        // no longer printed. Silence is what makes a boot feel expensive.
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050508] font-mono text-sm text-[#5dff6a]">
-                <div className="w-full max-w-md px-6 space-y-2">
-                    <div className="flex items-center gap-3 mb-5">
-                        <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-sm font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)]">
-                            T
-                        </span>
-                        <div>
-                            <p className="text-[10px] tracking-[0.4em] text-[#2d6b35]">TRUTH.OS</p>
-                            <p className="text-[11px] text-emerald-400/50">v3.0 · 2026 edition</p>
-                        </div>
-                    </div>
-                    {BOOT_LINES.slice(0, bootLine).map((m, i) => (
-                        <p key={i} className={i === bootLine - 1 ? 'animate-pulse' : 'text-emerald-400/80'}>
-                            <span className="text-emerald-700 mr-2">›</span>
-                            {m}
-                        </p>
-                    ))}
-                    <div className="mt-6 h-1 rounded-full bg-emerald-950 overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-emerald-600 to-cyan-400 transition-all duration-200"
-                            style={{ width: `${Math.min(100, (bootLine / BOOT_LINES.length) * 100)}%` }}
-                        />
-                    </div>
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
+                <span className="mb-14 bg-gradient-to-br from-amber-100 via-amber-300 to-amber-600 bg-clip-text text-7xl font-black text-transparent drop-shadow-[0_0_40px_rgba(251,191,36,0.25)] select-none">
+                    ✦
+                </span>
+                <div className="h-[5px] w-44 overflow-hidden rounded-full bg-white/15">
+                    <div
+                        className="h-full rounded-full bg-white transition-all duration-200 ease-out"
+                        style={{ width: `${Math.min(100, (bootLine / BOOT_LINES.length) * 100)}%` }}
+                    />
                 </div>
             </div>
         );
@@ -539,8 +534,18 @@ export default function TruthOSShell({
             className="fixed inset-0 z-40 flex flex-col overflow-hidden select-none bg-[#07090f]"
             style={
                 {
-                    ['--os-taskbar' as string]: 'calc(3.65rem + env(safe-area-inset-bottom, 0px))',
-                    ['--os-pad-top' as string]: 'env(safe-area-inset-top, 0px)',
+                    // The dock floats now, but the var keeps its name: every
+                    // flyout and snap computation reads it as "reserved bottom
+                    // chrome", and that contract is unchanged.
+                    ['--os-taskbar' as string]: phone
+                        ? 'calc(4.4rem + env(safe-area-inset-bottom, 0px))'
+                        : 'calc(4.6rem + env(safe-area-inset-bottom, 0px))',
+                    ['--os-menubar' as string]: phone
+                        ? '0px'
+                        : 'calc(1.8rem + env(safe-area-inset-top, 0px))',
+                    ['--os-pad-top' as string]: phone
+                        ? 'env(safe-area-inset-top, 0px)'
+                        : 'calc(1.8rem + env(safe-area-inset-top, 0px))',
                 } as CSSProperties
             }
         >
@@ -557,7 +562,10 @@ export default function TruthOSShell({
             <div
                 data-os-workspace
                 className="relative flex-1 min-h-0"
-                style={{ paddingBottom: 'var(--os-taskbar)' }}
+                style={{
+                    paddingBottom: 'var(--os-taskbar)',
+                    paddingTop: 'var(--os-menubar)',
+                }}
                 onClick={() => {
                     if (startOpen) setStartOpen(false);
                     if (flyout) setFlyout(null);
@@ -999,270 +1007,98 @@ export default function TruthOSShell({
                 <OsToasts />
             </div>
 
-            {/* Bottom taskbar — dock height matches --os-taskbar */}
-            <footer
-                className="absolute bottom-0 inset-x-0 z-50 flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 border-t border-white/15 bg-black/85 max-sm:backdrop-blur-md sm:backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
-                style={{
-                    minHeight: '3.65rem',
-                    height: 'var(--os-taskbar)',
-                    paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))',
-                    paddingTop: '0.35rem',
-                }}
-            >
-                <button
-                    type="button"
-                    onClick={() => {
-                        const next = !startOpen;
-                        setStartOpen(next);
-                        setFlyout(null);
-                        if (next) hubAudio.osStartMenu();
-                        else sacredUi.click();
+            {/* Menu bar — the strip that makes it read as a Mac (desktop only) */}
+            {!phone && (
+                <OsMenuBar
+                    focusApp={windows.find((w) => w.id === focusId && !w.minimized)?.app ?? null}
+                    clock={clock}
+                    unread={unread}
+                    soulPower={email ? snapshot.soulPower : 0}
+                    tier={snapshot.tier ?? null}
+                    isAdmin={isAdmin}
+                    desktop={desktop}
+                    flyout={flyout}
+                    onGlyphAction={(a) => {
+                        setStartOpen(false);
+                        if (a === 'about' || a === 'settings') launch('settings');
+                        else if (a === 'lock') useOsSystem.getState().setLocked(true);
+                        else if (a === 'restart') restartOs();
+                        else if (a === 'leave') enterChamber();
+                        sacredUi.click();
                     }}
-                    className={`h-11 min-h-[44px] min-w-[44px] px-2.5 sm:px-3 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold transition-all active:scale-95 touch-manipulation ${
-                        startOpen
-                            ? 'bg-emerald-500/25 text-white border border-emerald-400/40 shadow-[0_0_16px_rgba(52,211,153,0.25)]'
-                            : 'text-white/90 hover:bg-white/12 border border-white/10'
-                    }`}
-                >
-                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 text-[12px] font-black text-black flex items-center justify-center shadow-[0_0_12px_rgba(52,211,153,0.4)] ring-1 ring-white/30">
-                        T
-                    </span>
-                    <span className="hidden sm:inline">Start</span>
-                </button>
-                <button
-                    type="button"
-                    title="Search — command palette (Ctrl+K)"
-                    onClick={() => {
+                    onWindowAction={(a) => {
+                        const w = windows.find((x) => x.id === focusId);
+                        if (a === 'taskview') setTaskView(!taskView);
+                        else if (a === 'showdesktop') showDesktop();
+                        else if (w && a === 'minimize') minimizeWindow(w.id);
+                        else if (w && a === 'zoom') toggleMaximize(w.id);
+                        else if (w && a === 'close') closeWindow(w.id);
+                        sacredUi.click();
+                    }}
+                    onDesktop={(i) => {
+                        setDesktop(i);
+                        sacredUi.click();
+                    }}
+                    onSearch={() => {
                         setStartOpen(false);
                         setOverlay(overlay === 'palette' ? null : 'palette');
                         sacredUi.click();
                     }}
-                    className={`h-11 min-h-[44px] min-w-[44px] px-2 rounded-xl flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
-                        overlay === 'palette'
-                            ? 'bg-white/15 text-white border border-white/25'
-                            : 'text-white/70 hover:bg-white/10 border border-transparent'
-                    }`}
-                >
-                    <Search size={17} />
-                </button>
-                <button
-                    type="button"
-                    title="Task view (Ctrl+↑)"
-                    onClick={() => {
-                        setTaskView(!taskView);
-                        sacredUi.click();
-                    }}
-                    className={`h-11 min-h-[44px] min-w-[44px] px-2 rounded-xl flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
-                        taskView
-                            ? 'bg-white/15 text-white border border-white/25'
-                            : 'text-white/70 hover:bg-white/10 border border-transparent'
-                    }`}
-                >
-                    <SquareStack size={17} />
-                </button>
-                <button
-                    type="button"
-                    title="Widgets"
-                    onClick={() => {
+                    onQuick={() => {
                         setStartOpen(false);
-                        toggleFlyout('widgets');
+                        toggleFlyout('quick');
                         sacredUi.click();
                     }}
-                    className={`h-11 min-h-[44px] min-w-[44px] px-2 rounded-xl hidden sm:flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
-                        flyout === 'widgets'
-                            ? 'bg-white/15 text-white border border-white/25'
-                            : 'text-white/70 hover:bg-white/10 border border-transparent'
-                    }`}
-                >
-                    <LayoutPanelLeft size={17} />
-                </button>
-                {onEnterChamber && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setStartOpen(false);
-                            enterChamber();
-                            sacredUi.access();
-                        }}
-                        className="h-11 min-h-[44px] min-w-[44px] px-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 text-[11px] font-bold text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:brightness-110 border border-emerald-200/50 shadow-[0_0_20px_rgba(52,211,153,0.3)] active:scale-95 touch-manipulation"
-                        title="Leave terminal — enter 3D world"
-                    >
-                        <OsIconTile app="chamber" size="sm" />
-                        <span className="hidden lg:inline">Leave terminal</span>
-                    </button>
-                )}
-                {/* Virtual desktop switcher */}
-                {!phone && (
-                    <>
-                        <div className="w-px h-7 bg-white/15 mx-0.5 shrink-0" />
-                        <div className="flex items-center gap-0.5 shrink-0" title="Virtual desktops (Ctrl+Alt+←/→)">
-                            {Array.from({ length: DESKTOP_COUNT }).map((_, i) => {
-                                const count = windows.filter((w) => w.desktop === i).length;
-                                const active = i === desktop;
-                                return (
-                                    <button
-                                        key={i}
-                                        type="button"
-                                        onClick={() => {
-                                            setDesktop(i);
-                                            sacredUi.click();
-                                        }}
-                                        title={`Desktop ${i + 1}${count ? ` · ${count} window${count === 1 ? '' : 's'}` : ''}`}
-                                        className={`relative h-9 w-7 rounded-md border text-[10px] font-mono transition-colors touch-manipulation ${
-                                            active
-                                                ? 'bg-emerald-400/25 border-emerald-300/50 text-white'
-                                                : 'border-white/12 text-white/45 hover:bg-white/10 hover:text-white/80'
-                                        }`}
-                                    >
-                                        {i + 1}
-                                        {count > 0 && !active && (
-                                            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/50" />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </>
-                )}
-                <div className="w-px h-7 bg-white/15 mx-0.5 shrink-0" />
-                <div
-                    className="flex-1 flex items-center gap-1 sm:gap-1.5 overflow-x-auto min-w-0 no-scrollbar overscroll-x-contain"
-                    style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
-                >
-                    {/* Pinned programs that aren't currently running */}
-                    {pinned
-                        .filter((app) => !deskWindows.some((w) => w.app === app))
-                        .map((app) => (
-                            <button
-                                key={`pin-${app}`}
-                                type="button"
-                                onClick={() => launch(app)}
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    togglePin(app);
-                                    sacredUi.click();
-                                }}
-                                title={`${APP_META[app].label} (pinned — right-click to unpin)`}
-                                className="shrink-0 h-11 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-white/70 hover:bg-white/10 border border-transparent hover:border-white/15 transition-colors touch-manipulation"
-                            >
-                                <OsIconTile app={app} size="md" />
-                            </button>
-                        ))}
-                    {deskWindows.map((w) => (
-                        <div key={w.id} className="shrink-0">
-                            <div
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    setStartOpen(false);
-                                    setTaskMenu({ x: e.clientX, y: e.clientY, win: w });
-                                }}
-                            >
-                                <OsTaskbarItem
-                                    app={w.app}
-                                    title={w.title}
-                                    focused={focusId === w.id}
-                                    minimized={w.minimized}
-                                    iconOnly={phone}
-                                    onClick={() => {
-                                        if (w.minimized || focusId !== w.id) focusWindow(w.id);
-                                        else minimizeWindow(w.id);
-                                        sacredUi.click();
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                {/* System tray */}
-                {/* Live game readout — this OS runs inside the world */}
-                {email && snapshot.soulPower > 0 && (
-                    <button
-                        type="button"
-                        title={`Soul power ${snapshot.soulPower}${snapshot.tier ? ` · ${snapshot.tier}` : ''} — open Journey`}
-                        onClick={() => launch('journey')}
-                        className="hidden md:flex items-center gap-1.5 shrink-0 h-11 min-h-[44px] px-2.5 rounded-xl border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/20 transition-colors touch-manipulation"
-                    >
-                        <Flame size={14} className="text-amber-300" />
-                        <span className="text-[11px] font-mono text-amber-100 tabular-nums font-medium">
-                            {snapshot.soulPower}
-                        </span>
-                        {snapshot.tier && (
-                            <span className="text-[9px] uppercase tracking-widest text-amber-300/80 hidden lg:inline">
-                                {snapshot.tier}
-                            </span>
-                        )}
-                    </button>
-                )}
-                <div className="flex items-center gap-0.5 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] h-11 min-h-[44px] px-1">
-                    {isAdmin && (
-                        <span className="text-[9px] uppercase tracking-widest text-rose-300 font-bold hidden lg:inline px-1">
-                            Admin
-                        </span>
-                    )}
-                    <button
-                        type="button"
-                        title="Quick settings"
-                        onClick={() => {
-                            setStartOpen(false);
-                            toggleFlyout('quick');
-                            sacredUi.click();
-                        }}
-                        className={`h-9 min-w-[36px] px-1.5 rounded-lg flex items-center justify-center transition-colors touch-manipulation ${
-                            flyout === 'quick' ? 'bg-white/15 text-white' : 'text-white/65 hover:bg-white/10'
-                        }`}
-                    >
-                        <Settings2 size={15} />
-                    </button>
-                    <button
-                        type="button"
-                        title="Notifications"
-                        onClick={() => {
-                            setStartOpen(false);
-                            toggleFlyout('notifications');
-                            sacredUi.click();
-                        }}
-                        className={`relative h-9 min-w-[36px] px-1.5 rounded-lg flex items-center justify-center transition-colors touch-manipulation ${
-                            flyout === 'notifications'
-                                ? 'bg-white/15 text-white'
-                                : 'text-white/65 hover:bg-white/10'
-                        }`}
-                    >
-                        <Bell size={15} />
-                        {unread > 0 && (
-                            <span className="absolute top-0.5 right-0 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center ring-1 ring-black/60">
-                                {unread > 9 ? '9+' : unread}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        type="button"
-                        title="Calendar"
-                        onClick={() => {
-                            setStartOpen(false);
-                            toggleFlyout('calendar');
-                            sacredUi.click();
-                        }}
-                        className={`h-9 px-2 rounded-lg items-center justify-center hidden md:flex transition-colors touch-manipulation ${
-                            flyout === 'calendar' ? 'bg-white/15' : 'hover:bg-white/10'
-                        }`}
-                    >
-                        <span className="text-[11px] font-mono text-white/75 font-medium tabular-nums">
-                            {clock.split(' · ')[0]}
-                        </span>
-                    </button>
-                    <span
-                        className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#4ade80] mx-1"
-                        title="Online"
-                    />
-                </div>
-                {/* Show desktop sliver */}
-                <button
-                    type="button"
-                    title="Show desktop"
-                    onClick={showDesktop}
-                    className="hidden sm:block w-2 h-11 min-h-[44px] rounded-sm border-l border-white/15 hover:bg-white/15 transition-colors shrink-0"
+                    onNotifications={() => {
+                        setStartOpen(false);
+                        toggleFlyout('notifications');
+                        sacredUi.click();
+                    }}
+                    onCalendar={() => {
+                        setStartOpen(false);
+                        toggleFlyout('calendar');
+                        sacredUi.click();
+                    }}
+                    onSoul={() => launch('journey')}
                 />
-            </footer>
+            )}
+
+            {/* The Dock */}
+            <OsDock
+                pinned={pinned}
+                windows={deskWindows}
+                focusApp={windows.find((w) => w.id === focusId)?.app ?? null}
+                phone={phone}
+                onLaunch={launch}
+                onFocusApp={(app) => {
+                    // All windows of the app minimized -> restore the top one;
+                    // otherwise focus it, macOS-style (click never minimizes).
+                    const wins = deskWindows.filter((w) => w.app === app);
+                    const top = wins.find((w) => !w.minimized) ?? wins[0];
+                    if (top) focusWindow(top.id);
+                    sacredUi.click();
+                }}
+                onTogglePin={(app) => {
+                    togglePin(app);
+                    sacredUi.click();
+                }}
+                onLaunchpad={() => {
+                    const next = !startOpen;
+                    setStartOpen(next);
+                    setFlyout(null);
+                    if (next) hubAudio.osStartMenu();
+                    else sacredUi.click();
+                }}
+                onChamber={
+                    onEnterChamber
+                        ? () => {
+                              setStartOpen(false);
+                              enterChamber();
+                              sacredUi.access();
+                          }
+                        : undefined
+                }
+            />
 
             {/* Screen filters — brightness + night light */}
             {brightness < 1 && (

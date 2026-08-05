@@ -54,8 +54,9 @@ export function OsToasts() {
 
     return (
         <div
+            // Notifications arrive top-right, sliding in under the menu bar
             className="pointer-events-none absolute right-2 sm:right-3 z-[70] flex flex-col gap-2 w-[min(92vw,340px)]"
-            style={{ bottom: 'calc(var(--os-taskbar, 3.65rem) + 0.5rem)' }}
+            style={{ top: 'calc(var(--os-menubar, 1.8rem) + 0.5rem)' }}
         >
             <AnimatePresence>
                 {toasts.map((n) => {
@@ -111,18 +112,20 @@ function Flyout({
 }) {
     return (
         <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 14 }}
+            // Desktop flyouts drop DOWN from the menu bar now; phone keeps
+            // the bottom sheet, which is the right grammar for a thumb.
+            initial={phone ? { opacity: 0, y: 14 } : { opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={phone ? { opacity: 0, y: 14 } : { opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.16 }}
-            className={`absolute z-[60] border border-white/15 bg-[#0e1118]/97 shadow-2xl ring-1 ring-white/10 overflow-hidden flex flex-col max-sm:backdrop-blur-md sm:backdrop-blur-2xl ${
+            className={`absolute z-[60] border border-white/15 bg-[#0e1118]/90 shadow-[0_24px_70px_-12px_rgba(0,0,0,0.8)] ring-1 ring-black/40 overflow-hidden flex flex-col max-sm:backdrop-blur-md sm:backdrop-blur-2xl ${
                 phone
                     ? 'left-0 right-0 bottom-0 rounded-t-3xl border-b-0 max-h-[min(80dvh,600px)]'
-                    : `bottom-2 rounded-2xl max-h-[min(72vh,640px)] ${align === 'right' ? 'right-2' : 'left-2'}`
+                    : `rounded-2xl max-h-[min(72vh,640px)] ${align === 'right' ? 'right-2' : 'left-2'}`
             }`}
             style={
                 {
-                    marginBottom: 'var(--os-taskbar)',
+                    ...(phone ? {} : { top: 'calc(var(--os-menubar, 1.8rem) + 0.4rem)' }),
                     width: phone ? undefined : Math.min(width, 420),
                 } as CSSProperties
             }
@@ -684,17 +687,25 @@ export function OsLockScreen({ wallpaperCss }: { wallpaperCss: string }) {
                 className="absolute inset-0 bg-cover bg-center scale-105"
                 style={{ backgroundImage: wallpaperCss }}
             />
-            <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
-            <div className="relative h-full flex flex-col items-center justify-center gap-2 text-center px-6">
-                <p className="text-7xl sm:text-8xl font-extralight text-white tabular-nums drop-shadow-2xl">
-                    {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                <p className="text-sm text-white/80 uppercase tracking-[0.3em]">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
+            {/* macOS grammar: date over a huge thin clock in the top third,
+                identity + unlock hint resting at the bottom */}
+            <div className="relative h-full flex flex-col items-center text-center px-6 pt-[13vh]">
+                <p className="text-[13px] font-semibold text-white/85 tracking-wide">
                     {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
-                <p className="mt-10 text-[11px] text-white/55 uppercase tracking-[0.35em] animate-pulse flex items-center gap-2">
-                    <Power size={12} /> Tap anywhere to unlock
+                <p className="mt-1 text-[86px] sm:text-[110px] leading-none font-thin text-white tabular-nums drop-shadow-2xl tracking-tight">
+                    {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
+                <div className="mt-auto mb-[9vh] flex flex-col items-center gap-3">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-md text-2xl font-black bg-gradient-to-br from-amber-200 to-amber-500 bg-clip-text text-transparent shadow-xl">
+                        ✦
+                    </span>
+                    <p className="text-[12px] font-medium text-white/80">Truth.OS</p>
+                    <p className="text-[11px] text-white/50 animate-pulse flex items-center gap-2">
+                        <Power size={11} /> Click anywhere to unlock
+                    </p>
+                </div>
             </div>
         </motion.div>
     );

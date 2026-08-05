@@ -109,9 +109,7 @@ export default function OsWindowFrame({
     const narrow = phone || (typeof window !== 'undefined' && window.innerWidth < 768);
     const accentId = getAppAccent(app);
     const accentStyle = ACCENT_STYLES[accentId];
-    const borderCls = focused
-        ? `border-white/20 ring-1 ${accentStyle.ring}`
-        : 'border-white/12';
+    const borderCls = focused ? 'border-white/20' : 'border-white/10';
     const fillScreen = (maximized || narrow) && !(bento && !maximized && !narrow);
     const floating = !fillScreen && !(bento && !maximized && !narrow);
 
@@ -142,7 +140,9 @@ export default function OsWindowFrame({
               width: undefined,
               height: undefined,
               zIndex: z,
-              background: '#0c0e14',
+              background: 'rgba(15,17,24,0.86)',
+              backdropFilter: 'blur(28px) saturate(1.35)',
+              WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
           }
         : bento && !maximized && !narrow
           ? {
@@ -150,7 +150,9 @@ export default function OsWindowFrame({
                 width: '100%',
                 height: '100%',
                 zIndex: z,
-                background: '#0c0e14',
+                background: 'rgba(15,17,24,0.86)',
+                backdropFilter: 'blur(28px) saturate(1.35)',
+                WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
             }
           : {
                 position: 'absolute',
@@ -159,7 +161,9 @@ export default function OsWindowFrame({
                 width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
                 height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
                 zIndex: z,
-                background: '#0c0e14',
+                background: 'rgba(15,17,24,0.86)',
+                backdropFilter: 'blur(28px) saturate(1.35)',
+                WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
             };
 
     const startResize = (dir: ResizeDir) => (e: React.PointerEvent) => {
@@ -230,25 +234,24 @@ export default function OsWindowFrame({
                           { type: 'spring', stiffness: 520, damping: 38, mass: 0.7 }
                 }
                 className={`flex flex-col overflow-hidden border shadow-2xl ${
-                    narrow ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'
-                } ${borderCls} ${focused ? 'shadow-black/60' : 'opacity-[0.97]'} ${
+                    narrow ? 'rounded-none sm:rounded-xl' : 'rounded-xl'
+                } ${borderCls} ${focused ? 'shadow-[0_28px_80px_-16px_rgba(0,0,0,0.85)]' : 'shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] opacity-[0.97]'} ${
                     bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''
                 }`}
                 style={style}
                 onMouseDown={onFocus}
             >
                 <div
-                    className={`absolute left-0 top-0 bottom-0 w-1 ${accentStyle.bar} z-10 ${narrow ? '' : 'rounded-l-2xl'}`}
-                />
-                <div
-                    className={`shrink-0 flex items-center gap-2 pl-3 pr-1 border-b border-white/12 bg-gradient-to-r from-black/70 to-black/40 cursor-default ${
-                        narrow ? 'h-11 min-h-[44px]' : 'h-10'
-                    }`}
+                    className={`shrink-0 relative flex items-center border-b border-white/[0.07] cursor-default ${
+                        narrow ? 'h-11 min-h-[44px] px-2.5' : 'h-10 px-3'
+                    } ${focused ? 'bg-white/[0.07]' : 'bg-white/[0.03]'}`}
                     onDoubleClick={() => {
                         if (!narrow) onMaximize();
                     }}
                     onPointerDown={(e) => {
                         if (narrow || maximized || bento) return;
+                        // Traffic lights and popovers must not start a drag
+                        if ((e.target as HTMLElement).closest('[data-traffic]')) return;
                         drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
                         setDragging(true);
                         const move = (ev: PointerEvent) => {
@@ -280,114 +283,9 @@ export default function OsWindowFrame({
                         window.addEventListener('pointerup', up);
                     }}
                 >
-                    <OsIconTile app={app} size="sm" open={focused} />
-                    <span className="text-[12px] sm:text-[13px] text-white font-semibold truncate flex-1 tracking-tight">
-                        {title}
-                    </span>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                        {!narrow && (
-                            <button
-                                type="button"
-                                title="Snap bento"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSnap('hero');
-                                }}
-                                className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-[11px] text-white/50 hover:bg-white/12 hover:text-white transition-colors touch-manipulation"
-                            >
-                                ⊞
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            title="Minimize"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onMinimize();
-                            }}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-base leading-none transition-colors touch-manipulation"
-                        >
-                            –
-                        </button>
-                        {!narrow && (
-                            <div
-                                className="relative"
-                                onMouseEnter={() => {
-                                    if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
-                                    layoutsTimer.current = setTimeout(() => setLayoutsOpen(true), 420);
-                                }}
-                                onMouseLeave={() => {
-                                    if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
-                                    layoutsTimer.current = setTimeout(() => setLayoutsOpen(false), 240);
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    title="Maximize · hover for snap layouts"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setLayoutsOpen(false);
-                                        onMaximize();
-                                    }}
-                                    className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg text-white/60 hover:bg-white/12 text-[11px] transition-colors touch-manipulation"
-                                >
-                                    □
-                                </button>
-                                {layoutsOpen && (
-                                    <div
-                                        className="absolute right-0 top-full mt-1 z-50 rounded-xl border border-white/15 bg-[#10131b]/97 backdrop-blur-2xl shadow-2xl p-2 ring-1 ring-white/10"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <p className="text-[8px] uppercase tracking-[0.25em] text-white/40 font-mono mb-1.5 px-0.5">
-                                            Snap layouts
-                                        </p>
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            {(
-                                                [
-                                                    ['left', 'Left ½'],
-                                                    ['right', 'Right ½'],
-                                                    ['max', 'Full'],
-                                                    ['tl', 'Top-L ¼'],
-                                                    ['tr', 'Top-R ¼'],
-                                                    ['bl', 'Bot-L ¼'],
-                                                    ['br', 'Bot-R ¼'],
-                                                ] as [SnapZone | 'max', string][]
-                                            ).map(([zone, label]) => (
-                                                <button
-                                                    key={zone}
-                                                    type="button"
-                                                    title={label}
-                                                    onClick={() => {
-                                                        setLayoutsOpen(false);
-                                                        if (zone === 'max') onMaximize();
-                                                        else applyZone(zone);
-                                                    }}
-                                                    className="w-12 h-9 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/15 hover:border-white/35 relative overflow-hidden transition-colors"
-                                                >
-                                                    <span
-                                                        className={`absolute bg-white/50 rounded-[3px] ${
-                                                            zone === 'left'
-                                                                ? 'left-1 top-1 bottom-1 right-1/2 mr-0.5'
-                                                                : zone === 'right'
-                                                                  ? 'right-1 top-1 bottom-1 left-1/2 ml-0.5'
-                                                                  : zone === 'max'
-                                                                    ? 'inset-1'
-                                                                    : zone === 'tl'
-                                                                      ? 'left-1 top-1 right-1/2 bottom-1/2 mr-0.5 mb-0.5'
-                                                                      : zone === 'tr'
-                                                                        ? 'right-1 top-1 left-1/2 bottom-1/2 ml-0.5 mb-0.5'
-                                                                        : zone === 'bl'
-                                                                          ? 'left-1 bottom-1 right-1/2 top-1/2 mr-0.5 mt-0.5'
-                                                                          : 'right-1 bottom-1 left-1/2 top-1/2 ml-0.5 mt-0.5'
-                                                        }`}
-                                                    />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                    {/* Traffic lights. Grey when unfocused; glyphs appear on
+                        hover of the group, exactly like the real thing. */}
+                    <div data-traffic className="group flex items-center gap-2 shrink-0">
                         <button
                             type="button"
                             title="Close"
@@ -395,13 +293,151 @@ export default function OsWindowFrame({
                                 e.stopPropagation();
                                 onClose();
                             }}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] sm:w-9 sm:h-9 sm:min-w-[36px] sm:min-h-[36px] rounded-lg text-white/70 hover:bg-red-500 hover:text-white text-base leading-none transition-colors touch-manipulation"
+                            className={`flex items-center justify-center rounded-full border transition-colors ${
+                                narrow ? 'w-4 h-4' : 'w-3 h-3'
+                            } ${
+                                focused
+                                    ? 'bg-[#ff5f57] border-[#e0443e]'
+                                    : 'bg-white/20 border-white/10 group-hover:bg-[#ff5f57] group-hover:border-[#e0443e]'
+                            }`}
                         >
-                            ×
+                            <span className="opacity-0 group-hover:opacity-100 text-[9px] leading-none font-bold text-black/60 select-none">
+                                ×
+                            </span>
                         </button>
+                        <button
+                            type="button"
+                            title="Minimize"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onMinimize();
+                            }}
+                            className={`flex items-center justify-center rounded-full border transition-colors ${
+                                narrow ? 'w-4 h-4' : 'w-3 h-3'
+                            } ${
+                                focused
+                                    ? 'bg-[#febc2e] border-[#d89e24]'
+                                    : 'bg-white/20 border-white/10 group-hover:bg-[#febc2e] group-hover:border-[#d89e24]'
+                            }`}
+                        >
+                            <span className="opacity-0 group-hover:opacity-100 text-[9px] leading-none font-bold text-black/60 select-none">
+                                −
+                            </span>
+                        </button>
+                        <div
+                            className="relative"
+                            onMouseEnter={() => {
+                                if (narrow) return;
+                                if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
+                                layoutsTimer.current = setTimeout(() => setLayoutsOpen(true), 460);
+                            }}
+                            onMouseLeave={() => {
+                                if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
+                                layoutsTimer.current = setTimeout(() => setLayoutsOpen(false), 240);
+                            }}
+                        >
+                            <button
+                                type="button"
+                                title="Zoom · hover for tiling"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLayoutsOpen(false);
+                                    onMaximize();
+                                }}
+                                className={`flex items-center justify-center rounded-full border transition-colors ${
+                                    narrow ? 'w-4 h-4' : 'w-3 h-3'
+                                } ${
+                                    focused
+                                        ? 'bg-[#28c840] border-[#1dad2b]'
+                                        : 'bg-white/20 border-white/10 group-hover:bg-[#28c840] group-hover:border-[#1dad2b]'
+                                }`}
+                            >
+                                <span className="opacity-0 group-hover:opacity-100 text-[8px] leading-none font-bold text-black/60 select-none">
+                                    +
+                                </span>
+                            </button>
+                            {layoutsOpen && (
+                                <div
+                                    className="absolute left-0 top-full mt-2 z-50 rounded-xl border border-white/15 bg-[#181b24]/95 backdrop-blur-2xl shadow-2xl p-2 ring-1 ring-black/50"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <p className="text-[8px] uppercase tracking-[0.25em] text-white/40 font-mono mb-1.5 px-0.5 whitespace-nowrap">
+                                        Move &amp; tile
+                                    </p>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        {(
+                                            [
+                                                ['left', 'Left half'],
+                                                ['right', 'Right half'],
+                                                ['max', 'Fill'],
+                                                ['tl', 'Top-left'],
+                                                ['tr', 'Top-right'],
+                                                ['bl', 'Bottom-left'],
+                                                ['br', 'Bottom-right'],
+                                            ] as [SnapZone | 'max', string][]
+                                        ).map(([zone, label]) => (
+                                            <button
+                                                key={zone}
+                                                type="button"
+                                                title={label}
+                                                onClick={() => {
+                                                    setLayoutsOpen(false);
+                                                    if (zone === 'max') onMaximize();
+                                                    else applyZone(zone);
+                                                }}
+                                                className="w-12 h-9 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/15 hover:border-white/35 relative overflow-hidden transition-colors"
+                                            >
+                                                <span
+                                                    className={`absolute bg-white/50 rounded-[3px] ${
+                                                        zone === 'left'
+                                                            ? 'left-1 top-1 bottom-1 right-1/2 mr-0.5'
+                                                            : zone === 'right'
+                                                              ? 'right-1 top-1 bottom-1 left-1/2 ml-0.5'
+                                                              : zone === 'max'
+                                                                ? 'inset-1'
+                                                                : zone === 'tl'
+                                                                  ? 'left-1 top-1 right-1/2 bottom-1/2 mr-0.5 mb-0.5'
+                                                                  : zone === 'tr'
+                                                                    ? 'right-1 top-1 left-1/2 bottom-1/2 ml-0.5 mb-0.5'
+                                                                    : zone === 'bl'
+                                                                      ? 'left-1 bottom-1 right-1/2 top-1/2 mr-0.5 mt-0.5'
+                                                                      : 'right-1 bottom-1 left-1/2 top-1/2 ml-0.5 mt-0.5'
+                                                    }`}
+                                                />
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            title="Bento hero"
+                                            onClick={() => {
+                                                setLayoutsOpen(false);
+                                                onSnap('hero');
+                                            }}
+                                            className="w-12 h-9 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/15 hover:border-white/35 relative overflow-hidden transition-colors"
+                                        >
+                                            <span className="absolute left-1 top-1 bottom-1 right-1/2 mr-0.5 bg-amber-300/60 rounded-[3px]" />
+                                            <span className="absolute right-1 top-1 left-1/2 bottom-1/2 ml-0.5 mb-0.5 bg-white/40 rounded-[3px]" />
+                                            <span className="absolute right-1 bottom-1 left-1/2 top-1/2 ml-0.5 mt-0.5 bg-white/40 rounded-[3px]" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Centered title, absolute so the lights never shift it */}
+                    <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center gap-1.5 px-16">
+                        <OsIconTile app={app} size="sm" open={focused} />
+                        <span
+                            className={`text-[12px] sm:text-[13px] font-semibold truncate tracking-tight max-w-[60%] ${
+                                focused ? 'text-white/90' : 'text-white/40'
+                            }`}
+                        >
+                            {title}
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto bg-[#0c0e14] overscroll-contain">
+                <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto bg-[#0b0d14]/70 overscroll-contain">
                     {children}
                 </div>
 
