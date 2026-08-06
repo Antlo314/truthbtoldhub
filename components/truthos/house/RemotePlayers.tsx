@@ -6,8 +6,7 @@
  */
 import { useMemo } from 'react';
 import { Html } from '@react-three/drei';
-import * as THREE from 'three';
-import { SKIN_TONES } from '@/lib/game/avatar';
+import Humanoid from './Humanoid';
 import type { HousePeer } from '@/lib/truthos/housePresence';
 
 function PeerMesh({
@@ -19,43 +18,24 @@ function PeerMesh({
     showLabel: boolean;
     low: boolean;
 }) {
-    const skin = SKIN_TONES[peer.skin] ?? SKIN_TONES[6];
-    const aura = peer.aura || '#a78bfa';
-    const w = peer.build === 'fem' ? 0.3 : 0.36;
-    // Cheap peer mat — shared roughness/env read like vessel silk finish
-    const bodyMat = useMemo(
-        () =>
-            new THREE.MeshStandardMaterial({
-                color: skin,
-                roughness: 0.72,
-                metalness: 0.04,
-                envMapIntensity: low ? 0.35 : 0.55,
-            }),
-        [skin, low],
+    // A peer is a person now, not a capsule. The body derives its own
+    // walk speed from how far the synced pose actually moved, so remote
+    // players animate correctly without sending a single extra byte.
+    const look = useMemo(
+        () => ({
+            skin: peer.skin,
+            aura: peer.aura || '#a78bfa',
+            build: peer.build,
+        }),
+        [peer.skin, peer.aura, peer.build],
     );
+    const track = useMemo(() => ({ x: peer.x, z: peer.z }), [peer.x, peer.z]);
 
     return (
         <group position={[peer.x, 0, peer.z]} rotation={[0, peer.yaw, 0]}>
-            <mesh position={[0, 0.95, 0]} material={bodyMat}>
-                <capsuleGeometry args={[w * 0.45, 0.7, 4, low ? 6 : 8]} />
-            </mesh>
-            <mesh position={[0, 1.55, 0]} material={bodyMat}>
-                <sphereGeometry args={[0.15, low ? 8 : 10, low ? 8 : 10]} />
-            </mesh>
-            <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.26, 0.36, low ? 12 : 16]} />
-                <meshStandardMaterial
-                    color={aura}
-                    emissive={aura}
-                    emissiveIntensity={0.5}
-                    transparent
-                    opacity={0.7}
-                    side={THREE.DoubleSide}
-                    depthWrite={false}
-                />
-            </mesh>
+            <Humanoid look={look} low={low} trackPosition={track} />
             {showLabel && (
-                <Html position={[0, 1.92, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
+                <Html position={[0, 1.95, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
                     <div className="px-2 py-0.5 rounded-full text-[9px] whitespace-nowrap font-medium border bg-black/75 border-emerald-400/40 text-white/95">
                         <span className="text-emerald-400">LIVE · </span>
                         {peer.name}

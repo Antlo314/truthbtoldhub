@@ -7,7 +7,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { VesselModel } from '@/components/hut3d/VesselModel';
+import Humanoid from './Humanoid';
 import type { AvatarConfig } from '@/lib/game/avatar';
 
 export const LOCAL_BODY_LAYER = 1;
@@ -40,7 +40,21 @@ export default function LocalPlayerBody({
 
     return (
         <group ref={group} position={[pose.x, 0, pose.z]} rotation={[0, pose.yaw, 0]}>
-            <VesselModel avatar={avatar} scale={1} />
+            {/* Your own body — the SAME vessel everyone else sees, so the
+                mirror shows the person other players are looking at. */}
+            <Humanoid
+                look={{
+                    skin: avatar.skin,
+                    hair: avatar.hairColor,
+                    cloth: avatar.top,
+                    // The aura is the soul's colour, not the avatar's — the
+                    // presence layer owns it, so the mirror uses the brand
+                    // violet until a soul colour is threaded through.
+                    aura: '#a78bfa',
+                    build: avatar.build === 'fem' ? 'fem' : 'masc',
+                }}
+                trackPosition={{ x: pose.x, z: pose.z }}
+            />
         </group>
     );
 }
