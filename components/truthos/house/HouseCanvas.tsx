@@ -7,11 +7,9 @@ import DayNightCycle from './DayNightCycle';
 import JungleGeometry from './JungleGeometry';
 import WorldDestinations from './WorldDestinations';
 import DistantScenery from './DistantScenery';
-import LampGroup from './LampGroup';
 import * as THREE from 'three';
-import HouseGeometry from './HouseGeometry';
-import YardGeometry from './YardGeometry';
-import HouseDecor from './HouseDecor';
+import HomeGeometry from './HomeGeometry';
+import HomeDecor from './HomeDecor';
 import HouseAtmosphere from './HouseAtmosphere';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
@@ -93,14 +91,14 @@ export default function HouseCanvas({
                     fov: mobile ? 78 : 68,
                     near: 0.08,
                     far: mobile ? 340 : 620,
-                    position: [4.55, 1.62, 6.35],
+                    position: [-11.8, 1.12, 10.1],
                 }}
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
                     if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
                     // Pure euler FPS pose — avoid lookAt residual roll (flips world / ceiling walk)
                     camera.up.set(0, 1, 0);
-                    camera.position.set(4.55, 1.62, 6.35);
+                    camera.position.set(-11.8, 1.12, 10.1);
                     camera.rotation.order = 'YXZ';
                     camera.rotation.set(0, Math.PI, 0);
                     // Local body only for mirror FBO
@@ -129,48 +127,16 @@ export default function HouseCanvas({
 
                 {/* Zone practicals — pull color from textured materials.
                     Wrapped so daylight dims them instead of them burning at noon. */}
-                <LampGroup>
-                <pointLight position={[3.55, 1.4, 4.9]} intensity={mobile ? 2.8 : 3.1} color="#4ade80" distance={mobile ? 9 : 11} decay={2} />
-                <pointLight position={[0, 1.75, -4.2]} intensity={mobile ? 2.3 : 2.4} color="#22d3ee" distance={9} decay={2} />
-                <pointLight position={[3.15, 1.7, 8.5]} intensity={mobile ? 1.9 : 1.85} color="#c8dcf0" distance={7} decay={2} />
-                {!mobile && (
-                    <>
-                        <pointLight position={[-2.5, 1.45, 0.2]} intensity={1.55} color="#fbbf24" distance={8} decay={2} />
-                        <pointLight position={[0, 2.35, -8.2]} intensity={2.3} color="#22c55e" distance={12} decay={2} />
-                        <pointLight position={[-6.5, 2.0, -4.4]} intensity={1.4} color="#e8d5b0" distance={10} decay={2} />
-                        <pointLight position={[0, 2.5, 6.2]} intensity={1.1} color="#ffdfb8" distance={11} decay={2} />
-                        <pointLight position={[8.2, 1.9, 1.25]} intensity={1.6} color="#c084fc" distance={9} decay={2} />
-                        <pointLight position={[-7.4, 1.25, 3.6]} intensity={1.55} color="#ff8a3d" distance={7} decay={2} />
-                        <pointLight position={[7.6, 1.55, -7.0]} intensity={1.35} color="#fb923c" distance={6} decay={2} />
-                        <pointLight position={[-5.5, 1.8, 2.05]} intensity={1.05} color="#38bdf8" distance={5} decay={2} />
-                        <pointLight position={[-9.2, 1.6, 0.15]} intensity={0.85} color="#e8d5b0" distance={5} decay={2} />
-                        <spotLight
-                            position={[0.2, 2.9, -1.2]}
-                            angle={0.7}
-                            penumbra={0.65}
-                            intensity={0.6}
-                            color="#c4b5fd"
-                            castShadow
-                        />
-                    </>
-                )}
-                {mobile && (
-                    <>
-                        <pointLight position={[0, 2.5, 0]} intensity={2.1} color="#f0e8ff" distance={16} decay={1.6} />
-                        <pointLight position={[-2.5, 1.5, 0]} intensity={1.4} color="#fbbf24" distance={8} decay={2} />
-                        <pointLight position={[2, 1.6, -3]} intensity={1.3} color="#ffffff" distance={9} decay={2} />
-                    </>
-                )}
-                </LampGroup>
+                {/* Interior practicals now live inside HomeGeometry/HomeDecor,
+                    placed for the new plan. */}
 
                 {/* The jungle beyond the fence, and the green horizon past it */}
                 <JungleGeometry low={mobile} />
                 <WorldDestinations low={mobile} />
                 <DistantScenery low={mobile} />
 
-                <YardGeometry low={mobile} />
-                <HouseGeometry low={mobile} cinematic={!mobile} />
-                <HouseDecor low={mobile} />
+                <HomeGeometry low={mobile} />
+                <HomeDecor low={mobile} />
                 {/* Dust motes · fireflies · moon shafts — desktop only */}
                 {!mobile && <HouseAtmosphere />}
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />

@@ -7,7 +7,17 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { collideMove, resolveStuck, SPAWN, SPAWN_YAW, nearestHotspot, isOnLivingRug, type Hotspot } from './houseMap';
+import { type Hotspot } from './houseMap';
+import {
+    groundAt,
+    INTRO,
+    levelAfter,
+    moveOn,
+    nearestHomeHotspot,
+    SIT_HEIGHT,
+    SPAWN_YAW,
+    type Level,
+} from './homeMap';
 import { houseInput } from './houseInput';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import {
@@ -27,6 +37,13 @@ import {
     LOOK_SMOOTH,
     damp,
 } from './houseFeel';
+
+/** Soft footsteps on the two rugs (rec room + living) */
+function onRug(x: number, z: number): boolean {
+    if (x > -12.6 && x < -5.6 && z > 9.6 && z < 15.0) return true;
+    if (x > 6.4 && x < 11.8 && z > -1.6 && z < 5.0) return true;
+    return false;
+}
 
 /** Per-instance keys — never shared across remounts in a sticky way */
 function createKeyState() {
@@ -57,7 +74,10 @@ export default function FirstPersonController({
     const pitch = useRef(0);
     const yawS = useRef(SPAWN_YAW);
     const pitchS = useRef(0);
-    const pos = useRef(new THREE.Vector3(SPAWN[0], EYE_HEIGHT, SPAWN[2]));
+    const pos = useRef(new THREE.Vector3(INTRO.seat.x, SIT_HEIGHT, INTRO.seat.z));
+    const level = useRef<Level>('main');
+    // Every session opens seated at the desk: hold on the glow, then rise.
+    const intro = useRef<{ phase: 'hold' | 'rise' | 'done'; t: number }>({ phase: 'hold', t: 0 });
     const vel = useRef({ x: 0, z: 0 });
     const vy = useRef(0);
     const grounded = useRef(true);
@@ -72,8 +92,17 @@ export default function FirstPersonController({
     const lastBobSin = useRef(0);
 
     useEffect(() => {
-        const free = resolveStuck(SPAWN[0], SPAWN[2]);
-        pos.current.set(free.x, EYE_HEIGHT, free.z);
+        const reduce =
+            typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce) {
+            intro.current = { phase: 'done', t: 0 };
+            pos.current.set(INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z);
+        } else {
+            intro.current = { phase: 'hold', t: 0 };
+            pos.current.set(INTRO.seat.x, SIT_HEIGHT, INTRO.seat.z);
+        }
+        level.current = 'main';
         vel.current = { x: 0, z: 0 };
         vy.current = 0;
         grounded.current = true;
@@ -217,6 +246,48 @@ export default function FirstPersonController({
         // Every frame: force Y-up, zero roll — prevents upside-down / ceiling walking
         camera.up.set(0, 1, 0);
         camera.rotation.order = 'YXZ';
+
+        // ── The opening: seated at the terminal, then you stand ──
+        // You were just at Truth.OS; the world begins with the same screen
+        // in front of you. Hold on the glow, push back, rise to full
+        // height, and only then does the world hand you your legs.
+        if (intro.current.phase !== 'done') {
+            const st = intro.current;
+            st.t += d;
+            // Any input skips the ceremony
+            if (houseInput.consumeInteract() || keys.current.size > 0) {
+                st.phase = 'done';
+                pos.current.set(INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z);
+            } else if (st.phase === 'hold') {
+                // Seated: a slow breath so the frame is alive, not frozen
+                const breathe = Math.sin(st.t * 1.8) * 0.006;
+                pos.current.set(INTRO.seat.x, SIT_HEIGHT + breathe, INTRO.seat.z);
+                pitch.current = -0.06;
+                if (st.t >= INTRO.holdS) {
+                    st.phase = 'rise';
+                    st.t = 0;
+                }
+            } else {
+                // Rise: ease up and step back off the chair in one motion
+                const p = Math.min(1, st.t / INTRO.riseS);
+                const e = p * p * (3 - 2 * p); // smoothstep
+                pos.current.set(
+                    INTRO.seat.x + (INTRO.stand.x - INTRO.seat.x) * e,
+                    SIT_HEIGHT + (EYE_HEIGHT - SIT_HEIGHT) * e,
+                    INTRO.seat.z + (INTRO.stand.z - INTRO.seat.z) * e,
+                );
+                pitch.current = -0.06 * (1 - e);
+                if (p >= 1) st.phase = 'done';
+            }
+            yaw.current = SPAWN_YAW;
+            yawS.current = SPAWN_YAW;
+            pitchS.current = pitch.current;
+            camera.position.copy(pos.current);
+            camera.rotation.set(pitchS.current, yawS.current, 0);
+            onHotspot(null);
+            houseInput.consumeJump();
+            return;
+        }
         const lookSens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
         const k = keys.current;
 
@@ -339,11 +410,12 @@ export default function FirstPersonController({
             }
 
             if (vel.current.x !== 0 || vel.current.z !== 0) {
-                const next = collideMove(
+                const next = moveOn(
+                    level.current,
                     pos.current.x,
                     pos.current.z,
-                    vel.current.x * d,
-                    vel.current.z * d,
+                    pos.current.x + vel.current.x * d,
+                    pos.current.z + vel.current.z * d,
                 );
                 if (Math.abs(next.x - pos.current.x) < 1e-5) vel.current.x *= 0.1;
                 if (Math.abs(next.z - pos.current.z) < 1e-5) vel.current.z *= 0.1;
@@ -356,10 +428,14 @@ export default function FirstPersonController({
                 grounded.current = false;
                 emit('jump');
             }
+            // Two-storey ground: the floor under you depends on where you are
+            // AND which storey you're on; the stair is a ramp between them.
+            level.current = levelAfter(pos.current.x, pos.current.z, level.current);
+            const eyeFloor = groundAt(pos.current.x, pos.current.z, level.current) + EYE_HEIGHT;
             vy.current -= GRAVITY * d;
             pos.current.y += vy.current * d;
-            if (pos.current.y <= EYE_HEIGHT) {
-                pos.current.y = EYE_HEIGHT;
+            if (pos.current.y <= eyeFloor) {
+                pos.current.y = eyeFloor;
                 vy.current = 0;
                 grounded.current = true;
             }
@@ -373,7 +449,7 @@ export default function FirstPersonController({
                 const prev = lastBobSin.current;
                 // Heel-down on each zero-cross of walk cycle
                 if ((prev <= 0 && s > 0) || (prev >= 0 && s < 0)) {
-                    hubAudio.footPlant(isOnLivingRug(pos.current.x, pos.current.z));
+                    hubAudio.footPlant(onRug(pos.current.x, pos.current.z));
                 }
                 lastBobSin.current = s;
             } else {
@@ -394,7 +470,7 @@ export default function FirstPersonController({
             camera.position.set(pos.current.x, pos.current.y, pos.current.z);
         }
 
-        const hs = nearestHotspot(pos.current.x, pos.current.z);
+        const hs = nearestHomeHotspot(pos.current.x, pos.current.z, level.current);
         onHotspot(hs);
 
         if (!lockedNow && houseInput.consumeInteract()) {
