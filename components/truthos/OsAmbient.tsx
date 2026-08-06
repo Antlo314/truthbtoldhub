@@ -19,6 +19,7 @@
 import { useEffect, useRef } from 'react';
 import { ACCENT_HEX } from './osSystemStore';
 import type { OsAccentId } from './OsIcon';
+import AetherDust from './AetherDust';
 
 export default function OsAmbient({
     accent,
@@ -110,7 +111,8 @@ export default function OsAmbient({
                     height: '52vmax',
                     right: '-16vmax',
                     top: '-8vmax',
-                    background: 'radial-gradient(circle at 50% 50%, #38bdf866, transparent 66%)',
+                    // Brand indigo (--aether-indigo), not generic sky cyan
+                    background: 'radial-gradient(circle at 50% 50%, #6366f166, transparent 66%)',
                     animation: phone ? undefined : 'os-drift-b 46s ease-in-out infinite',
                     transform: 'translate3d(calc(var(--px) * -22px), calc(var(--py) * -18px), 0)',
                 }}
@@ -127,6 +129,10 @@ export default function OsAmbient({
                     transform: 'translate3d(calc(var(--px) * -30px), calc(var(--py) * -24px), 0)',
                 }}
             />
+
+            {/* True 3D: gold aether motes drifting in depth. Desktop only —
+                a phone GPU has better things to do than a wallpaper. */}
+            <AetherDust enabled={!phone} />
 
             {/* Slow specular sweep — the thing that makes glass read as glass */}
             {!phone && (
