@@ -130,6 +130,11 @@ export default function OsWindowFrame({
         onRect(zoneRect(zone, workspace()));
     };
 
+    // The focused window carries the system accent — a hairline ring plus a
+    // soft halo, layered under the existing depth shadow.
+    const focusGlow =
+        '0 28px 80px -16px rgba(0,0,0,0.85), 0 0 0 1px color-mix(in srgb, var(--os-accent, #34d399) 45%, transparent), 0 0 26px -8px color-mix(in srgb, var(--os-accent, #34d399) 40%, transparent)';
+
     const style: CSSProperties = fillScreen
         ? {
               position: 'absolute',
@@ -235,10 +240,14 @@ export default function OsWindowFrame({
                 }
                 className={`flex flex-col overflow-hidden border shadow-2xl ${
                     narrow ? 'rounded-none sm:rounded-xl' : 'rounded-xl'
-                } ${borderCls} ${focused ? 'shadow-[0_28px_80px_-16px_rgba(0,0,0,0.85)]' : 'shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] opacity-[0.97]'} ${
+                } ${borderCls} ${focused ? '' : 'shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] opacity-[0.97]'} ${
                     bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''
                 }`}
-                style={style}
+                style={
+                    (focused
+                        ? { ...style, boxShadow: focusGlow }
+                        : style) as unknown as import('framer-motion').MotionStyle
+                }
                 onMouseDown={onFocus}
             >
                 <div

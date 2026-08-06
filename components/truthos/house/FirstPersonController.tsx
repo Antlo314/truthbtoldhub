@@ -37,6 +37,7 @@ import {
     LOOK_SMOOTH,
     damp,
 } from './houseFeel';
+import { setWalkerPose } from './walkerPose';
 
 /** Soft footsteps on the two rugs (rec room + living) */
 function onRug(x: number, z: number): boolean {
@@ -492,12 +493,16 @@ export default function FirstPersonController({
         poseT.current += d;
         if (poseT.current > 0.12) {
             poseT.current = 0;
-            onPose({
+            const p = {
                 x: pos.current.x,
-                y: 0,
+                // Body-ground height (0 on main, ~UPPER_Y upstairs, rises in
+                // jumps) — eye Y minus eye height, bob is camera-only.
+                y: Math.max(0, pos.current.y - EYE_HEIGHT),
                 z: pos.current.z,
                 yaw: yawS.current,
-            });
+            };
+            setWalkerPose(p);
+            onPose(p);
         }
     });
 

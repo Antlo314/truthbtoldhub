@@ -269,7 +269,8 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
                         max={100}
                         value={Math.round(brightness * 100)}
                         onChange={(e) => setBrightness(Number(e.target.value) / 100)}
-                        className="w-full accent-emerald-400 h-6 touch-manipulation"
+                        className="w-full h-6 touch-manipulation"
+                        style={{ accentColor: 'var(--os-accent, #34d399)' }}
                     />
                 </div>
 
@@ -293,7 +294,8 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
                             setVolume(v);
                             hubAudio.setMaster(v);
                         }}
-                        className="w-full accent-emerald-400 h-6 touch-manipulation"
+                        className="w-full h-6 touch-manipulation"
+                        style={{ accentColor: 'var(--os-accent, #34d399)' }}
                     />
                 </div>
 
@@ -593,9 +595,11 @@ export function OsTaskView({ onPick }: { onPick: (id: string) => void }) {
 export function OsContextMenu({
     onOpenSettings,
     onRestart,
+    onWidgets,
 }: {
     onOpenSettings: () => void;
     onRestart: () => void;
+    onWidgets?: () => void;
 }) {
     const ctxMenu = useOsSystem((s) => s.ctxMenu);
     const setCtxMenu = useOsSystem((s) => s.setCtxMenu);
@@ -610,6 +614,9 @@ export function OsContextMenu({
     const items: { label: string; icon: React.ReactNode; run: () => void }[] = [
         { label: 'Command palette', icon: <Search size={13} />, run: () => setOverlay('palette') },
         { label: 'Task view', icon: <Expand size={13} />, run: () => setTaskView(true) },
+        ...(onWidgets
+            ? [{ label: 'Widgets', icon: <LayoutGrid size={13} />, run: onWidgets }]
+            : []),
         {
             label: 'Next wallpaper',
             icon: <ImageIcon size={13} />,
@@ -683,10 +690,10 @@ export function OsLockScreen({ wallpaperCss }: { wallpaperCss: string }) {
                 sacredUi.access();
             }}
         >
-            <div
-                className="absolute inset-0 bg-cover bg-center scale-105"
-                style={{ backgroundImage: wallpaperCss }}
-            />
+            {/* `wallpaperCss` is a background SHORTHAND (url(...) center/cover)
+                — it must go on `background`, not backgroundImage, or every
+                image wallpaper renders blank here. */}
+            <div className="absolute inset-0 scale-105" style={{ background: wallpaperCss }} />
             <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
             {/* macOS grammar: date over a huge thin clock in the top third,
                 identity + unlock hint resting at the bottom */}

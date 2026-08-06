@@ -16,8 +16,10 @@
  * The sky dome and moon live here now — the old YardGeometry carried
  * them for the old house, and this file replaces it.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getSky } from './DayNightCycle';
 import { useHouseMaterials } from './HouseMaterials';
 import {
     FURNITURE,
@@ -68,6 +70,46 @@ function Walls({
                 </mesh>
             ))}
         </group>
+    );
+}
+
+/**
+ * Sky that follows the world clock. The dome texture is a night gradient, so
+ * instead of trying to tint it into a day sky it FADES — at noon it goes
+ * transparent and the scene background (already repainted every frame by
+ * DayNightCycle to the sky/fog colour) becomes the daytime sky. The moon
+ * rides its own opacity from the same resolved state.
+ */
+function SkyAndMoon({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
+    const skyMat = m.sky as THREE.MeshBasicMaterial;
+    const moonMat = m.moon as THREE.MeshBasicMaterial;
+    const moonRef = useRef<THREE.Mesh>(null);
+
+    useFrame(() => {
+        const sky = getSky();
+        // Night dome fully opaque below ~35% daylight, gone by ~80%
+        const nightness = Math.max(0, Math.min(1, 1 - (sky.daylight - 0.35) / 0.45));
+        if (!skyMat.transparent) skyMat.transparent = true;
+        skyMat.opacity = nightness;
+        moonMat.opacity = sky.moonOpacity;
+        if (moonRef.current) moonRef.current.visible = sky.moonOpacity > 0.02;
+    });
+
+    return (
+        <>
+            <mesh frustumCulled={false}>
+                <sphereGeometry args={[low ? 240 : 480, low ? 24 : 40, low ? 14 : 22]} />
+                <primitive object={skyMat} attach="material" />
+            </mesh>
+            <mesh
+                ref={moonRef}
+                position={low ? [-97, 123, -134] : [-195, 246, -267]}
+                onUpdate={(self: THREE.Mesh) => self.lookAt(0, 3, 0)}
+            >
+                <planeGeometry args={low ? [41, 41] : [82, 82]} />
+                <primitive object={moonMat} attach="material" />
+            </mesh>
+        </>
     );
 }
 
@@ -125,7 +167,16 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                 color: '#cfe0ea', transparent: true, opacity: 0.22,
                 roughness: 0.06, metalness: 0.4, side: THREE.DoubleSide,
             }),
-            warm: new THREE.MeshBasicMaterial({ color: '#ffd9a0', toneMapped: false }),
+            warm: (() => {
+                // Entry glow pane — dims with daylight via LampGroup's glow tag
+                const w = new THREE.MeshBasicMaterial({
+                    color: '#ffd9a0',
+                    toneMapped: false,
+                    transparent: true,
+                });
+                w.userData.lampGlow = true;
+                return w;
+            })(),
         }),
         [],
     );
@@ -150,17 +201,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
     return (
         <group>
             {/* ── Sky — the dome and moon this world looks up into ── */}
-            <mesh frustumCulled={false}>
-                <sphereGeometry args={[low ? 240 : 480, low ? 24 : 40, low ? 14 : 22]} />
-                <primitive object={m.sky} attach="material" />
-            </mesh>
-            <mesh
-                position={low ? [-97, 123, -134] : [-195, 246, -267]}
-                onUpdate={(self: THREE.Mesh) => self.lookAt(0, 3, 0)}
-            >
-                <planeGeometry args={low ? [41, 41] : [82, 82]} />
-                <primitive object={m.moon} attach="material" />
-            </mesh>
+            <SkyAndMoon m={m} low={low} />
 
             {/* ── Floors ─────────────────────────────────────── */}
             {floors.map((f) => (

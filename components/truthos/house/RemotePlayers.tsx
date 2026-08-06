@@ -4,8 +4,10 @@
  * Only OTHER live players currently heartbeating in the house.
  * Never show self · no ghosts · no bots.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import * as THREE from 'three';
 import Humanoid from './Humanoid';
 import type { HousePeer } from '@/lib/truthos/housePresence';
 
@@ -30,9 +32,34 @@ function PeerMesh({
         [peer.skin, peer.aura, peer.build],
     );
     const track = useMemo(() => ({ x: peer.x, z: peer.z }), [peer.x, peer.z]);
+    const group = useRef<THREE.Group>(null);
+
+    // Glide between pose packets (~0.12 s apart) instead of snapping.
+    // Height comes from the pose too, so upstairs peers stand upstairs.
+    useFrame((_, dt) => {
+        const g = group.current;
+        if (!g) return;
+        const k = Math.min(1, dt * 10);
+        const dx = peer.x - g.position.x;
+        const dy = (peer.y || 0) - g.position.y;
+        const dz = peer.z - g.position.z;
+        // A stale or teleporting peer jumps rather than sliding across rooms
+        if (dx * dx + dz * dz > 36) {
+            g.position.set(peer.x, peer.y || 0, peer.z);
+            g.rotation.y = peer.yaw;
+            return;
+        }
+        g.position.x += dx * k;
+        g.position.y += dy * k;
+        g.position.z += dz * k;
+        let dyaw = peer.yaw - g.rotation.y;
+        while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+        g.rotation.y += dyaw * k;
+    });
 
     return (
-        <group position={[peer.x, 0, peer.z]} rotation={[0, peer.yaw, 0]}>
+        <group ref={group} position={[peer.x, peer.y || 0, peer.z]} rotation={[0, peer.yaw, 0]}>
             <Humanoid look={look} low={low} trackPosition={track} />
             {showLabel && (
                 <Html position={[0, 1.95, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>

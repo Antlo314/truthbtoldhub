@@ -386,14 +386,52 @@ export function ClockApp() {
 
 /* ─── Task Manager ───────────────────────────────────────── */
 
+type HeapInfo = { used: number; limit: number };
+type BatteryInfo = { level: number; charging: boolean };
+type BatteryManagerLike = BatteryInfo & {
+    addEventListener: (type: string, fn: () => void) => void;
+    removeEventListener: (type: string, fn: () => void) => void;
+};
+
+function readHeap(): HeapInfo | null {
+    if (typeof performance === 'undefined') return null;
+    const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+    if (!mem) return null;
+    return { used: mem.usedJSHeapSize, limit: mem.jsHeapSizeLimit };
+}
+
+function fmtUptime(ms: number) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ${String(s % 60).padStart(2, '0')}s`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${String(m % 60).padStart(2, '0')}m`;
+}
+
 export function TaskManagerApp() {
     const windows = useTruthOs((s) => s.windows);
+    const focusId = useTruthOs((s) => s.focusId);
     const closeWindow = useTruthOs((s) => s.closeWindow);
     const focusWindow = useTruthOs((s) => s.focusWindow);
     const [fps, setFps] = useState(0);
-    const [tick, setTick] = useState(0);
+    const [, setTick] = useState(0);
+    const [heap, setHeap] = useState<HeapInfo | null>(() => readHeap());
+    const [online, setOnline] = useState(true);
+    const [battery, setBattery] = useState<BatteryInfo | null>(null);
+    // First-seen timestamps per window id — drives the uptime column.
+    const mountedAt = useRef<Map<string, number>>(new Map());
 
-    // FPS sampling
+    const now = Date.now();
+    const liveIds = new Set(windows.map((w) => w.id));
+    for (const w of windows) {
+        if (!mountedAt.current.has(w.id)) mountedAt.current.set(w.id, now);
+    }
+    for (const id of Array.from(mountedAt.current.keys())) {
+        if (!liveIds.has(id)) mountedAt.current.delete(id);
+    }
+
+    // FPS sampling + 1s refresh for uptime/heap
     useEffect(() => {
         let frames = 0;
         let last = performance.now();
@@ -408,28 +446,68 @@ export function TaskManagerApp() {
             raf = requestAnimationFrame(loop);
         };
         raf = requestAnimationFrame(loop);
-        const jitter = setInterval(() => setTick((v) => v + 1), 2000);
+        const timer = setInterval(() => {
+            setTick((v) => v + 1);
+            setHeap(readHeap());
+        }, 1000);
         return () => {
             cancelAnimationFrame(raf);
-            clearInterval(jitter);
+            clearInterval(timer);
         };
     }, []);
 
-    // Playful-but-stable per-window load figures, re-rolled every couple seconds
-    const loads = useMemo(() => {
-        return windows.map((w, i) => {
-            const seed = (w.id.charCodeAt(1) * 31 + i * 17 + tick * 13) % 100;
-            return {
-                cpu: (seed % 18) + (w.minimized ? 0.4 : 2.1),
-                mem: 38 + ((seed * 7) % 220),
-            };
-        });
-    }, [windows, tick]);
+    // Online / offline
+    useEffect(() => {
+        setOnline(navigator.onLine);
+        const goOn = () => setOnline(true);
+        const goOff = () => setOnline(false);
+        window.addEventListener('online', goOn);
+        window.addEventListener('offline', goOff);
+        return () => {
+            window.removeEventListener('online', goOn);
+            window.removeEventListener('offline', goOff);
+        };
+    }, []);
 
-    const mem =
-        typeof performance !== 'undefined' &&
-        (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } })
-            .memory;
+    // Battery (where supported)
+    useEffect(() => {
+        const nav = navigator as Navigator & { getBattery?: () => Promise<BatteryManagerLike> };
+        if (!nav.getBattery) return;
+        let batt: BatteryManagerLike | null = null;
+        let disposed = false;
+        const sync = () => {
+            if (batt) setBattery({ level: batt.level, charging: batt.charging });
+        };
+        nav.getBattery()
+            .then((b) => {
+                if (disposed) return;
+                batt = b;
+                sync();
+                b.addEventListener('levelchange', sync);
+                b.addEventListener('chargingchange', sync);
+            })
+            .catch(() => {
+                /* */
+            });
+        return () => {
+            disposed = true;
+            if (batt) {
+                batt.removeEventListener('levelchange', sync);
+                batt.removeEventListener('chargingchange', sync);
+            }
+        };
+    }, []);
+
+    const heapPct = heap && heap.limit > 0 ? Math.min(100, (heap.used / heap.limit) * 100) : 0;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+    const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined;
+    const pageUptime = typeof performance !== 'undefined' ? performance.now() : 0;
+
+    const statusOf = (id: string, minimized?: boolean) => {
+        if (minimized) return { label: 'minimized', cls: 'text-zinc-500' };
+        if (id === focusId) return { label: 'focused', cls: 'text-amber-300' };
+        return { label: 'normal', cls: 'text-zinc-400' };
+    };
 
     return (
         <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[280px]">
@@ -439,13 +517,39 @@ export function TaskManagerApp() {
                     <p className="text-xl text-white font-semibold tabular-nums">{fps || '—'}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Processes</p>
-                    <p className="text-xl text-white font-semibold tabular-nums">{windows.length + 3}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
                     <p className="text-[9px] uppercase tracking-widest text-zinc-500">JS Heap</p>
                     <p className="text-xl text-white font-semibold tabular-nums">
-                        {mem ? `${Math.round(mem.usedJSHeapSize / 1048576)}M` : '—'}
+                        {heap ? `${Math.round(heap.used / 1048576)} MB` : '—'}
+                    </p>
+                    {heap && (
+                        <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-emerald-400/70"
+                                style={{ width: `${heapPct}%` }}
+                            />
+                        </div>
+                    )}
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Windows</p>
+                    <p className="text-xl text-white font-semibold tabular-nums">{windows.length}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">DPR · Cores</p>
+                    <p className="text-xl text-white font-semibold tabular-nums">
+                        {dpr}x · {cores ?? '—'}
+                    </p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Network</p>
+                    <p className={`text-xl font-semibold ${online ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {online ? 'online' : 'offline'}
+                    </p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Battery</p>
+                    <p className="text-xl text-white font-semibold tabular-nums">
+                        {battery ? `${Math.round(battery.level * 100)}%${battery.charging ? ' ⚡' : ''}` : '—'}
                     </p>
                 </div>
             </div>
@@ -454,63 +558,56 @@ export function TaskManagerApp() {
                     <thead className="sticky top-0 bg-zinc-950/95 backdrop-blur">
                         <tr className="text-[9px] uppercase tracking-widest text-zinc-500 border-b border-white/10">
                             <th className="px-3 py-2 font-medium">Process</th>
-                            <th className="px-2 py-2 font-medium text-right">CPU</th>
-                            <th className="px-2 py-2 font-medium text-right">Mem</th>
+                            <th className="px-2 py-2 font-medium text-right">Uptime</th>
+                            <th className="px-2 py-2 font-medium text-right">Status</th>
                             <th className="px-3 py-2 font-medium text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {[
-                            ['soulsh.sys', 0.3, 24],
-                            ['bento-wm.sys', 1.1, 52],
-                            ['aura-compositor.sys', 2.4, 96],
-                        ].map(([nm, cpu, memMb]) => (
-                            <tr key={nm as string} className="border-b border-white/5 text-zinc-500">
+                        {['soulsh.sys', 'bento-wm.sys', 'aura-compositor.sys'].map((nm) => (
+                            <tr key={nm} className="border-b border-white/5 text-zinc-500">
                                 <td className="px-3 py-2 font-mono">{nm}</td>
-                                <td className="px-2 py-2 text-right tabular-nums">{cpu}%</td>
-                                <td className="px-2 py-2 text-right tabular-nums">{memMb} MB</td>
-                                <td className="px-3 py-2 text-right text-[10px]">system</td>
+                                <td className="px-2 py-2 text-right tabular-nums">{fmtUptime(pageUptime)}</td>
+                                <td className="px-2 py-2 text-right text-[10px]">system</td>
+                                <td className="px-3 py-2 text-right text-[10px]">—</td>
                             </tr>
                         ))}
-                        {windows.map((w, i) => (
-                            <tr key={w.id} className="border-b border-white/5 hover:bg-white/[0.03]">
-                                <td className="px-3 py-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            focusWindow(w.id);
-                                            sacredUi.click();
-                                        }}
-                                        className="text-white/90 hover:text-amber-200 font-medium truncate max-w-[180px] block text-left"
-                                    >
-                                        {w.title}
-                                        {w.minimized && (
-                                            <span className="text-zinc-600 ml-1.5 text-[10px]">
-                                                (minimized)
-                                            </span>
-                                        )}
-                                    </button>
-                                </td>
-                                <td className="px-2 py-2 text-right tabular-nums text-zinc-400">
-                                    {loads[i]?.cpu.toFixed(1)}%
-                                </td>
-                                <td className="px-2 py-2 text-right tabular-nums text-zinc-400">
-                                    {loads[i]?.mem} MB
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            closeWindow(w.id);
-                                            sacredUi.click();
-                                        }}
-                                        className="text-[10px] px-2.5 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/15 min-h-[32px] touch-manipulation"
-                                    >
-                                        End task
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {windows.map((w) => {
+                            const st = statusOf(w.id, w.minimized);
+                            const born = mountedAt.current.get(w.id) ?? now;
+                            return (
+                                <tr key={w.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                                    <td className="px-3 py-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                focusWindow(w.id);
+                                                sacredUi.click();
+                                            }}
+                                            className="text-white/90 hover:text-amber-200 font-medium truncate max-w-[180px] block text-left"
+                                        >
+                                            {w.title}
+                                        </button>
+                                    </td>
+                                    <td className="px-2 py-2 text-right tabular-nums text-zinc-400">
+                                        {fmtUptime(now - born)}
+                                    </td>
+                                    <td className={`px-2 py-2 text-right text-[10px] ${st.cls}`}>{st.label}</td>
+                                    <td className="px-3 py-2 text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                closeWindow(w.id);
+                                                sacredUi.click();
+                                            }}
+                                            className="text-[10px] px-2.5 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/15 min-h-[32px] touch-manipulation"
+                                        >
+                                            End task
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {windows.length === 0 && (
                             <tr>
                                 <td colSpan={4} className="px-3 py-6 text-center text-zinc-600 text-xs">

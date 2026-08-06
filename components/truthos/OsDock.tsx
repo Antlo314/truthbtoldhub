@@ -125,15 +125,19 @@ function DockIcon({
                 </motion.span>
             </motion.span>
 
-            {/* Running indicator */}
+            {/* Running indicator — the focused app's dot carries the accent */}
             <span
                 className={`absolute -bottom-[7px] h-1 w-1 rounded-full transition-all ${
-                    running
-                        ? focused
-                            ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]'
-                            : 'bg-white/60'
-                        : 'bg-transparent'
+                    running ? (focused ? '' : 'bg-white/60') : 'bg-transparent'
                 }`}
+                style={
+                    running && focused
+                        ? {
+                              background: 'var(--os-accent, #fff)',
+                              boxShadow: '0 0 6px var(--os-accent, rgba(255,255,255,0.9))',
+                          }
+                        : undefined
+                }
             />
         </motion.button>
     );
@@ -147,6 +151,7 @@ export default function OsDock({
     onLaunch,
     onFocusApp,
     onTogglePin,
+    onAppMenu,
     onLaunchpad,
     onChamber,
 }: {
@@ -157,6 +162,8 @@ export default function OsDock({
     onLaunch: (app: OsAppId) => void;
     onFocusApp: (app: OsAppId) => void;
     onTogglePin: (app: OsAppId) => void;
+    /** Right-click — opens the shell's jump list (falls back to pin toggle) */
+    onAppMenu?: (app: OsAppId, x: number, y: number) => void;
     onLaunchpad: () => void;
     onChamber?: () => void;
 }) {
@@ -244,7 +251,8 @@ export default function OsDock({
                         onClick={() => launch(app)}
                         onContextMenu={(e) => {
                             e.preventDefault();
-                            onTogglePin(app);
+                            if (onAppMenu) onAppMenu(app, e.clientX, e.clientY);
+                            else onTogglePin(app);
                         }}
                     />
                 ))}

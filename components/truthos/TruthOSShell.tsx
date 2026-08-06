@@ -40,7 +40,7 @@ import OsAmbient from './OsAmbient';
 import OsWindowFrame from './OsWindowFrame';
 import OsDock from './OsDock';
 import OsMenuBar from './OsMenuBar';
-import { useOsSystem } from './osSystemStore';
+import { ACCENT_HEX, useOsSystem } from './osSystemStore';
 import { resolveWallpaper } from './osWallpapers';
 import { useOsGameBridge } from './useOsGameBridge';
 import {
@@ -412,6 +412,12 @@ export default function TruthOSShell({
                 showDesktop();
                 return;
             }
+            // Lock screen — the binding the ✦ menu advertises
+            if (mod && !e.altKey && !e.shiftKey && key.toLowerCase() === 'l') {
+                e.preventDefault();
+                useOsSystem.getState().setLocked(true);
+                return;
+            }
             // Virtual desktops
             if (mod && e.altKey) {
                 if (key === 'ArrowLeft' || key === 'ArrowRight') {
@@ -546,12 +552,23 @@ export default function TruthOSShell({
                     ['--os-pad-top' as string]: phone
                         ? 'env(safe-area-inset-top, 0px)'
                         : 'calc(1.8rem + env(safe-area-inset-top, 0px))',
+                    // One accent, everywhere: window chrome, dock dots,
+                    // sliders and ambient all read this var.
+                    ['--os-accent' as string]: ACCENT_HEX[accent] ?? ACCENT_HEX.emerald,
                 } as CSSProperties
             }
         >
-            {/* Wallpaper — themeable (Settings / Photos / right-click) */}
+            {/* Wallpaper — themeable (Settings / Photos / right-click).
+                Desktop wallpapers breathe: gradients drift hue, photos get a
+                very slow ken-burns. Phones stay static (battery). */}
             <div
-                className={`pointer-events-none absolute inset-0 ${phone ? '' : 'scale-105'}`}
+                className={`pointer-events-none absolute inset-0 ${
+                    phone
+                        ? ''
+                        : wallpaper.kind === 'image'
+                          ? 'os-wall-image'
+                          : 'os-wall-gradient'
+                }`}
                 style={{ background: wallpaper.css }}
             />
             {/* Living layer: drifting aurora, parallax, grain */}
@@ -888,6 +905,10 @@ export default function TruthOSShell({
                 <OsContextMenu
                     onOpenSettings={() => launch('settings')}
                     onRestart={restartOs}
+                    onWidgets={() => {
+                        setStartOpen(false);
+                        toggleFlyout('widgets');
+                    }}
                 />
 
                 {/* Command palette · window switcher · shortcut sheet */}
@@ -1054,6 +1075,11 @@ export default function TruthOSShell({
                         toggleFlyout('notifications');
                         sacredUi.click();
                     }}
+                    onWidgets={() => {
+                        setStartOpen(false);
+                        toggleFlyout('widgets');
+                        sacredUi.click();
+                    }}
                     onCalendar={() => {
                         setStartOpen(false);
                         toggleFlyout('calendar');
@@ -1081,6 +1107,17 @@ export default function TruthOSShell({
                 onTogglePin={(app) => {
                     togglePin(app);
                     sacredUi.click();
+                }}
+                onAppMenu={(app, x, y) => {
+                    // Right-click on a running app opens the jump list; a
+                    // non-running pin keeps the old quick toggle.
+                    const wins = deskWindows.filter((w) => w.app === app);
+                    const top = wins.find((w) => !w.minimized) ?? wins[0];
+                    if (top) setTaskMenu({ x, y, win: top });
+                    else {
+                        togglePin(app);
+                        sacredUi.click();
+                    }
                 }}
                 onLaunchpad={() => {
                     const next = !startOpen;

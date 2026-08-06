@@ -1,9 +1,13 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import type { BloomEffect } from 'postprocessing';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, Environment, Stars } from '@react-three/drei';
+import { ContactShadows, Environment } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import DayNightCycle from './DayNightCycle';
+import LampGroup from './LampGroup';
+import { BloomByDaylight, NightStars, Rain } from './WeatherFx';
 import JungleGeometry from './JungleGeometry';
 import WorldDestinations from './WorldDestinations';
 import DistantScenery from './DistantScenery';
@@ -45,6 +49,7 @@ export default function HouseCanvas({
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
     const bg = mobile ? '#1c1630' : '#120e1c';
+    const bloom = useRef<BloomEffect>(null);
     const [localPose, setLocalPose] = useState<PlayerPose | null>(null);
     const poseCb = useRef(onPose);
     poseCb.current = onPose;
@@ -118,9 +123,9 @@ export default function HouseCanvas({
                 {!mobile && <Environment preset="night" environmentIntensity={0.35} />}
                 {mobile && <Environment preset="apartment" environmentIntensity={0.55} />}
 
-                {!mobile && (
-                    <Stars radius={40} depth={28} count={900} factor={2.2} saturation={0.2} fade speed={0.3} />
-                )}
+                {/* Stars + rain follow the world clock and weather */}
+                {!mobile && <NightStars />}
+                {!mobile && <Rain />}
 
                 {/* Sun, ambient and hemisphere are owned by the day/night cycle
                     so there is one place the time of day is expressed. */}
@@ -133,12 +138,17 @@ export default function HouseCanvas({
 
                 {/* The jungle beyond the fence, and the green horizon past it */}
                 <JungleGeometry low={mobile} />
-                <WorldDestinations low={mobile} />
                 <DistantScenery low={mobile} />
 
-                <HomeGeometry low={mobile} />
-                <HomeInterior low={mobile} />
-                <HomeDecor low={mobile} />
+                {/* Everything with practicals sits in one LampGroup, so every
+                    lamp, cove strip and glow pane dims as the sun comes up —
+                    the payoff the worldTime keyframes were written for. */}
+                <LampGroup floor={0.07}>
+                    <WorldDestinations low={mobile} />
+                    <HomeGeometry low={mobile} />
+                    <HomeInterior low={mobile} />
+                    <HomeDecor low={mobile} />
+                </LampGroup>
                 {/* Dust motes · fireflies · moon shafts — desktop only */}
                 {!mobile && <HouseAtmosphere />}
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
@@ -154,6 +164,23 @@ export default function HouseCanvas({
                 />
                 {!mobile && (
                     <ContactShadows position={[0, 0.02, 0]} opacity={0.3} scale={48} blur={2.8} far={18} />
+                )}
+                {/* Post pass — bloom lifts the emissives (torches, coves,
+                    screens) into real glow; vignette seats the frame. Bloom
+                    strength follows the sun so noon doesn't wash out. */}
+                {!mobile && <BloomByDaylight effect={bloom} />}
+                {!mobile && (
+                    <EffectComposer multisampling={4}>
+                        <Bloom
+                            ref={bloom}
+                            intensity={0.62}
+                            luminanceThreshold={0.9}
+                            luminanceSmoothing={0.32}
+                            mipmapBlur
+                            radius={0.7}
+                        />
+                        <Vignette eskil={false} offset={0.22} darkness={0.45} />
+                    </EffectComposer>
                 )}
             </Canvas>
         </div>

@@ -16,6 +16,7 @@
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import CinemaScreen from './CinemaScreen';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import { DESTINATIONS, destCenter, type Destination } from './jungleMap';
@@ -99,10 +100,18 @@ function CinemaGrove({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low:
                     <primitive object={m.woodDark} attach="material" />
                 </mesh>
             ))}
-            <mesh position={[0, 2.4, 0.02]}>
-                <planeGeometry args={[6.4, 3.0]} />
-                <primitive object={m.screen} attach="material" />
-            </mesh>
+            {/* The screen is ALIVE on desktop — the panel's film plays here
+                via VideoTexture; phones keep the cheap static surface. */}
+            {low ? (
+                <mesh position={[0, 2.4, 0.02]}>
+                    <planeGeometry args={[6.4, 3.0]} />
+                    <primitive object={m.screen} attach="material" />
+                </mesh>
+            ) : (
+                <group position={[0, 2.4, 0.02]}>
+                    <CinemaScreen w={6.4} h={3.0} />
+                </group>
+            )}
             <mesh position={[0, 2.4, -0.04]}>
                 <planeGeometry args={[6.9, 3.5]} />
                 <primitive object={m.woodDark} attach="material" />

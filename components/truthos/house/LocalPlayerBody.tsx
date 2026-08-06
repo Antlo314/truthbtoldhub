@@ -30,7 +30,7 @@ export default function LocalPlayerBody({
 
     useFrame(() => {
         if (!group.current || !pose) return;
-        group.current.position.set(pose.x, 0, pose.z);
+        group.current.position.set(pose.x, pose.y, pose.z);
         group.current.rotation.y = pose.yaw;
         group.current.visible = true;
         group.current.traverse((o) => o.layers.set(LOCAL_BODY_LAYER));
@@ -39,7 +39,7 @@ export default function LocalPlayerBody({
     if (!pose) return null;
 
     return (
-        <group ref={group} position={[pose.x, 0, pose.z]} rotation={[0, pose.yaw, 0]}>
+        <group ref={group} position={[pose.x, pose.y, pose.z]} rotation={[0, pose.yaw, 0]}>
             {/* Your own body — the SAME vessel everyone else sees, so the
                 mirror shows the person other players are looking at. */}
             <Humanoid

@@ -34,7 +34,7 @@ type HouseUiState = {
     stopCinema: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v7';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v8';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -80,37 +80,37 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 export const WALKTHROUGH_STEPS = [
     {
         title: 'Welcome home',
-        body: 'You are in the foyer. A real hallway connects living, bedroom, library, and the east wing. Take a full walk — the house is bigger now.',
+        body: 'You wake at the rec-room desk on the main floor. This is a two-storey house drawn from real plans — a full stair connects it to the living floor above.',
         tip: 'Continue',
     },
     {
         title: 'How to move',
-        body: 'Desktop: WASD or arrows · click the scene to look. Mobile: left stick move · right drag look · Use button to interact.',
+        body: 'Desktop: WASD or arrows · click the scene to look · Shift to run · Space to jump. Mobile: left stick move · right drag look · Use button to interact.',
         tip: 'Try a few steps',
     },
     {
-        title: 'The hallway',
-        body: 'The runner marks the main corridor. Open passages lead to every wing — no interior doors. Gold rings mark what you can open.',
-        tip: 'Look for gold rings',
+        title: 'The main floor',
+        body: 'Rec room, bedrooms and the garage. The computer at your desk boots Truth.OS; the arcade cabinet and the envelope on the table open their own rooms.',
+        tip: 'Gold rings mark what opens',
     },
     {
-        title: 'Living room',
-        body: 'North of the hall — sofa, TV, and a real wall fireplace. Controller on the coffee table opens the Arcade.',
-        tip: 'Cyan ring · controller',
+        title: 'Upstairs',
+        body: 'Take the stair up to kitchen, dining, living and the master wing. The library, the ledger, the codex niche and the wayfinder map all live on that floor.',
+        tip: 'Follow the stair',
     },
     {
-        title: 'Bedroom & Truth.OS',
-        body: 'South wing — bed, Soul Mirror on the wall, and the green desktop. Only the computer boots Truth.OS.',
-        tip: 'Green monitor · bedroom',
+        title: 'Out into the jungle',
+        body: 'Step outside and four paths leave the clearing: the Cinema Grove east, the Hall Stones west, the Mirror Pool southeast, the Signal Studio southwest.',
+        tip: 'The wayfinder maps them',
     },
     {
-        title: 'Wings',
-        body: 'West: library shelves on the wall. East: study, cinema, Signal Studio. Northwest arch opens The Hall community.',
-        tip: 'Explore freely',
+        title: 'The world has a clock',
+        body: 'A full day passes about every twelve minutes. Lamps warm at dusk and fade by morning, stars come and go, and weather rolls on its own.',
+        tip: 'Watch the sky',
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space. Front door opens to the porch and front yard. Living has a back door west of the fire into the garden. Tour again anytime.',
+        body: 'Only LIVE players share the space — you will see them walking, upstairs or down. Tour again anytime from the house menu.',
         tip: 'Enter the house',
     },
 ] as const;

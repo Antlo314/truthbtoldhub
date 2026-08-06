@@ -1,14 +1,17 @@
 'use client';
 
 /**
- * Desktop-only atmosphere layer — living-room dust motes, back-garden
- * fireflies, faint moonlight shafts through the night windows.
- * Mount gated behind `!mobile` in HouseCanvas (never on the low tier).
+ * Desktop-only atmosphere layer — dust motes hanging in the upper living
+ * room's window light. Mount gated behind `!mobile` in HouseCanvas.
+ *
+ * The volume derives from homeMap's `living` room so it moves with the
+ * plan; fireflies live in JungleGeometry (outdoors), not here.
  */
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { seededRng } from './houseSkins';
+import { ROOMS, UPPER_Y } from './homeMap';
 
 type Cloud = {
     geometry: THREE.BufferGeometry;
@@ -36,7 +39,7 @@ function buildCloud(
     return { geometry, base, phase };
 }
 
-/** ~120 slow-drifting motes in the living room volume */
+/** ~120 slow-drifting motes in the upper living room volume */
 function DustMotes() {
     const mat = useMemo(
         () =>
@@ -51,7 +54,16 @@ function DustMotes() {
             }),
         [],
     );
-    const cloud = useMemo(() => buildCloud(101, 120, [-5.4, 0.3, -11.6], [5.4, 2.75, -1.8]), []);
+    const cloud = useMemo(() => {
+        const living = ROOMS.find((r) => r.id === 'living');
+        const min: [number, number, number] = living
+            ? [living.minX + 0.4, UPPER_Y + 0.3, living.minZ + 0.4]
+            : [-5.4, 0.3, -11.6];
+        const max: [number, number, number] = living
+            ? [living.maxX - 0.4, UPPER_Y + 2.6, living.maxZ - 0.4]
+            : [5.4, 2.75, -1.8];
+        return buildCloud(101, 120, min, max);
+    }, []);
     useFrame(({ clock }) => {
         const t = clock.elapsedTime;
         const attr = cloud.geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -67,48 +79,6 @@ function DustMotes() {
     return <points geometry={cloud.geometry} material={mat} frustumCulled={false} />;
 }
 
-/** ~70 fireflies wandering the back garden, gentle group flicker */
-function Fireflies() {
-    const mat = useMemo(
-        () =>
-            new THREE.PointsMaterial({
-                color: '#d9f99d',
-                size: 0.06,
-                sizeAttenuation: true,
-                transparent: true,
-                opacity: 0.75,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending,
-            }),
-        [],
-    );
-    const cloud = useMemo(() => buildCloud(202, 70, [-9, 0.3, -20.4], [9, 1.9, -13.3]), []);
-    useFrame(({ clock }) => {
-        const t = clock.elapsedTime;
-        const attr = cloud.geometry.getAttribute('position') as THREE.BufferAttribute;
-        const arr = attr.array as Float32Array;
-        for (let i = 0; i < cloud.phase.length; i++) {
-            const p = cloud.phase[i];
-            arr[i * 3] = cloud.base[i * 3] + Math.sin(t * 0.5 + p * 2.1) * 0.6;
-            arr[i * 3 + 1] = cloud.base[i * 3 + 1] + Math.sin(t * 0.9 + p) * 0.32;
-            arr[i * 3 + 2] = cloud.base[i * 3 + 2] + Math.cos(t * 0.42 + p) * 0.6;
-        }
-        attr.needsUpdate = true;
-        mat.opacity = 0.55 + Math.sin(t * 2.1) * 0.28;
-    });
-    return <points geometry={cloud.geometry} material={mat} frustumCulled={false} />;
-}
-
-/*
- * Moonlight shafts removed — windows are now real openings with transparent
- * glass, so the actual sky/moon show through instead of faked light planes.
- */
-
 export default function HouseAtmosphere() {
-    return (
-        <group>
-            <DustMotes />
-            <Fireflies />
-        </group>
-    );
+    return <DustMotes />;
 }

@@ -108,6 +108,23 @@ export function useHouseMaterials(low = false) {
             return mat;
         };
 
+        // Cove strips and bulb cores dim with daylight when mounted inside a
+        // LampGroup — the tag is on the material so every mesh sharing it dims.
+        const cove = new THREE.MeshStandardMaterial({
+            color: '#2a2440',
+            emissive: '#b6a4ff',
+            emissiveIntensity: 0.85,
+            toneMapped: false,
+        });
+        cove.userData.lampEmissive = true;
+        const bulbWarm = new THREE.MeshStandardMaterial({
+            color: '#fff3d6',
+            emissive: '#ffcf8a',
+            emissiveIntensity: 1.5,
+            toneMapped: false,
+        });
+        bulbWarm.userData.lampEmissive = true;
+
         return {
             wood: mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62),
             woodDark: photo(mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68), 'woodDark', [2.5, 2.5], { normalScale: 0.6, keepTint: 0.3 }),
@@ -185,19 +202,9 @@ export function useHouseMaterials(low = false) {
                 toneMapped: false,
             }),
             /** Ceiling cove strip — cheap emissive, no light objects */
-            cove: new THREE.MeshStandardMaterial({
-                color: '#2a2440',
-                emissive: '#b6a4ff',
-                emissiveIntensity: 0.85,
-                toneMapped: false,
-            }),
+            cove,
             /** Warm bulb / lamp core */
-            bulbWarm: new THREE.MeshStandardMaterial({
-                color: '#fff3d6',
-                emissive: '#ffcf8a',
-                emissiveIntensity: 1.5,
-                toneMapped: false,
-            }),
+            bulbWarm,
             ember: new THREE.MeshStandardMaterial({
                 color: '#ff6b2c',
                 emissive: '#ff6b2c',

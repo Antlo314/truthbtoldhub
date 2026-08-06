@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Flame, Search, SlidersHorizontal } from 'lucide-react';
+import { Bell, Flame, LayoutGrid, Search, SlidersHorizontal } from 'lucide-react';
 import type { OsAppId } from './truthOsStore';
 import { APP_META, DESKTOP_COUNT } from './truthOsStore';
 
@@ -82,6 +82,7 @@ export default function OsMenuBar({
     onSearch,
     onQuick,
     onNotifications,
+    onWidgets,
     onCalendar,
     onSoul,
 }: {
@@ -99,6 +100,7 @@ export default function OsMenuBar({
     onSearch: () => void;
     onQuick: () => void;
     onNotifications: () => void;
+    onWidgets: () => void;
     onCalendar: () => void;
     onSoul: () => void;
 }) {
@@ -157,9 +159,9 @@ export default function OsMenuBar({
                         open
                         onClose={() => setMenu(null)}
                         items={[
-                            { label: 'Minimize', hint: '⌃↓', onClick: () => onWindowAction('minimize') },
-                            { label: 'Zoom', hint: '⌃↑', onClick: () => onWindowAction('zoom') },
-                            { label: 'Close Window', hint: '⌃W', onClick: () => onWindowAction('close') },
+                            { label: 'Minimize', hint: '⌃⇧↓', onClick: () => onWindowAction('minimize') },
+                            { label: 'Zoom', hint: '⌃⇧↑', onClick: () => onWindowAction('zoom') },
+                            { label: 'Close Window', onClick: () => onWindowAction('close') },
                             'divider',
                             { label: 'Mission Control', onClick: () => onWindowAction('taskview') },
                             { label: 'Show Desktop', onClick: () => onWindowAction('showdesktop') },
@@ -239,6 +241,9 @@ export default function OsMenuBar({
                 {trayBtn(false, 'Search (⌘K)', onSearch, <Search size={14} />)}
                 {trayBtn(flyout === 'quick', 'Control Center', onQuick, (
                     <SlidersHorizontal size={14} />
+                ))}
+                {trayBtn(flyout === 'widgets', 'Widgets', onWidgets, (
+                    <LayoutGrid size={14} />
                 ))}
                 {trayBtn(flyout === 'notifications', 'Notifications', onNotifications, (
                     <>

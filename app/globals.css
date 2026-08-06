@@ -502,3 +502,29 @@ h1, h2, h3, .font-ritual {
 @media (prefers-reduced-motion: reduce) {
     .journal-tab-panel, .journal-card-in, .codex-crest-glow { animation: none; }
 }
+
+/* ─── Truth.OS living wallpaper ─────────────────────────────
+   Gradients drift their hue very slowly; photo wallpapers get a
+   long ken-burns. Both stand still for reduced-motion users. */
+.os-wall-gradient {
+    animation: os-wall-drift 64s ease-in-out infinite;
+}
+.os-wall-image {
+    animation: os-wall-kenburns 96s ease-in-out infinite;
+}
+@keyframes os-wall-drift {
+    0%, 100% { filter: hue-rotate(0deg) saturate(1); }
+    50% { filter: hue-rotate(9deg) saturate(1.07); }
+}
+@keyframes os-wall-kenburns {
+    0%, 100% { transform: scale(1.05); }
+    50% { transform: scale(1.11) translate(0.6%, -0.5%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-wall-gradient, .os-wall-image {
+        animation: none;
+    }
+    .os-wall-image {
+        transform: scale(1.05);
+    }
+}

@@ -1,8 +1,11 @@
 'use client';
 
 /**
- * East-wall cinema screen — plays HOUSE_FILMS via VideoTexture.
- * Shared selection lives in houseUiStore (panel + wall stay in sync).
+ * The living cinema surface — plays HOUSE_FILMS via VideoTexture.
+ * Shared selection lives in houseUiStore (panel + screen stay in sync).
+ *
+ * Renders at its local origin so the parent decides where it hangs —
+ * today that is the Cinema Grove screen in WorldDestinations.
  */
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -10,15 +13,15 @@ import { useFrame } from '@react-three/fiber';
 import { getHouseFilm, HOUSE_FILMS } from '@/lib/truthos/houseCinemaFilms';
 import { useHouseUi } from './houseUiStore';
 
-const SCREEN = {
-    x: 12.5,
-    y: 1.65,
-    z: 7.0,
-    w: 2.15,
-    h: 1.3,
-};
-
-export default function CinemaScreen({ low = false }: { low?: boolean }) {
+export default function CinemaScreen({
+    w = 2.15,
+    h = 1.3,
+    low = false,
+}: {
+    w?: number;
+    h?: number;
+    low?: boolean;
+}) {
     const filmId = useHouseUi((s) => s.cinemaFilmId);
     const playing = useHouseUi((s) => s.cinemaPlaying);
     const meshRef = useRef<THREE.Mesh>(null);
@@ -100,20 +103,24 @@ export default function CinemaScreen({ low = false }: { low?: boolean }) {
     });
 
     return (
-        <group position={[SCREEN.x, SCREEN.y, SCREEN.z]} rotation={[0, -Math.PI / 2, 0]}>
-            {/* Bezel already in HouseGeometry — this is the active surface */}
+        <group>
+            {/* Bezel is the parent's job — this is the active surface */}
             <mesh ref={meshRef}>
-                <planeGeometry args={[SCREEN.w, SCREEN.h]} />
+                <planeGeometry args={[w, h]} />
                 <meshBasicMaterial
                     color={filmId && playing ? '#ffffff' : '#1a1030'}
                     toneMapped={false}
                     side={THREE.FrontSide}
                 />
             </mesh>
+            {/* Screen light spills onto the benches while a film runs */}
+            {!low && playing && (
+                <pointLight position={[0, 0, 2.4]} intensity={2.6} color="#bcd4ff" distance={12} decay={2} />
+            )}
             {/* Soft idle glow when nothing is playing */}
             {!playing && (
                 <mesh position={[0, 0, -0.01]}>
-                    <planeGeometry args={[SCREEN.w * 0.98, SCREEN.h * 0.98]} />
+                    <planeGeometry args={[w * 0.98, h * 0.98]} />
                     <meshStandardMaterial
                         color="#0a0a12"
                         emissive="#7c3aed"

@@ -27,6 +27,11 @@ export default function LampGroup({
 }) {
     const group = useRef<THREE.Group>(null);
     const base = useRef<Map<THREE.Light, number>>(new Map());
+    // Emissive surfaces (cove strips, bulb cores) and glow planes opt in via
+    // material.userData.lampEmissive / .lampGlow — Maps keyed by material so
+    // shared materials are captured once no matter how many meshes use them.
+    const baseEmissive = useRef<Map<THREE.MeshStandardMaterial, number>>(new Map());
+    const baseGlow = useRef<Map<THREE.Material, number>>(new Map());
 
     // Capture authored intensities once the children exist
     useEffect(() => {
@@ -36,6 +41,21 @@ export default function LampGroup({
         g.traverse((o) => {
             const l = o as THREE.Light;
             if (l.isLight && !map.has(l)) map.set(l, l.intensity);
+            const mesh = o as THREE.Mesh;
+            if (mesh.isMesh) {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                for (const mat of mats) {
+                    if (!mat) continue;
+                    const std = mat as THREE.MeshStandardMaterial;
+                    if (mat.userData.lampEmissive && 'emissiveIntensity' in std && !baseEmissive.current.has(std)) {
+                        baseEmissive.current.set(std, std.emissiveIntensity);
+                    }
+                    if (mat.userData.lampGlow && !baseGlow.current.has(mat)) {
+                        mat.transparent = true;
+                        baseGlow.current.set(mat, mat.opacity);
+                    }
+                }
+            }
         });
     });
 
@@ -46,6 +66,12 @@ export default function LampGroup({
         const scale = floor + (1 - floor) * level;
         base.current.forEach((original, light) => {
             light.intensity = original * scale;
+        });
+        baseEmissive.current.forEach((original, mat) => {
+            mat.emissiveIntensity = original * scale;
+        });
+        baseGlow.current.forEach((original, mat) => {
+            mat.opacity = original * scale;
         });
     });
 

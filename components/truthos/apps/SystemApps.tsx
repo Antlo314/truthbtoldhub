@@ -5,6 +5,7 @@
  * Virtual FS in localStorage — create/rename/move folders & files.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Brush, Eraser, Minus, Square, Circle, PaintBucket, Undo2, Redo2 } from 'lucide-react';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { useTruthOs, type OsAppId } from '../truthOsStore';
 
@@ -246,19 +247,55 @@ export function NotepadApp({ nodeId, name }: { nodeId?: string; name?: string } 
 
 /* ─── Paint ──────────────────────────────────────────────── */
 
+type PaintTool = 'brush' | 'eraser' | 'line' | 'rect' | 'ellipse' | 'fill';
+
+const PAINT_BG = '#111318';
+const UNDO_CAP = 25;
+
 export function PaintApp() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const drawing = useRef(false);
+    const startPt = useRef<{ x: number; y: number } | null>(null);
+    const shapeSnapshot = useRef<ImageData | null>(null);
+    const undoStack = useRef<ImageData[]>([]);
+    const redoStack = useRef<ImageData[]>([]);
+    const [tool, setTool] = useState<PaintTool>('brush');
     const [color, setColor] = useState('#34d399');
     const [size, setSize] = useState(4);
 
+    const getCtx = () => canvasRef.current?.getContext('2d') ?? null;
+
+    // Responsive canvas: track the container, preserve pixels across resizes.
     useEffect(() => {
         const c = canvasRef.current;
-        if (!c) return;
-        const ctx = c.getContext('2d');
-        if (!ctx) return;
-        ctx.fillStyle = '#111318';
-        ctx.fillRect(0, 0, c.width, c.height);
+        const wrap = containerRef.current;
+        if (!c || !wrap) return;
+
+        const applySize = (w: number, h: number) => {
+            const nw = Math.max(1, Math.floor(w));
+            const nh = Math.max(1, Math.floor(h));
+            if (c.width === nw && c.height === nh) return;
+            const off = document.createElement('canvas');
+            off.width = Math.max(1, c.width);
+            off.height = Math.max(1, c.height);
+            off.getContext('2d')?.drawImage(c, 0, 0);
+            c.width = nw;
+            c.height = nh;
+            const ctx = c.getContext('2d');
+            if (!ctx) return;
+            ctx.fillStyle = PAINT_BG;
+            ctx.fillRect(0, 0, nw, nh);
+            ctx.drawImage(off, 0, 0);
+        };
+
+        const r = wrap.getBoundingClientRect();
+        applySize(r.width, r.height);
+        const ro = new ResizeObserver((entries) => {
+            for (const en of entries) applySize(en.contentRect.width, en.contentRect.height);
+        });
+        ro.observe(wrap);
+        return () => ro.disconnect();
     }, []);
 
     const pos = (e: React.PointerEvent) => {
@@ -270,41 +307,200 @@ export function PaintApp() {
         };
     };
 
+    const pushUndo = () => {
+        const c = canvasRef.current;
+        const ctx = getCtx();
+        if (!c || !ctx) return;
+        undoStack.current.push(ctx.getImageData(0, 0, c.width, c.height));
+        if (undoStack.current.length > UNDO_CAP) undoStack.current.shift();
+        redoStack.current = [];
+    };
+
+    const restore = (img: ImageData) => {
+        const c = canvasRef.current;
+        const ctx = getCtx();
+        if (!c || !ctx) return;
+        ctx.fillStyle = PAINT_BG;
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.putImageData(img, 0, 0);
+    };
+
+    const undo = useCallback(() => {
+        const c = canvasRef.current;
+        const ctx = c?.getContext('2d');
+        if (!c || !ctx) return;
+        const prev = undoStack.current.pop();
+        if (!prev) return;
+        redoStack.current.push(ctx.getImageData(0, 0, c.width, c.height));
+        if (redoStack.current.length > UNDO_CAP) redoStack.current.shift();
+        ctx.fillStyle = PAINT_BG;
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.putImageData(prev, 0, 0);
+        sacredUi.click();
+    }, []);
+
+    const redo = useCallback(() => {
+        const c = canvasRef.current;
+        const ctx = c?.getContext('2d');
+        if (!c || !ctx) return;
+        const next = redoStack.current.pop();
+        if (!next) return;
+        undoStack.current.push(ctx.getImageData(0, 0, c.width, c.height));
+        if (undoStack.current.length > UNDO_CAP) undoStack.current.shift();
+        ctx.fillStyle = PAINT_BG;
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.putImageData(next, 0, 0);
+        sacredUi.click();
+    }, []);
+
+    // Undo/redo shortcuts — scoped to this app: only fires while focus is inside the root div.
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        if (e.key.toLowerCase() !== 'z') return;
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+    };
+
+    const floodFill = (sx: number, sy: number, fill: string) => {
+        const c = canvasRef.current;
+        const ctx = getCtx();
+        if (!c || !ctx) return;
+        const w = c.width;
+        const h = c.height;
+        const x0 = Math.floor(sx);
+        const y0 = Math.floor(sy);
+        if (x0 < 0 || y0 < 0 || x0 >= w || y0 >= h) return;
+        // Resolve the fill color to raw RGBA bytes via a 1×1 scratch canvas.
+        const scratch = document.createElement('canvas');
+        scratch.width = 1;
+        scratch.height = 1;
+        const sctx = scratch.getContext('2d');
+        if (!sctx) return;
+        sctx.fillStyle = fill;
+        sctx.fillRect(0, 0, 1, 1);
+        const fillBytes = sctx.getImageData(0, 0, 1, 1).data;
+        const fr = fillBytes[0];
+        const fg = fillBytes[1];
+        const fb = fillBytes[2];
+        const img = ctx.getImageData(0, 0, w, h);
+        const px = new Uint32Array(img.data.buffer);
+        const repl = (255 << 24) | (fb << 16) | (fg << 8) | fr;
+        const target = px[y0 * w + x0];
+        if (target === repl) return;
+        // Scanline flood fill, tolerance 0, bounded by the canvas.
+        const stack: number[] = [x0, y0];
+        while (stack.length) {
+            const y = stack.pop()!;
+            const x = stack.pop()!;
+            let xl = x;
+            while (xl >= 0 && px[y * w + xl] === target) xl -= 1;
+            xl += 1;
+            let spanUp = false;
+            let spanDown = false;
+            let xr = xl;
+            while (xr < w && px[y * w + xr] === target) {
+                px[y * w + xr] = repl;
+                if (y > 0) {
+                    const up = px[(y - 1) * w + xr] === target;
+                    if (up && !spanUp) {
+                        stack.push(xr, y - 1);
+                        spanUp = true;
+                    } else if (!up) spanUp = false;
+                }
+                if (y < h - 1) {
+                    const dn = px[(y + 1) * w + xr] === target;
+                    if (dn && !spanDown) {
+                        stack.push(xr, y + 1);
+                        spanDown = true;
+                    } else if (!dn) spanDown = false;
+                }
+                xr += 1;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+    };
+
+    const drawShape = (ctx: CanvasRenderingContext2D, from: { x: number; y: number }, to: { x: number; y: number }) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        if (tool === 'line') {
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+        } else if (tool === 'rect') {
+            ctx.rect(Math.min(from.x, to.x), Math.min(from.y, to.y), Math.abs(to.x - from.x), Math.abs(to.y - from.y));
+        } else {
+            ctx.ellipse(
+                (from.x + to.x) / 2,
+                (from.y + to.y) / 2,
+                Math.abs(to.x - from.x) / 2,
+                Math.abs(to.y - from.y) / 2,
+                0,
+                0,
+                Math.PI * 2,
+            );
+        }
+        ctx.stroke();
+    };
+
     const down = (e: React.PointerEvent) => {
-        drawing.current = true;
         const c = canvasRef.current;
         const ctx = c?.getContext('2d');
         if (!ctx || !c) return;
         const p = pos(e);
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
+        pushUndo();
+        if (tool === 'fill') {
+            floodFill(p.x, p.y, color);
+            sacredUi.click();
+            return;
+        }
+        drawing.current = true;
+        startPt.current = p;
+        if (tool === 'brush' || tool === 'eraser') {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+        } else {
+            shapeSnapshot.current = ctx.getImageData(0, 0, c.width, c.height);
+        }
         c.setPointerCapture(e.pointerId);
     };
 
     const move = (e: React.PointerEvent) => {
         if (!drawing.current) return;
-        const ctx = canvasRef.current?.getContext('2d');
+        const ctx = getCtx();
         if (!ctx) return;
         const p = pos(e);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
+        if (tool === 'brush' || tool === 'eraser') {
+            ctx.strokeStyle = tool === 'eraser' ? PAINT_BG : color;
+            ctx.lineWidth = size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+        } else if (shapeSnapshot.current && startPt.current) {
+            // Live preview: restore the pre-drag snapshot, then draw the shape.
+            restore(shapeSnapshot.current);
+            drawShape(ctx, startPt.current, p);
+        }
     };
 
     const up = () => {
         drawing.current = false;
+        startPt.current = null;
+        shapeSnapshot.current = null;
     };
 
     const clear = () => {
         const c = canvasRef.current;
         const ctx = c?.getContext('2d');
         if (!ctx || !c) return;
-        ctx.fillStyle = '#111318';
+        pushUndo();
+        ctx.fillStyle = PAINT_BG;
         ctx.fillRect(0, 0, c.width, c.height);
         sacredUi.click();
     };
@@ -330,54 +526,114 @@ export function PaintApp() {
 
     const colors = ['#34d399', '#22d3ee', '#fbbf24', '#f472b6', '#ffffff', '#000000', '#ef4444', '#a78bfa'];
 
+    const tools: { id: PaintTool; icon: typeof Brush; label: string }[] = [
+        { id: 'brush', icon: Brush, label: 'Brush' },
+        { id: 'eraser', icon: Eraser, label: 'Eraser' },
+        { id: 'line', icon: Minus, label: 'Line' },
+        { id: 'rect', icon: Square, label: 'Rectangle' },
+        { id: 'ellipse', icon: Circle, label: 'Ellipse' },
+        { id: 'fill', icon: PaintBucket, label: 'Fill' },
+    ];
+
     return (
         <Panel>
-            <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10">
-                {colors.map((c) => (
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+            <div className="h-full flex flex-col outline-none" tabIndex={0} onKeyDown={onKeyDown}>
+                <div className="shrink-0 flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-white/10">
+                    {tools.map(({ id, icon: Icon, label }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            title={label}
+                            aria-label={label}
+                            onClick={() => {
+                                setTool(id);
+                                sacredUi.click();
+                            }}
+                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors ${
+                                tool === id
+                                    ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200'
+                                    : 'border-white/15 text-white/50 hover:text-white hover:border-white/30'
+                            }`}
+                        >
+                            <Icon size={14} />
+                        </button>
+                    ))}
+                    <span className="w-px h-5 bg-white/10 mx-1" />
                     <button
-                        key={c}
                         type="button"
-                        onClick={() => {
-                            setColor(c);
-                            sacredUi.click();
-                        }}
-                        className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white scale-110' : 'border-white/20'}`}
-                        style={{ background: c }}
-                    />
-                ))}
-                <label className="flex items-center gap-2 text-[10px] text-white/50 ml-2">
-                    Size
+                        title="Undo (Ctrl+Z)"
+                        aria-label="Undo"
+                        onClick={undo}
+                        className="w-7 h-7 rounded-lg border border-white/15 text-white/50 hover:text-white hover:border-white/30 flex items-center justify-center"
+                    >
+                        <Undo2 size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        title="Redo (Ctrl+Shift+Z)"
+                        aria-label="Redo"
+                        onClick={redo}
+                        className="w-7 h-7 rounded-lg border border-white/15 text-white/50 hover:text-white hover:border-white/30 flex items-center justify-center"
+                    >
+                        <Redo2 size={14} />
+                    </button>
+                    <button type="button" onClick={clear} className="ml-auto text-[10px] uppercase tracking-widest text-white/50 hover:text-white px-2 py-1">
+                        Clear
+                    </button>
+                    <button
+                        type="button"
+                        onClick={saveToFs}
+                        className="text-[10px] uppercase tracking-widest text-emerald-300/90 hover:text-emerald-200 px-2 py-1 border border-emerald-500/30 rounded-lg"
+                    >
+                        Save to Pictures
+                    </button>
+                </div>
+                <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10">
+                    {colors.map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                                setColor(c);
+                                sacredUi.click();
+                            }}
+                            className={`w-7 h-7 rounded-full border-2 ${color === c ? 'border-white scale-110' : 'border-white/20'}`}
+                            style={{ background: c }}
+                        />
+                    ))}
                     <input
-                        type="range"
-                        min={1}
-                        max={24}
-                        value={size}
-                        onChange={(e) => setSize(Number(e.target.value))}
-                        className="w-20 accent-emerald-400"
+                        type="color"
+                        value={color}
+                        title="Custom color"
+                        aria-label="Custom color"
+                        onChange={(e) => setColor(e.target.value)}
+                        className="w-7 h-7 rounded-full border-2 border-white/20 bg-transparent cursor-pointer p-0"
                     />
-                </label>
-                <button type="button" onClick={clear} className="ml-auto text-[10px] uppercase tracking-widest text-white/50 hover:text-white px-2 py-1">
-                    Clear
-                </button>
-                <button
-                    type="button"
-                    onClick={saveToFs}
-                    className="text-[10px] uppercase tracking-widest text-emerald-300/90 hover:text-emerald-200 px-2 py-1 border border-emerald-500/30 rounded-lg"
-                >
-                    Save to Pictures
-                </button>
-            </div>
-            <div className="flex-1 min-h-0 p-2">
-                <canvas
-                    ref={canvasRef}
-                    width={640}
-                    height={400}
-                    className="w-full h-full max-h-[360px] rounded-xl border border-white/10 touch-none cursor-crosshair bg-[#111318]"
-                    onPointerDown={down}
-                    onPointerMove={move}
-                    onPointerUp={up}
-                    onPointerLeave={up}
-                />
+                    <label className="flex items-center gap-2 text-[10px] text-white/50 ml-2">
+                        Size
+                        <input
+                            type="range"
+                            min={1}
+                            max={24}
+                            value={size}
+                            onChange={(e) => setSize(Number(e.target.value))}
+                            className="w-20 accent-emerald-400"
+                        />
+                    </label>
+                </div>
+                <div className="flex-1 min-h-0 p-2">
+                    <div ref={containerRef} className="relative w-full h-full rounded-xl border border-white/10 bg-[#111318] overflow-hidden">
+                        <canvas
+                            ref={canvasRef}
+                            className="absolute inset-0 touch-none cursor-crosshair"
+                            onPointerDown={down}
+                            onPointerMove={move}
+                            onPointerUp={up}
+                            onPointerLeave={up}
+                        />
+                    </div>
+                </div>
             </div>
         </Panel>
     );
