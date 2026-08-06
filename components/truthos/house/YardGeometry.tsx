@@ -226,20 +226,25 @@ function FirePit({ x, z, m, sh, low }: { x: number; z: number; m: HouseMaterials
     );
 }
 
-/** Gradient sky sphere + moon sprite — gives the yard a real horizon */
+/** Gradient sky sphere + moon sprite — the REAL sky, far beyond the rim.
+    The old radius was 42 — inside the jungle — which put the dome's horizon
+    band at eye level everywhere and made the world feel open to nothing.
+    Now: rim (210/400) < dome (240/480) < camera far (340/620). The moon
+    scales out with the dome so its angular size is unchanged. */
 function SkyDome({ m, low }: { m: HouseMaterials; low: boolean }) {
+    const R = low ? 240 : 480;
+    const k = (R / 42) * 0.9; // moon sits just inside the dome
     return (
         <group>
-            {/* Radius 42: worst-case cam-to-far-side ≈ 42+28 < mobile far 72 */}
             <mesh frustumCulled={false}>
-                <sphereGeometry args={[42, low ? 20 : 32, low ? 12 : 18]} />
+                <sphereGeometry args={[R, low ? 24 : 40, low ? 14 : 22]} />
                 <primitive object={m.sky} attach="material" />
             </mesh>
             <mesh
-                position={[-19, 24, -26]}
+                position={[-19 * k, 24 * k, -26 * k]}
                 onUpdate={(self: THREE.Mesh) => self.lookAt(0, 3, 0)}
             >
-                <planeGeometry args={[8, 8]} />
+                <planeGeometry args={[8 * k, 8 * k]} />
                 <primitive object={m.moon} attach="material" />
             </mesh>
         </group>

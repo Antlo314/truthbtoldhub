@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, Stars } from '@react-three/drei';
 import DayNightCycle from './DayNightCycle';
 import JungleGeometry from './JungleGeometry';
+import WorldDestinations from './WorldDestinations';
 import DistantScenery from './DistantScenery';
 import LampGroup from './LampGroup';
 import * as THREE from 'three';
@@ -164,6 +165,7 @@ export default function HouseCanvas({
 
                 {/* The jungle beyond the fence, and the green horizon past it */}
                 <JungleGeometry low={mobile} />
+                <WorldDestinations low={mobile} />
                 <DistantScenery low={mobile} />
 
                 <YardGeometry low={mobile} />

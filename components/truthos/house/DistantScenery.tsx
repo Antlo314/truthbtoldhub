@@ -111,6 +111,65 @@ function ScenicRing({ ring, low }: { ring: Ring; low: boolean }) {
     return <instancedMesh ref={mesh} args={[geo, mat, count]} />;
 }
 
+
+/**
+ * The rim — a continuous displaced ridge encircling the whole world.
+ *
+ * The instanced rings are dense but not gap-proof: between silhouettes the
+ * sky dome used to show at EYE LEVEL, which is what made the world read as
+ * open. A single noise-displaced cylinder wall guarantees every bearing has
+ * land between the treeline and the sky, so the horizon always sits where a
+ * horizon belongs — below the canopy line, above nothing.
+ */
+function HorizonRim({ low }: { low: boolean }) {
+    const mat = useMemo(
+        () =>
+            new THREE.MeshLambertMaterial({
+                color: new THREE.Color('#2b3550'),
+                flatShading: true,
+                fog: false,
+                side: THREE.BackSide, // seen from inside
+            }),
+        [],
+    );
+
+    const geo = useMemo(() => {
+        const R = low ? 210 : 400;
+        const H = low ? 34 : 70;
+        const seg = low ? 64 : 128;
+        const g = new THREE.CylinderGeometry(R, R, H, seg, 1, true);
+        // Displace the TOP edge into a ridgeline — two sine octaves + seeded
+        // jitter reads as distant mountains without a noise library.
+        const rnd = seededRng(87001);
+        const jit = Array.from({ length: seg + 1 }, () => rnd());
+        const pos = g.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            if (pos.getY(i) > 0) {
+                const a = Math.atan2(pos.getZ(i), pos.getX(i));
+                const idx = Math.floor(((a + Math.PI) / (Math.PI * 2)) * seg);
+                const ridge =
+                    Math.sin(a * 3.1) * 0.3 + Math.sin(a * 7.7 + 1.4) * 0.18 + jit[idx] * 0.22;
+                pos.setY(i, (H / 2) * (0.55 + ridge));
+            }
+        }
+        pos.needsUpdate = true;
+        g.computeVertexNormals();
+        return g;
+    }, [low]);
+
+    // Same aerial-perspective contract as the rings: the rim wears the sky
+    const base = useMemo(() => new THREE.Color('#2b3550'), []);
+    const scratch = useMemo(() => new THREE.Color(), []);
+    useFrame(() => {
+        const sky = getSky();
+        scratch.setRGB(sky.fogColor[0] / 255, sky.fogColor[1] / 255, sky.fogColor[2] / 255);
+        const lit = 0.35 + sky.daylight * 0.65;
+        mat.color.copy(base).multiplyScalar(lit).lerp(scratch, 0.88);
+    });
+
+    return <mesh geometry={geo} material={mat} position={[0, (low ? 34 : 70) * 0.25, 0]} frustumCulled={false} />;
+}
+
 export default function DistantScenery({ low = false }: { low?: boolean }) {
     // Mobile drops the middle band; the near treeline and far hills carry depth
     const rings = low ? [RINGS[0], RINGS[2]] : RINGS;
@@ -119,6 +178,9 @@ export default function DistantScenery({ low = false }: { low?: boolean }) {
             {rings.map((r, i) => (
                 <ScenicRing key={i} ring={r} low={low} />
             ))}
+
+            {/* The gap-proof ridgeline behind everything */}
+            <HorizonRim low={low} />
 
             {/* Ground plane out to the hills so the grass never ends mid-air */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} receiveShadow={false}>

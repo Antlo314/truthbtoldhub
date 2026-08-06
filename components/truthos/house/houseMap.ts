@@ -359,7 +359,7 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'wayfinder',
         label: 'Wall map',
-        hint: 'Roads · temporarily down',
+        hint: 'World map · the paths are open',
         // Hall console west of the foyer opening (spine to the opening stays clear)
         position: [-2.55, 1.15, 0.95],
         radius: 1.05,
@@ -403,9 +403,10 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'soul_mirror',
         label: 'Soul Mirror',
-        hint: 'Vessel · shape your form',
+        hint: 'The Mirror Pool · shape your vessel',
         // Bedroom east wall — north of cinema doorway band
-        position: [4.7, 1.25, 9.35],
+        // Moved out of the Hut: the pool clearing south-east
+        position: [33.9, 1.25, -54.3],
         radius: 1.1,
         action: { type: 'panel', panel: 'soul' },
     },
@@ -430,8 +431,9 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'hall',
         label: 'Hall arch',
-        hint: 'The Hall · community',
-        position: [-9.0, 1.15, 6.4],
+        hint: 'The Hall Stones · community circle',
+        // Moved out of the Hut: the standing stones west along their path
+        position: [-69.5, 1.15, 8.4],
         radius: 1.2,
         action: { type: 'panel', panel: 'hall' },
     },
@@ -446,17 +448,18 @@ export const HOTSPOTS: Hotspot[] = [
     {
         id: 'cinema',
         label: 'Film screen',
-        hint: 'Cinema · film',
-        // SE empty room (east of bedroom doorway)
-        position: [10.6, 1.35, 7.0],
+        hint: 'The Cinema Grove · films under the canopy',
+        // Moved out of the Hut: the grove clearing east along its path
+        position: [71.6, 1.35, 7.2],
         radius: 1.25,
         action: { type: 'panel', panel: 'cinema' },
     },
     {
         id: 'studio',
         label: 'Studio',
-        hint: 'Signal Studio · brand pulse',
-        position: [10.0, 1.0, -9.0],
+        hint: 'The Signal Studio · broadcast from the wild',
+        // Moved out of the Hut: the pavilion clearing south-west
+        position: [-49.6, 1.2, -43.5],
         radius: 1.2,
         action: { type: 'panel', panel: 'studio' },
     },

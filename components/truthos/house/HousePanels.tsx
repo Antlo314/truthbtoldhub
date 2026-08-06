@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useHouseUi, type HousePanelId } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
+import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
 import CinemaPanel from './CinemaPanel';
 import NewspaperPanel from './NewspaperPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
@@ -135,29 +136,72 @@ function FramePanel({
 }
 
 function WayfinderNative({ onClose }: { onClose: () => void }) {
+    // Drawn LIVE from jungleMap — the same tables that grow the walls and
+    // lay the colliders. Open a corridor in the worldplan and it appears
+    // here without anyone remembering to update a picture.
+    const toMap = (x: number, z: number) => ({ mx: x, my: -z }); // north up
     return (
-        <Shell title="Wall map · Roads" accent="text-emerald-300" onClose={onClose}>
-            <div className="p-6 space-y-5 overflow-y-auto h-full flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 rounded-2xl border border-amber-400/30 bg-amber-500/10 flex items-center justify-center text-2xl">
-                    🛤
+        <Shell title="Wall map · The Paths" accent="text-emerald-300" onClose={onClose}>
+            <div className="p-4 h-full flex flex-col gap-3 overflow-y-auto">
+                <p className="text-[10px] uppercase tracking-[0.3em] font-mono text-emerald-300/80 text-center shrink-0">
+                    The paths are open
+                </p>
+                <div className="flex-1 min-h-0 flex items-center justify-center">
+                    <svg viewBox="-100 -100 200 200" className="max-h-full w-auto aspect-square rounded-xl border border-white/10 bg-[#0b1410]">
+                        {/* The jungle */}
+                        <rect x="-100" y="-100" width="200" height="200" fill="#12241a" />
+                        {/* Corridors */}
+                        {CORRIDORS.map((c, i) => {
+                            const a = toMap(c.ax, c.az);
+                            const b = toMap(c.bx, c.bz);
+                            return (
+                                <line
+                                    key={i}
+                                    x1={a.mx} y1={a.my} x2={b.mx} y2={b.my}
+                                    stroke="#8a6f4d" strokeWidth={c.halfWidth * 2}
+                                    strokeLinecap="round" opacity={0.9}
+                                />
+                            );
+                        })}
+                        {/* Home clearing + the safe house */}
+                        <circle cx={0} cy={0} r={CLEARING_R} fill="#1d3a28" stroke="#3f7d46" strokeWidth="1.4" />
+                        <rect x={-5} y={-6} width={10} height={12} rx={1.5} fill="#c8ac88" stroke="#7a5c3c" strokeWidth="1" />
+                        <text x={0} y={CLEARING_R - 5} textAnchor="middle" fontSize="6.2" fill="#e8e4d8" fontFamily="monospace">
+                            THE SAFE HOUSE
+                        </text>
+                        {/* Destinations */}
+                        {DESTINATIONS.map((d) => {
+                            const c = destCenter(d);
+                            const m = toMap(c.x, c.z);
+                            return (
+                                <g key={d.id}>
+                                    <circle cx={m.mx} cy={m.my} r={d.r} fill="#1d3a28" stroke="#fbbf24" strokeWidth="1.2" />
+                                    <circle cx={m.mx} cy={m.my} r={2.4} fill="#fbbf24" />
+                                    <text x={m.mx} y={m.my - d.r - 3} textAnchor="middle" fontSize="6.4" fill="#fde68a" fontFamily="monospace" fontWeight="bold">
+                                        {d.name.toUpperCase()}
+                                    </text>
+                                    <text x={m.mx} y={m.my + d.r + 8} textAnchor="middle" fontSize="4.8" fill="#d6d3c4" fontFamily="monospace">
+                                        {d.blurb}
+                                    </text>
+                                </g>
+                            );
+                        })}
+                        {/* The north walk — goes nowhere, and says so */}
+                        <text x={0} y={-52} textAnchor="middle" fontSize="4.8" fill="#8f9a8a" fontFamily="monospace">
+                            the north walk · unfinished
+                        </text>
+                        {/* Compass */}
+                        <g transform="translate(84,-84)">
+                            <circle r="9" fill="#0b1410" stroke="#3f7d46" strokeWidth="0.8" />
+                            <path d="M0,-6 L2,2 L0,0.6 L-2,2 Z" fill="#fbbf24" />
+                            <text y={-11} textAnchor="middle" fontSize="5" fill="#fde68a" fontFamily="monospace">N</text>
+                        </g>
+                    </svg>
                 </div>
-                <div className="space-y-2 max-w-sm">
-                    <p className="text-[10px] uppercase tracking-[0.35em] font-mono text-amber-300/80">
-                        Temporarily down
-                    </p>
-                    <h3 className="text-xl font-semibold text-white">Roads offline</h3>
-                    <p className="text-sm text-white/55 leading-relaxed">
-                        The wall map is under maintenance. Destinations and wayfinding will return soon.
-                        Walk the house, boot Truth.OS, or open the Library while we re-route.
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="mt-2 px-6 py-2.5 rounded-xl border border-white/15 text-[11px] uppercase tracking-[0.2em] text-white/70 hover:text-white hover:border-white/30"
-                >
-                    Back to house
-                </button>
+                <p className="text-[10px] text-white/45 text-center leading-relaxed shrink-0">
+                    Four stations left the house and took root in the jungle. Follow a path;
+                    the torches are lit.
+                </p>
             </div>
         </Shell>
     );

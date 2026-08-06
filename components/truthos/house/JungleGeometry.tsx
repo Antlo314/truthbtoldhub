@@ -26,12 +26,19 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
-import { CLEARING_R, CORRIDORS, inCorridor } from './jungleMap';
+import {
+    CLEARING_R,
+    CORRIDORS,
+    DESTINATIONS,
+    destCenter,
+    inCorridor,
+    inDestination,
+    inOpenGround,
+} from './jungleMap';
 
-/** True when a spot must stay clear — clearing, or any corridor. */
+/** True when a spot must stay clear — any clearing, any corridor. */
 function keepOut(x: number, z: number): boolean {
-    if (Math.hypot(x, z) < CLEARING_R + 1.2) return true;
-    return inCorridor(x, z, 3.0);
+    return inOpenGround(x, z, 2.2);
 }
 
 /** Scatter n points in a radial band, rejecting the keep-out shapes. */
@@ -70,7 +77,7 @@ function ringPoints(
         const rr = r + (rnd() - 0.5) * jitter;
         const x = Math.cos(a) * rr;
         const z = Math.sin(a) * rr;
-        if (inCorridor(x, z, 2.6)) continue;
+        if (inCorridor(x, z, 2.6) || inDestination(x, z, 1.6)) continue;
         pts.push({ x, z });
     }
     return pts;
@@ -133,6 +140,25 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
     const rocks = useMemo(() => scatter(seededRng(12909), Math.floor(30 * k), CLEARING_R - 4, 55), [k]);
     const logs = useMemo(() => (low ? [] : scatter(seededRng(80841), 14, CLEARING_R + 1, 52)), [low]);
 
+    // ── Walls around each destination clearing — same grammar as home ──
+    const wallD = useMemo(() => {
+        const rnd = seededRng(66906);
+        const pts: { x: number; z: number }[] = [];
+        for (const d of DESTINATIONS) {
+            const c = destCenter(d);
+            const count = Math.floor((low ? 26 : 44) * (d.r / 14));
+            for (let i = 0; i < count; i++) {
+                const a = (i / count) * Math.PI * 2 + (rnd() - 0.5) * 0.06;
+                const rr = d.r + 3.2 + (rnd() - 0.5) * 3;
+                const x = c.x + Math.cos(a) * rr;
+                const z = c.z + Math.sin(a) * rr;
+                if (inCorridor(x, z, 2.6)) continue;
+                pts.push({ x, z });
+            }
+        }
+        return pts;
+    }, [low]);
+
     // ── Canopy lip — foliage leaning IN over the wall, sealing the sky line ──
     const lip = useMemo(() => (low ? [] : ringPoints(seededRng(44904), 64, 44, 10)), [low]);
 
@@ -153,6 +179,7 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
     );
 
     const wallARef = useRef<THREE.InstancedMesh>(null);
+    const wallDRef = useRef<THREE.InstancedMesh>(null);
     const wallALowRef = useRef<THREE.InstancedMesh>(null);
     const wallBRef = useRef<THREE.InstancedMesh>(null);
     const wallCRef = useRef<THREE.InstancedMesh>(null);
@@ -182,6 +209,14 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
             _p.set(p.x, 2.6 + rnd() * 2.2, p.z);
             _e.set(rnd() * 0.4, rnd() * Math.PI, rnd() * 0.4);
             _s.set(w, w * (0.7 + rnd() * 0.3), w);
+        });
+        // Destination walls — hedge + mass in one pass, alternating
+        fill(wallDRef.current, wallD, (i, p) => {
+            const tall = i % 2 === 0;
+            const w = tall ? 3.4 + rnd() * 2 : 2.4 + rnd() * 1.4;
+            _p.set(p.x, tall ? 2.8 + rnd() * 2 : 1 + rnd() * 0.5, p.z);
+            _e.set(rnd() * 0.35, rnd() * Math.PI, rnd() * 0.35);
+            _s.set(w, w * (0.6 + rnd() * 0.3), w);
         });
         // Ring B — taller, darker, half-hidden
         fill(wallBRef.current, wallB, (_i, p) => {
@@ -259,7 +294,7 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
             _e.set((rnd() - 0.5) * 0.15, rnd() * Math.PI, Math.PI / 2 + (rnd() - 0.5) * 0.1);
             _s.set(0.35 + rnd() * 0.2, 2.2 + rnd() * 2.4, 0.35 + rnd() * 0.2);
         });
-    }, [wallA, wallAlow, wallB, wallC, lip, trees, giants, ferns, leaves, rocks, logs]);
+    }, [wallA, wallAlow, wallB, wallC, wallD, lip, trees, giants, ferns, leaves, rocks, logs]);
 
     // ── Ground mist — humidity you can see (desktop only) ──
     const mistTex = useMemo(() => (low ? null : mistTexture()), [low]);
@@ -347,6 +382,10 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
                 <primitive object={mats.canopy} attach="material" />
             </instancedMesh>
             <instancedMesh ref={wallARef} args={[undefined, undefined, wallA.length]} castShadow={sh} frustumCulled={false}>
+                <icosahedronGeometry args={[1, 1]} />
+                <primitive object={mats.canopyDeep} attach="material" />
+            </instancedMesh>
+            <instancedMesh ref={wallDRef} args={[undefined, undefined, wallD.length]} castShadow={sh} frustumCulled={false}>
                 <icosahedronGeometry args={[1, 1]} />
                 <primitive object={mats.canopyDeep} attach="material" />
             </instancedMesh>
