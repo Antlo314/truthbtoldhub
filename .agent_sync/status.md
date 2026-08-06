@@ -423,3 +423,62 @@ Ack the ownership split (or propose changes) and I'll proceed. — Claude
 - **Creatures stalk-gated**: rushing (>55% stick or dash within 4 tiles) makes unnamed beasts dart ~4 tiles (leash-clamped — never unreachable); approach slow for the naming.
 - **Playtest tuning knobs** (top of EdenWorld constants): wisp speed 32px/s + spawn stagger (some Channel rolls are easy holds); drain rate/floor; dash cd. Known cosmetics: rush knockback absorbs against walls; attunement intro dialogue overlaps Pishon's timer; codex/minimap still hint blight-hidden creatures.
 - claude → idle.
+
+---
+
+## 2026-07-24 (Claude) — TRUTH.OS 3.0 "2026 edition" + house graphics overhaul
+
+- **Status**: Built + verified (`npm run build` exit 0; live dev-server smoke test: boot, home bento, Terminal `open media` launches Media Player, Start search filters, quick-settings flyout, /world mounts WebGL canvas with zero console errors). Commit `13c8947` on main (NOT pushed).
+- **Truth.OS** (files: `truthOsStore.ts`, NEW `osSystemStore.ts` / `OsWindowFrame.tsx` / `OsSystemUI.tsx` / `apps/{MediaApps,UtilityApps,BrowserApp}.tsx`, `OsIcon.tsx`, `apps/OsApps.tsx`, `TruthOSShell.tsx`): full 2026-OS chrome — 8-way window resize + Aero edge-drag snap (halves/quarters/max w/ preview) + snap-layouts popover on the maximize button; task view (Ctrl+Tab); notification center + toasts (`useOsSystem.notify`); quick settings (music/night-light/brightness/accent/fullscreen/layout/lock); calendar flyout; widgets board; desktop right-click context menu; lock screen; restart (re-boot) flow; desktop icon rail; Start search. Six NEW apps: terminal (soulsh — `open <app>` works), media (18 reels from `HOUSE_FILMS`), photos (set-as-wallpaper → `custom:` ids), clock, taskmgr, browser (internal routes iframe). Theming persists in localStorage `truthos_theme_v3` (10 wallpapers incl. /brand art + 3 gradients, 10 accents).
+- **House** (agent-assisted; files: NEW `HouseTrim.tsx` / `HouseAtmosphere.tsx`, `HouseGeometry/YardGeometry/HouseDecor/HouseCanvas/HouseMaterials/houseSkins/houseMap`): baseboards + crown molding + cove strips, 10 emissive night windows + curtains, sconces, chandeliers, porch lights; desktop-only dust motes / fireflies / moonlight shafts; night-sky dome + moon + instanced meadow; potted plants, floor lamp, framed art, clutter, medallion rug; 6 new COLLIDERS. All procedural, no new deps, mobile (`low`) stays light.
+- **Gotchas for other agents**: window layers now end at `bottom: var(--os-taskbar)` (don't re-add inset-0 or windows slide under the taskbar); fresh style literals on `motion.*` elements can fail framer-motion 12's MotionStyle excess-property check — use Tailwind arbitrary values or a cast.
+- claude → idle.
+
+---
+
+## 2026-07-24 (Claude) — HOUSE: real windows + interior restructure (user: fake moonlight, slim entrances, walls not touching)
+
+- **Status**: Built + verified (`npm run build` 0; flood-fill reachability audit `scratch/reach_house.ts` — all 16 hotspots reachable; /world mounts, 0 console errors). Commit `95898c0`, PUSHED.
+- **Windows are REAL now**: `WALL_RUNS` holes cut through the shell (sill band 0→1.145, header 2.295→3.1); `m.windowGlass` transparent pane (opacity 0.16, DoubleSide, depthWrite off) at wall center — yard/sky-dome/moon show through. `nightGlass` material + MoonShafts (HouseAtmosphere) DELETED.
+- **WALL SYSTEM**: walls now live ONCE in `houseMap.ts` as `WALL_RUNS: WallRun[]` ({axis, at, from..to, t, holes[{c,hw,sill,head}], trim}). `RunWall` (HouseGeometry) builds meshes, `wallColliders()` derives COLLIDERS (door holes sill<0.01 passable, windows solid), HouseTrim generates baseboards + crown from `doorSpans()`. **Edit walls in WALL_RUNS only — never hand-place wall meshes/colliders again.**
+- **New floor plan**: Living (C-N) · Library (NW) · Study wing (NE, merged dead-end corridor) · hall band (C) · Community hall wing (W, merged) · Bedroom (C-S) · Cinema (SE). Library gets two proper doors (1.5 m from living @ z −5.2; 1.4 m from hall wing @ x −9.9); ~4 m arches into both wings (z −1.04..2.99); old 0.76 m / 0.31 m slots gone. All walls full-height 3.1, flush corners.
+- **De-floated**: bed set moved to headboard-on-south-wall (z 11.35, colliders updated), media/offering flush to partitions (FURN.media.x 5.82, offering −5.85), bookcases at wallX ±13.6, art + domain plate flush-mounted (rotY fixed to face rooms), doorway sconces → ±1.85.
+- **Gotcha**: SPAWN sits inside the desk collider's player-radius margin (resolveStuck handles it at runtime — reach audits must start from nearest free cell).
+- claude → idle.
+
+---
+
+## 2026-07-24 (Claude) — TRUTH.OS 3.5 (palette/workspaces/session) + house floor-plan pass
+
+- **Status**: Built + verified (`npm run build` 0; live browser checks; house audit `scratch/reach_house.ts` green). Commits `82c86e4`, `d654ac8`, `a540e83` — all PUSHED to origin/main.
+- **House** (`82c86e4`): front door moved to x=3.5 into a new FOYER; BEDROOM is now private behind its own door (new divider wall x=1.7) with the bed headboard flush on the west partition (was clipping the south window + curtains). New KITCHEN in living NE (counters/sink under window/stove/fridge/dining set). Roof slab + eaves + fascia + chimney, covered porch on posts, front gate, mailbox, birdbath, garden shed, back patio.
+- **`scratch/reach_house.ts` is now a 2-part audit** (untracked): flood-fill reachability for all 16 hotspots AND a **height-aware clash pass** (furniture vs WALL_RUNS solids + window/curtain keep-outs; items below WIN.sill correctly pass under, so counters-under-windows aren't false positives). **Run it after any house layout edit.**
+- **Truth.OS 3.5** (`d654ac8`, `a540e83`): NEW `OsCommandPalette.tsx` (Ctrl+K — fuzzy over apps/actions/VFS files/routes + inline arithmetic) and `OsSwitcher.tsx` (MRU switcher + shortcut sheet). Store gained virtual desktops (`desktop` per window, DESKTOP_COUNT=4), `mru`, `pinned`, `MULTI_INSTANCE`, `OsAppPayload`, and `saveSession`/`restoreSession` (localStorage `truthos_session_v1`). New apps: Music, To-Do.
+- **Gotchas for other agents**:
+  - **Ctrl+Tab is reserved by the browser** — the window switcher uses **Ctrl+`**.
+  - **Never `saveSession()` in an effect cleanup**: React StrictMode's dev double-mount clobbers the stored session with an empty desktop before `restoreSession()` reads it (this was a real bug, fixed by gating on a `restored` ref).
+  - framer-motion 12 `MotionStyle` rejects fresh CSS longhand literals (e.g. `paddingTop`) — use Tailwind arbitrary values.
+- claude → idle.
+
+---
+
+## 2026-07-24 (Claude) — TRUTH.OS diegetic pass: 20 wallpapers, game bridge, Journey + Vault
+
+- **Status**: Built + verified (clean-cache `npm run build` 0; live browser checks). Commits `e4a80d9`, `3b43e98`, `4b13462` — PUSHED.
+- **Wallpapers 10 → 20** (`osWallpapers.ts`, NEW): families Sanctum (7 key-art) / Abstract (12 procedural CSS mesh gradients, 0 bytes) / Living (1, repaints from local clock across 5 phases). `resolveWallpaper(id, hour)` is the single entry point and handles `custom:<url>` from Photos. **4 are unlock-gated on REAL state**: sourceReturned, soul_power>=500, founderClaimed, is_supporter. Picking a wallpaper also applies its suggested accent.
+- **`useOsGameBridge.ts` (NEW)** mirrors character/profile → `useOsSystem.snapshot` and notifies on genuine transitions only (tier change, new discoveries, wallpaper unlocks). Seeds a baseline on first pass so returning players aren't spammed. READ-ONLY on game stores.
+- **Journey + Vault apps** (agent-built, wired by me): read-only views over real catalogs (destinations/scrolls/clothing/weapons/consumables/quests/paths). Both sign-in gated. Taskbar now has a live soul-power + tier chip that opens Journey.
+- **Smoothness**: window open/close on spring; `prefers-reduced-motion` respected; compositor promotion only while dragging.
+- **Gotchas**: framer-motion 12 `MotionStyle` rejects CSS longhand literals (`paddingTop`, `willChange`) — use Tailwind arbitrary values/classes. Building while subagents write files can leave a stale `.next` producing phantom `TypeError: Cannot read properties of undefined (reading 'call')` — `rm -rf .next` before trusting a failure.
+- claude → idle.
+
+---
+
+## 2026-07-24 (Claude) — House model density pass (interior → exterior)
+
+- **Status**: placement work committed `da8e386` (typechecked). Surface-skin upgrade (`houseSkins.ts`) was in flight by a subagent at time of writing — **verify + build before trusting the tree**.
+- **Manifest 31 → 50 entries** in `HouseProp.tsx`. Only 14 of 57 downloaded Kenney models had actually been placed; the rest are now in the scene. Sizes come from measured GLB bounding boxes (script pattern: parse GLB JSON chunk, read accessor POSITION min/max) — **never guess `fit` values, measure them**.
+- **Interior**: kitchen uppers + hood + coffee machine + modelled dining table; bedroom bed/dresser/nightstand lamps; library run of 4 bookcases + reading lamp + books; study monitor/keyboard/mouse/bin; living floor lamp + potted plant.
+- **Exterior**: campfire in the fire pit, log stack, 20 hand-placed hero props (rocks/bushes/blooms/tufts) clear of walk paths, 4 tree species.
+- **Gotcha — dev-server verification of the 3D scene is unreliable**: Fast Refresh churn makes `canvas` count and GLB request counts flap between readings. A concurrent subagent's half-written `houseSkins.ts` broke the module graph and made the whole house fail to mount (canvas 0, zero model requests) with **no console error** — it looked exactly like a model-loading regression. If the house won't mount, `npx tsc --noEmit` FIRST. Added a `prod` entry to `.claude/launch.json` (port 3100, `npm run start`) for HMR-free verification.
+- claude → idle pending skins agent.

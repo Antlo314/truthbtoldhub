@@ -5,7 +5,7 @@
  */
 
 import type { HousePanelId } from './houseUiStore';
-import { TOWN_COLLIDERS } from './townMap';
+import { JUNGLE_BOUNDS, JUNGLE_COLLIDERS } from './jungleMap';
 
 export type HotspotId =
     | 'computer'
@@ -39,12 +39,8 @@ export type Hotspot = {
 };
 
 /** Interior shell ~±13.8 · yards extend beyond N/S doors · side wrap for full loop */
-export const HOUSE_BOUNDS = {
-    minX: -96,
-    maxX: 96,
-    minZ: -30,
-    maxZ: 54,
-};
+// The world is a clearing now — the roam box is the jungle's, not the street's
+export const HOUSE_BOUNDS = { ...JUNGLE_BOUNDS };
 
 /** Outer shell planes + partition thickness (single source for mesh + colliders) */
 export const SHELL = {
@@ -556,8 +552,8 @@ export const COLLIDERS: Collider[] = [
     { x: YARD.firePit.x, z: YARD.firePit.z, hx: 0.72, hz: 0.72 },
     ...YARD.trees.map((t) => ({ x: t.x, z: t.z, hx: t.r, hz: t.r })),
     ...YARD.bushes.map((b) => ({ x: b.x, z: b.z, hx: b.r, hz: b.r })),
-    // Neighbourhood beyond the fence — houses, parked cars, street lamps
-    ...TOWN_COLLIDERS,
+    // The jungle wall — the clearing ring, path rails, and the dead end
+    ...JUNGLE_COLLIDERS,
 ];
 
 const PLAYER_R = 0.34;

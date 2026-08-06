@@ -213,7 +213,9 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
     zTop: 10,
     bootDone: false,
     startOpen: false,
-    layoutMode: 'bento',
+    // Float-first: windows open free-moving and resizable, like any desktop.
+    // Bento remains one keystroke away for people who want the tiled board.
+    layoutMode: 'float',
     sessionEmail: null,
     authPrompt: false,
     pendingApp: null,
