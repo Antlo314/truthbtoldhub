@@ -10,6 +10,7 @@ import DistantScenery from './DistantScenery';
 import * as THREE from 'three';
 import HomeGeometry from './HomeGeometry';
 import HomeDecor from './HomeDecor';
+import HomeInterior from './HomeInterior';
 import HouseAtmosphere from './HouseAtmosphere';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
@@ -136,6 +137,7 @@ export default function HouseCanvas({
                 <DistantScenery low={mobile} />
 
                 <HomeGeometry low={mobile} />
+                <HomeInterior low={mobile} />
                 <HomeDecor low={mobile} />
                 {/* Dust motes · fireflies · moon shafts — desktop only */}
                 {!mobile && <HouseAtmosphere />}

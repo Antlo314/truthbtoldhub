@@ -25,11 +25,12 @@ import {
     MAIN_Y,
     ROOF_Y,
     ROOMS,
+    SHAFT,
     SHELL,
-    STAIR,
     STOREY,
     UPPER_COLLIDERS,
     UPPER_Y,
+    VOID,
     u,
     type Collider,
 } from './homeMap';
@@ -143,19 +144,6 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
         [],
     );
 
-    const treads = useMemo(() => {
-        const out: { y: number; z: number; d: number }[] = [];
-        const run = STAIR.zBottom - STAIR.zTop;
-        const step = run / STAIR.treads;
-        for (let i = 0; i < STAIR.treads; i++) {
-            out.push({
-                y: STAIR.yBottom + ((i + 1) / STAIR.treads) * (STAIR.yTop - STAIR.yBottom),
-                z: STAIR.zBottom - i * step - step / 2,
-                d: step,
-            });
-        }
-        return out;
-    }, []);
 
     const OVER = 1.4;
 
@@ -186,41 +174,29 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                     <primitive object={f.open ? m.concrete : f.y > 1 ? m.woodFloor : m.tile} attach="material" />
                 </mesh>
             ))}
-            {/* Ceilings under the upper rooms (the main floor's lid) */}
-            {!low && (
-                <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, UPPER_Y - 0.16, 0]}>
-                    <planeGeometry args={[W - 0.2, D - 0.2]} />
-                    <primitive object={mats.inner} attach="material" />
+            {/* The upper storey is ONE slab with two holes — the stairwell
+                and the foyer void — cut as five rectangles. Room floors above
+                are finishes; this is the structure you actually stand on, and
+                it is the same shape onUpperFootprint tests against. */}
+            {[
+                { x: 0, z: (Z0 + SHAFT.minZ) / 2, w: W, d: SHAFT.minZ - Z0 },
+                { x: (X0 + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - X0, d: SHAFT.maxZ - SHAFT.minZ },
+                { x: (SHAFT.maxX + X1) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: X1 - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
+                { x: (X0 + VOID.minX) / 2, z: (VOID.minZ + Z1) / 2, w: VOID.minX - X0, d: Z1 - VOID.minZ },
+                { x: (VOID.maxX + X1) / 2, z: (VOID.minZ + Z1) / 2, w: X1 - VOID.maxX, d: Z1 - VOID.minZ },
+            ].map((p, i) => (
+                <mesh key={i} position={[p.x, UPPER_Y - 0.15, p.z]} castShadow={sh} receiveShadow={sh}>
+                    <boxGeometry args={[p.w, 0.3, p.d]} />
+                    <primitive object={mats.trim} attach="material" />
                 </mesh>
-            )}
-            <mesh position={[0, UPPER_Y - 0.15, 0]} castShadow={sh}>
-                <boxGeometry args={[W + 0.12, 0.3, D + 0.12]} />
-                <primitive object={mats.trim} attach="material" />
-            </mesh>
+            ))}
 
             {/* ── Walls ──────────────────────────────────────── */}
             <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={mats.stucco} shadow={sh} />
             <Walls cols={UPPER_COLLIDERS} y={UPPER_Y} h={STOREY} mat={mats.stucco} shadow={sh} />
 
-            {/* ── The stair ──────────────────────────────────── */}
-            {treads.map((t, i) => (
-                <mesh
-                    key={i}
-                    position={[(STAIR.minX + STAIR.maxX) / 2, t.y - 0.06, t.z]}
-                    castShadow={sh}
-                    receiveShadow={sh}
-                >
-                    <boxGeometry args={[STAIR.maxX - STAIR.minX, 0.12, t.d]} />
-                    <primitive object={m.wood} attach="material" />
-                </mesh>
-            ))}
-            <mesh
-                position={[STAIR.minX - 0.07, UPPER_Y / 2, (STAIR.zTop + STAIR.zBottom) / 2]}
-                castShadow={sh}
-            >
-                <boxGeometry args={[0.14, UPPER_Y, STAIR.zBottom - STAIR.zTop]} />
-                <primitive object={mats.inner} attach="material" />
-            </mesh>
+            {/* The stair, its enclosure and all finish carpentry live in
+                HomeInterior — built as joinery, not extruded boxes. */}
 
             {/* ── Entry: brick pier, door, warm two-storey glow ── */}
             <mesh position={[u(0.55), STOREY, Z1 - 0.12]} castShadow={sh}>

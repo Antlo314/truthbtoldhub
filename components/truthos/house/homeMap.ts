@@ -88,6 +88,9 @@ export const ROOMS: Room[] = [
     { id: 'mud', name: 'Mud', level: 'main', minX: W_E, maxX: C_E, minZ: u(0.6), maxZ: u(2.3) },
     { id: 'bed_w', name: 'Bedroom', level: 'main', minX: X0, maxX: u(-3.1), minZ: u(-4.4), maxZ: u(0.6) },
     { id: 'bed_n', name: 'Bedroom', level: 'main', minX: u(-3.1), maxX: u(1.27), minZ: Z0, maxZ: u(-4.4) },
+    // The circulation spine: bedrooms -> mud -> foyer. It existed as
+    // walkable space but had no room, therefore no floor.
+    { id: 'hall_m', name: 'Hall', level: 'main', minX: u(-3.1), maxX: C_E, minZ: u(-4.4), maxZ: u(0.6) },
     { id: 'mech', name: 'Mech', level: 'main', minX: C_E, maxX: u(1.27), minZ: u(-1.0), maxZ: u(0.6), solid: true },
     { id: 'garage', name: 'Garage', level: 'main', minX: u(1.27), maxX: X1, minZ: u(0.4), maxZ: Z1, solid: true },
     { id: 'tandem', name: 'Tandem', level: 'main', minX: u(1.27), maxX: X1, minZ: u(-4.4), maxZ: u(0.4), solid: true },
@@ -98,14 +101,15 @@ export const ROOMS: Room[] = [
     { id: 'wic', name: 'Walk-in', level: 'upper', minX: u(-4.5), maxX: u(-2.66), minZ: u(0.6), maxZ: u(2.67) },
     { id: 'bed_u', name: 'Bedroom', level: 'upper', minX: X0, maxX: u(-3.3), minZ: u(-4.3), maxZ: u(-0.4) },
     { id: 'laundry', name: 'Laundry', level: 'upper', minX: u(-3.3), maxX: u(-0.5), minZ: u(-4.3), maxZ: u(-1.9) },
-    { id: 'pwdr', name: 'Powder', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(-0.4), maxZ: u(1.0) },
+    { id: 'pwdr', name: 'Powder', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(-0.4), maxZ: u(0.6) },
     { id: 'dining', name: 'Dining', level: 'upper', minX: u(-0.5), maxX: u(2.7), minZ: u(0.4), maxZ: u(3.6) },
     { id: 'kitchen', name: 'Kitchen', level: 'upper', minX: u(0.9), maxX: X1, minZ: u(-4.4), maxZ: u(-1.2) },
-    { id: 'living', name: 'Living', level: 'upper', minX: u(2.7), maxX: X1, minZ: u(-1.2), maxZ: u(3.8) },
-    { id: 'landing', name: 'Landing', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(1.0), maxZ: u(3.4) },
-    { id: 'balcony', name: 'Covered Balcony', level: 'upper', minX: u(1.5), maxX: X1, minZ: u(3.8), maxZ: Z1, open: true },
+    { id: 'living', name: 'Living', level: 'upper', minX: u(2.7), maxX: X1, minZ: u(-1.2), maxZ: u(3.6) },
+    // The platform the stair arrives on. North of it: the open shaft —
+    // no room, therefore no floor, which is what a stairwell IS.
+    { id: 'landing', name: 'Landing', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(0.6), maxZ: u(1.7) },
+    { id: 'balcony', name: 'Covered Balcony', level: 'upper', minX: u(0.9), maxX: X1, minZ: u(3.6), maxZ: Z1, open: true },
     { id: 'patio', name: 'Covered Patio', level: 'upper', minX: u(3.3), maxX: X1, minZ: Z0, maxZ: u(-4.4), open: true },
-    { id: 'void', name: 'Open to Below', level: 'upper', minX: u(-2.66), maxX: u(0.9), minZ: u(3.6), maxZ: Z1, solid: true },
 ];
 
 export const roomsOn = (level: Level) => ROOMS.filter((r) => r.level === level);
@@ -113,13 +117,33 @@ export const roomsOn = (level: Level) => ROOMS.filter((r) => r.level === level);
 /* ── The stair ────────────────────────────────────────────── */
 
 export const STAIR = {
-    minX: u(-2.4),
-    maxX: u(-0.7),
+    /** Fills the shaft between its two enclosing walls */
+    minX: u(-2.57),
+    maxX: u(-0.58),
     zBottom: u(5.2),
-    zTop: u(0.7),
+    zTop: u(1.7),
     yBottom: MAIN_Y,
     yTop: UPPER_Y,
-    treads: 20,
+    treads: 18,
+} as const;
+
+/**
+ * The shaft the stair lives in — the hole in the upper floor.
+ * No upper room covers it, so no floor is drawn there.
+ */
+/** The double-height foyer: upper storey has no floor here */
+export const VOID = {
+    minX: u(-2.66),
+    maxX: u(0.9),
+    minZ: u(5.2),
+    maxZ: Z1,
+} as const;
+
+export const SHAFT = {
+    minX: u(-2.66),
+    maxX: u(-0.5),
+    minZ: u(1.7),
+    maxZ: u(5.2),
 } as const;
 
 const inStair = (x: number, z: number) =>
@@ -135,8 +159,20 @@ function stairY(z: number): number {
 const inRoom = (x: number, z: number, r: Room) =>
     x > r.minX && x < r.maxX && z > r.minZ && z < r.maxZ;
 
+/**
+ * Is (x,z) on the upper storey's floor?
+ *
+ * Deliberately NOT "is there a room here". Rooms describe finishes and
+ * they do not tile the plate — the gaps between them (the bedroom
+ * corridor, the strip behind the laundry, the space beside the kitchen)
+ * were walkable AIR, and you fell through them. The upper storey is one
+ * slab with exactly two holes: the stairwell and the foyer void.
+ */
 export function onUpperFootprint(x: number, z: number): boolean {
-    return ROOMS.some((r) => r.level === 'upper' && !r.solid && inRoom(x, z, r));
+    if (x <= X0 || x >= X1 || z <= Z0 || z >= Z1) return false;
+    if (x > SHAFT.minX && x < SHAFT.maxX && z > SHAFT.minZ && z < SHAFT.maxZ) return false;
+    if (x > VOID.minX && x < VOID.maxX && z > VOID.minZ && z < VOID.maxZ) return false;
+    return true;
 }
 
 /** Floor height under the player. See v1 notes: level disambiguates. */
@@ -149,8 +185,10 @@ export function groundAt(x: number, z: number, level: Level): number {
 /** Storey after a move — switches only at the stair's ends. */
 export function levelAfter(x: number, z: number, level: Level): Level {
     if (!inStair(x, z)) return level;
-    if (z <= STAIR.zTop + 0.4) return 'upper';
-    if (z >= STAIR.zBottom - 0.4) return 'main';
+    if (z <= STAIR.zTop + 1.4) return 'upper';
+    // Hand over to the main floor WELL before the bottom tread, so the
+    // rail guarding the foyer void can never block a descent.
+    if (z >= STAIR.zBottom - 1.4) return 'main';
     return level;
 }
 
@@ -182,6 +220,18 @@ function withDoor(
     ].filter((c) => c.hz > t / 2 + 0.01);
 }
 
+/**
+ * The stair enclosure — present at EVERY level, which is the fix for
+ * walking off the steps. A stair is a corridor: a solid wall on the
+ * west, a balustrade on the east. Both are solid to a body; only one
+ * is solid to the eye. Without these the climb had open sides and you
+ * could step straight out over the foyer.
+ */
+export const STAIR_WALLS: Collider[] = [
+    { x: SHAFT.minX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 },
+    { x: SHAFT.maxX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 },
+];
+
 const SHELL_WALLS: Collider[] = [
     seg(X0, Z0, X1, Z0),
     seg(X0, Z0, X0, Z1),
@@ -204,8 +254,14 @@ export const MAIN_COLLIDERS: Collider[] = [
     // Bedrooms
     ...withDoor(u(-3.1), u(-4.4), u(1.27), u(-4.4), u(-1.0), 1.35),
     seg(u(-3.1), u(-4.4), u(-3.1), u(0.6)),
-    // Mud / mech
+    // Mud / mech — and mech's south face, which was open to the corridor
     seg(C_E, u(0.6), u(1.27), u(0.6)),
+    seg(C_E, u(-1.0), u(1.27), u(-1.0)),
+    // Under the stair: the ramp's north end is a wall at ground level.
+    // Without it you walk into the underside of the flight and the floor
+    // height jumps three metres.
+    seg(SHAFT.minX, SHAFT.minZ, SHAFT.maxX, SHAFT.minZ),
+    ...STAIR_WALLS,
     // The jungle: outdoors the same walls that always held
     ...JUNGLE_COLLIDERS,
 ];
@@ -223,17 +279,23 @@ export const UPPER_COLLIDERS: Collider[] = [
     seg(u(-3.3), u(-4.3), u(-3.3), u(-0.4)),
     ...withDoor(u(-3.3), u(-1.9), u(-0.5), u(-1.9), u(-2.4), 1.25),
     // Powder
-    ...withDoor(u(-2.66), u(1.0), u(-0.5), u(1.0), u(-1.9), 1.2),
+    ...withDoor(u(-2.66), u(0.6), u(-0.5), u(0.6), u(-1.9), 1.2),
     seg(u(-0.5), u(-0.4), u(-0.5), u(1.0)),
     // Kitchen west wall + dining/living divider (open plan, half-walls)
     seg(u(0.9), u(-4.4), u(0.9), u(-1.2)),
     seg(u(2.7), u(0.4), u(2.7), u(3.6)),
-    // The void rail
-    seg(u(-2.66), u(3.6), u(0.9), u(3.6)),
+    // Guard the foyer void: dining's north edge, and the balcony's west
+    seg(u(-0.5), u(3.6), u(0.9), u(3.6)),
+    seg(u(0.9), u(3.6), u(0.9), Z1),
     // Balcony + patio rails
-    seg(u(1.5), Z1, X1, Z1),
-    seg(u(1.5), u(3.8), u(1.5), Z1),
+    seg(u(0.9), Z1, X1, Z1),
     seg(u(3.3), Z0, X1, Z0),
+    // Same enclosure, upper storey — you arrive between the same walls
+    ...STAIR_WALLS,
+    // …and the shaft's far end is railed, so an upper-floor walker can
+    // never stroll off the landing into the foyer drop.
+    seg(SHAFT.minX, SHAFT.maxZ, SHAFT.maxX, SHAFT.maxZ),
+    seg(SHAFT.maxX, VOID.minZ, VOID.maxX, VOID.minZ),
 ];
 
 export const FURNITURE: (Collider & { level: Level })[] = [
