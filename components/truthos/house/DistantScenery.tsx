@@ -19,8 +19,9 @@ import { seededRng } from './houseSkins';
 import { getSky } from './DayNightCycle';
 import { useFrame } from '@react-three/fiber';
 
-/** Keep-out radius — nothing spawns inside the playable neighbourhood */
-const INNER = 118;
+/** Keep-out radius — the horizon now hugs the jungle's outer wall,
+    so no empty ground ever shows between the layers */
+const INNER = 86;
 
 type Ring = {
     /** Distance band from world centre */
@@ -38,11 +39,11 @@ type Ring = {
 
 const RINGS: Ring[] = [
     // Treeline just past the houses — still has individual shapes
-    { from: 122, to: 168, count: 190, minH: 7, maxH: 13, color: '#2f4a34', haze: 0.3, kind: 'tree' },
+    { from: 88, to: 128, count: 210, minH: 8, maxH: 15, color: '#2f4a34', haze: 0.3, kind: 'tree' },
     // Wooded mass — reads as bulk, not individual trees
-    { from: 178, to: 250, count: 150, minH: 12, maxH: 22, color: '#2a3f42', haze: 0.58, kind: 'tree' },
+    { from: 136, to: 205, count: 160, minH: 14, maxH: 26, color: '#2a3f42', haze: 0.58, kind: 'tree' },
     // Far hills — silhouette only
-    { from: 265, to: 400, count: 46, minH: 26, maxH: 62, color: '#2b3550', haze: 0.82, kind: 'hill' },
+    { from: 220, to: 380, count: 46, minH: 26, maxH: 62, color: '#2b3550', haze: 0.82, kind: 'hill' },
 ];
 
 function ScenicRing({ ring, low }: { ring: Ring; low: boolean }) {

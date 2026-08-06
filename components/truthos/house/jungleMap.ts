@@ -1,59 +1,92 @@
 /**
- * The jungle worldplan — the safe house sits alone in a clearing.
+ * The jungle worldplan — an ENCLOSED clearing, not an open sandbox.
  *
- * One description drives everything: the clearing edge is both the visual
- * treeline and the collider ring, the path corridor is both the dirt strip
- * and the gap in that ring. Meshes and physics can therefore never disagree
- * about where the jungle starts, the same single-source rule the house and
- * the old town followed.
+ * One description drives everything: the clearing edge is the treeline,
+ * the collider ring, and the base of the green wall; corridors are both
+ * the dirt strips and the gaps in all of it. Meshes and physics can never
+ * disagree about where the world ends.
+ *
+ * Corridors are a list on purpose — opening a new path later is one entry
+ * here, and the wall, the undergrowth, and the colliders all part for it
+ * automatically.
  */
 
 export type Box = { x: number; z: number; hx: number; hz: number };
 
-/** Radius of the open ground around the house — the safe part of the world */
+/** Radius of the open ground around the house — the safe world */
 export const CLEARING_R = 32;
 
-/**
- * The one way out: a dirt path north from the front-yard gate that fades
- * into the trees and dead-ends. Walkable a little way — enough to feel the
- * jungle close over you — then the wall of green.
- */
-export const PATH = {
-    halfWidth: 2.2,
-    from: 16,   // just past the front fence line
-    to: 46,     // where the jungle closes it
-} as const;
+export type Corridor = {
+    /** Segment the corridor runs along (world coords) */
+    ax: number;
+    az: number;
+    bx: number;
+    bz: number;
+    halfWidth: number;
+};
 
-/** Player roam box — the clearing plus the path throat */
+/**
+ * Ways out of the clearing. One today — the north path — more shortly.
+ * Every system (wall rings, scatter, colliders, dirt strips) reads this
+ * list, so adding a corridor here opens it everywhere at once.
+ */
+export const CORRIDORS: Corridor[] = [
+    { ax: 0, az: 16, bx: 0, bz: 46, halfWidth: 2.2 },
+];
+
+/** Player roam box — the clearing plus corridor throats */
 export const JUNGLE_BOUNDS = {
     minX: -34,
     maxX: 34,
     minZ: -34,
-    maxZ: PATH.to,
+    maxZ: 46,
 } as const;
 
+/** Distance from point to a corridor's centreline segment */
+export function corridorDistance(x: number, z: number, c: Corridor): number {
+    const dx = c.bx - c.ax;
+    const dz = c.bz - c.az;
+    const len2 = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((x - c.ax) * dx + (z - c.az) * dz) / len2));
+    return Math.hypot(x - (c.ax + dx * t), z - (c.az + dz * t));
+}
+
+/** True when a spot is inside any corridor (plus a margin for shoulders) */
+export function inCorridor(x: number, z: number, margin = 0): boolean {
+    return CORRIDORS.some((c) => corridorDistance(x, z, c) < c.halfWidth + margin);
+}
+
 /**
- * Collider ring — boxes approximating the clearing circle, with a gap at
- * the path corridor, corridor side rails, and a dead-end cap. ~40 boxes,
- * about what the old street cost, and the AABB test is unchanged.
+ * Collider ring — boxes approximating the clearing circle with gaps at
+ * corridors, rails along each corridor, and a cap at each dead end.
  */
 export const JUNGLE_COLLIDERS: Box[] = (() => {
     const out: Box[] = [];
-    const SEGMENTS = 36;
+    const SEGMENTS = 40;
     for (let i = 0; i < SEGMENTS; i++) {
         const a = (i / SEGMENTS) * Math.PI * 2;
         const x = Math.cos(a) * CLEARING_R;
         const z = Math.sin(a) * CLEARING_R;
-        // Leave the ring open where the path passes through it
-        if (z > 0 && Math.abs(x) < PATH.halfWidth + 2.4) continue;
-        out.push({ x, z, hx: 3.4, hz: 3.4 });
+        if (inCorridor(x, z, 3.2)) continue;
+        out.push({ x, z, hx: 3.2, hz: 3.2 });
     }
-    // Path side rails — dense jungle either side of the corridor
-    for (let z = CLEARING_R - 2; z < PATH.to; z += 4) {
-        out.push({ x: -(PATH.halfWidth + 2.6), z, hx: 2.4, hz: 2.4 });
-        out.push({ x: PATH.halfWidth + 2.6, z, hx: 2.4, hz: 2.4 });
+    for (const c of CORRIDORS) {
+        const dx = c.bx - c.ax;
+        const dz = c.bz - c.az;
+        const len = Math.hypot(dx, dz) || 1;
+        const nx = -dz / len; // corridor normal
+        const nz = dx / len;
+        const steps = Math.ceil(len / 3.6);
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const px = c.ax + dx * t;
+            const pz = c.az + dz * t;
+            // Rails hug both shoulders
+            out.push({ x: px + nx * (c.halfWidth + 2.4), z: pz + nz * (c.halfWidth + 2.4), hx: 2.2, hz: 2.2 });
+            out.push({ x: px - nx * (c.halfWidth + 2.4), z: pz - nz * (c.halfWidth + 2.4), hx: 2.2, hz: 2.2 });
+        }
+        // The jungle wins at the end of every path (for now)
+        out.push({ x: c.bx + (dx / len) * 1.8, z: c.bz + (dz / len) * 1.8, hx: c.halfWidth + 4.5, hz: 2 });
     }
-    // Dead end — the jungle wins
-    out.push({ x: 0, z: PATH.to + 1.6, hx: PATH.halfWidth + 5, hz: 2 });
     return out;
 })();

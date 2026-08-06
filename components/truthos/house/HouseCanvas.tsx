@@ -76,7 +76,7 @@ export default function HouseCanvas({
                     cursor: mobile ? 'default' : 'crosshair',
                 }}
                 shadows={!mobile}
-                dpr={mobile ? [1, 1.25] : [1, 2]}
+                dpr={mobile ? [1, 1.2] : [1, 1.75]}
                 performance={{ min: mobile ? 0.4 : 0.8 }}
                 gl={{
                     antialias: !mobile,
@@ -107,8 +107,11 @@ export default function HouseCanvas({
                 }}
             >
                 <color attach="background" args={[bg]} />
-                {/* Farther fog so yards stay readable without washing interiors */}
-                {!mobile && <fog attach="fog" args={[bg, 18, 58]} />}
+                {/* Fog reaches to the green wall's outer ring (r≈70) so the
+                    enclosure reads as layered green, not swallowed grey; the
+                    interior band (<15) is untouched either way. Mobile keeps
+                    the short fog — there, the fog IS the wall. */}
+                {!mobile && <fog attach="fog" args={[bg, 20, 85]} />}
                 {mobile && <fog attach="fog" args={['#2a2438', 16, 48]} />}
 
                 {/* Soft IBL for material depth (free preset, no paid assets) */}
