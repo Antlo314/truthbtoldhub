@@ -12,6 +12,7 @@ import AmbientEmbers from '@/components/game/AmbientEmbers';
 import { DURATION, EASE } from '@/lib/design/motion';
 import { cn } from '@/lib/design/cn';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import SoundToggle from './SoundToggle';
 
 /** Routes that are pure immersion — no constellation chrome */
 const FULL_IMMERSIVE = [
@@ -80,6 +81,9 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
 
     return (
         <div className="relative min-h-[100dvh] flex flex-col">
+            {/* Sound, on one button, on every route — including the 3D world */}
+            <SoundToggle />
+
             {/* Living atmosphere — never on immersive 3D (perf + focus) */}
             {!immersive && (
                 <div

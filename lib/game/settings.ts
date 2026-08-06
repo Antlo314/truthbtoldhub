@@ -49,7 +49,11 @@ export function saveSettings(s: Partial<GameSettings>): GameSettings {
 
 export function applyMusicSetting(enabled: boolean) {
     if (typeof window === 'undefined') return;
-    import('@/lib/game/music').then(({ gameMusic }) => gameMusic.setMuted(!enabled));
+    // BOTH controllers. This used to reach only gameMusic, so the OS, the
+    // house and the arcade — all scored by hubAudio — kept playing with
+    // the setting switched off.
+    import('@/lib/game/music').then(({ gameMusic }) => gameMusic.setMuted(!enabled)).catch(() => {});
+    import('@/lib/truthos/hubAudio').then(({ hubAudio }) => hubAudio.setMuted(!enabled)).catch(() => {});
 }
 
 export function prefersReducedMotion(): boolean {
