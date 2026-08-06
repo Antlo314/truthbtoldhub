@@ -23,7 +23,9 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useHouseMaterials } from './HouseMaterials';
 import {
+    DOORWAYS,
     MAIN_COLLIDERS,
+    MAIN_DOORWAYS_END,
     MAIN_Y,
     SHAFT,
     SHELL,
@@ -32,6 +34,7 @@ import {
     STOREY,
     UPPER_COLLIDERS,
     UPPER_Y,
+    u,
     type Collider,
 } from './homeMap';
 import { JUNGLE_COLLIDERS } from './jungleMap';
@@ -289,6 +292,88 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             <pointLight position={[0, UPPER_Y - 0.5, -6]} intensity={1.0} color="#ffdfae" distance={20} decay={2} />
             <pointLight position={[4, UPPER_Y + STOREY - 0.6, 2]} intensity={1.2} color="#ffe6c8" distance={22} decay={2} />
             <pointLight position={[-4, UPPER_Y + STOREY - 0.6, -2]} intensity={1.0} color="#ffe6c8" distance={20} decay={2} />
+
+            {/* ── Cased openings — a doorway is joinery, not a hole ────
+                Two jambs and a head per opening, from the same DOORWAYS
+                table the colliders were punched from. */}
+            {DOORWAYS.map((d, i) => {
+                const y = i < MAIN_DOORWAYS_END ? MAIN_Y : UPPER_Y;
+                const H = 2.3;
+                const along = d.axis === 'x';
+                return (
+                    <group key={`case-${i}`} position={[d.x, y, d.z]}>
+                        {[-1, 1].map((s2) => (
+                            <mesh
+                                key={s2}
+                                position={along ? [s2 * (d.w / 2), H / 2, 0] : [0, H / 2, s2 * (d.w / 2)]}
+                                castShadow={sh}
+                            >
+                                <boxGeometry args={along ? [0.09, H, 0.3] : [0.3, H, 0.09]} />
+                                <primitive object={m.woodDark} attach="material" />
+                            </mesh>
+                        ))}
+                        <mesh position={[0, H + 0.05, 0]} castShadow={sh}>
+                            <boxGeometry args={along ? [d.w + 0.18, 0.12, 0.3] : [0.3, 0.12, d.w + 0.18]} />
+                            <primitive object={m.woodDark} attach="material" />
+                        </mesh>
+                    </group>
+                );
+            })}
+
+            {/* ── Art — a wall with nothing on it reads as a texture, not
+                a home. The four house artworks hang where people pause. */}
+            {[
+                { art: m.artDomain, x: u(-2.7) + 0.16, y: 1.7, z: u(6.2), ry: Math.PI / 2, w: 1.6, h: 1.15 },
+                { art: m.artAsWithin, x: u(-2.66) + 0.16, y: UPPER_Y + 1.8, z: u(4.6), ry: Math.PI / 2, w: 1.5, h: 1.1 },
+                { art: m.artStillPoint, x: 0, y: UPPER_Y + 1.75, z: SHELL.minZ + 0.16, ry: 0, w: 1.9, h: 1.3 },
+                { art: m.artUnnamed, x: SHELL.minX + 0.16, y: 1.65, z: u(-2.2), ry: Math.PI / 2, w: 1.5, h: 1.1 },
+            ].map((a, i) => (
+                <group key={`art-${i}`} position={[a.x, a.y, a.z]} rotation={[0, a.ry, 0]}>
+                    <mesh>
+                        <planeGeometry args={[a.w, a.h]} />
+                        <primitive object={a.art} attach="material" />
+                    </mesh>
+                    <mesh position={[0, 0, -0.02]}>
+                        <boxGeometry args={[a.w + 0.12, a.h + 0.12, 0.05]} />
+                        <primitive object={m.woodDark} attach="material" />
+                    </mesh>
+                </group>
+            ))}
+
+            {/* ── Kitchen uppers + range hood over the north counter ── */}
+            {[0, 1, 2, 3].map((i) => (
+                <mesh
+                    key={`upper-${i}`}
+                    position={[u(1.6) + i * 1.7, UPPER_Y + 2.1, SHELL.minZ + 0.55]}
+                    castShadow={sh}
+                >
+                    <boxGeometry args={[1.5, 0.8, 0.42]} />
+                    <primitive object={m.woodDark} attach="material" />
+                </mesh>
+            ))}
+
+            {/* ── Pendants — island and dining. Emissive shades; the cove
+                system already carries the light itself. */}
+            {[
+                { x: u(3.4) - 1.1, z: u(-2.6) },
+                { x: u(3.4) + 1.1, z: u(-2.6) },
+                { x: u(1.1), z: u(2.0) },
+            ].map((pd, i) => (
+                <group key={`pend-${i}`} position={[pd.x, UPPER_Y, pd.z]}>
+                    <mesh position={[0, STOREY - 0.55, 0]}>
+                        <cylinderGeometry args={[0.02, 0.02, 1.0, 5]} />
+                        <primitive object={m.metalDark} attach="material" />
+                    </mesh>
+                    <mesh position={[0, STOREY - 1.1, 0]}>
+                        <cylinderGeometry args={[0.16, 0.24, 0.26, 10, 1, true]} />
+                        <primitive object={m.metalDark} attach="material" />
+                    </mesh>
+                    <mesh position={[0, STOREY - 1.2, 0]}>
+                        <sphereGeometry args={[0.07, 8, 6]} />
+                        <meshBasicMaterial color="#ffdfae" toneMapped={false} />
+                    </mesh>
+                </group>
+            ))}
 
             {/* ── The shaft edge: a lining round the hole in the floor ── */}
             {[

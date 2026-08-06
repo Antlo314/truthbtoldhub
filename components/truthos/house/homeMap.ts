@@ -196,12 +196,27 @@ export function levelAfter(x: number, z: number, level: Level): Level {
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
-const seg = (x1: number, z1: number, x2: number, z2: number, t = SHELL.t): Collider => ({
-    x: (x1 + x2) / 2,
-    z: (z1 + z2) / 2,
-    hx: Math.max(Math.abs(x2 - x1) / 2, t / 2),
-    hz: Math.max(Math.abs(z2 - z1) / 2, t / 2),
-});
+/**
+ * A wall segment. Every run is EXTENDED by half a wall thickness at both
+ * ends along its axis, so any two walls whose endpoints share a corner
+ * physically overlap instead of kissing at a zero-width line. "Some walls
+ * aren't even touching" was exactly this: segments met edge-to-edge and
+ * floating-point met daylight. Overlap is invisible; a seam is not.
+ */
+const seg = (x1: number, z1: number, x2: number, z2: number, t = SHELL.t): Collider => {
+    const alongX = Math.abs(x2 - x1) >= Math.abs(z2 - z1);
+    const ext = t / 2;
+    return {
+        x: (x1 + x2) / 2,
+        z: (z1 + z2) / 2,
+        hx: alongX ? Math.abs(x2 - x1) / 2 + ext : t / 2,
+        hz: alongX ? t / 2 : Math.abs(z2 - z1) / 2 + ext,
+    };
+};
+
+/** Every doorway punched by withDoor — casings and thresholds read this */
+export type Doorway = { x: number; z: number; w: number; axis: 'x' | 'z' };
+export const DOORWAYS: Doorway[] = [];
 
 function withDoor(
     x1: number, z1: number, x2: number, z2: number,
@@ -209,15 +224,20 @@ function withDoor(
 ): Collider[] {
     const horizontal = Math.abs(x2 - x1) > Math.abs(z2 - z1);
     if (horizontal) {
+        DOORWAYS.push({ x: gapC, z: (z1 + z2) / 2, w: gapW, axis: 'x' });
+        // Keep even tiny stubs: the old filter silently DELETED any piece
+        // shorter than the wall's own thickness, which left an open gap
+        // at the corner wherever a doorway sat near a wall end.
         return [
             seg(x1, z1, gapC - gapW / 2, z2, t),
             seg(gapC + gapW / 2, z1, x2, z2, t),
-        ].filter((c) => c.hx > t / 2 + 0.01);
+        ].filter((c) => c.hx > t / 2 + 0.001 && Math.abs(x2 - x1) > 0.02);
     }
+    DOORWAYS.push({ x: (x1 + x2) / 2, z: gapC, w: gapW, axis: 'z' });
     return [
         seg(x1, z1, x2, gapC - gapW / 2, t),
         seg(x1, gapC + gapW / 2, x2, z2, t),
-    ].filter((c) => c.hz > t / 2 + 0.01);
+    ].filter((c) => c.hz > t / 2 + 0.001 && Math.abs(z2 - z1) > 0.02);
 }
 
 /**
@@ -228,9 +248,12 @@ function withDoor(
  * could step straight out over the foyer.
  */
 export const STAIR_WALLS: Collider[] = [
-    { x: SHAFT.minX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 },
-    { x: SHAFT.maxX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 },
+    { x: SHAFT.minX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 + 0.12 },
+    { x: SHAFT.maxX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 + 0.12 },
 ];
+
+/** The stair mouth is a cased opening, not a hole */
+DOORWAYS.push({ x: (STAIR.minX + STAIR.maxX) / 2, z: STAIR.zBottom, w: STAIR.maxX - STAIR.minX, axis: 'x' });
 
 const SHELL_WALLS: Collider[] = [
     seg(X0, Z0, X1, Z0),
@@ -243,14 +266,16 @@ export const MAIN_COLLIDERS: Collider[] = [
     // Front wall — door gap on the foyer axis
     ...withDoor(X0, Z1, X1, Z1, u(-1.2), 1.8),
     // West band / centre divider — doors to rec and mud
-    ...withDoor(W_E, u(2.3), W_E, Z1, u(5.0), DOOR),
-    ...withDoor(W_E, u(0.6), W_E, u(2.3), u(1.5), 1.35),
+    // Rec door sits NORTH of the stair shaft — at u(5.0) it opened
+    // straight into the enclosure wall and was unpassable.
+    ...withDoor(W_E, u(2.3), W_E, Z1, u(6.2), DOOR),
+    ...withDoor(W_E, u(0.6), W_E, u(2.3), u(0.9), 1.35),
     // Centre / garage dividers
     seg(C_E, u(-1.0), C_E, Z1),
     seg(u(1.27), Z0, u(1.27), Z1),
     // Rec / bath · bath / bedroom
     ...withDoor(X0, u(2.3), W_E, u(2.3), u(-4.0), 1.35),
-    ...withDoor(X0, u(0.6), u(-3.1), u(0.6), u(-5.6), 1.35),
+    ...withDoor(X0, u(0.6), W_E, u(0.6), u(-5.6), 1.35),
     // Bedrooms
     ...withDoor(u(-3.1), u(-4.4), u(1.27), u(-4.4), u(-1.0), 1.35),
     seg(u(-3.1), u(-4.4), u(-3.1), u(0.6)),
@@ -265,6 +290,9 @@ export const MAIN_COLLIDERS: Collider[] = [
     // The jungle: outdoors the same walls that always held
     ...JUNGLE_COLLIDERS,
 ];
+
+/** Doorways pushed so far belong to the main storey (stair mouth included) */
+export const MAIN_DOORWAYS_END = DOORWAYS.length;
 
 export const UPPER_COLLIDERS: Collider[] = [
     ...SHELL_WALLS,
@@ -281,6 +309,19 @@ export const UPPER_COLLIDERS: Collider[] = [
     // Powder
     ...withDoor(u(-2.66), u(0.6), u(-0.5), u(0.6), u(-1.9), 1.2),
     seg(u(-0.5), u(-0.4), u(-0.5), u(1.0)),
+    // Walls the first pass simply never drew — every one of these was a
+    // room whose partition stopped short of its neighbour:
+    // walk-in's south face (it hung open into the ensuite)
+    seg(u(-4.5), u(0.6), u(-2.66), u(0.6)),
+    // powder's west face
+    seg(u(-2.66), u(-0.4), u(-2.66), u(0.6)),
+    // laundry's east face
+    seg(u(-0.5), u(-4.3), u(-0.5), u(-1.9)),
+    // bedroom + laundry north faces (they were open to the patio corridor)
+    seg(X0, u(-4.3), u(-3.3), u(-4.3)),
+    seg(u(-3.3), u(-4.3), u(-0.5), u(-4.3)),
+    // kitchen's north face, with the door out to the covered patio
+    ...withDoor(u(0.9), u(-4.4), X1, u(-4.4), u(4.2), 1.4),
     // Kitchen west wall + dining/living divider (open plan, half-walls)
     seg(u(0.9), u(-4.4), u(0.9), u(-1.2)),
     seg(u(2.7), u(0.4), u(2.7), u(3.6)),
