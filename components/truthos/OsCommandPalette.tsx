@@ -158,12 +158,6 @@ export default function OsCommandPalette({
         action('restart', 'Restart Truth.OS', 'System', onRestart);
         action('taskview', 'Open task view', 'Window', () => sys.setTaskView(true), <SquareStack size={15} />);
         action('closeall', 'Close all windows', 'Window', clearAll);
-        action(
-            'layout',
-            `Switch layout to ${layoutMode === 'bento' ? 'free float' : 'bento snap'}`,
-            'Window',
-            () => setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento'),
-        );
         action('nightlight', `Night light ${sys.nightLight ? 'off' : 'on'}`, 'Display', () =>
             sys.setNightLight(!sys.nightLight),
         );

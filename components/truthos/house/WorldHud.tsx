@@ -55,59 +55,98 @@ function WeatherIcon({ weather, phase, size = 15 }: { weather: Weather; phase: P
  */
 const COMPASS_FOV = 1.15; // radians of world visible across the strip
 
+const ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'] as const;
+const arrowFor = (rel: number) => ARROWS[((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8];
+
+/**
+ * The compass was unreadable for two independent reasons, and both are fixed
+ * here rather than restyled:
+ *
+ *  1. THE BEARING WAS BACKWARDS. `atan2(-dx, -dz) - facing` negates the
+ *     destination vector but not the forward vector, so markers swung the
+ *     wrong way as you turned. The signed bearing is `facing - atan2(dx, dz)`,
+ *     which is exactly atan2(d·right, d·forward) for the forward/right basis
+ *     FirstPersonController uses. Positive is to your right, which is what
+ *     `left: 50% + t*46%` already assumed.
+ *
+ *  2. THE LABELS COULD NOT MISS EACH OTHER. Four absolutely-positioned
+ *     `whitespace-nowrap` spans needing ~430px of text shared a 300px strip,
+ *     and anything outside the FOV was CLAMPED to exactly ±1 — so two places
+ *     behind you landed on the identical pixel and printed through each other.
+ *     Position and identity are now separate: the ribbon carries dots only
+ *     (overlapping dots are harmless), and the names live in a grid, where
+ *     overlap is impossible by construction. The rear hemisphere compresses
+ *     into the outer band instead of clamping, so two markers can never share
+ *     one x again.
+ */
 function Compass({ compact }: { compact: boolean }) {
-    const sites = DESTINATIONS.map((d) => ({ d, c: destCenter(d) }));
     const pose = getWalkerPose();
     // Yaw 0 faces −z in this world, so the forward vector is (−sin, −cos)
     const facing = Math.atan2(-Math.sin(pose.yaw), -Math.cos(pose.yaw));
-    const width = compact ? 200 : 300;
+
+    const marks = DESTINATIONS.map((d) => {
+        const c = destCenter(d);
+        const dx = c.x - pose.x;
+        const dz = c.z - pose.z;
+        const dist = Math.hypot(dx, dz);
+        let rel = facing - Math.atan2(dx, dz);
+        while (rel > Math.PI) rel -= Math.PI * 2;
+        while (rel < -Math.PI) rel += Math.PI * 2;
+        const a = Math.abs(rel);
+        const behind = a > COMPASS_FOV;
+        const t = behind
+            ? Math.sign(rel) * (0.72 + 0.28 * ((a - COMPASS_FOV) / (Math.PI - COMPASS_FOV)))
+            : (rel / COMPASS_FOV) * 0.72;
+        return { d, dist, rel, t, behind, arrived: dist < d.r, short: d.name.replace(/^The /, '') };
+    });
+
+    const dotClass = (m: (typeof marks)[number]) =>
+        m.arrived ? 'bg-emerald-400' : m.behind ? 'bg-white/35' : 'bg-amber-300';
 
     return (
-        <div
-            className="relative rounded-full border border-white/12 bg-black/55 backdrop-blur-md shadow-xl overflow-hidden"
-            style={{ width, height: compact ? 26 : 30 }}
-        >
-            {/* Centre tick — the direction you're actually walking */}
-            <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/25" />
-            {sites.map(({ d, c }) => {
-                const dx = c.x - pose.x;
-                const dz = c.z - pose.z;
-                const dist = Math.hypot(dx, dz);
-                let rel = Math.atan2(-dx, -dz) - facing;
-                while (rel > Math.PI) rel -= Math.PI * 2;
-                while (rel < -Math.PI) rel += Math.PI * 2;
-                const behind = Math.abs(rel) > COMPASS_FOV;
-                const t = Math.max(-1, Math.min(1, rel / COMPASS_FOV));
-                const arrived = dist < d.r;
-                return (
+        <div className="flex flex-col items-center gap-1.5 w-[min(92vw,420px)]">
+            {/* Ribbon — position only, zero text */}
+            <div className="relative w-full h-6 rounded-full border border-white/12 bg-black/55 backdrop-blur-md shadow-xl overflow-hidden">
+                <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/25" />
+                {marks.map((m) => (
                     <span
-                        key={d.id}
-                        title={`${d.name} · ${Math.round(dist)}m`}
-                        className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap font-mono transition-opacity ${
-                            compact ? 'text-[8px]' : 'text-[9px]'
-                        } ${
-                            arrived
-                                ? 'text-emerald-300'
-                                : behind
-                                  ? 'text-white/30'
-                                  : 'text-white/75'
+                        key={m.d.id}
+                        className={`absolute top-1/2 h-2 w-2 -translate-y-1/2 -translate-x-1/2 rounded-full ring-1 ring-black/60 transition-[left] duration-200 ease-out ${dotClass(m)}`}
+                        style={{ left: `${50 + m.t * 46}%`, opacity: m.behind ? 0.55 : 1 }}
+                    />
+                ))}
+            </div>
+
+            {/* Legend — grid flow, so nothing can sit on anything */}
+            <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-1 rounded-2xl border border-white/12 bg-black/55 backdrop-blur-md px-2.5 py-1.5 shadow-xl">
+                {marks.map((m) => (
+                    <li
+                        key={m.d.id}
+                        className={`flex min-w-0 items-center gap-1.5 font-mono leading-none ${
+                            m.arrived ? 'text-emerald-300' : m.behind ? 'text-white/45' : 'text-white/80'
                         }`}
-                        style={{ left: `${50 + t * 46}%`, opacity: behind ? 0.5 : 1 }}
                     >
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass(m)}`} />
+                        <span className={`w-3 shrink-0 text-center ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
+                            {arrowFor(m.rel)}
+                        </span>
                         <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                                arrived ? 'bg-emerald-400' : 'bg-amber-300/80'
+                            className={`min-w-0 flex-1 truncate uppercase tracking-[0.08em] ${
+                                compact ? 'text-[8px]' : 'text-[9px]'
                             }`}
-                        />
-                        {!compact && (
-                            <span className="uppercase tracking-[0.12em]">
-                                {d.name.replace(/^The /, '')}
-                            </span>
-                        )}
-                        <span className="tabular-nums text-white/45">{Math.round(dist)}m</span>
-                    </span>
-                );
-            })}
+                        >
+                            {m.short}
+                        </span>
+                        <span
+                            className={`shrink-0 tabular-nums text-white/45 ${
+                                compact ? 'text-[8px]' : 'text-[9px]'
+                            }`}
+                        >
+                            {Math.round(m.dist)}m
+                        </span>
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 }
@@ -182,12 +221,16 @@ export default function WorldHud({
 
     return (
         <div className="pointer-events-none absolute inset-0 z-[45] select-none">
-            {/* Top-left — who you are */}
+            {/* One grid row owns the three top islands. They used to be three
+                absolutely-positioned blocks that simply overlapped once the
+                viewport got narrow; now the browser keeps them apart. */}
             <div
-                className={`absolute left-3 flex items-center gap-2.5 rounded-2xl border border-white/12 bg-black/55 backdrop-blur-md px-3 py-2 shadow-xl ${
-                    compact ? 'top-2' : 'top-3'
-                }`}
-                style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+                className="absolute inset-x-0 top-0 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] items-start gap-2 px-3"
+                style={{ paddingTop: `calc(${compact ? '0.5rem' : '0.75rem'} + env(safe-area-inset-top, 0px))` }}
+            >
+            {/* Who you are */}
+            <div
+                className="justify-self-start flex items-center gap-2.5 rounded-2xl border border-white/12 bg-black/55 backdrop-blur-md px-3 py-2 shadow-xl"
             >
                 <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-black font-black text-sm ring-1 ring-white/25 shrink-0">
                     {name.slice(0, 1).toUpperCase()}
@@ -209,12 +252,9 @@ export default function WorldHud({
                 )}
             </div>
 
-            {/* Top-right — when and what the sky is doing */}
+            {/* When, and what the sky is doing */}
             <div
-                className={`absolute right-3 flex items-center gap-2.5 rounded-2xl border border-white/12 bg-black/55 backdrop-blur-md px-3 py-2 shadow-xl ${
-                    compact ? 'top-2' : 'top-3'
-                }`}
-                style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+                className="justify-self-end flex items-center gap-2.5 rounded-2xl border border-white/12 bg-black/55 backdrop-blur-md px-3 py-2 shadow-xl"
             >
                 <span className="text-white/85">
                     <WeatherIcon weather={weather} phase={ph} size={compact ? 15 : 17} />
@@ -236,12 +276,10 @@ export default function WorldHud({
                 )}
             </div>
 
-            {/* Top-centre — the compass, so a path always has a destination */}
-            <div
-                className="absolute left-1/2 -translate-x-1/2"
-                style={{ top: `calc(${compact ? '0.5rem' : '0.75rem'} + env(safe-area-inset-top, 0px))` }}
-            >
+            {/* The compass, so a path always has a destination */}
+            <div className="justify-self-center min-w-0 order-2">
                 <Compass compact={compact} />
+            </div>
             </div>
 
             {/* Bottom-centre — skill rail (hidden until a path grants one) */}

@@ -42,31 +42,60 @@ try {
 }
 
 function run(M) {
-    const { FURNITURE, DOORWAYS, STAIR, SHELL, ROOMS, PLAYER_R, INTRO, collidersFor, roomsOn } = M;
+    const {
+        FURNITURE, DOORWAYS, MAIN_DOORWAYS_END, STAIR, SHELL, ROOMS,
+        PLAYER_R, INTRO, collidersFor, roomsOn, artFootprints,
+    } = M;
     const fail = [];
     const R = PLAYER_R;
+    const ART_BOXES = artFootprints();
 
     const overlaps = (a, b) =>
         Math.abs(a.x - b.x) < a.hx + b.hx && Math.abs(a.z - b.z) < a.hz + b.hz;
 
+    // Doorways are pushed main-storey-first, so the index splits them. Without
+    // this a main-floor prop gets reported against an upper-floor door it is
+    // three metres below.
+    const doorLevel = (i) => (i < MAIN_DOORWAYS_END ? 'main' : 'upper');
+
     /* 1 ── doorway clearance ─────────────────────────────────── */
-    // A door needs its own width plus a body's width of approach on each
-    // side of the wall, or you clip the frame walking through.
+    // Furniture and art fail a door in DIFFERENT ways, so they get different
+    // boxes:
+    //   · furniture stands on the floor and you walk into it, so it must clear
+    //     the opening AND a body's width of approach on each side;
+    //   · art hangs at head height and never blocks a step — what it can do is
+    //     hang ACROSS the opening, which is what you see. So it is tested
+    //     against the bare opening only. Padding art like furniture would flag
+    //     every picture hung near a door, which is where pictures go.
     const DEPTH = SHELL.t / 2 + R + 0.45;
-    for (const d of DOORWAYS) {
-        const box =
+    DOORWAYS.forEach((d, i) => {
+        const lvl = doorLevel(i);
+        const walkBox =
             d.axis === 'x'
                 ? { x: d.x, z: d.z, hx: d.w / 2 + R, hz: DEPTH }
                 : { x: d.x, z: d.z, hx: DEPTH, hz: d.w / 2 + R };
+        const openBox =
+            d.axis === 'x'
+                ? { x: d.x, z: d.z, hx: d.w / 2, hz: SHELL.t / 2 + 0.12 }
+                : { x: d.x, z: d.z, hx: SHELL.t / 2 + 0.12, hz: d.w / 2 };
+
         for (const f of FURNITURE) {
-            if (overlaps(box, f)) {
+            if (f.level !== lvl) continue;
+            if (overlaps(walkBox, f)) {
                 fail.push(`DOORWAY  ${f.level} "${f.name}" blocks the door at (${d.x.toFixed(2)}, ${d.z.toFixed(2)})`);
             }
         }
-    }
+        for (const a of ART_BOXES) {
+            if (a.level !== lvl) continue;
+            if (overlaps(openBox, a)) {
+                fail.push(`DOORWAY  ${a.level} art "${a.name}" hangs across the opening at (${d.x.toFixed(2)}, ${d.z.toFixed(2)})`);
+            }
+        }
+    });
 
     /* 2 ── stair clearance ───────────────────────────────────── */
-    // The flight itself, plus a landing pad at each end.
+    // Floor space only — art on the shaft wall beside the flight is fine, so
+    // this reads FURNITURE, not ART.
     const PAD = 1.3;
     const stairBox = {
         x: (STAIR.minX + STAIR.maxX) / 2,
@@ -139,5 +168,5 @@ function run(M) {
         console.log(`\n${fail.length} problem(s).`);
         process.exit(1);
     }
-    console.log(`  ✓ ${FURNITURE.length} props, ${DOORWAYS.length} doorways, stair clear, every room reachable.`);
+    console.log(`  ✓ ${FURNITURE.length} props, ${ART_BOXES.length} artworks, ${DOORWAYS.length} doorways, stair clear, every room reachable.`);
 }

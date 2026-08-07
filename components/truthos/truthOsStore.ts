@@ -102,6 +102,8 @@ type TruthOsState = {
     zTop: number;
     bootDone: boolean;
     startOpen: boolean;
+    /** Kept as a type for stored sessions; only 'float' is reachable now
+        that the bento board is gone. */
     layoutMode: 'bento' | 'float';
     sessionEmail: string | null;
     authPrompt: boolean;
@@ -167,7 +169,7 @@ export const APP_META: Record<
     media: { title: 'Media Player', w: 760, h: 540, label: 'Media', accent: 'violet' },
     photos: { title: 'Photos', w: 680, h: 520, label: 'Photos', accent: 'pink' },
     clock: { title: 'Clock & Calendar', w: 420, h: 520, label: 'Clock', accent: 'sky' },
-    taskmgr: { title: 'Task Manager', w: 560, h: 480, label: 'Tasks', accent: 'amber' },
+    taskmgr: { title: 'Task Manager', w: 560, h: 480, label: 'Task Manager', accent: 'zinc' },
     browser: { title: 'Sanctum Browser', w: 820, h: 560, label: 'Browser', accent: 'cyan' },
     music: { title: 'Music', w: 620, h: 500, label: 'Music', accent: 'violet' },
     tasks: { title: 'To-Do', w: 520, h: 560, label: 'To-Do', accent: 'gold' },

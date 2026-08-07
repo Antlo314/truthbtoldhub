@@ -34,7 +34,7 @@ import { supabase } from '@/lib/supabase';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import AuthModal from '@/components/AuthModal';
-import { OsAppButton, OsIconTile, OsTaskbarItem } from './OsIcon';
+import { OsAppButton, OsIconTile, OsTaskbarItem, getAppIconMeta } from './OsIcon';
 import OsHome from './OsHome';
 import OsAmbient from './OsAmbient';
 import OsWindowFrame from './OsWindowFrame';
@@ -81,7 +81,7 @@ const APPS: DockItem[] = [
     { app: 'terminal', label: 'Terminal', guestOk: true },
     { app: 'files', label: 'Files', guestOk: true },
     { app: 'clock', label: 'Clock', guestOk: true },
-    { app: 'taskmgr', label: 'Tasks', guestOk: true },
+    { app: 'taskmgr', label: 'Task Manager', guestOk: true },
     { app: 'calculator', label: 'Calc', guestOk: true },
     { app: 'paint', label: 'Paint', guestOk: true },
     { app: 'notepad', label: 'Notepad', guestOk: true },
@@ -114,16 +114,6 @@ const BOOT_LINES = [
     'restoring last session…',
     'desktop session ready',
 ];
-
-const BENTO_CLASS: Record<BentoSlot, string> = {
-    hero: 'col-span-1 row-span-2 md:col-start-1 md:row-start-1',
-    a: 'col-span-1 row-span-1 md:col-start-2 md:row-start-1',
-    b: 'col-span-1 row-span-1 md:col-start-3 md:row-start-1',
-    c: 'col-span-1 row-span-1 md:col-start-2 md:row-start-2',
-    d: 'col-span-1 row-span-1 md:col-start-3 md:row-start-2',
-    float: '',
-    max: 'col-span-full row-span-full',
-};
 
 export default function TruthOSShell({
     onLogout,
@@ -485,7 +475,6 @@ export default function TruthOSShell({
         : visibleApps;
     const deskWindows = windows.filter((w) => w.desktop === desktop);
     const openWindows = deskWindows.filter((w) => !w.minimized);
-    const useBento = layoutMode === 'bento' && !phone;
 
     const launch = (app: OsAppId) => {
         openApp(app);
@@ -607,8 +596,8 @@ export default function TruthOSShell({
                                 title={app}
                             >
                                 <OsIconTile app={app} size="md" open={openAppIds.has(app)} />
-                                <span className="text-[9px] text-white/85 drop-shadow-md leading-tight capitalize">
-                                    {app === 'taskmgr' ? 'Tasks' : app}
+                                <span className="text-[9px] text-white/85 drop-shadow-md leading-tight">
+                                    {getAppIconMeta(app).label}
                                 </span>
                             </button>
                         ))}
@@ -645,57 +634,11 @@ export default function TruthOSShell({
                     </div>
                 )}
 
-                {/* Window layer */}
-                {useBento && openWindows.length > 0 ? (
-                    <div
-                        className="absolute inset-x-0 top-0 z-[5] p-3 grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-3 auto-rows-fr pointer-events-none"
-                        style={{ bottom: 'var(--os-taskbar)' }}
-                    >
-                        <AnimatePresence>
-                            {openWindows.map((w) => (
-                                <div
-                                    key={w.id}
-                                    data-os-window
-                                    className={`${BENTO_CLASS[w.snap] || ''} min-h-0 pointer-events-auto ${
-                                        w.snap === 'float' ? 'relative' : ''
-                                    }`}
-                                    style={{ zIndex: w.z }}
-                                >
-                                    <OsWindowFrame
-                                        title={w.title}
-                                        app={w.app}
-                                        x={w.x}
-                                        y={w.y}
-                                        w={w.w}
-                                        h={w.h}
-                                        z={w.z}
-                                        maximized={!!w.maximized || w.snap === 'max'}
-                                        focused={focusId === w.id}
-                                        bento
-                                        phone={phone}
-                                        onFocus={() => focusWindow(w.id)}
-                                        onClose={() => {
-                                            closeWindow(w.id);
-                                            hubAudio.osWindowClose();
-                                        }}
-                                        onMinimize={() => minimizeWindow(w.id)}
-                                        onMaximize={() => toggleMaximize(w.id)}
-                                        onMove={(x, y) => moveWindow(w.id, x, y)}
-                                        onSnap={(s) => setSnap(w.id, s)}
-                                        onRect={(r) => setRect(w.id, r)}
-                                    >
-                                        {renderOsApp(w.app, {
-                                            onLogout,
-                                            onEnterChamber: enterChamber,
-                                            payload: w.payload,
-                                        })}
-                                    </OsWindowFrame>
-                                </div>
-                            ))}
-                        </AnimatePresence>
-                    </div>
-                ) : (
-                    openWindows.length > 0 && (
+                {/* Window layer — windows float and snap; the bento BOARD
+                    (a 3x2 grid that owned window placement) is gone. Real
+                    snapping — edge drag, the seven zones, Ctrl+Shift+arrow —
+                    is untouched. */}
+                {openWindows.length > 0 && (
                         <div
                             className="absolute inset-x-0 top-0 z-[5] pointer-events-none [&>*]:pointer-events-auto"
                             style={{ bottom: 'var(--os-taskbar)' }}
@@ -728,6 +671,7 @@ export default function TruthOSShell({
                                     >
                                         {renderOsApp(w.app, {
                                             onLogout,
+                                            onExit: () => closeWindow(w.id),
                                             onEnterChamber: enterChamber,
                                             payload: w.payload,
                                         })}
@@ -735,7 +679,6 @@ export default function TruthOSShell({
                                 ))}
                             </AnimatePresence>
                         </div>
-                    )
                 )}
 
                 {/* Start menu — bottom sheet on phone, floating on desktop */}
@@ -825,16 +768,6 @@ export default function TruthOSShell({
                             )}
                         </div>
                         <div className="p-2 border-t border-white/10 flex items-center gap-1 shrink-0 bg-black/30">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento');
-                                    sacredUi.click();
-                                }}
-                                className="flex-1 text-left px-3 py-2.5 rounded-xl text-[11px] text-white/75 hover:bg-white/10 hover:text-white min-h-[44px] font-medium"
-                            >
-                                Layout · {layoutMode === 'bento' ? 'Bento' : 'Float'}
-                            </button>
                             {onEnterChamber && (
                                 <button
                                     type="button"

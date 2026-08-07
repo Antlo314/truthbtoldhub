@@ -412,6 +412,53 @@ export const FURNITURE: (Collider & { level: Level; name: string })[] = [
     { name: 'balcony chair (e)', level: 'upper', x: u(5.9), z: u(5.6), hx: 0.46, hz: 0.46 },
 ];
 
+/**
+ * Wall art, as a table.
+ *
+ * A framed picture is 5 cm of solid box standing off a wall, so it blocks a
+ * doorway exactly as well as a bookcase does — `artDomain` hung across half
+ * the opening into the stair room, and the house validator never saw it
+ * because that check only ever read FURNITURE. Positions live here now so
+ * scripts/validate-house.mjs can hold art to the same door clearance.
+ *
+ * `art` keys into useHouseMaterials(); ry is the yaw, so a rotated frame's
+ * width runs along z instead of x (the validator accounts for that).
+ */
+export type ArtSpec = {
+    art: string;
+    x: number;
+    y: number;
+    z: number;
+    ry: number;
+    w: number;
+    h: number;
+};
+
+export const ART: ArtSpec[] = [
+    // Was z u(6.2) — 1.72 m of frame across a 1.5 m door. Moved north onto
+    // the solid stub: clears the casing's jamb by 0.145 and the shell by 0.11.
+    { art: 'artDomain', x: u(-2.7) + 0.16, y: 1.7, z: u(7.1), ry: Math.PI / 2, w: 1.6, h: 1.15 },
+    { art: 'artAsWithin', x: u(-2.66) + 0.16, y: UPPER_Y + 1.8, z: u(4.6), ry: Math.PI / 2, w: 1.5, h: 1.1 },
+    { art: 'artStillPoint', x: 0, y: UPPER_Y + 1.75, z: SHELL.minZ + 0.16, ry: 0, w: 1.9, h: 1.3 },
+    { art: 'artUnnamed', x: SHELL.minX + 0.16, y: 1.65, z: u(-2.2), ry: Math.PI / 2, w: 1.5, h: 1.1 },
+];
+
+/** Art as floor footprints, for the doorway/stair clearance checks. */
+export function artFootprints(): (Collider & { name: string; level: Level })[] {
+    return ART.map((a) => {
+        const alongZ = Math.abs(Math.sin(a.ry)) > 0.5;
+        const half = (a.w + 0.12) / 2;
+        return {
+            name: a.art,
+            level: (a.y > UPPER_Y ? 'upper' : 'main') as Level,
+            x: a.x,
+            z: a.z,
+            hx: alongZ ? 0.05 : half,
+            hz: alongZ ? half : 0.05,
+        };
+    });
+}
+
 export function collidersFor(level: Level): Collider[] {
     return [
         ...(level === 'upper' ? UPPER_COLLIDERS : MAIN_COLLIDERS),

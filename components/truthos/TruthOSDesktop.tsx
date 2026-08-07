@@ -98,8 +98,8 @@ export default function TruthOSDesktop() {
                         >
                             ← Return to terminal
                         </button>
-                        {/* disableOsBoot: no computer → Truth.OS from inside chamber */}
-                        <HouseExperience disableOsBoot />
+                        {/* The desk hotspot and this button are the same door. */}
+                        <HouseExperience disableOsBoot onReturnToTerminal={exitChamber} />
                     </motion.div>
                 )}
             </AnimatePresence>

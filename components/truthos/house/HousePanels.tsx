@@ -242,6 +242,17 @@ function ArcadePanel({ onClose }: { onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-[55] bg-black">
             <ArcadeLobby character={character} onClose={onClose} />
+            {/* The lobby's own back button sits top-left — directly underneath
+                the chamber's "← Return to terminal" button at z-[80], which
+                swallowed every click aimed at it. This one lives on the other
+                side of the frame, above the lobby, and can actually be hit. */}
+            <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-3 right-3 z-[60] px-3 py-2 rounded-xl bg-black/80 border border-white/25 text-[11px] uppercase tracking-widest text-white/80 hover:bg-black hover:text-white backdrop-blur-md min-h-[44px]"
+            >
+                Close · Esc
+            </button>
         </div>
     );
 }

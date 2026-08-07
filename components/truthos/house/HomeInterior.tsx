@@ -32,6 +32,7 @@ import {
     STAIR,
     STAIR_WALLS,
     STOREY,
+    ART,
     UPPER_COLLIDERS,
     UPPER_Y,
     VOID,
@@ -361,13 +362,13 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             })}
 
             {/* ── Art — a wall with nothing on it reads as a texture, not
-                a home. The four house artworks hang where people pause. */}
-            {[
-                { art: m.artDomain, x: u(-2.7) + 0.16, y: 1.7, z: u(6.2), ry: Math.PI / 2, w: 1.6, h: 1.15 },
-                { art: m.artAsWithin, x: u(-2.66) + 0.16, y: UPPER_Y + 1.8, z: u(4.6), ry: Math.PI / 2, w: 1.5, h: 1.1 },
-                { art: m.artStillPoint, x: 0, y: UPPER_Y + 1.75, z: SHELL.minZ + 0.16, ry: 0, w: 1.9, h: 1.3 },
-                { art: m.artUnnamed, x: SHELL.minX + 0.16, y: 1.65, z: u(-2.2), ry: Math.PI / 2, w: 1.5, h: 1.1 },
-            ].map((a, i) => (
+                a home. The four house artworks hang where people pause.
+                Positions come from ART in homeMap so validate-house.mjs can
+                hold them to the same doorway clearance as the furniture —
+                artDomain used to hang across half the stair-room door. */}
+            {ART.map((spec, i) => {
+                const a = { ...spec, art: m[spec.art as keyof typeof m] as THREE.Material };
+                return (
                 <group key={`art-${i}`} position={[a.x, a.y, a.z]} rotation={[0, a.ry, 0]}>
                     <mesh>
                         <planeGeometry args={[a.w, a.h]} />
@@ -378,7 +379,8 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                         <primitive object={m.woodDark} attach="material" />
                     </mesh>
                 </group>
-            ))}
+                );
+            })}
 
             {/* ── Kitchen uppers + range hood over the north counter ── */}
             {[0, 1, 2, 3].map((i) => (

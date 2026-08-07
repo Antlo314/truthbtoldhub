@@ -219,15 +219,6 @@ export function OsQuickSettings({ phone }: { phone: boolean }) {
                         }}
                     />
                     <QuickToggle
-                        active={layoutMode === 'bento'}
-                        label={layoutMode === 'bento' ? 'Bento snap' : 'Free float'}
-                        icon={<LayoutGrid size={15} />}
-                        onClick={() => {
-                            setLayoutMode(layoutMode === 'bento' ? 'float' : 'bento');
-                            sacredUi.click();
-                        }}
-                    />
-                    <QuickToggle
                         active={doNotDisturb}
                         label="Do not disturb"
                         icon={<BellOff size={15} />}

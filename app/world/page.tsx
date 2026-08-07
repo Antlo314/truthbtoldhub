@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 /**
  * Optional 3D Chamber (legacy /world).
@@ -20,6 +21,7 @@ const HouseExperience = dynamic(
 );
 
 export default function WorldPage() {
+    const router = useRouter();
     return (
         <div className="relative min-h-[100dvh]">
             <Link
@@ -28,7 +30,8 @@ export default function WorldPage() {
             >
                 ← Truth.OS desktop
             </Link>
-            <HouseExperience disableOsBoot />
+            {/* Sitting back at the desk goes where the link goes. */}
+            <HouseExperience disableOsBoot onReturnToTerminal={() => router.push('/')} />
         </div>
     );
 }

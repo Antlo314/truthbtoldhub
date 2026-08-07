@@ -81,14 +81,22 @@ function ensureGuestId(): string {
 export default function HouseExperience({
     /** When true (opened from Truth.OS), computer cannot re-open the terminal */
     disableOsBoot = false,
+    /**
+     * How this chamber gets back to Truth.OS. Without it the desk hotspot can
+     * only print "use the button at the top-left", which is why sitting back
+     * down at the terminal did nothing but show a toast.
+     */
+    onReturnToTerminal,
 }: {
     disableOsBoot?: boolean;
+    onReturnToTerminal?: () => void;
 } = {}) {
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const { device } = useClientDevice();
     const { enterOs, closeToRoom } = useTruthOs();
     const openPanel = useHouseUi((s) => s.openPanel);
+    const closePanel = useHouseUi((s) => s.closePanel);
     const setSoonMessage = useHouseUi((s) => s.setSoonMessage);
     const soonMessage = useHouseUi((s) => s.soonMessage);
     const panel = useHouseUi((s) => s.panel);
@@ -152,6 +160,12 @@ export default function HouseExperience({
         setAuthed(true);
         setReady(true);
 
+        // The house UI store is module-scoped, so a panel opened before you
+        // left the chamber is STILL OPEN when you come back — you re-entered
+        // and landed straight back in the arcade. Clear it before the
+        // deep-link read below, so an explicit deep-link still wins.
+        closePanel();
+
         // Deep-link from /world or other redirects
         let pendingPanel: string | null = null;
         try {
@@ -169,7 +183,7 @@ export default function HouseExperience({
             const t = window.setTimeout(() => setWalkthrough(true, 0), 900);
             return () => window.clearTimeout(t);
         }
-    }, [openPanel, setWalkthrough]);
+    }, [openPanel, closePanel, setWalkthrough]);
 
     useEffect(() => {
         let cancelled = false;
@@ -300,6 +314,12 @@ export default function HouseExperience({
                 markVisited('computer');
                 // Terminal is the primary surface — no re-entry from chamber
                 if (disableOsBoot) {
+                    // The desk IS the terminal. Sitting back down means going
+                    // back to Truth.OS — same path as the top-left button.
+                    if (onReturnToTerminal) {
+                        onReturnToTerminal();
+                        return;
+                    }
                     setSoonMessage('Return to Truth.OS with the button at the top-left of the chamber.');
                     window.setTimeout(() => setSoonMessage(null), 3800);
                     return;
@@ -323,7 +343,7 @@ export default function HouseExperience({
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot],
+        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal],
     );
 
     const tryInteract = useCallback(() => {
@@ -348,12 +368,16 @@ export default function HouseExperience({
                     setOsOpen(false);
                     closeToRoom();
                     hubAudio.osExitToHouse();
+                } else if (panel) {
+                    // The arcade panel has no close button of its own, so
+                    // without this there is no way out of it but a reload.
+                    closePanel();
                 }
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, uiLocked, osOpen, activateHotspot, closeToRoom]);
+    }, [hotspot, uiLocked, osOpen, panel, activateHotspot, closeToRoom, closePanel]);
 
     const onAuthSuccess = () => {
         try {

@@ -282,19 +282,22 @@ export function LedgerApp() {
     );
 }
 
-export function SoulApp() {
+export function SoulApp({ onExit }: { onExit?: () => void }) {
     return (
         <div className="h-full min-h-[320px] bg-zinc-950 overflow-auto">
-            <SoulPanel onClose={() => sacredUi.click()} />
+            <SoulPanel onClose={() => { sacredUi.click(); onExit?.(); }} />
         </div>
     );
 }
 
-export function ArcadeApp() {
+export function ArcadeApp({ onExit }: { onExit?: () => void }) {
     const character = useGameStore((s) => s.character);
     return (
         <div className="h-full min-h-[320px] bg-zinc-950 overflow-auto">
-            <ArcadeLobby character={character} onClose={() => sacredUi.click()} />
+            {/* The lobby's own back button used to call a no-op, so the only
+                way out of the arcade window was the title-bar button that the
+                lobby itself was painting over. */}
+            <ArcadeLobby character={character} onClose={() => { sacredUi.click(); onExit?.(); }} />
         </div>
     );
 }
@@ -588,9 +591,9 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
         case 'ledger':
             return <LedgerApp />;
         case 'soul':
-            return <SoulApp />;
+            return <SoulApp onExit={ctx.onExit} />;
         case 'arcade':
-            return <ArcadeApp />;
+            return <ArcadeApp onExit={ctx.onExit} />;
         case 'offering':
             return <OfferingApp />;
         case 'library':
