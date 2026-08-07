@@ -1,4 +1,5 @@
-"use client";
+
+import { useLiveSouls } from '@/lib/truthos/liveSouls';"use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
@@ -207,7 +208,8 @@ export default function Archive() {
     const [newWhisper, setNewWhisper] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLocked, setIsLocked] = useState(true);
-    const [onlineUsers, setOnlineUsers] = useState(5);
+    // Real presence, not a literal — see lib/truthos/liveSouls.ts
+    const onlineUsers = useLiveSouls();
     const [activeReplyBox, setActiveReplyBox] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState('');
     const [isSubmittingReply, setIsSubmittingReply] = useState(false);
@@ -322,11 +324,9 @@ export default function Archive() {
         });
 
         channel.subscribe();
-        const presenceInterval = setInterval(() => setOnlineUsers(Math.floor(Math.random() * 5) + 3), 15000);
 
         return () => {
             supabase.removeChannel(channel);
-            clearInterval(presenceInterval);
             if (reqRef.current) cancelAnimationFrame(reqRef.current);
         };
     }, []);
@@ -475,7 +475,7 @@ export default function Archive() {
                             <div className="w-2 h-2 rounded-full bg-emerald-500 relative shadow-[0_0_10px_#10b981]" />
                         </div>
                         <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-[0.2em] font-bold">
-                            <span className="text-emerald-400">{onlineUsers}</span> Souls Live
+                            <span className="text-emerald-400">{onlineUsers ?? '—'}</span> Souls Live
                         </span>
                     </div>
                     <button 

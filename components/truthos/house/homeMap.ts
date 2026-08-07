@@ -339,18 +339,77 @@ export const UPPER_COLLIDERS: Collider[] = [
     seg(SHAFT.maxX, VOID.minZ, VOID.maxX, VOID.minZ),
 ];
 
-export const FURNITURE: (Collider & { level: Level })[] = [
-    // Main — the intro desk, rec sofa, beds
-    { level: 'main', x: u(-5.9), z: u(6.2), hx: 1.1, hz: 0.5 },
-    { level: 'main', x: u(-4.2), z: u(7.2), hx: 1.3, hz: 0.55 },
-    { level: 'main', x: u(-5.9), z: u(-2.4), hx: 1.15, hz: 1.25 },
-    { level: 'main', x: u(-1.0), z: u(-6.2), hx: 1.25, hz: 1.15 },
-    // Upper — island, sofas, dining table, master bed, bookshelf wall
-    { level: 'upper', x: u(3.4), z: u(-2.6), hx: 2.2, hz: 0.7 },
-    { level: 'upper', x: u(4.6), z: u(1.6), hx: 1.8, hz: 0.6 },
-    { level: 'upper', x: u(1.1), z: u(2.0), hx: 1.3, hz: 0.9 },
-    { level: 'upper', x: u(-5.2), z: u(5.6), hx: 1.3, hz: 1.4 },
-    { level: 'upper', x: u(6.6), z: u(1.3), hx: 0.35, hz: 2.6 },
+/** The rec-room desk — the anchor of the intro and of the FURNITURE table below */
+export const DESK = {
+    x: u(-5.9),
+    z: u(6.2),
+    monitorY: 1.35,
+} as const;
+
+/**
+ * Every solid prop in the house, as a footprint.
+ *
+ * This table is the reason you cannot walk through the furniture: it is
+ * concatenated onto the wall colliders in collidersFor(). One entry per
+ * prop that HomeDecor/HomeInterior actually place, half-extents taken
+ * from the prop's real size (props are human-scale metres even though
+ * the ROOMS ride the u() doubling).
+ *
+ * Two deliberate omissions:
+ *   · rugs — flat, you walk on them;
+ *   · the rec-room desk chair — every session SPAWNS seated in it, and a
+ *     collider you start inside blocks both slide axes, i.e. you wake up
+ *     unable to move.
+ *
+ * scripts/validate-house.mjs asserts nothing here sits in a doorway or
+ * on the stair, and that every room is still reachable from the seat.
+ */
+export const FURNITURE: (Collider & { level: Level; name: string })[] = [
+    /* ── MAIN: rec room ───────────────────────────────── */
+    { name: 'desk', level: 'main', x: DESK.x, z: DESK.z, hx: 1.0, hz: 0.45 },
+    { name: 'rec sofa', level: 'main', x: u(-4.2), z: u(7.2), hx: 1.25, hz: 0.5 },
+    { name: 'rec coffee table', level: 'main', x: u(-4.2), z: u(5.4), hx: 0.58, hz: 0.36 },
+    { name: 'floor lamp', level: 'main', x: u(-6.4), z: u(7.3), hx: 0.22, hz: 0.22 },
+    { name: 'arcade cabinet', level: 'main', x: u(-2.95), z: u(7.2), hx: 0.42, hz: 0.37 },
+    { name: 'rec side table', level: 'main', x: u(-1.6), z: u(6.9), hx: 0.46, hz: 0.36 },
+    { name: 'rec plant', level: 'main', x: u(-6.6), z: u(3.0), hx: 0.3, hz: 0.3 },
+
+    /* ── MAIN: bedrooms + bath ────────────────────────── */
+    { name: 'bed (west)', level: 'main', x: u(-5.9), z: u(-2.4), hx: 1.15, hz: 1.25 },
+    // Was at z u(-0.6), standing squarely in the bedroom doorway
+    { name: 'nightstand', level: 'main', x: u(-6.4), z: u(-3.9), hx: 0.3, hz: 0.3 },
+    { name: 'bed (north)', level: 'main', x: u(-1.0), z: u(-6.2), hx: 1.25, hz: 1.15 },
+    { name: 'dresser', level: 'main', x: u(0.6), z: u(-6.9), hx: 0.58, hz: 0.32 },
+    { name: 'bath vanity', level: 'main', x: u(-6.2), z: u(1.4), hx: 0.88, hz: 0.42 },
+
+    /* ── UPPER: kitchen ───────────────────────────────── */
+    { name: 'island', level: 'upper', x: u(3.4), z: u(-2.6), hx: 2.2, hz: 0.7 },
+    { name: 'counter run', level: 'upper', x: u(3.2), z: -SHELL.maxZ + 0.9, hx: 3.85, hz: 0.4 },
+    { name: 'fridge', level: 'upper', x: u(1.6), z: u(-6.9), hx: 0.42, hz: 0.37 },
+    { name: 'stove', level: 'upper', x: u(4.4), z: u(-6.9), hx: 0.47, hz: 0.34 },
+
+    /* ── UPPER: dining + the Ledger ───────────────────── */
+    { name: 'dining table', level: 'upper', x: u(1.1), z: u(2.0), hx: 1.3, hz: 0.9 },
+    // Was at x u(-0.3), overhanging the stair's top landing
+    { name: 'sideboard (Ledger)', level: 'upper', x: u(0.2), z: u(3.3), hx: 0.98, hz: 0.28 },
+
+    /* ── UPPER: living + the Library wall ─────────────── */
+    { name: 'bookshelf wall', level: 'upper', x: u(6.6), z: u(1.3), hx: 0.35, hz: 2.6 },
+    { name: 'living sofa', level: 'upper', x: u(4.6), z: u(1.6), hx: 1.8, hz: 0.6 },
+    { name: 'living coffee table', level: 'upper', x: u(4.6), z: u(-0.1), hx: 0.68, hz: 0.42 },
+    { name: 'accent chair', level: 'upper', x: u(6.2), z: u(3.2), hx: 0.46, hz: 0.46 },
+    { name: 'media wall', level: 'upper', x: SHELL.maxX - 0.45, z: u(-0.9), hx: 0.38, hz: 0.82 },
+    { name: 'codex desk', level: 'upper', x: u(2.6), z: u(-4.0), hx: 0.58, hz: 0.28 },
+
+    /* ── UPPER: master + bedroom ──────────────────────── */
+    { name: 'master bed', level: 'upper', x: u(-5.2), z: u(5.6), hx: 1.3, hz: 1.4 },
+    { name: 'bedside (west)', level: 'upper', x: u(-6.7), z: u(6.8), hx: 0.3, hz: 0.3 },
+    { name: 'bedside (east)', level: 'upper', x: u(-3.7), z: u(6.8), hx: 0.3, hz: 0.3 },
+    { name: 'upper bed', level: 'upper', x: u(-3.6), z: u(-2.8), hx: 1.05, hz: 1.0 },
+
+    /* ── UPPER: balcony ───────────────────────────────── */
+    { name: 'balcony chair (w)', level: 'upper', x: u(4.6), z: u(5.6), hx: 0.46, hz: 0.46 },
+    { name: 'balcony chair (e)', level: 'upper', x: u(5.9), z: u(5.6), hx: 0.46, hz: 0.46 },
 ];
 
 export function collidersFor(level: Level): Collider[] {
@@ -412,12 +471,6 @@ export const INTRO = {
     /** Seconds: hold on the glow, then rise */
     holdS: 1.1,
     riseS: 1.6,
-} as const;
-
-export const DESK = {
-    x: u(-5.9),
-    z: u(6.2),
-    monitorY: 1.35,
 } as const;
 
 /* ── Spawn (used if the intro is skipped) ─────────────────── */

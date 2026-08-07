@@ -26,6 +26,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
+import GrassField from './GrassField';
 import {
     CLEARING_R,
     CORRIDORS,
@@ -353,11 +354,14 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
 
     return (
         <group>
-            {/* The jungle floor */}
+            {/* The jungle floor — the texture is now the DISTANCE only;
+                everything you walk through is real blades (GrassField). */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow={sh}>
                 <circleGeometry args={[240, low ? 40 : 64]} />
                 <primitive object={m.grass} attach="material" />
             </mesh>
+
+            <GrassField low={low} />
 
             {/* Dirt strips — one per corridor, drawn from the same list the
                 walls and colliders part around */}

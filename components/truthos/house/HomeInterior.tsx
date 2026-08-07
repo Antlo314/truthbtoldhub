@@ -34,10 +34,12 @@ import {
     STOREY,
     UPPER_COLLIDERS,
     UPPER_Y,
+    VOID,
     u,
     type Collider,
 } from './homeMap';
 import { JUNGLE_COLLIDERS } from './jungleMap';
+import { RoomPracticals } from './HouseLights';
 
 const X0 = SHELL.minX;
 const X1 = SHELL.maxX;
@@ -260,16 +262,57 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             <Skirting cols={mainWalls} y={MAIN_Y} mat={mats.skirting} />
             <Skirting cols={upperWalls} y={UPPER_Y} mat={mats.skirting} />
 
-            {/* ── Ceilings with a shadow-gap cove ────────────── */}
+            {/* ── Ceilings with a shadow-gap cove ──────────────
+                Each storey's ceiling is the footprint MINUS its holes,
+                cut into rectangles — never one plane across everything:
+
+                · main  — minus the stairwell and the foyer void, or the
+                  double-height foyer gets a lid;
+                · upper — minus the covered balcony and patio, which have
+                  their own soffit in HomeGeometry at ROOF_Y − 0.18. That
+                  soffit and a full-footprint ceiling plane were EXACTLY
+                  coplanar and both face down: two surfaces fighting for
+                  the same depth is the blinking ceiling upstairs.
+
+                Also dropped below the structural slab (its underside sits
+                at UPPER_Y − 0.30) instead of 12 cm inside it. */}
             {[
-                { y: UPPER_Y - 0.18, label: 'main' },
-                { y: UPPER_Y + STOREY - 0.18, label: 'upper' },
+                {
+                    label: 'main',
+                    y: UPPER_Y - 0.32,
+                    rects: [
+                        { x: 0, z: (Z0 + SHAFT.minZ) / 2, w: X1 - X0, d: SHAFT.minZ - Z0 },
+                        { x: (X0 + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - X0, d: SHAFT.maxZ - SHAFT.minZ },
+                        { x: (SHAFT.maxX + X1) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: X1 - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
+                        { x: (X0 + VOID.minX) / 2, z: (VOID.minZ + Z1) / 2, w: VOID.minX - X0, d: Z1 - VOID.minZ },
+                        { x: (VOID.maxX + X1) / 2, z: (VOID.minZ + Z1) / 2, w: X1 - VOID.maxX, d: Z1 - VOID.minZ },
+                    ],
+                },
+                {
+                    label: 'upper',
+                    y: UPPER_Y + STOREY - 0.18,
+                    rects: [
+                        // west strip, full depth — clear of both open rooms
+                        { x: (X0 + u(0.9)) / 2, z: 0, w: u(0.9) - X0, d: Z1 - Z0 },
+                        // middle, stopping at the balcony's south edge
+                        { x: (u(0.9) + u(3.3)) / 2, z: (Z0 + u(3.6)) / 2, w: u(3.3) - u(0.9), d: u(3.6) - Z0 },
+                        // east, between the patio and the balcony
+                        { x: (u(3.3) + X1) / 2, z: (u(-4.4) + u(3.6)) / 2, w: X1 - u(3.3), d: u(3.6) - u(-4.4) },
+                    ],
+                },
             ].map((c) => (
                 <group key={c.label}>
-                    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, c.y, 0]} receiveShadow={sh}>
-                        <planeGeometry args={[X1 - X0 - coveInset * 2, Z1 - Z0 - coveInset * 2]} />
-                        <primitive object={mats.ceiling} attach="material" />
-                    </mesh>
+                    {c.rects.map((r, i) => (
+                        <mesh
+                            key={i}
+                            rotation={[Math.PI / 2, 0, 0]}
+                            position={[r.x, c.y, r.z]}
+                            receiveShadow={sh}
+                        >
+                            <planeGeometry args={[Math.max(0, r.w - coveInset * 2), Math.max(0, r.d - coveInset * 2)]} />
+                            <primitive object={mats.ceiling} attach="material" />
+                        </mesh>
+                    ))}
                     {/* Concealed cove: a bright strip inside the shadow gap,
                         washing the ceiling from its perimeter */}
                     {[
@@ -286,12 +329,9 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 </group>
             ))}
 
-            {/* Ambient lift from the coves — soft, so the ceiling reads lit
-                rather than the room being flooded */}
-            <pointLight position={[0, UPPER_Y - 0.5, 6]} intensity={1.1} color="#ffdfae" distance={20} decay={2} />
-            <pointLight position={[0, UPPER_Y - 0.5, -6]} intensity={1.0} color="#ffdfae" distance={20} decay={2} />
-            <pointLight position={[4, UPPER_Y + STOREY - 0.6, 2]} intensity={1.2} color="#ffe6c8" distance={22} decay={2} />
-            <pointLight position={[-4, UPPER_Y + STOREY - 0.6, -2]} intensity={1.0} color="#ffe6c8" distance={20} decay={2} />
+            {/* One fixture per room, from the ROOMS table — four lights for
+                nineteen rooms is what made the interior read flat. */}
+            <RoomPracticals />
 
             {/* ── Cased openings — a doorway is joinery, not a hole ────
                 Two jambs and a head per opening, from the same DOORWAYS

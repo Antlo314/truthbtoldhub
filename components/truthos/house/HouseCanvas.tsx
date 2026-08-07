@@ -3,10 +3,12 @@
 import { useCallback, useRef, useState } from 'react';
 import type { BloomEffect } from 'postprocessing';
 import { Canvas } from '@react-three/fiber';
-import { ContactShadows, Environment } from '@react-three/drei';
+import { ContactShadows, Environment, PerformanceMonitor } from '@react-three/drei';
+import { PropDetailProvider } from './HouseProp';
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
+import { DaylightFill } from './HouseLights';
 import { BloomByDaylight, NightStars, Rain } from './WeatherFx';
 import JungleGeometry from './JungleGeometry';
 import WorldDestinations from './WorldDestinations';
@@ -62,6 +64,13 @@ export default function HouseCanvas({
     const attachBloom = useCallback((e: BloomEffect | null) => {
         bloom.current = e;
     }, []);
+    /**
+     * Adaptive resolution. A fixed dpr ceiling assumes every phone is the
+     * same phone; PerformanceMonitor below walks this down when frames are
+     * being missed and back up when there is headroom, so a weak device
+     * gets a playable frame rate instead of a beautiful slideshow.
+     */
+    const [dpr, setDpr] = useState(mobile ? 1.1 : 1.5);
     const [localPose, setLocalPose] = useState<PlayerPose | null>(null);
     const poseCb = useRef(onPose);
     poseCb.current = onPose;
@@ -93,7 +102,7 @@ export default function HouseCanvas({
                     cursor: mobile ? 'default' : 'crosshair',
                 }}
                 shadows={!mobile}
-                dpr={mobile ? [1, 1.2] : [1, 1.75]}
+                dpr={dpr}
                 performance={{ min: mobile ? 0.4 : 0.8 }}
                 gl={{
                     antialias: !mobile,
@@ -113,7 +122,9 @@ export default function HouseCanvas({
                 }}
                 onCreated={({ gl, camera }) => {
                     gl.setClearColor(bg, 1);
-                    if (mobile) gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+                    // Pixel ratio has ONE owner now — the `dpr` state above,
+                    // driven by PerformanceMonitor. Setting it here too meant
+                    // two writers fighting over the same value.
                     // Pure euler FPS pose — avoid lookAt residual roll (flips world / ceiling walk)
                     camera.up.set(0, 1, 0);
                     camera.position.set(-11.8, 1.12, 10.1);
@@ -123,6 +134,10 @@ export default function HouseCanvas({
                     camera.layers.disable(1);
                 }}
             >
+                <PerformanceMonitor
+                    onDecline={() => setDpr((d) => Math.max(mobile ? 0.65 : 1, +(d - 0.2).toFixed(2)))}
+                    onIncline={() => setDpr((d) => Math.min(mobile ? 1.25 : 1.75, +(d + 0.1).toFixed(2)))}
+                />
                 <color attach="background" args={[bg]} />
                 {/* Fog reaches to the green wall's outer ring (r≈70) so the
                     enclosure reads as layered green, not swallowed grey; the
@@ -155,12 +170,22 @@ export default function HouseCanvas({
                 {/* Everything with practicals sits in one LampGroup, so every
                     lamp, cove strip and glow pane dims as the sun comes up —
                     the payoff the worldTime keyframes were written for. */}
-                <LampGroup floor={0.07}>
-                    <WorldDestinations low={mobile} />
-                    <HomeGeometry low={mobile} />
-                    <HomeInterior low={mobile} />
-                    <HomeDecor low={mobile} />
-                </LampGroup>
+                {/* Phones render every prop's procedural fallback instead of
+                    its GLB — ~30 fewer model downloads, parses, materials and
+                    draw calls, and the rooms stay furnished. */}
+                <PropDetailProvider primitiveOnly={mobile}>
+                    <LampGroup floor={0.07}>
+                        <WorldDestinations low={mobile} />
+                        <HomeGeometry low={mobile} />
+                        <HomeInterior low={mobile} />
+                        <HomeDecor low={mobile} />
+                    </LampGroup>
+                </PropDetailProvider>
+                {/* Window bounce — rises with the sun, so noon is lit by
+                    the outside instead of by lamps LampGroup is dimming. Must
+                    stay OUTSIDE LampGroup or its curve gets overwritten. */}
+                <DaylightFill low={mobile} />
+
                 {/* Dust motes · fireflies · moon shafts — desktop only */}
                 {!mobile && <HouseAtmosphere />}
                 <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />

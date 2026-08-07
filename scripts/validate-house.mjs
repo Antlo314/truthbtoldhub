@@ -1,0 +1,143 @@
+/**
+ * House plan validator — run it after touching homeMap/HomeDecor.
+ *
+ *   node scripts/validate-house.mjs
+ *
+ * Three assertions, all against the SAME tables the walker collides with,
+ * so a pass here means a pass in the world:
+ *
+ *   1. DOORWAYS  — nothing solid stands in a door's clearance box.
+ *   2. STAIR     — the flight and both landings are clear of furniture.
+ *   3. REACH     — flood-fill from the spawn seat touches every room on
+ *                  the storey (and the upper storey from the stair top),
+ *                  so no prop has sealed a room off.
+ *
+ * homeMap is TypeScript with extensionless imports, which node's type
+ * stripper cannot resolve — so we copy it to a temp dir and rewrite the
+ * relative import specifiers to carry .ts. (Same trick as the jungle
+ * plan validation.)
+ */
+import { mkdtempSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname, basename } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const HOUSE = join(HERE, '..', 'components', 'truthos', 'house');
+const DEPS = ['homeMap.ts', 'jungleMap.ts', 'houseMap.ts'];
+
+const tmp = mkdtempSync(join(tmpdir(), 'housecheck-'));
+try {
+    for (const f of DEPS) {
+        const src = readFileSync(join(HOUSE, f), 'utf8');
+        writeFileSync(
+            join(tmp, f),
+            src.replace(/from '(\.\.?\/[^']+?)'/g, (m, spec) => (spec.endsWith('.ts') ? m : `from '${spec}.ts'`)),
+        );
+    }
+    const map = await import(pathToFileURL(join(tmp, 'homeMap.ts')).href);
+    run(map);
+} finally {
+    rmSync(tmp, { recursive: true, force: true });
+}
+
+function run(M) {
+    const { FURNITURE, DOORWAYS, STAIR, SHELL, ROOMS, PLAYER_R, INTRO, collidersFor, roomsOn } = M;
+    const fail = [];
+    const R = PLAYER_R;
+
+    const overlaps = (a, b) =>
+        Math.abs(a.x - b.x) < a.hx + b.hx && Math.abs(a.z - b.z) < a.hz + b.hz;
+
+    /* 1 ── doorway clearance ─────────────────────────────────── */
+    // A door needs its own width plus a body's width of approach on each
+    // side of the wall, or you clip the frame walking through.
+    const DEPTH = SHELL.t / 2 + R + 0.45;
+    for (const d of DOORWAYS) {
+        const box =
+            d.axis === 'x'
+                ? { x: d.x, z: d.z, hx: d.w / 2 + R, hz: DEPTH }
+                : { x: d.x, z: d.z, hx: DEPTH, hz: d.w / 2 + R };
+        for (const f of FURNITURE) {
+            if (overlaps(box, f)) {
+                fail.push(`DOORWAY  ${f.level} "${f.name}" blocks the door at (${d.x.toFixed(2)}, ${d.z.toFixed(2)})`);
+            }
+        }
+    }
+
+    /* 2 ── stair clearance ───────────────────────────────────── */
+    // The flight itself, plus a landing pad at each end.
+    const PAD = 1.3;
+    const stairBox = {
+        x: (STAIR.minX + STAIR.maxX) / 2,
+        z: (STAIR.zTop + STAIR.zBottom) / 2,
+        hx: (STAIR.maxX - STAIR.minX) / 2 + R,
+        hz: (STAIR.zBottom - STAIR.zTop) / 2 + PAD,
+    };
+    for (const f of FURNITURE) {
+        if (overlaps(stairBox, f)) fail.push(`STAIR    ${f.level} "${f.name}" stands on the stair run or its landings`);
+    }
+
+    /* 3 ── reachability ──────────────────────────────────────── */
+    const STEP = 0.28;
+    for (const level of ['main', 'upper']) {
+        const cs = collidersFor(level);
+        const blocked = (x, z) => {
+            for (const c of cs) {
+                if (x > c.x - c.hx - R && x < c.x + c.hx + R && z > c.z - c.hz - R && z < c.z + c.hz + R) return true;
+            }
+            return false;
+        };
+        // Start at the seat (main) / the top of the stair (upper)
+        const start =
+            level === 'main'
+                ? { x: INTRO.stand.x, z: INTRO.stand.z }
+                : { x: (STAIR.minX + STAIR.maxX) / 2, z: STAIR.zTop - 0.9 };
+        if (blocked(start.x, start.z)) {
+            fail.push(`REACH    ${level}: the start point itself is inside a collider`);
+            continue;
+        }
+        const key = (i, j) => `${i},${j}`;
+        const i0 = Math.round(start.x / STEP);
+        const j0 = Math.round(start.z / STEP);
+        const seen = new Set([key(i0, j0)]);
+        const queue = [[i0, j0]];
+        const iMin = Math.floor(SHELL.minX / STEP) - 1;
+        const iMax = Math.ceil(SHELL.maxX / STEP) + 1;
+        const jMin = Math.floor(SHELL.minZ / STEP) - 1;
+        const jMax = Math.ceil(SHELL.maxZ / STEP) + 1;
+        while (queue.length) {
+            const [i, j] = queue.pop();
+            for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const ni = i + di;
+                const nj = j + dj;
+                if (ni < iMin || ni > iMax || nj < jMin || nj > jMax) continue;
+                const k = key(ni, nj);
+                if (seen.has(k)) continue;
+                if (blocked(ni * STEP, nj * STEP)) continue;
+                seen.add(k);
+                queue.push([ni, nj]);
+            }
+        }
+        // Every non-solid room on this storey must have SOME reached cell
+        for (const r of roomsOn(level)) {
+            if (r.solid) continue;
+            let touched = 0;
+            for (let x = r.minX + 0.4; x < r.maxX - 0.4; x += STEP) {
+                for (let z = r.minZ + 0.4; z < r.maxZ - 0.4; z += STEP) {
+                    if (seen.has(key(Math.round(x / STEP), Math.round(z / STEP)))) touched++;
+                }
+            }
+            if (touched === 0) fail.push(`REACH    ${level}: "${r.name}" (${r.id}) cannot be walked into`);
+        }
+        console.log(`  ${level}: ${seen.size} reachable cells, ${roomsOn(level).filter((r) => !r.solid).length} rooms checked`);
+    }
+
+    console.log('');
+    if (fail.length) {
+        for (const f of fail) console.log(`  ✗ ${f}`);
+        console.log(`\n${fail.length} problem(s).`);
+        process.exit(1);
+    }
+    console.log(`  ✓ ${FURNITURE.length} props, ${DOORWAYS.length} doorways, stair clear, every room reachable.`);
+}

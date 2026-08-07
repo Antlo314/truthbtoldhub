@@ -146,7 +146,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="main" x={u(-6.5)} z={u(-0.6)}>
+            <On level="main" x={u(-6.4)} z={u(-3.9)}>
                 <HouseProp model="nightstand" fit={{ w: 0.55 }} >{null}</HouseProp>
             </On>
             <On level="main" x={u(-1.0)} z={u(-6.2)}>
@@ -229,7 +229,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
             </On>
             {/* The sideboard — the Daily Word lives HERE now, against the
                 wall, not in the middle of the floor */}
-            <On level="upper" x={u(-0.3)} z={u(3.3)}>
+            <On level="upper" x={u(0.2)} z={u(3.3)}>
                 <mesh position={[0, 0.45, 0]} castShadow={sh}>
                     <boxGeometry args={[1.9, 0.9, 0.5]} />
                     <primitive object={m.woodDark} attach="material" />

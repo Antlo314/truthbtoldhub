@@ -13,7 +13,7 @@
  * Provenance lives next to the path in HOUSE_MODELS so licence obligations are
  * visible in code rather than remembered.
  */
-import { Component, Suspense, useMemo, type ReactNode } from 'react';
+import { Component, Suspense, createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -218,6 +218,29 @@ function Model({
     return <primitive object={object} />;
 }
 
+/**
+ * Detail tier for every prop under it.
+ *
+ * `primitiveOnly` makes HouseProp render the procedural fallback it already
+ * carries instead of fetching the GLB. On a phone that removes ~30 model
+ * downloads, their parse cost, their materials and their textures in one
+ * switch — and because every prop was authored fallback-first, the room is
+ * still furnished, just blockier. Flip it off in HouseCanvas if a phone
+ * should pay for the art.
+ */
+export const PropDetail = createContext({ primitiveOnly: false });
+
+export function PropDetailProvider({
+    primitiveOnly,
+    children,
+}: {
+    primitiveOnly: boolean;
+    children: ReactNode;
+}) {
+    const value = useMemo(() => ({ primitiveOnly }), [primitiveOnly]);
+    return <PropDetail.Provider value={value}>{children}</PropDetail.Provider>;
+}
+
 export default function HouseProp({
     model,
     position = [0, 0, 0],
@@ -240,7 +263,8 @@ export default function HouseProp({
     children: ReactNode;
 }) {
     const entry = HOUSE_MODELS[model];
-    if (!entry?.url) return <>{children}</>;
+    const { primitiveOnly } = useContext(PropDetail);
+    if (primitiveOnly || !entry?.url) return <>{children}</>;
 
     // The fallback meshes are authored in world space, so they must render
     // OUTSIDE the positioning group — nesting them would double their offset.
