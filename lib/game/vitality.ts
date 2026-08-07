@@ -1,14 +1,12 @@
 import type { GameCharacter } from '@/lib/store/useGameStore';
-import { combatRelicBonuses } from '@/lib/game/resonance';
 import { skillBonuses } from '@/lib/game/paths';
 import { founderBonuses } from '@/lib/game/founders';
 import { clothingBonus } from '@/lib/game/clothing';
 
 // ============================================================
-//  VITALITY — one persistent health pool, the same in battle and
-//  out. Max grows with relics / skills / founder seal / garment;
-//  current hp carries between the overworld and every fight, and
-//  is restored by health hearts, tonics, and resting at the Hut.
+//  VITALITY — one persistent health pool. Max grows with skills /
+//  founder seal / garment. (Relic bonuses were removed with the
+//  destination catalog — nothing grants a relic any more.)
 // ============================================================
 
 export const BASE_VITALITY = 100;
@@ -17,7 +15,6 @@ export const BASE_VITALITY = 100;
 export function maxVitality(c: GameCharacter, founderNumber: number | null = null): number {
     return Math.round(
         BASE_VITALITY
-        + combatRelicBonuses(c.inventory, c.equipped.relic).hp
         + skillBonuses(c.skills).hp
         + founderBonuses(founderNumber).hp
         + clothingBonus(c.equipped.clothing).hp,

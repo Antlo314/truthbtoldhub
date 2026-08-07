@@ -33,8 +33,6 @@ export function middleware(request: NextRequest) {
     '/thanks',             // post-donation thank-you (Stripe return)
     '/mission-confirmed',  // post-action confirmation (Stripe return)
     '/trial',              // trial / entry flow
-    '/vision',             // destination vision portals (cinematic previews)
-    '/epilogue',           // source-return after vision roads
   ];
   if (pathname === '/' || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();

@@ -29,8 +29,6 @@ import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
 import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
-import { VaultApp } from './VaultApp';
-import { JourneyApp } from './JourneyApp';
 import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
 import { Lock } from 'lucide-react';
@@ -200,7 +198,7 @@ export function WebLinksApp() {
                     { href: '/archive', label: 'The Hall', tag: 'community' },
                     { href: '/support', label: 'Support', tag: 'offering' },
                     { href: '/codex', label: 'Codex', tag: 'study' },
-                    { href: '/vision', label: 'Visions', tag: 'roads' },
+                    { href: '/cineworks', label: 'Cineworks', tag: 'catalog' },
                     { href: '/self', label: 'Soul page', tag: 'profile' },
                 ]}
             />
@@ -306,25 +304,6 @@ export function OfferingApp() {
         <Panel className="bg-zinc-950">
             <AppHeader title="Offering.exe" sub="Sustain the work" accent="text-rose-300/80" />
             <DonationSection />
-        </Panel>
-    );
-}
-
-export function VisionsApp() {
-    return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Visions.exe" sub="Seeing glass" accent="text-sky-300/80" />
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                Unseal roads, prophetic cinema, and the vision map.
-            </p>
-            <LinkGrid
-                links={[
-                    { href: '/vision', label: 'Vision roads', tag: 'map' },
-                    { href: '/cinema', label: 'Cinema', tag: 'films' },
-                    { href: '/cineworks', label: 'Cineworks', tag: 'catalog' },
-                    { href: '/epilogue', label: 'Return / Source', tag: 'epilogue' },
-                ]}
-            />
         </Panel>
     );
 }
@@ -614,8 +593,6 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <ArcadeApp />;
         case 'offering':
             return <OfferingApp />;
-        case 'visions':
-            return <VisionsApp />;
         case 'library':
             return <LibraryApp />;
         case 'archive':
@@ -656,10 +633,6 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <MusicApp />;
         case 'tasks':
             return <TasksApp />;
-        case 'vault':
-            return <VaultApp />;
-        case 'journey':
-            return <JourneyApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
         default:

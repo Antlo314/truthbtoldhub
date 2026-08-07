@@ -4,7 +4,6 @@
 //  and calm. Hooks into shades, loot, hut dispatch, and HUD.
 // ============================================================
 
-import type { WildEncounterMods } from '@/lib/game/destinations';
 
 export type WorldEventId = 'shade_surge' | 'bountiful_essence' | 'truth_speaks' | 'still_garden';
 
@@ -111,14 +110,6 @@ export function scalePickupQty(qty: number, event: WorldEvent): number {
     return Math.max(1, Math.round(qty * event.materialMult));
 }
 
-export function wildEncounterMods(event: WorldEvent): WildEncounterMods {
-    return {
-        hpMult: event.wildHpMult,
-        dmgMult: event.wildDmgMult,
-        enemyBonus: event.wildEnemyBonus,
-        worldEventId: event.id,
-    };
-}
 
 export function effectiveShadeCount(baseShades: number, event: WorldEvent): number {
     return Math.max(0, Math.min(5, baseShades + event.shadeBonus));

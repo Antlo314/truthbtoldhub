@@ -41,7 +41,6 @@ const ROUTES: { path: string; label: string }[] = [
     { path: '/archive', label: 'The Hall' },
     { path: '/cinema', label: 'Cinema' },
     { path: '/codex', label: 'Codex' },
-    { path: '/vision', label: 'Visions' },
     { path: '/support', label: 'Support' },
     { path: '/self', label: 'Soul page' },
     { path: '/treasury', label: 'Treasury' },

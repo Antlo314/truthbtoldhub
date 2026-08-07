@@ -76,7 +76,7 @@ export default function RestartJourneyButton({
                             </button>
                         </div>
                         <p className="text-sm text-zinc-400 leading-relaxed">
-                            This erases your name, path, attunements, relics, quests, and all world progress. You will begin again at the Awakening.
+                            This erases your name, path, attunements, and all house progress. You will begin again at the Awakening.
                         </p>
                         <p className="text-[10px] text-zinc-600 mt-2">Account sign-in and founder seal status are kept.</p>
                         <div className="flex gap-2 mt-5">

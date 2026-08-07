@@ -382,7 +382,6 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     soul: Soul,
     arcade: Arcade,
     offering: Offering,
-    visions: Visions,
     library: LibraryG,
     archive: Archive,
     files: FilesG,
@@ -401,8 +400,6 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     browser: BrowserG,
     music: MusicG,
     tasks: TasksG,
-    journey: JourneyG,
-    vault: VaultG,
 };
 
 export function OsGlyph({ app, size = 20 }: { app: OsAppId; size?: number }) {

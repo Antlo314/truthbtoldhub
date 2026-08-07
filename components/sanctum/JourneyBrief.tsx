@@ -5,13 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SacredButton from '@/components/sanctum/SacredButton';
 import { DURATION, EASE } from '@/lib/design/motion';
 
-const KEY = 'tbth-journey-brief-v3';
+const KEY = 'tbth-journey-brief-v4';
 
 const STEPS = [
-    { title: 'Walk the aisle', body: 'Truth waits at the north end of the chamber. Approach and press E to speak. The gold path is your first road.' },
-    { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade, Wayfinder. Each opens a real system.' },
-    { title: 'Open the visions', body: 'At the Wayfinder, five vision portals are unsealed. Look through peace and trial, claim each road’s relic, then return.' },
-    { title: 'Return to the Source', body: 'When every portal is open, the Epilogue waits. Until then, the Wayfinder and Reliquary keep your map.' },
+    { title: 'You wake in the house', body: 'Two storeys, drawn from real plans. WASD to walk, mouse to look, Space to jump. The stair at the back carries you to the living floor.' },
+    { title: 'Touch the stations', body: 'Gold rings mark living stations — Ledger, Archive, Forge, Offering, Arcade. Each one opens a real system, not a prop.' },
+    { title: 'Walk out to the four sites', body: 'Past the clearing: Cinema Grove east, Hall Stones west, Mirror Pool southeast, Signal Studio southwest. The compass in the corner keeps your bearing.' },
     { title: 'Cross the Hub', body: 'Hall, Cinema, Library, Codex, Offering — one constellation. Use the bar above the hut or the veil menu anytime.' },
 ];
 

@@ -23,6 +23,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
 import { HOUSE_FILMS } from '@/lib/truthos/houseCinemaFilms';
+import { hutCompletion, HOUSE_CORE } from './house/stationProgress';
 
 function greeting(h: number): string {
     if (h < 5) return 'Still awake';
@@ -166,9 +167,12 @@ export default function OsHome({
     const profile = useSoulStore((s) => s.profile);
     const [now, setNow] = useState(() => new Date());
     const [bulletin, setBulletin] = useState<Bulletin | null>(null);
+    /** Real house progress — stations this soul has actually opened. */
+    const [house, setHouse] = useState({ seen: 0, total: HOUSE_CORE.length });
 
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 20_000);
+        setHouse(hutCompletion());
         fetchBulletins(1)
             .then((b) => setBulletin(b[0] ?? null))
             .catch(() => setBulletin(null));
@@ -179,7 +183,6 @@ export default function OsHome({
     const soul = snapshot.soulPower;
     // Next round hundred, so the ring always has somewhere to go
     const soulTarget = Math.max(100, Math.ceil((soul + 1) / 100) * 100);
-    const discovered = snapshot.discovered;
 
     return (
         <div className="max-w-5xl mx-auto space-y-3 sm:space-y-4 pb-10">
@@ -229,9 +232,9 @@ export default function OsHome({
                         <div className="flex items-center gap-4 shrink-0">
                             <Ring value={soul} max={soulTarget} label="soul" color="#fbbf24" />
                             <Ring
-                                value={discovered}
-                                max={Math.max(12, discovered + 4)}
-                                label="found"
+                                value={house.seen}
+                                max={house.total}
+                                label="house"
                                 color="#22d3ee"
                             />
                         </div>
@@ -263,11 +266,11 @@ export default function OsHome({
                     onClick={() => onLaunch('ledger')}
                 />
                 <Tile
-                    app="journey"
-                    title="Journey"
-                    value={email ? String(discovered) : null}
-                    sub={email ? 'discoveries recorded' : 'Your record'}
-                    onClick={() => onLaunch('journey')}
+                    app="chamber"
+                    title="The House"
+                    value={`${house.seen}/${house.total}`}
+                    sub="stations found"
+                    onClick={() => onLaunch('chamber')}
                 />
 
                 <Tile
@@ -287,7 +290,7 @@ export default function OsHome({
                 />
                 <Tile app="arcade" title="Arcade" sub="Three cabinets" onClick={() => onLaunch('arcade')} />
                 <Tile app="archive" title="The Hall" sub="Community" onClick={() => onLaunch('archive')} />
-                <Tile app="vault" title="Vault" sub="Satchel · gear" onClick={() => onLaunch('vault')} />
+                <Tile app="browser" title="Codex" sub="Study · records" onClick={() => onLaunch('browser')} />
                 <Tile app="library" title="Library" sub="Scrolls · study" onClick={() => onLaunch('library')} />
                 <Tile app="soul" title="Soul" sub="Vessel · identity" onClick={() => onLaunch('soul')} />
             </div>

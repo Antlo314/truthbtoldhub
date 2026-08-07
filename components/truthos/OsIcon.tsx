@@ -133,7 +133,6 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: s
     soul: { Icon: Heart, accent: 'cyan', label: 'Soul' },
     arcade: { Icon: Gamepad2, accent: 'violet', label: 'Arcade' },
     offering: { Icon: Gift, accent: 'rose', label: 'Offering' },
-    visions: { Icon: Image, accent: 'sky', label: 'Visions' },
     library: { Icon: Library, accent: 'sky', label: 'Library' },
     archive: { Icon: Users, accent: 'indigo', label: 'Hall' },
     files: { Icon: FolderOpen, accent: 'sky', label: 'Files' },
@@ -152,8 +151,6 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: s
     browser: { Icon: Globe, accent: 'cyan', label: 'Browser' },
     music: { Icon: Music, accent: 'violet', label: 'Music' },
     tasks: { Icon: ListChecks, accent: 'gold', label: 'To-Do' },
-    journey: { Icon: Compass, accent: 'amber', label: 'Journey' },
-    vault: { Icon: Backpack, accent: 'violet', label: 'Vault' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {

@@ -30,8 +30,6 @@ type NavItem = { href: string; label: string; whisper: string; icon: typeof Home
 const CONSTELLATION: NavItem[] = [
     { href: '/', label: 'Desktop', whisper: 'Truth.OS', icon: Home },
     { href: '/world', label: 'Chamber', whisper: '3D optional', icon: Globe },
-    { href: '/vision', label: 'Visions', whisper: 'Unsealed roads', icon: Sparkles },
-    { href: '/epilogue', label: 'Return', whisper: 'Source roads', icon: Sun },
     { href: '/archive', label: 'The Hall', whisper: 'Voices gather', icon: Users },
     { href: '/codex', label: 'Codex', whisper: 'Memory', icon: BookOpen },
     { href: '/library', label: 'Library', whisper: 'Scrolls', icon: Library },

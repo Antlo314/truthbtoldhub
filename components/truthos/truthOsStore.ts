@@ -10,7 +10,6 @@ export type OsAppId =
     | 'soul'
     | 'arcade'
     | 'offering'
-    | 'visions'
     | 'library'
     | 'archive'
     | 'files'
@@ -29,8 +28,7 @@ export type OsAppId =
     | 'browser'
     | 'music'
     | 'tasks'
-    | 'journey'
-    | 'vault';
+;
 
 export type BentoSlot =
     | 'hero'
@@ -155,7 +153,6 @@ export const APP_META: Record<
     soul: { title: 'Your Soul', w: 480, h: 520, label: 'Soul', accent: 'cyan', protected: true },
     arcade: { title: 'Arcade', w: 640, h: 520, label: 'Arcade', accent: 'violet', protected: true },
     offering: { title: 'The Offering', w: 480, h: 520, label: 'Offering', accent: 'rose', protected: true },
-    visions: { title: 'Visions', w: 480, h: 440, label: 'Visions', accent: 'sky' },
     library: { title: 'Library', w: 520, h: 480, label: 'Library', accent: 'sky' },
     archive: { title: 'The Hall', w: 560, h: 520, label: 'Hall', accent: 'indigo' },
     files: { title: 'File Explorer', w: 640, h: 480, label: 'Files', accent: 'sky' },
@@ -174,8 +171,6 @@ export const APP_META: Record<
     browser: { title: 'Sanctum Browser', w: 820, h: 560, label: 'Browser', accent: 'cyan' },
     music: { title: 'Music', w: 620, h: 500, label: 'Music', accent: 'violet' },
     tasks: { title: 'To-Do', w: 520, h: 560, label: 'To-Do', accent: 'gold' },
-    journey: { title: 'Journey', w: 620, h: 560, label: 'Journey', accent: 'amber', protected: true },
-    vault: { title: 'Vault', w: 680, h: 540, label: 'Vault', accent: 'violet', protected: true },
 };
 
 /** Preferred bento slot order when opening apps */

@@ -68,13 +68,10 @@ const APPS: DockItem[] = [
     { app: 'truth', label: 'Guide', guestOk: true },
     { app: 'ledger', label: 'Ledger' },
     { app: 'soul', label: 'Soul' },
-    { app: 'journey', label: 'Journey' },
-    { app: 'vault', label: 'Vault' },
     { app: 'arcade', label: 'Arcade' },
     { app: 'offering', label: 'Offering' },
     { app: 'archive', label: 'Hall', guestOk: true },
     { app: 'library', label: 'Library', guestOk: true },
-    { app: 'visions', label: 'Visions', guestOk: true },
     { app: 'updates', label: 'Updates', guestOk: true },
     { app: 'browser', label: 'Browser', guestOk: true },
     { app: 'media', label: 'Media', guestOk: true },
@@ -1085,7 +1082,7 @@ export default function TruthOSShell({
                         toggleFlyout('calendar');
                         sacredUi.click();
                     }}
-                    onSoul={() => launch('journey')}
+                    onSoul={() => launch('soul')}
                 />
             )}
 

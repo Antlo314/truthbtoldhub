@@ -136,7 +136,7 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
             {showEnterWorld && (
                 <div className="px-5 py-4 border-t border-white/10 shrink-0 space-y-2">
                     <p className="text-center text-[10px] text-white/40 leading-relaxed">
-                        Your path is set. Open Truth.OS desktop for the full Hut — or open vision portals. 3D Chamber is optional.
+                        Your path is set. Open Truth.OS desktop for the full Hut, or walk the house and the four sites in 3D.
                     </p>
                     <Link
                         href="/"
@@ -146,16 +146,10 @@ export default function AttunementPanel({ character, onLearn, onClose, showEnter
                         Open Truth.OS →
                     </Link>
                     <Link
-                        href="/vision"
+                        href="/world"
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.28em] text-aether-gold border border-aether-gold/35 bg-aether-gold/10 hover:bg-aether-gold/15 transition-colors min-h-[44px]"
                     >
-                        Open vision portals →
-                    </Link>
-                    <Link
-                        href="/world"
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.28em] text-white/50 border border-white/15 hover:bg-white/5 transition-colors min-h-[40px]"
-                    >
-                        Optional 3D Chamber →
+                        Walk the house →
                     </Link>
                     <div className="flex justify-center flex-wrap gap-x-4 gap-y-1 pt-1">
                         <Link href="/codex" className="text-[9px] uppercase tracking-[0.2em] text-white/30 hover:text-aether-gold/70">Codex</Link>
