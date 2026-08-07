@@ -50,6 +50,18 @@ export default function HouseCanvas({
 }) {
     const bg = mobile ? '#1c1630' : '#120e1c';
     const bloom = useRef<BloomEffect>(null);
+    /**
+     * ⚠ The bloom handle MUST be attached with a callback ref, never
+     * `ref={bloom}`. @react-three/postprocessing memoises an effect's args on
+     * `[JSON.stringify(props)]`, and under React 19 `ref` arrives as a normal
+     * prop — so an object ref serialises the live BloomEffect, walks its
+     * `__r3f` instance and throws "Converting circular structure to JSON" on
+     * the first re-render, killing the whole Canvas. A function is skipped by
+     * JSON.stringify, so the memo key stays "{}" and the world keeps standing.
+     */
+    const attachBloom = useCallback((e: BloomEffect | null) => {
+        bloom.current = e;
+    }, []);
     const [localPose, setLocalPose] = useState<PlayerPose | null>(null);
     const poseCb = useRef(onPose);
     poseCb.current = onPose;
@@ -172,7 +184,7 @@ export default function HouseCanvas({
                 {!mobile && (
                     <EffectComposer multisampling={4}>
                         <Bloom
-                            ref={bloom}
+                            ref={attachBloom}
                             intensity={0.62}
                             luminanceThreshold={0.9}
                             luminanceSmoothing={0.32}
