@@ -468,10 +468,64 @@ export function artFootprints(): (Collider & { name: string; level: Level })[] {
     });
 }
 
+/**
+ * Door leaves — the doors themselves, which the house did not have.
+ *
+ * Every opening was a bare hole punched in a wall: you walked through the
+ * front of the house through a 1.8 m gap with no door in it, which is why
+ * the entry read as unfinished. A leaf is solid (you cannot walk through
+ * the door itself) but stands ajar, so the opening stays passable — the
+ * PINCH pass in validate-house.mjs proves a body still fits past it.
+ *
+ * `hinge` is the jamb it swings from; `swing` is how far open, in radians.
+ */
+export type DoorLeaf = {
+    name: string;
+    level: Level;
+    /** Hinge point, on the wall line */
+    x: number;
+    z: number;
+    /** Leaf width and thickness */
+    w: number;
+    t: number;
+    /** Wall axis the opening runs along */
+    axis: 'x' | 'z';
+    /** + or - : which way along the axis the leaf reaches from its hinge */
+    dir: 1 | -1;
+    /** How far it has swung into the room (0 = shut, PI/2 = flat to the wall) */
+    swing: number;
+};
+
+export const DOOR_LEAVES: DoorLeaf[] = [
+    // The front doors — a pair, both standing open into the foyer.
+    { name: 'front door (west leaf)', level: 'main', x: u(-1.2) - 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: 1, swing: 1.22 },
+    { name: 'front door (east leaf)', level: 'main', x: u(-1.2) + 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: -1, swing: 1.22 },
+];
+
+/** A swung leaf's footprint, for collision. */
+export function leafCollider(d: DoorLeaf): Collider & { level: Level; name: string } {
+    // Swept from the hinge: along the wall by cos(swing), into the room by sin.
+    const along = Math.cos(d.swing) * d.w;
+    const into = Math.sin(d.swing) * d.w;
+    // Doors on an x-axis wall swing into -z (the house side)
+    const cx = d.axis === 'x' ? d.x + (along / 2) * d.dir : d.x - into / 2;
+    const cz = d.axis === 'x' ? d.z - into / 2 : d.z + (along / 2) * d.dir;
+    return {
+        name: d.name,
+        level: d.level,
+        x: cx,
+        z: cz,
+        hx: d.axis === 'x' ? Math.max(d.t, Math.abs(along)) / 2 : Math.max(d.t, into) / 2,
+        hz: d.axis === 'x' ? Math.max(d.t, into) / 2 : Math.max(d.t, Math.abs(along)) / 2,
+    };
+}
+
 export function collidersFor(level: Level): Collider[] {
     return [
         ...(level === 'upper' ? UPPER_COLLIDERS : MAIN_COLLIDERS),
         ...FURNITURE.filter((f) => f.level === level),
+        // The doors are solid. You used to walk straight through the leaf.
+        ...DOOR_LEAVES.filter((d) => d.level === level).map(leafCollider),
     ];
 }
 

@@ -33,6 +33,7 @@ import {
     STAIR_WALLS,
     STOREY,
     ART,
+    DOOR_LEAVES,
     UPPER_COLLIDERS,
     UPPER_Y,
     VOID,
@@ -46,6 +47,30 @@ const X0 = SHELL.minX;
 const X1 = SHELL.maxX;
 const Z0 = SHELL.minZ;
 const Z1 = SHELL.maxZ;
+
+/**
+ * Each storey's ceiling is the footprint MINUS its holes, cut into rects.
+ * Shared by both tiers so a phone and a desktop cannot disagree about where
+ * the ceiling is.
+ *   · main  — minus the stairwell and the foyer void, or the double-height
+ *     foyer gets a lid;
+ *   · upper — minus the covered balcony and patio, which carry their own
+ *     soffit at ROOF_Y - 0.18. A full-footprint plane there was EXACTLY
+ *     coplanar with that soffit: the blinking ceiling.
+ */
+const MAIN_CEILING = [
+    { x: 0, z: (SHELL.minZ + SHAFT.minZ) / 2, w: SHELL.maxX - SHELL.minX, d: SHAFT.minZ - SHELL.minZ },
+    { x: (SHELL.minX + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - SHELL.minX, d: SHAFT.maxZ - SHAFT.minZ },
+    { x: (SHAFT.maxX + SHELL.maxX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHELL.maxX - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
+    { x: (SHELL.minX + VOID.minX) / 2, z: (VOID.minZ + SHELL.maxZ) / 2, w: VOID.minX - SHELL.minX, d: SHELL.maxZ - VOID.minZ },
+    { x: (VOID.maxX + SHELL.maxX) / 2, z: (VOID.minZ + SHELL.maxZ) / 2, w: SHELL.maxX - VOID.maxX, d: SHELL.maxZ - VOID.minZ },
+];
+
+const UPPER_CEILING = [
+    { x: (SHELL.minX + u(0.9)) / 2, z: 0, w: u(0.9) - SHELL.minX, d: SHELL.maxZ - SHELL.minZ },
+    { x: (u(0.9) + u(3.3)) / 2, z: (SHELL.minZ + u(3.6)) / 2, w: u(3.3) - u(0.9), d: u(3.6) - SHELL.minZ },
+    { x: (u(3.3) + SHELL.maxX) / 2, z: (u(-4.4) + u(3.6)) / 2, w: SHELL.maxX - u(3.3), d: u(3.6) - u(-4.4) },
+];
 
 /** House walls only — jungle boxes are terrain */
 const houseWalls = (cols: Collider[]) => cols.filter((c) => !JUNGLE_COLLIDERS.includes(c));
@@ -86,6 +111,51 @@ function Skirting({
             <boxGeometry args={[1, 1, 1]} />
             <primitive object={mat} attach="material" />
         </instancedMesh>
+    );
+}
+
+/* ── The front doors ───────────────────────────────────────
+   The entry was a 1.8 m hole punched in the front wall — no leaf, no
+   frame, nothing to walk through but air, which is why it looked wrong
+   and why you passed through it. A pair of panelled leaves stand open
+   into the foyer, hinged at their jambs, solid to the body. */
+function FrontDoors({
+    m,
+    shadow,
+}: {
+    m: ReturnType<typeof useHouseMaterials>;
+    shadow: boolean;
+}) {
+    const H = 2.35;
+    return (
+        <group>
+            {DOOR_LEAVES.map((d) => (
+                <group key={d.name} position={[d.x, 0, d.z]} rotation={[0, d.dir * -d.swing, 0]}>
+                    {/* leaf, hinged at the group origin so it swings true */}
+                    <mesh position={[(d.w / 2) * d.dir, H / 2, 0]} castShadow={shadow} receiveShadow={shadow}>
+                        <boxGeometry args={[d.w, H, d.t]} />
+                        <primitive object={m.wood} attach="material" />
+                    </mesh>
+                    {/* two sunk panels per leaf — a flat slab reads as plywood */}
+                    {[0.62, 1.62].map((py) => (
+                        <mesh key={py} position={[(d.w / 2) * d.dir, py, d.t / 2 + 0.005]}>
+                            <boxGeometry args={[d.w - 0.22, 0.72, 0.012]} />
+                            <primitive object={m.woodDark} attach="material" />
+                        </mesh>
+                    ))}
+                    {/* handle on the swinging edge */}
+                    <mesh position={[(d.w - 0.11) * d.dir, 1.06, d.t / 2 + 0.05]} castShadow={shadow}>
+                        <boxGeometry args={[0.05, 0.05, 0.12]} />
+                        <primitive object={m.gold} attach="material" />
+                    </mesh>
+                </group>
+            ))}
+            {/* threshold plate under the pair */}
+            <mesh position={[u(-1.2), 0.02, SHELL.maxZ]} receiveShadow={shadow}>
+                <boxGeometry args={[1.9, 0.04, 0.34]} />
+                <primitive object={m.stone} attach="material" />
+            </mesh>
+        </group>
     );
 }
 
@@ -240,10 +310,33 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
         // lights. Skipping the lights too meant the whole lighting plan was
         // desktop-only, so a phone saw flat ambient in every room — the
         // fixtures are the cheapest part of this file and the most visible.
+        // Phones get the carpentry that makes a room read as a room, and
+        // skip only what genuinely costs: shadows, the cove strips and the
+        // per-doorway casings. Skirting is ONE instanced draw call for every
+        // wall in the house — leaving it out was never a performance saving,
+        // it just made the phone look like a different, cheaper product.
         return (
             <>
                 <Stair m={m} mats={mats} shadow={false} />
                 <RoomPracticals low />
+                <FrontDoors m={m} shadow={false} />
+                <Skirting cols={mainWalls} y={MAIN_Y} mat={mats.skirting} />
+                <Skirting cols={upperWalls} y={UPPER_Y} mat={mats.skirting} />
+                <group>
+                    {[
+                        { y: UPPER_Y - 0.32, rects: MAIN_CEILING },
+                        { y: UPPER_Y + STOREY - 0.18, rects: UPPER_CEILING },
+                    ].map((c, ci) => (
+                        <group key={ci}>
+                            {c.rects.map((r, i) => (
+                                <mesh key={i} rotation={[Math.PI / 2, 0, 0]} position={[r.x, c.y, r.z]}>
+                                    <planeGeometry args={[Math.max(0, r.w - 0.7), Math.max(0, r.d - 0.7)]} />
+                                    <primitive object={mats.ceiling} attach="material" />
+                                </mesh>
+                            ))}
+                        </group>
+                    ))}
+                </group>
             </>
         );
     }
@@ -286,29 +379,8 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 Also dropped below the structural slab (its underside sits
                 at UPPER_Y − 0.30) instead of 12 cm inside it. */}
             {[
-                {
-                    label: 'main',
-                    y: UPPER_Y - 0.32,
-                    rects: [
-                        { x: 0, z: (Z0 + SHAFT.minZ) / 2, w: X1 - X0, d: SHAFT.minZ - Z0 },
-                        { x: (X0 + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - X0, d: SHAFT.maxZ - SHAFT.minZ },
-                        { x: (SHAFT.maxX + X1) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: X1 - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
-                        { x: (X0 + VOID.minX) / 2, z: (VOID.minZ + Z1) / 2, w: VOID.minX - X0, d: Z1 - VOID.minZ },
-                        { x: (VOID.maxX + X1) / 2, z: (VOID.minZ + Z1) / 2, w: X1 - VOID.maxX, d: Z1 - VOID.minZ },
-                    ],
-                },
-                {
-                    label: 'upper',
-                    y: UPPER_Y + STOREY - 0.18,
-                    rects: [
-                        // west strip, full depth — clear of both open rooms
-                        { x: (X0 + u(0.9)) / 2, z: 0, w: u(0.9) - X0, d: Z1 - Z0 },
-                        // middle, stopping at the balcony's south edge
-                        { x: (u(0.9) + u(3.3)) / 2, z: (Z0 + u(3.6)) / 2, w: u(3.3) - u(0.9), d: u(3.6) - Z0 },
-                        // east, between the patio and the balcony
-                        { x: (u(3.3) + X1) / 2, z: (u(-4.4) + u(3.6)) / 2, w: X1 - u(3.3), d: u(3.6) - u(-4.4) },
-                    ],
-                },
+                { label: 'main', y: UPPER_Y - 0.32, rects: MAIN_CEILING },
+                { label: 'upper', y: UPPER_Y + STOREY - 0.18, rects: UPPER_CEILING },
             ].map((c) => (
                 <group key={c.label}>
                     {c.rects.map((r, i) => (
@@ -341,6 +413,8 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             {/* One fixture per room, from the ROOMS table — four lights for
                 nineteen rooms is what made the interior read flat. */}
             <RoomPracticals />
+
+            <FrontDoors m={m} shadow={sh} />
 
             {/* ── Cased openings — a doorway is joinery, not a hole ────
                 Two jambs and a head per opening, from the same DOORWAYS
