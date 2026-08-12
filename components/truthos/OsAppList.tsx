@@ -21,6 +21,8 @@ import { OsIconTile, getAppIconMeta } from './OsIcon';
 
 export type AppRow = {
     app: OsAppId;
+    /** Starts a new group. The label prints above it, once. */
+    group?: string;
     /** One-word "what is this" — never a sentence */
     hint?: string;
     /** Live value, right-aligned (house stations, soul power, reel count) */
@@ -48,11 +50,19 @@ export default function OsAppList({
                     : 'flex flex-col gap-0.5 w-[248px]'
             }
         >
-            {rows.map(({ app, hint, value, gated }) => {
+            {rows.map(({ app, hint, value, gated, group }) => {
                 const meta = getAppIconMeta(app);
                 const locked = gated && !email;
                 return (
                     <li key={app}>
+                        {/* One hairline label per section. Twenty-one rows in a
+                            single undifferentiated column is a list you scroll
+                            past, not one you read. */}
+                        {group && (
+                            <p className="px-2 pt-4 pb-1 text-[8px] uppercase tracking-[0.32em] text-white/25 font-mono">
+                                {group}
+                            </p>
+                        )}
                         <button
                             type="button"
                             onClick={() => onLaunch(app)}

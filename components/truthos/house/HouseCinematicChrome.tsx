@@ -58,14 +58,6 @@ export default function HouseCinematicChrome({
                         </p>
                     </div>
                     <div className="flex gap-2 pointer-events-auto">
-                        <button
-                            type="button"
-                            onClick={onTour}
-                            className="w-9 h-9 rounded-full border border-white/20 bg-black/55 text-white/85 text-sm font-semibold backdrop-blur-md"
-                            aria-label="Tour"
-                        >
-                            ?
-                        </button>
                         {guest && (
                             <button
                                 type="button"
@@ -114,20 +106,12 @@ export default function HouseCinematicChrome({
                 className="fixed z-[45] left-6 top-[calc(4.5vh+0.75rem)] pointer-events-none space-y-0.5"
                 style={{ marginTop: 'env(safe-area-inset-top)' }}
             >
-                <p className="text-[10px] uppercase tracking-[0.4em] text-amber-200/60 font-mono">
-                    Truth.OS House · Cinematic
-                </p>
-                <p className="text-base text-white font-medium drop-shadow-lg">
-                    {characterName}
-                    {peerLiveCount > 0 && (
-                        <span className="text-emerald-400 text-xs ml-2 font-mono">
-                            · {peerLiveCount} LIVE
-                        </span>
-                    )}
-                </p>
-                {hut.seen < hut.total && (
-                    <p className="text-[10px] text-white/35 font-mono tracking-wider">
-                        Rooms {hut.seen}/{hut.total}
+                {/* Name, title and room count all live in WorldHud a few
+                    pixels from here. Only the live count is unique to this
+                    layer, and it only speaks when someone else is present. */}
+                {peerLiveCount > 0 && (
+                    <p className="text-[11px] font-mono text-emerald-400">
+                        {peerLiveCount} here with you
                     </p>
                 )}
             </div>
@@ -136,13 +120,6 @@ export default function HouseCinematicChrome({
                 className="fixed z-[45] right-6 top-[calc(4.5vh+0.75rem)] flex items-center gap-2 pointer-events-auto"
                 style={{ marginTop: 'env(safe-area-inset-top)' }}
             >
-                <button
-                    type="button"
-                    onClick={onTour}
-                    className="h-9 px-3 rounded-lg border border-white/15 bg-black/60 text-[10px] uppercase tracking-widest text-white/70 hover:text-white hover:border-amber-400/40 backdrop-blur-md"
-                >
-                    Tour
-                </button>
                 <button
                     type="button"
                     onClick={onFullscreen}
@@ -159,11 +136,6 @@ export default function HouseCinematicChrome({
                     >
                         Click to look
                     </button>
-                )}
-                {pointerLocked && (
-                    <span className="h-9 px-3 rounded-lg border border-white/10 bg-black/50 text-[10px] uppercase tracking-widest text-white/40 flex items-center">
-                        Look locked · Esc
-                    </span>
                 )}
                 {guest && (
                     <button

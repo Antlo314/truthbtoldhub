@@ -99,14 +99,19 @@ function buildHouseMaterials(low: boolean) {
             repeat: [number, number],
             o: { normalScale?: number; keepTint?: number; aniso?: number } = {},
         ) => {
-            if (low) return mat;
+            // Phones used to get NO photo at all, so every surface stayed a
+            // procedural canvas — the whole material pass was invisible on the
+            // device most people arrive on. They get the DIFFUSE now (the map
+            // that carries the look) and skip normal + roughness (the two that
+            // carry the memory). One third of the texture budget, most of the
+            // gain.
             const wire = (slot: 'map' | 'normalMap' | 'roughnessMap', file: string, srgb = false) => {
                 texLoader.load(
                     file,
                     (t) => {
                         t.wrapS = t.wrapT = THREE.RepeatWrapping;
                         t.repeat.set(repeat[0], repeat[1]);
-                        t.anisotropy = o.aniso ?? 8;
+                        t.anisotropy = low ? 2 : (o.aniso ?? 8);
                         if (srgb) t.colorSpace = THREE.SRGBColorSpace;
                         mat[slot] = t;
                         if (slot === 'map') {
@@ -121,9 +126,11 @@ function buildHouseMaterials(low: boolean) {
                 );
             };
             wire('map', `/textures/polyhaven/${key}_diff.jpg`, true);
-            wire('normalMap', `/textures/polyhaven/${key}_nor.jpg`);
-            wire('roughnessMap', `/textures/polyhaven/${key}_rough.jpg`);
-            mat.normalScale.set(o.normalScale ?? 0.8, o.normalScale ?? 0.8);
+            if (!low) {
+                wire('normalMap', `/textures/polyhaven/${key}_nor.jpg`);
+                wire('roughnessMap', `/textures/polyhaven/${key}_rough.jpg`);
+                mat.normalScale.set(o.normalScale ?? 0.8, o.normalScale ?? 0.8);
+            }
             return mat;
         };
 

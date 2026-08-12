@@ -236,8 +236,16 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
     const upperWalls = useMemo(() => houseWalls(UPPER_COLLIDERS), []);
 
     if (low) {
-        // Phones get the stair (you must be able to climb it) and nothing else
-        return <Stair m={m} mats={mats} shadow={false} />;
+        // Phones get the stair (you must be able to climb it) and the room
+        // lights. Skipping the lights too meant the whole lighting plan was
+        // desktop-only, so a phone saw flat ambient in every room — the
+        // fixtures are the cheapest part of this file and the most visible.
+        return (
+            <>
+                <Stair m={m} mats={mats} shadow={false} />
+                <RoomPracticals low />
+            </>
+        );
     }
 
     const coveInset = 0.35;
