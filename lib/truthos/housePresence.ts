@@ -24,8 +24,21 @@ export type HousePeer = {
 export type HousePresenceApi = {
     channel: RealtimeChannel;
     track: (pose: Omit<HousePeer, 'id' | 'at' | 'kind'>) => void;
+    /** Speak into the room. Broadcast, not presence — a word is an event. */
+    say: (text: string) => void;
     leave: () => Promise<void>;
 };
+
+/** A word said in the house, addressed to everyone standing in it. */
+export type HouseSaid = {
+    id: string;
+    name: string;
+    text: string;
+    at: number;
+};
+
+/** Longest thing anyone can say at once — a bubble, not an essay. */
+export const SAY_MAX = 140;
 
 /** Bump channel when presence identity rules change (clears stale self ghosts) */
 const CHANNEL = 'truthos-house-v5';
@@ -74,6 +87,8 @@ export async function joinHousePresence(
     selfId: string,
     initial: Omit<HousePeer, 'id' | 'at' | 'kind'>,
     onSync: (peers: HousePeer[]) => void,
+    /** Someone spoke. Fires for others' words only — never your own echo. */
+    onSaid?: (said: HouseSaid) => void,
 ): Promise<HousePresenceApi | null> {
     try {
         const channel = supabase.channel(CHANNEL, {
@@ -138,7 +153,21 @@ export async function joinHousePresence(
         channel
             .on('presence', { event: 'sync' }, publish)
             .on('presence', { event: 'join' }, publish)
-            .on('presence', { event: 'leave' }, publish);
+            .on('presence', { event: 'leave' }, publish)
+            // Words ride the channel that already carries the bodies. No new
+            // table, no new channel, no history: if you were not standing
+            // there, you did not hear it.
+            .on('broadcast', { event: 'say' }, ({ payload }) => {
+                const p = payload as Partial<HouseSaid> | undefined;
+                if (!p?.id || !p.text) return;
+                if (p.id === selfId) return;
+                onSaid?.({
+                    id: String(p.id),
+                    name: String(p.name || 'Soul'),
+                    text: String(p.text).slice(0, SAY_MAX),
+                    at: typeof p.at === 'number' ? p.at : Date.now(),
+                });
+            });
 
         let lastPose: Omit<HousePeer, 'id' | 'at' | 'kind'> = { ...initial };
         let alive = true;
@@ -169,6 +198,15 @@ export async function joinHousePresence(
             track: (pose) => {
                 lastPose = { ...pose };
                 void channel.track({ ...pose, at: Date.now() });
+            },
+            say: (text) => {
+                const clean = text.trim().slice(0, SAY_MAX);
+                if (!clean) return;
+                void channel.send({
+                    type: 'broadcast',
+                    event: 'say',
+                    payload: { id: selfId, name: lastPose.name || 'Soul', text: clean, at: Date.now() },
+                });
             },
             leave: async () => {
                 alive = false;

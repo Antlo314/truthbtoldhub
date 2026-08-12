@@ -15,10 +15,13 @@ function PeerMesh({
     peer,
     showLabel,
     low,
+    said,
 }: {
     peer: HousePeer;
     showLabel: boolean;
     low: boolean;
+    /** The last thing this soul said, while it is still fresh */
+    said?: string | null;
 }) {
     // A peer is a person now, not a capsule. The body derives its own
     // walk speed from how far the synced pose actually moved, so remote
@@ -61,14 +64,25 @@ function PeerMesh({
     return (
         <group ref={group} position={[peer.x, peer.y || 0, peer.z]} rotation={[0, peer.yaw, 0]}>
             <Humanoid look={look} low={low} trackPosition={track} />
-            {showLabel && (
+            {/* A spoken word outranks the nameplate: while someone is
+                talking you see what they said, not that they exist. */}
+            {said ? (
+                <Html position={[0, 2.12, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
+                    <div className="max-w-[220px] px-2.5 py-1 rounded-2xl text-[10px] leading-snug font-medium border bg-black/85 border-white/25 text-white text-center shadow-lg">
+                        <span className="block text-[8px] uppercase tracking-[0.2em] text-emerald-300/80">
+                            {peer.name}
+                        </span>
+                        {said}
+                    </div>
+                </Html>
+            ) : showLabel ? (
                 <Html position={[0, 1.95, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
                     <div className="px-2 py-0.5 rounded-full text-[9px] whitespace-nowrap font-medium border bg-black/75 border-emerald-400/40 text-white/95">
                         <span className="text-emerald-400">LIVE · </span>
                         {peer.name}
                     </div>
                 </Html>
-            )}
+            ) : null}
         </group>
     );
 }
@@ -77,11 +91,14 @@ export default function RemotePlayers({
     peers,
     selfId,
     mobile = false,
+    saidBy,
 }: {
     peers: HousePeer[];
     /** Local presence key — exclude from world (only other live viewers) */
     selfId?: string;
     mobile?: boolean;
+    /** peer id -> the words they just said, cleared by the caller on expiry */
+    saidBy?: Record<string, string>;
 }) {
     const list = useMemo(() => {
         const now = Date.now();
@@ -104,6 +121,7 @@ export default function RemotePlayers({
                     peer={p}
                     showLabel={!mobile}
                     low={mobile}
+                    said={saidBy?.[p.id] ?? null}
                 />
             ))}
         </group>

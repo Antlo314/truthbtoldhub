@@ -12,7 +12,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
-import { joinHousePresence, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
+import { joinHousePresence, SAY_MAX, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
 import type { Hotspot } from './houseMap';
 // isOnLivingRug inlined in onPose for rug footsteps
 import TruthGuideWidget from './TruthGuideWidget';
@@ -111,6 +111,31 @@ export default function HouseExperience({
     const [authOpen, setAuthOpen] = useState(false);
     const [hotspot, setHotspot] = useState<Hotspot | null>(null);
     const [peers, setPeers] = useState<HousePeer[]>([]);
+    /**
+     * Live speech. Two souls could see each other walk but had no way to say
+     * anything — the house was a silent pass-by. Words ride the presence
+     * channel that already carries the bodies, live only: if you were not
+     * standing there, you did not hear it.
+     */
+    const [saidBy, setSaidBy] = useState<Record<string, string>>({});
+    const [composing, setComposing] = useState(false);
+    const [draft, setDraft] = useState('');
+    const sayTimers = useRef<Record<string, number>>({});
+    const [selfSaid, setSelfSaid] = useState<string | null>(null);
+    const selfSayTimer = useRef<number | undefined>(undefined);
+
+    /** Show a bubble for SAY_HOLD_MS, then let the nameplate return. */
+    const showSaid = useCallback((id: string, text: string) => {
+        setSaidBy((prev) => ({ ...prev, [id]: text }));
+        window.clearTimeout(sayTimers.current[id]);
+        sayTimers.current[id] = window.setTimeout(() => {
+            setSaidBy((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+        }, 6500);
+    }, []);
     const [osOpen, setOsOpen] = useState(false);
     const [canvasError, setCanvasError] = useState<string | null>(null);
     const [activity, setActivity] = useState<'move' | 'look' | 'jump' | 'idle' | null>(null);
@@ -265,6 +290,11 @@ export default function HouseExperience({
                 const me = presenceKey;
                 setPeers(list.filter((p) => p.id !== me && String(p.id) !== me));
             },
+            (said) => {
+                if (dead) return;
+                showSaid(said.id, said.text);
+                hubAudio.peerJoined();
+            },
         ).then((api) => {
             if (dead) {
                 void api?.leave();
@@ -362,6 +392,14 @@ export default function HouseExperience({
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
+            // Enter speaks. Guarded on uiLocked so it cannot fire behind a
+            // panel, and the composer swallows its own keys.
+            if (e.code === 'Enter' && !composing && !uiLocked) {
+                e.preventDefault();
+                setComposing(true);
+                return;
+            }
+            if (composing) return;
             if (e.code === 'KeyE' && hotspot && !uiLocked) activateHotspot(hotspot);
             if (e.code === 'Escape') {
                 if (osOpen) {
@@ -377,7 +415,7 @@ export default function HouseExperience({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, uiLocked, osOpen, panel, activateHotspot, closeToRoom, closePanel]);
+    }, [hotspot, uiLocked, osOpen, panel, composing, activateHotspot, closeToRoom, closePanel]);
 
     const onAuthSuccess = () => {
         try {
@@ -459,6 +497,7 @@ export default function HouseExperience({
                             onPose={onPose}
                             onInteractRequest={tryInteract}
                             onMoveActivity={onMoveActivity}
+                            saidBy={saidBy}
                         />
                     </ErrorBoundary>
                 </div>
@@ -542,6 +581,54 @@ export default function HouseExperience({
                 onInteract={tryInteract}
                 visible={showHud && isMobile}
             />
+
+            {/* Speak into the room. Enter opens it, Enter sends, Escape drops
+                it — the same grammar every world chat has used for 25 years. */}
+            {composing && (
+                <div className="fixed inset-x-0 bottom-24 z-[58] flex justify-center px-4">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            const text = draft.trim().slice(0, SAY_MAX);
+                            setDraft('');
+                            setComposing(false);
+                            if (!text) return;
+                            presence.current?.say(text);
+                            // Your own words never come back over the wire
+                            showSaid(selfId.current, text);
+                            setSelfSaid(text);
+                            window.clearTimeout(selfSayTimer.current);
+                            selfSayTimer.current = window.setTimeout(() => setSelfSaid(null), 6500);
+                        }}
+                        className="w-full max-w-lg"
+                    >
+                        <input
+                            autoFocus
+                            value={draft}
+                            maxLength={SAY_MAX}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Escape') {
+                                    setDraft('');
+                                    setComposing(false);
+                                }
+                            }}
+                            placeholder="Say something to the room…"
+                            className="w-full rounded-2xl border border-emerald-400/40 bg-black/85 px-4 py-3 text-sm text-white placeholder:text-white/35 backdrop-blur-md outline-none focus:border-emerald-400/70"
+                        />
+                    </form>
+                </div>
+            )}
+
+            {/* Your own words, so you can see what the room sees */}
+            {selfSaid && !composing && (
+                <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[57] flex justify-center px-4">
+                    <p className="max-w-lg rounded-2xl border border-white/20 bg-black/75 px-4 py-2 text-center text-sm text-white/90 backdrop-blur-md">
+                        {selfSaid}
+                    </p>
+                </div>
+            )}
 
             <HouseWalkthrough />
             <HousePanels />

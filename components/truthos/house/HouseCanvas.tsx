@@ -39,6 +39,7 @@ export default function HouseCanvas({
     onPose,
     onInteractRequest,
     onMoveActivity,
+    saidBy,
 }: {
     locked: boolean;
     mobile: boolean;
@@ -49,6 +50,8 @@ export default function HouseCanvas({
     onPose: (p: { x: number; y: number; z: number; yaw: number }) => void;
     onInteractRequest?: () => void;
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
+    /** peer id -> their live speech bubble */
+    saidBy?: Record<string, string>;
 }) {
     const bg = mobile ? '#1c1630' : '#120e1c';
     const bloom = useRef<BloomEffect>(null);
@@ -188,7 +191,7 @@ export default function HouseCanvas({
 
                 {/* Dust motes · fireflies · moon shafts — desktop only */}
                 {!mobile && <HouseAtmosphere />}
-                <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} />
+                <RemotePlayers peers={peers} selfId={selfId} mobile={mobile} saidBy={saidBy} />
                 {/* Vessel body — mirror-only layer */}
                 <LocalPlayerBody avatar={avatar} pose={localPose} />
                 <FirstPersonController

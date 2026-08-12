@@ -377,9 +377,9 @@ export const FURNITURE: (Collider & { level: Level; name: string })[] = [
     { name: 'rec sofa', level: 'main', x: u(-4.2), z: u(7.2), hx: 1.25, hz: 0.5 },
     { name: 'rec coffee table', level: 'main', x: u(-4.2), z: u(5.4), hx: 0.58, hz: 0.36 },
     { name: 'floor lamp', level: 'main', x: u(-6.4), z: u(7.3), hx: 0.22, hz: 0.22 },
-    { name: 'arcade cabinet', level: 'main', x: u(-2.95), z: u(7.2), hx: 0.42, hz: 0.37 },
+    { name: 'arcade cabinet', level: 'main', x: u(-3.0), z: u(7.2), hx: 0.42, hz: 0.37 },
     { name: 'rec side table', level: 'main', x: u(-1.6), z: u(6.9), hx: 0.46, hz: 0.36 },
-    { name: 'rec plant', level: 'main', x: u(-6.6), z: u(3.0), hx: 0.3, hz: 0.3 },
+    { name: 'rec plant', level: 'main', x: u(-6.55), z: u(3.0), hx: 0.3, hz: 0.3 },
 
     /* ── MAIN: bedrooms + bath ────────────────────────── */
     { name: 'bed (west)', level: 'main', x: u(-5.9), z: u(-2.4), hx: 1.15, hz: 1.25 },
@@ -392,8 +392,8 @@ export const FURNITURE: (Collider & { level: Level; name: string })[] = [
     /* ── UPPER: kitchen ───────────────────────────────── */
     { name: 'island', level: 'upper', x: u(3.4), z: u(-2.6), hx: 2.2, hz: 0.7 },
     { name: 'counter run', level: 'upper', x: u(3.2), z: -SHELL.maxZ + 0.9, hx: 3.85, hz: 0.4 },
-    { name: 'fridge', level: 'upper', x: u(1.6), z: u(-6.9), hx: 0.42, hz: 0.37 },
-    { name: 'stove', level: 'upper', x: u(4.4), z: u(-6.9), hx: 0.47, hz: 0.34 },
+    { name: 'fridge', level: 'upper', x: u(1.6), z: u(-6.78), hx: 0.42, hz: 0.37 },
+    { name: 'stove', level: 'upper', x: u(4.4), z: u(-6.78), hx: 0.47, hz: 0.34 },
 
     /* ── UPPER: dining + the Ledger ───────────────────── */
     { name: 'dining table', level: 'upper', x: u(1.1), z: u(2.0), hx: 1.3, hz: 0.9 },
@@ -401,18 +401,20 @@ export const FURNITURE: (Collider & { level: Level; name: string })[] = [
     { name: 'sideboard (Ledger)', level: 'upper', x: u(0.2), z: u(3.3), hx: 0.98, hz: 0.28 },
 
     /* ── UPPER: living + the Library wall ─────────────── */
-    { name: 'bookshelf wall', level: 'upper', x: u(6.6), z: u(1.3), hx: 0.35, hz: 2.6 },
+    // Collider follows the MESH (X1 - 0.55), which is where the shelves
+    // actually stand — it used to sit 16 cm east of them, inside the wall.
+    { name: 'bookshelf wall', level: 'upper', x: SHELL.maxX - 0.55, z: u(1.3), hx: 0.35, hz: 2.6 },
     { name: 'living sofa', level: 'upper', x: u(4.6), z: u(1.6), hx: 1.8, hz: 0.6 },
     { name: 'living coffee table', level: 'upper', x: u(4.6), z: u(-0.1), hx: 0.68, hz: 0.42 },
     { name: 'accent chair', level: 'upper', x: u(6.2), z: u(3.2), hx: 0.46, hz: 0.46 },
-    { name: 'media wall', level: 'upper', x: SHELL.maxX - 0.45, z: u(-0.9), hx: 0.38, hz: 0.82 },
+    { name: 'media wall', level: 'upper', x: SHELL.maxX - 0.52, z: u(-0.9), hx: 0.36, hz: 0.82 },
     { name: 'codex desk', level: 'upper', x: u(2.6), z: u(-4.0), hx: 0.58, hz: 0.28 },
 
     /* ── UPPER: master + bedroom ──────────────────────── */
     { name: 'master bed', level: 'upper', x: u(-5.2), z: u(5.6), hx: 1.3, hz: 1.4 },
-    { name: 'bedside (west)', level: 'upper', x: u(-6.7), z: u(6.8), hx: 0.3, hz: 0.3 },
+    { name: 'bedside (west)', level: 'upper', x: u(-6.55), z: u(6.8), hx: 0.3, hz: 0.3 },
     { name: 'bedside (east)', level: 'upper', x: u(-3.7), z: u(6.8), hx: 0.3, hz: 0.3 },
-    { name: 'upper bed', level: 'upper', x: u(-3.6), z: u(-2.8), hx: 1.05, hz: 1.0 },
+    { name: 'upper bed', level: 'upper', x: u(-3.95), z: u(-2.8), hx: 1.05, hz: 1.0 },
 
     /* ── UPPER: balcony ───────────────────────────────── */
     { name: 'balcony chair (w)', level: 'upper', x: u(4.6), z: u(5.6), hx: 0.46, hz: 0.46 },

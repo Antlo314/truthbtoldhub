@@ -107,6 +107,41 @@ function run(M) {
         if (overlaps(stairBox, f)) fail.push(`STAIR    ${f.level} "${f.name}" stands on the stair run or its landings`);
     }
 
+    /* 2b ── solidity ─────────────────────────────────────────── */
+    // Nothing may be inside anything else. Two end tables were buried in the
+    // shell wall: their footprints were never checked against the walls, only
+    // against doors and the stair, so a prop could sit half in masonry and the
+    // suite still passed. Two assertions:
+    //   · no prop overlaps a WALL (art is exempt — art hangs ON walls);
+    //   · no prop overlaps another prop on the same storey.
+    const JUNGLE = new Set(M.JUNGLE_COLLIDERS ?? []);
+    const wallsOn = (level) =>
+        (level === 'upper' ? M.UPPER_COLLIDERS : M.MAIN_COLLIDERS).filter((c) => !JUNGLE.has(c));
+    for (const f of FURNITURE) {
+        for (const w of wallsOn(f.level)) {
+            if (overlaps(w, f)) {
+                const depth = Math.min(
+                    f.hx + w.hx - Math.abs(f.x - w.x),
+                    f.hz + w.hz - Math.abs(f.z - w.z),
+                );
+                fail.push(
+                    `SOLID    ${f.level} "${f.name}" is inside a wall at (${w.x.toFixed(2)}, ${w.z.toFixed(2)}) by ${depth.toFixed(2)}m`,
+                );
+                break; // one report per prop is enough to act on
+            }
+        }
+    }
+    for (let i = 0; i < FURNITURE.length; i++) {
+        for (let j = i + 1; j < FURNITURE.length; j++) {
+            const a = FURNITURE[i];
+            const b = FURNITURE[j];
+            if (a.level !== b.level) continue;
+            if (overlaps(a, b)) {
+                fail.push(`SOLID    ${a.level} "${a.name}" intersects "${b.name}"`);
+            }
+        }
+    }
+
     /* 3 ── hallways ──────────────────────────────────────────── */
     // "Zero obstacles in hallways" as assertions, two ways:
     //   a) circulation rooms (the main hall, the landing) may contain NO

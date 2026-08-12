@@ -99,7 +99,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
             <On level="main" x={u(-6.4)} z={u(7.3)}>
                 <HouseProp model="floorLamp" fit={{ h: 1.5 }} >{null}</HouseProp>
             </On>
-            <On level="main" x={u(-2.95)} z={u(7.2)}>
+            <On level="main" x={u(-3.0)} z={u(7.2)}>
                 {/* Arcade cabinet — a tall dark box with a glowing marquee */}
                 <mesh position={[0, 0.9, 0]} castShadow={sh}>
                     <boxGeometry args={[0.8, 1.8, 0.7]} />
@@ -123,7 +123,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <primitive object={m.book} attach="material" />
                 </mesh>
             </On>
-            <On level="main" x={u(-6.6)} z={u(3.0)}>
+            <On level="main" x={u(-6.55)} z={u(3.0)}>
                 <HouseProp model="pottedPlant" fit={{ h: 1.0 }} >{null}</HouseProp>
             </On>
 
@@ -193,7 +193,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <primitive object={m.counter} attach="material" />
                 </mesh>
             </On>
-            <On level="upper" x={u(1.6)} z={u(-6.9)}>
+            <On level="upper" x={u(1.6)} z={u(-6.78)}>
                 <HouseProp model="fridge" fit={{ h: 1.9 }}>
                     <mesh position={[0, 0.95, 0]} castShadow={sh}>
                         <boxGeometry args={[0.9, 1.9, 0.8]} />
@@ -201,7 +201,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="upper" x={u(4.4)} z={u(-6.9)}>
+            <On level="upper" x={u(4.4)} z={u(-6.78)}>
                 <HouseProp model="kitchenStove" fit={{ w: 0.9 }} >{null}</HouseProp>
             </On>
             <On level="upper" x={u(5.6)} z={u(-6.9)}>
@@ -280,7 +280,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="accentChair" rotation={[0, -Math.PI / 1.6, 0]} fit={{ w: 0.9 }} >{null}</HouseProp>
             </On>
             {/* Fireplace mass on the east wall, south of the shelves */}
-            <On level="upper" x={X1 - 0.45} z={u(-0.9)}>
+            <On level="upper" x={X1 - 0.52} z={u(-0.9)}>
                 <mesh position={[0, 1.3, 0]} castShadow={sh}>
                     <boxGeometry args={[0.7, 2.6, 1.6]} />
                     <primitive object={m.stone} attach="material" />
@@ -334,13 +334,13 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </mesh>
                 </HouseProp>
             </On>
-            {[u(-6.7), u(-3.7)].map((x, i) => (
+            {[u(-6.55), u(-3.7)].map((x, i) => (
                 <On key={i} level="upper" x={x} z={u(6.8)}>
                     <HouseProp model="bedsideTable" fit={{ w: 0.55 }} >{null}</HouseProp>
                     <HouseProp model="tableLamp" position={[0, 0.55, 0]} fit={{ h: 0.4 }} >{null}</HouseProp>
                 </On>
             ))}
-            <On level="upper" x={u(-3.6)} z={u(-2.8)}>
+            <On level="upper" x={u(-3.95)} z={u(-2.8)}>
                 <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.0 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
                         <boxGeometry args={[2.0, 0.7, 1.6]} />
