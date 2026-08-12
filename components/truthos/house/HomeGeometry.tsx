@@ -181,6 +181,36 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
         [],
     );
 
+    /**
+     * Flooring per room, the way a real house is finished. The library has
+     * carried tileKitchen / carpet / woodFloorDark / marble since the PBR
+     * pass, but every floor in the building drew one of three materials
+     * chosen by storey - so the kitchen, the bedrooms and the library all
+     * wore the same boards.
+     */
+    const floorMat = (mm: ReturnType<typeof useHouseMaterials>, f: { id: string; open: boolean }) => {
+        if (f.open) return mm.concrete;                        // balcony + patio
+        switch (f.id) {
+            case 'kitchen':  return mm.tileKitchen;
+            case 'dining':
+            case 'living':   return mm.woodHerring;            // hero parquet
+            case 'rec':      return mm.woodFloorDark;
+            case 'foyer':
+            case 'hall_m':
+            case 'landing':  return mm.marble;                 // circulation
+            case 'bath':
+            case 'ensuite':
+            case 'pwdr':
+            case 'laundry':  return mm.tile;                   // ceramic
+            case 'bed_w':
+            case 'bed_n':
+            case 'bed_u':
+            case 'master':
+            case 'wic':      return mm.carpet;
+            default:         return mm.woodFloor;
+        }
+    };
+
     const floors = useMemo(
         () =>
             ROOMS.filter((r) => !r.solid).map((r) => ({
@@ -212,7 +242,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                     receiveShadow={sh}
                 >
                     <planeGeometry args={[f.w, f.d]} />
-                    <primitive object={f.open ? m.concrete : f.y > 1 ? m.woodFloor : m.tile} attach="material" />
+                    <primitive object={floorMat(m, f)} attach="material" />
                 </mesh>
             ))}
             {/* The upper storey is ONE slab with two holes — the stairwell
@@ -233,8 +263,11 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
             ))}
 
             {/* ── Walls ──────────────────────────────────────── */}
-            <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={mats.stucco} shadow={sh} />
-            <Walls cols={UPPER_COLLIDERS} y={UPPER_Y} h={STOREY} mat={mats.stucco} shadow={sh} />
+            {/* Painted plaster, not a flat fill. Every wall in the house was
+                one untextured colour while a 2k plaster scan sat unused in the
+                library - the single biggest reason interiors read as CAD. */}
+            <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={m.wallPlaster} shadow={sh} />
+            <Walls cols={UPPER_COLLIDERS} y={UPPER_Y} h={STOREY} mat={m.wallPlaster} shadow={sh} />
 
             {/* The stair, its enclosure and all finish carpentry live in
                 HomeInterior — built as joinery, not extruded boxes. */}

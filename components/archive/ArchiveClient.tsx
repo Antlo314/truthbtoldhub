@@ -24,6 +24,8 @@ export default function ArchiveClient() {
     } = useArchiveStore();
 
     const [isLoading, setIsLoading] = useState(true);
+    /** Signed-out soul reading the room — everything renders, nothing sends. */
+    const [guestReading, setGuestReading] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
     const initializedRef = useRef(false);
     const activeStateRef = useRef({ activeWorkspaceId, activeDmId: null as string | null });
@@ -43,11 +45,35 @@ export default function ArchiveClient() {
     useEffect(() => {
         const myId = user?.id;
         if (!myId) {
-            // Give identity a beat to resolve; if still nothing, send home.
+            // Guests READ the Hall. Bouncing them home meant the number of
+            // clicks from landing to seeing another human's words was
+            // infinite without an account — for a hub whose whole purpose is
+            // community, the room has to be visible from the doorway. The
+            // live subscriptions below need an id, so they simply do not run;
+            // the channel + message fetch that RLS already allows anon does.
             const t = setTimeout(async () => {
                 const { data } = await supabase.auth.getSession();
-                if (!data.session) window.location.href = '/';
-            }, 1500);
+                if (data.session) return;
+                setGuestReading(true);
+                // Read-only bootstrap: workspaces + the default hall. No
+                // join_sanctum, no presence.track, no DM inbox, no last_seen
+                // write — every one of those needs an id. RLS already allows
+                // anon SELECT on public halls, so the room simply renders.
+                try {
+                    const { data: ws } = await supabase
+                        .from('archive_workspaces')
+                        .select('*')
+                        .order('created_at', { ascending: true });
+                    if (ws && ws.length > 0) {
+                        setWorkspaces(ws);
+                        const sanctum = ws.find((w: any) => w.id === SANCTUM_WS) || ws[0];
+                        setActiveWorkspaceId(sanctum.id);
+                    }
+                } catch (e) {
+                    console.error('guest hall load failed', e);
+                }
+                setIsLoading(false);
+            }, 1200);
             return () => clearTimeout(t);
         }
         if (initializedRef.current) return;

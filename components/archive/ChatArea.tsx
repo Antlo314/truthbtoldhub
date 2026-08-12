@@ -545,7 +545,17 @@ export default function ChatArea() {
 
             {/* Composer */}
             <div className="px-4 pb-6 pt-1 shrink-0 relative z-20" id="archive-input-section">
-                {canPost ? (
+                {!myAuth?.id ? (
+                    /* A guest reads the room but cannot speak into it. Without
+                       this they would meet a live composer that silently fails
+                       on send — worse than an honest closed door. */
+                    <a
+                        href="/"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-aether-gold/30 bg-aether-gold/10 px-4 py-3 text-[11px] font-black uppercase tracking-[0.25em] text-aether-gold hover:bg-aether-gold/15 transition-colors min-h-[48px]"
+                    >
+                        Sign in to speak in the Hall
+                    </a>
+                ) : canPost ? (
                     <form
                         onSubmit={handleSend}
                         className={`bg-aether-surface border border-white/5 flex items-center px-4 py-2.5 relative group focus-within:border-aether-gold/40 transition-all ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`}

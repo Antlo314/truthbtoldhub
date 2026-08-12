@@ -142,7 +142,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.1 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
                         <boxGeometry args={[2.1, 0.7, 1.7]} />
-                        <primitive object={m.fabricLight} attach="material" />
+                        <primitive object={m.linen} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
@@ -153,7 +153,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="bed" fit={{ w: 2.1 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
                         <boxGeometry args={[1.7, 0.7, 2.1]} />
-                        <primitive object={m.fabricLight} attach="material" />
+                        <primitive object={m.linen} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
@@ -174,7 +174,9 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 {/* Island with stools */}
                 <mesh position={[0, 0.5, 0]} castShadow={sh}>
                     <boxGeometry args={[4.4, 1.0, 1.4]} />
-                    <primitive object={m.marble} attach="material" />
+                    {/* Terrazzo worktop - the entry marble read as one stone
+                        for the whole house */}
+                    <primitive object={m.counter} attach="material" />
                 </mesh>
                 {[-1.4, 0, 1.4].map((dx) => (
                     <HouseProp key={dx} model="barStool" position={[dx, 0, 1.05]} fit={{ h: 0.75 }} >{null}</HouseProp>
@@ -188,7 +190,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 </mesh>
                 <mesh position={[0, 0.98, 0]}>
                     <boxGeometry args={[7.6, 0.05, 0.8]} />
-                    <primitive object={m.marble} attach="material" />
+                    <primitive object={m.counter} attach="material" />
                 </mesh>
             </On>
             <On level="upper" x={u(1.6)} z={u(-6.9)}>
@@ -328,7 +330,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="bed" rotation={[0, Math.PI, 0]} fit={{ w: 2.4 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
                         <boxGeometry args={[2.4, 0.7, 2.2]} />
-                        <primitive object={m.fabricLight} attach="material" />
+                        <primitive object={m.linen} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
@@ -342,7 +344,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.0 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
                         <boxGeometry args={[2.0, 0.7, 1.6]} />
-                        <primitive object={m.fabricLight} attach="material" />
+                        <primitive object={m.linen} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>

@@ -107,13 +107,61 @@ function run(M) {
         if (overlaps(stairBox, f)) fail.push(`STAIR    ${f.level} "${f.name}" stands on the stair run or its landings`);
     }
 
-    /* 3 ── reachability ──────────────────────────────────────── */
-    const STEP = 0.28;
+    /* 3 ── hallways ──────────────────────────────────────────── */
+    // "Zero obstacles in hallways" as assertions, two ways:
+    //   a) circulation rooms (the main hall, the landing) may contain NO
+    //      furniture at all — a hall is not a furniture room;
+    //   b) a clear straight band must run the hall's full length down its
+    //      middle, wide enough for a body with margin (1.1 m). (a) implies
+    //      (b) today, but (b) also survives someone relaxing (a) later.
+    const HALL_IDS = ['hall_m', 'landing'];
+    const BAND_HALF = 0.55;
+    for (const id of HALL_IDS) {
+        const room = ROOMS.find((r) => r.id === id);
+        if (!room) { fail.push(`HALLWAY  room "${id}" missing from ROOMS`); continue; }
+        const roomBox = {
+            x: (room.minX + room.maxX) / 2,
+            z: (room.minZ + room.maxZ) / 2,
+            hx: (room.maxX - room.minX) / 2,
+            hz: (room.maxZ - room.minZ) / 2,
+        };
+        for (const f of FURNITURE) {
+            if (f.level !== room.level) continue;
+            if (overlaps(roomBox, f)) {
+                fail.push(`HALLWAY  ${room.level} "${f.name}" stands in the ${room.name} (${id}) — halls stay empty`);
+            }
+        }
+        // the walking band runs along the room's long axis
+        const alongZ = roomBox.hz >= roomBox.hx;
+        const band = alongZ
+            ? { x: roomBox.x, z: roomBox.z, hx: BAND_HALF, hz: roomBox.hz }
+            : { x: roomBox.x, z: roomBox.z, hx: roomBox.hx, hz: BAND_HALF };
+        for (const f of FURNITURE) {
+            if (f.level !== room.level) continue;
+            if (overlaps(band, f)) {
+                fail.push(`HALLWAY  ${room.level} "${f.name}" pinches the ${room.name} walking band`);
+            }
+        }
+    }
+
+    /* 4 ── reachability, twice ───────────────────────────────── */
+    // Pass 1 at PLAYER_R proves every room can be entered. Pass 2 at a
+    // COMFORT radius proves it can be entered without squeezing: a 1.0 m
+    // disc must fit down every route. The comfort pass runs on a much finer
+    // grid — the free band through a 1.2 m door at comfort width is only
+    // 0.2 m across, and a coarse grid would miss it and cry wolf.
+    const PASSES = [
+        { label: 'REACH', radius: R, step: 0.28 },
+        { label: 'PINCH', radius: 0.5, step: 0.07 },
+    ];
+    for (const pass of PASSES)
     for (const level of ['main', 'upper']) {
+        const STEP = pass.step;
+        const RR = pass.radius;
         const cs = collidersFor(level);
         const blocked = (x, z) => {
             for (const c of cs) {
-                if (x > c.x - c.hx - R && x < c.x + c.hx + R && z > c.z - c.hz - R && z < c.z + c.hz + R) return true;
+                if (x > c.x - c.hx - RR && x < c.x + c.hx + RR && z > c.z - c.hz - RR && z < c.z + c.hz + RR) return true;
             }
             return false;
         };
@@ -123,7 +171,7 @@ function run(M) {
                 ? { x: INTRO.stand.x, z: INTRO.stand.z }
                 : { x: (STAIR.minX + STAIR.maxX) / 2, z: STAIR.zTop - 0.9 };
         if (blocked(start.x, start.z)) {
-            fail.push(`REACH    ${level}: the start point itself is inside a collider`);
+            fail.push(`${pass.label}    ${level}: the start point itself is inside a collider`);
             continue;
         }
         const key = (i, j) => `${i},${j}`;
@@ -157,9 +205,15 @@ function run(M) {
                     if (seen.has(key(Math.round(x / STEP), Math.round(z / STEP)))) touched++;
                 }
             }
-            if (touched === 0) fail.push(`REACH    ${level}: "${r.name}" (${r.id}) cannot be walked into`);
+            if (touched === 0) {
+                fail.push(
+                    pass.label === 'PINCH'
+                        ? `PINCH    ${level}: "${r.name}" (${r.id}) can only be reached by squeezing — a 1.0 m body does not fit the route`
+                        : `REACH    ${level}: "${r.name}" (${r.id}) cannot be walked into`,
+                );
+            }
         }
-        console.log(`  ${level}: ${seen.size} reachable cells, ${roomsOn(level).filter((r) => !r.solid).length} rooms checked`);
+        console.log(`  ${pass.label.toLowerCase()} ${level}: ${seen.size} cells at r=${RR}`);
     }
 
     console.log('');
@@ -168,5 +222,5 @@ function run(M) {
         console.log(`\n${fail.length} problem(s).`);
         process.exit(1);
     }
-    console.log(`  ✓ ${FURNITURE.length} props, ${ART_BOXES.length} artworks, ${DOORWAYS.length} doorways, stair clear, every room reachable.`);
+    console.log(`  OK ${FURNITURE.length} props, ${ART_BOXES.length} artworks, ${DOORWAYS.length} doorways, halls empty, no pinch points, every room reachable.`);
 }

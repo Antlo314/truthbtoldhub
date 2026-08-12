@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 /** Full Hut feature set as desktop apps */
 export type OsAppId =
@@ -55,6 +56,9 @@ export type OsAppPayload = {
 
 /** Apps that can have several windows open at once */
 export const MULTI_INSTANCE = new Set<OsAppId>(['notepad', 'terminal', 'browser', 'photos']);
+
+/** Apps only an Architect may open, enforced in openApp */
+export const ADMIN_APPS = new Set<OsAppId>(['admin']);
 
 /** Apps that require a signed-in session */
 export const PROTECTED_APPS = new Set<OsAppId>([
@@ -149,14 +153,17 @@ export const APP_META: Record<
     OsAppId,
     { title: string; w: number; h: number; label: string; accent: string; protected?: boolean }
 > = {
-    truth: { title: 'Truth · Guide', w: 420, h: 560, label: 'Truth', accent: 'emerald' },
+    truth: { title: 'Truth · Guide', w: 420, h: 560, label: 'Guide', accent: 'emerald' },
     updates: { title: 'Updates', w: 440, h: 420, label: 'Updates', accent: 'amber' },
     ledger: { title: 'The Ledger', w: 520, h: 480, label: 'Ledger', accent: 'gold', protected: true },
     soul: { title: 'Your Soul', w: 480, h: 520, label: 'Soul', accent: 'cyan', protected: true },
     arcade: { title: 'Arcade', w: 640, h: 520, label: 'Arcade', accent: 'violet', protected: true },
     offering: { title: 'The Offering', w: 480, h: 520, label: 'Offering', accent: 'rose', protected: true },
     library: { title: 'Library', w: 520, h: 480, label: 'Library', accent: 'sky' },
-    archive: { title: 'The Hall', w: 560, h: 520, label: 'Hall', accent: 'indigo' },
+    // Wide enough that the channel rail AND the member list are on screen:
+    // below the lg breakpoint the Hall hides the very thing that proves other
+    // souls are here, so the flagship community room opened in phone layout.
+    archive: { title: 'The Hall', w: 1120, h: 700, label: 'The Hall', accent: 'indigo' },
     files: { title: 'File Explorer', w: 640, h: 480, label: 'Files', accent: 'sky' },
     calculator: { title: 'Calculator', w: 320, h: 440, label: 'Calculator', accent: 'emerald' },
     paint: { title: 'Paint', w: 700, h: 520, label: 'Paint', accent: 'pink' },
@@ -164,7 +171,7 @@ export const APP_META: Record<
     account: { title: 'Account', w: 440, h: 480, label: 'Account', accent: 'cyan', protected: true },
     settings: { title: 'Settings', w: 560, h: 540, label: 'Settings', accent: 'zinc' },
     admin: { title: 'Admin Console', w: 560, h: 560, label: 'Admin', accent: 'rose', protected: true },
-    chamber: { title: 'Leave Terminal', w: 480, h: 360, label: 'Leave Terminal', accent: 'emerald' },
+    chamber: { title: 'The House', w: 480, h: 360, label: 'The House', accent: 'emerald' },
     terminal: { title: 'Terminal', w: 620, h: 440, label: 'Terminal', accent: 'emerald' },
     media: { title: 'Media Player', w: 760, h: 540, label: 'Media', accent: 'violet' },
     photos: { title: 'Photos', w: 680, h: 520, label: 'Photos', accent: 'pink' },
@@ -218,7 +225,9 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
     pendingApp: null,
     desktop: 0,
     mru: [],
-    pinned: ['truth', 'browser', 'files', 'terminal'],
+    // The Hall is pinned first: this is a community hub, and the dock is
+    // the one launcher that never leaves the screen.
+    pinned: ['archive', 'truth', 'chamber', 'browser'],
 
     enterOs: () => set({ phase: 'os', bootDone: false, startOpen: false }),
     openDevice: () => set({ phase: 'device-lock' }),
@@ -249,6 +258,14 @@ export const useTruthOs = create<TruthOsState>((set, get) => ({
         const needsAuth = PROTECTED_APPS.has(app) || meta.protected;
         if (needsAuth && !email) {
             set({ authPrompt: true, pendingApp: app, startOpen: false });
+            return;
+        }
+        // Architect-only apps are gated HERE, not per launcher. The Start menu
+        // filtered 'admin' by isAdmin, but the command palette only checked
+        // for any session and the Terminal's `open admin` checked nothing —
+        // so the console opened for any signed-in soul. One door, one lock.
+        if (ADMIN_APPS.has(app) && !isAdminEmail(email)) {
+            set({ startOpen: false });
             return;
         }
 

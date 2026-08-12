@@ -110,5 +110,69 @@
       "nor": "/textures/polyhaven/concrete_nor.jpg",
       "rough": "/textures/polyhaven/concrete_rough.jpg"
     }
+  },
+  "woodHerring": {
+    "slug": "herringbone_parquet",
+    "maps": {
+      "diff": "/textures/polyhaven/woodHerring_diff.jpg",
+      "nor": "/textures/polyhaven/woodHerring_nor.jpg",
+      "rough": "/textures/polyhaven/woodHerring_rough.jpg"
+    }
+  },
+  "oak": {
+    "slug": "oak_veneer_01",
+    "maps": {
+      "diff": "/textures/polyhaven/oak_diff.jpg",
+      "nor": "/textures/polyhaven/oak_nor.jpg",
+      "rough": "/textures/polyhaven/oak_rough.jpg"
+    }
+  },
+  "counter": {
+    "slug": "terrazzo_tiles",
+    "maps": {
+      "diff": "/textures/polyhaven/counter_diff.jpg",
+      "nor": "/textures/polyhaven/counter_nor.jpg",
+      "rough": "/textures/polyhaven/counter_rough.jpg"
+    }
+  },
+  "ceramic": {
+    "slug": "square_tiles_02",
+    "maps": {
+      "diff": "/textures/polyhaven/ceramic_diff.jpg",
+      "nor": "/textures/polyhaven/ceramic_nor.jpg",
+      "rough": "/textures/polyhaven/ceramic_rough.jpg"
+    }
+  },
+  "linen": {
+    "slug": "rough_linen",
+    "maps": {
+      "diff": "/textures/polyhaven/linen_diff.jpg",
+      "nor": "/textures/polyhaven/linen_nor.jpg",
+      "rough": "/textures/polyhaven/linen_rough.jpg"
+    }
+  },
+  "wool": {
+    "slug": "wool_boucle",
+    "maps": {
+      "diff": "/textures/polyhaven/wool_diff.jpg",
+      "nor": "/textures/polyhaven/wool_nor.jpg",
+      "rough": "/textures/polyhaven/wool_rough.jpg"
+    }
+  },
+  "bark": {
+    "slug": "bark_brown_01",
+    "maps": {
+      "diff": "/textures/polyhaven/bark_diff.jpg",
+      "nor": "/textures/polyhaven/bark_nor.jpg",
+      "rough": "/textures/polyhaven/bark_rough.jpg"
+    }
+  },
+  "forestFloor": {
+    "slug": "forest_floor",
+    "maps": {
+      "diff": "/textures/polyhaven/forestFloor_diff.jpg",
+      "nor": "/textures/polyhaven/forestFloor_nor.jpg",
+      "rough": "/textures/polyhaven/forestFloor_rough.jpg"
+    }
   }
 }

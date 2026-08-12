@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -37,6 +38,7 @@ import {
     Users,
     type LucideIcon,
 } from 'lucide-react';
+import { APP_META } from './truthOsStore';
 
 export type OsAccentId =
     | 'emerald'
@@ -126,39 +128,41 @@ export const ACCENT_STYLES: Record<
     },
 };
 
-const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId; label: string }> = {
-    truth: { Icon: Sparkles, accent: 'emerald', label: 'Guide' },
-    updates: { Icon: Newspaper, accent: 'amber', label: 'Updates' },
-    ledger: { Icon: BookOpen, accent: 'gold', label: 'Ledger' },
-    soul: { Icon: Heart, accent: 'cyan', label: 'Soul' },
-    arcade: { Icon: Gamepad2, accent: 'violet', label: 'Arcade' },
-    offering: { Icon: Gift, accent: 'rose', label: 'Offering' },
-    library: { Icon: Library, accent: 'sky', label: 'Library' },
-    archive: { Icon: Users, accent: 'indigo', label: 'Hall' },
-    files: { Icon: FolderOpen, accent: 'sky', label: 'Files' },
-    calculator: { Icon: Calculator, accent: 'emerald', label: 'Calc' },
-    paint: { Icon: Palette, accent: 'pink', label: 'Paint' },
-    notepad: { Icon: FileText, accent: 'zinc', label: 'Notepad' },
-    account: { Icon: User, accent: 'cyan', label: 'Account' },
-    settings: { Icon: Settings, accent: 'zinc', label: 'Settings' },
-    admin: { Icon: Shield, accent: 'rose', label: 'Admin' },
-    chamber: { Icon: DoorOpen, accent: 'emerald', label: 'The House' },
-    terminal: { Icon: SquareTerminal, accent: 'emerald', label: 'Terminal' },
-    media: { Icon: Clapperboard, accent: 'violet', label: 'Media' },
-    photos: { Icon: Images, accent: 'pink', label: 'Photos' },
-    clock: { Icon: Clock, accent: 'sky', label: 'Clock' },
-    taskmgr: { Icon: Activity, accent: 'zinc', label: 'Task Manager' },
-    browser: { Icon: Globe, accent: 'cyan', label: 'Browser' },
-    music: { Icon: Music, accent: 'violet', label: 'Music' },
-    tasks: { Icon: ListChecks, accent: 'gold', label: 'To-Do' },
+const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId }> = {
+    truth: { Icon: Sparkles, accent: 'emerald' },
+    updates: { Icon: Newspaper, accent: 'amber' },
+    ledger: { Icon: BookOpen, accent: 'gold' },
+    soul: { Icon: Heart, accent: 'cyan' },
+    arcade: { Icon: Gamepad2, accent: 'violet' },
+    offering: { Icon: Gift, accent: 'rose' },
+    library: { Icon: Library, accent: 'sky' },
+    archive: { Icon: Users, accent: 'indigo' },
+    files: { Icon: FolderOpen, accent: 'sky' },
+    calculator: { Icon: Calculator, accent: 'emerald' },
+    paint: { Icon: Palette, accent: 'pink' },
+    notepad: { Icon: FileText, accent: 'zinc' },
+    account: { Icon: User, accent: 'cyan' },
+    settings: { Icon: Settings, accent: 'zinc' },
+    admin: { Icon: Shield, accent: 'rose' },
+    chamber: { Icon: DoorOpen, accent: 'emerald' },
+    terminal: { Icon: SquareTerminal, accent: 'emerald' },
+    media: { Icon: Clapperboard, accent: 'violet' },
+    photos: { Icon: Images, accent: 'pink' },
+    clock: { Icon: Clock, accent: 'sky' },
+    taskmgr: { Icon: Activity, accent: 'zinc' },
+    browser: { Icon: Globe, accent: 'cyan' },
+    music: { Icon: Music, accent: 'violet' },
+    tasks: { Icon: ListChecks, accent: 'gold' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {
     return APP_ICON[app]?.accent ?? 'emerald';
 }
 
+/** Icon + accent from here, label from APP_META — one name per app. */
 export function getAppIconMeta(app: OsAppId) {
-    return APP_ICON[app] ?? { Icon: Hash, accent: 'emerald' as OsAccentId, label: app };
+    const icon = APP_ICON[app] ?? { Icon: Hash, accent: 'emerald' as OsAccentId };
+    return { ...icon, label: APP_META[app]?.label ?? app };
 }
 
 type Size = 'sm' | 'md' | 'lg' | 'xl';

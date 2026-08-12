@@ -22,6 +22,7 @@ import { useSoulStore } from '@/lib/store/useSoulStore';
 import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
 import { HOUSE_FILMS } from '@/lib/truthos/houseCinemaFilms';
 import { hutCompletion, HOUSE_CORE } from './house/stationProgress';
+import { useLiveSouls } from '@/lib/truthos/liveSouls';
 
 function greeting(h: number): string {
     if (h < 5) return 'Still awake';
@@ -51,6 +52,8 @@ export default function OsHome({
     const [bulletin, setBulletin] = useState<Bulletin | null>(null);
     /** Real house progress — stations this soul has actually opened. */
     const [house, setHouse] = useState({ seen: 0, total: HOUSE_CORE.length });
+    /** Live souls on the channel — the one number that says 'people are here'. */
+    const souls = useLiveSouls();
 
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 20_000);
@@ -107,12 +110,16 @@ export default function OsHome({
                 email={email}
                 onLaunch={onLaunch}
                 rows={[
+                    {
+                        app: 'archive',
+                        hint: souls === null ? 'gather with other souls' : souls === 1 ? 'you are the first here' : 'souls in the room',
+                        value: souls === null ? null : String(souls),
+                    },
                     { app: 'truth', hint: 'guide' },
                     { app: 'chamber', hint: 'the house', value: `${house.seen}/${house.total}` },
                     { app: 'ledger', hint: 'daily word', value: email ? String(soul) : null, gated: true },
                     { app: 'updates', hint: bulletin?.title ? 'new dispatch' : 'dispatches' },
                     { app: 'media', hint: 'cinema', value: String(HOUSE_FILMS.length) },
-                    { app: 'archive', hint: 'the hall' },
                     { app: 'arcade', hint: 'three cabinets', gated: true },
                     { app: 'library', hint: 'scrolls' },
                     { app: 'soul', hint: 'vessel', gated: true },

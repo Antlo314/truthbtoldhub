@@ -1,7 +1,8 @@
 
-import { useLiveSouls } from '@/lib/truthos/liveSouls';"use client";
+"use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useLiveSouls } from '@/lib/truthos/liveSouls';
 import { 
     ArrowLeft, 
     Send, 

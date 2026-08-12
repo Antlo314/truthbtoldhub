@@ -5,7 +5,7 @@ import type { BloomEffect } from 'postprocessing';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Environment, PerformanceMonitor } from '@react-three/drei';
 import { PropDetailProvider } from './HouseProp';
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, N8AO, Vignette } from '@react-three/postprocessing';
 import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
 import { DaylightFill } from './HouseLights';
@@ -208,6 +208,24 @@ export default function HouseCanvas({
                 {!mobile && <BloomByDaylight effect={bloom} />}
                 {!mobile && (
                     <EffectComposer multisampling={4}>
+                        {/* Ambient occlusion first in the chain.
+                            Everything indoors met its neighbour on a hard
+                            unshaded seam - a single 48 m ContactShadows disc
+                            cannot darken where a wall meets a floor, where a
+                            sofa meets a rug, or under a counter. AO is the one
+                            pass that makes a room read as built rather than
+                            assembled. halfRes keeps the cost on the floor, and
+                            PerformanceMonitor's dpr governor is the safety
+                            valve if a weak desktop dips. */}
+                        <N8AO
+                            aoRadius={0.9}
+                            distanceFalloff={1.0}
+                            intensity={2.4}
+                            quality="medium"
+                            halfRes
+                            depthAwareUpsampling
+                            color="#0b0716"
+                        />
                         <Bloom
                             ref={attachBloom}
                             intensity={0.62}

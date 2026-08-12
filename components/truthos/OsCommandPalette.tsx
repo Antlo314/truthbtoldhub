@@ -21,6 +21,7 @@ import { APP_META, useTruthOs, type OsAppId } from './truthOsStore';
 import { useOsSystem } from './osSystemStore';
 import { ACCENT_STYLES, OsIconTile, getAppAccent } from './OsIcon';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 type CmdKind = 'app' | 'action' | 'file' | 'route' | 'math';
 
@@ -138,7 +139,7 @@ export default function OsCommandPalette({
 
         // Programs
         (Object.keys(APP_META) as OsAppId[]).forEach((app) => {
-            if (app === 'admin' && !sessionEmail) return;
+            if (app === 'admin' && !isAdminEmail(sessionEmail)) return;
             list.push({
                 id: `app:${app}`,
                 kind: 'app',

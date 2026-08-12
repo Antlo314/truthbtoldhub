@@ -93,6 +93,7 @@ const APPS: DockItem[] = [
 
 /** Desktop shortcut rail (visible behind windows, desktop only) */
 const DESKTOP_ICONS: OsAppId[] = [
+    'archive',
     'truth',
     'browser',
     'files',
@@ -585,7 +586,10 @@ export default function TruthOSShell({
             >
                 {/* Desktop shortcut rail — behind windows, desktop only */}
                 {!phone && openWindows.length > 0 && (
-                    <div className="absolute left-2 top-2 z-[2] flex flex-col gap-1 w-[76px]">
+                    <div
+                        className="absolute left-2 z-[2] flex flex-col gap-1 w-[76px]"
+                        style={{ top: 'calc(var(--os-menubar) + 0.5rem)' }}
+                    >
                         {DESKTOP_ICONS.map((app) => (
                             <button
                                 key={app}
@@ -640,8 +644,8 @@ export default function TruthOSShell({
                     is untouched. */}
                 {openWindows.length > 0 && (
                         <div
-                            className="absolute inset-x-0 top-0 z-[5] pointer-events-none [&>*]:pointer-events-auto"
-                            style={{ bottom: 'var(--os-taskbar)' }}
+                            className="absolute inset-x-0 z-[5] pointer-events-none [&>*]:pointer-events-auto"
+                            style={{ top: 'var(--os-menubar)', bottom: 'var(--os-taskbar)' }}
                         >
                             <AnimatePresence>
                                 {openWindows.map((w) => (

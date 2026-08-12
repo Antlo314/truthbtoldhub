@@ -413,16 +413,17 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
 
             {/* Forest band behind the wall */}
             <instancedMesh ref={trunkRef} args={[undefined, undefined, trees.length]} castShadow={sh} frustumCulled={false}>
-                <cylinderGeometry args={[0.32, 0.55, 7, low ? 5 : 7]} />
-                <primitive object={m.woodDark} attach="material" />
+                <cylinderGeometry args={[0.32, 0.55, 7, low ? 5 : 9]} />
+                {/* Bark, not the interior's dark furniture wood */}
+                <primitive object={m.bark} attach="material" />
             </instancedMesh>
             <instancedMesh ref={canopyRef} args={[undefined, undefined, trees.length]} castShadow={sh} frustumCulled={false}>
                 <icosahedronGeometry args={[1, 1]} />
                 <primitive object={mats.canopy} attach="material" />
             </instancedMesh>
             <instancedMesh ref={giantTrunkRef} args={[undefined, undefined, giants.length]} castShadow={sh} frustumCulled={false}>
-                <cylinderGeometry args={[0.5, 0.9, 7, 8]} />
-                <primitive object={m.woodDark} attach="material" />
+                <cylinderGeometry args={[0.5, 0.9, 7, 10]} />
+                <primitive object={m.bark} attach="material" />
             </instancedMesh>
             <instancedMesh ref={giantCanopyRef} args={[undefined, undefined, giants.length]} castShadow={sh} frustumCulled={false}>
                 <icosahedronGeometry args={[1, 1]} />

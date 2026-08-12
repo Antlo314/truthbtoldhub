@@ -222,6 +222,13 @@ function withDoor(
     x1: number, z1: number, x2: number, z2: number,
     gapC: number, gapW = DOOR, t = SHELL.t,
 ): Collider[] {
+    // seg() extends every run by t/2 at both ends to seal corners — but a
+    // stub's gap-facing end is not a corner, it is the door jamb. Left
+    // extended, every doorway was t (0.24 m) narrower to the BODY than to
+    // the EYE: a "1.2 m" door passed 0.96 m of collider, and players bumped
+    // invisible wall inside the visible opening. Pulling the gap-facing
+    // endpoint back by t/2 makes the collider edge sit exactly on the jamb.
+    const ext = t / 2;
     const horizontal = Math.abs(x2 - x1) > Math.abs(z2 - z1);
     if (horizontal) {
         DOORWAYS.push({ x: gapC, z: (z1 + z2) / 2, w: gapW, axis: 'x' });
@@ -229,14 +236,14 @@ function withDoor(
         // shorter than the wall's own thickness, which left an open gap
         // at the corner wherever a doorway sat near a wall end.
         return [
-            seg(x1, z1, gapC - gapW / 2, z2, t),
-            seg(gapC + gapW / 2, z1, x2, z2, t),
+            seg(x1, z1, gapC - gapW / 2 - ext, z2, t),
+            seg(gapC + gapW / 2 + ext, z1, x2, z2, t),
         ].filter((c) => c.hx > t / 2 + 0.001 && Math.abs(x2 - x1) > 0.02);
     }
     DOORWAYS.push({ x: (x1 + x2) / 2, z: gapC, w: gapW, axis: 'z' });
     return [
-        seg(x1, z1, x2, gapC - gapW / 2, t),
-        seg(x1, gapC + gapW / 2, x2, z2, t),
+        seg(x1, z1, x2, gapC - gapW / 2 - ext, t),
+        seg(x1, gapC + gapW / 2 + ext, x2, z2, t),
     ].filter((c) => c.hz > t / 2 + 0.001 && Math.abs(z2 - z1) > 0.02);
 }
 
