@@ -27,6 +27,7 @@ import { useFrame } from '@react-three/fiber';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import GrassField from './GrassField';
+import Grove from './Grove';
 import {
     CLEARING_R,
     CORRIDORS,
@@ -362,6 +363,11 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
             </mesh>
 
             <GrassField low={low} />
+
+            {/* Real trees in the band you walk through. The instanced
+                rings still carry the far wall, where a cylinder reads
+                fine; up close it only ever read as a cylinder. */}
+            <Grove low={low} />
 
             {/* Dirt strips — one per corridor, drawn from the same list the
                 walls and colliders part around */}
