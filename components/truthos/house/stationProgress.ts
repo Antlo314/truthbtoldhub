@@ -16,6 +16,7 @@ export const HOUSE_CORE: HotspotId[] = [
     'fireplace',
     'library',
     'hall',
+    'wall',
 ];
 
 export const HOUSE_EXTRA: HotspotId[] = [
@@ -28,6 +29,8 @@ export const HOUSE_EXTRA: HotspotId[] = [
     'back_door',
     'front_bench',
     'back_gate',
+    'mailbox',
+    'cineworks',
 ];
 
 export const STATION_LABELS: Record<HotspotId, string> = {
@@ -48,6 +51,8 @@ export const STATION_LABELS: Record<HotspotId, string> = {
     back_gate: 'Garden gate',
     mailbox: 'Mailbox',
     fireplace: 'Fireplace',
+    wall: 'The Mark',
+    cineworks: 'Cineworks table',
 };
 
 export function loadVisited(): Set<string> {

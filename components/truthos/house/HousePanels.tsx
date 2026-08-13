@@ -11,6 +11,7 @@ import StudioPanel from './StudioPanel';
 import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
 import CinemaPanel from './CinemaPanel';
 import NewspaperPanel from './NewspaperPanel';
+import WallPanel from './WallPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { hubAudio } from '@/lib/truthos/hubAudio';
@@ -25,7 +26,7 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
 });
 
 const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema' | 'news'>,
+    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema' | 'news' | 'wall'>,
     { title: string; accent: string; src: string; blurb: string }
 > = {
     library: {
@@ -57,6 +58,12 @@ const PANEL_META: Record<
         accent: 'text-amber-200',
         src: '/archive',
         blurb: 'Daily word and dispatches.',
+    },
+    cineworks: {
+        title: 'Cineworks',
+        accent: 'text-violet-200',
+        src: '/cineworks',
+        blurb: 'The catalog.',
     },
 };
 
@@ -280,6 +287,7 @@ export default function HousePanels() {
     if (panel === 'arcade') return <ArcadePanel onClose={onClose} />;
     if (panel === 'cinema') return <CinemaPanel onClose={onClose} />;
     if (panel === 'news') return <NewspaperPanel onClose={onClose} />;
+    if (panel === 'wall') return <WallPanel onClose={onClose} />;
     if (panel in PANEL_META) {
         return <FramePanel id={panel as keyof typeof PANEL_META} onClose={onClose} />;
     }

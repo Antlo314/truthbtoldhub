@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     Bell,
     Flame,
+    FolderOpen,
     LayoutPanelLeft,
     Power,
     RefreshCw,
@@ -55,54 +56,17 @@ import {
 } from './OsSystemUI';
 import OsCommandPalette from './OsCommandPalette';
 import { OsShortcutsSheet, OsWindowSwitcher } from './OsSwitcher';
+import {
+    FOLDER_META,
+    FOLDER_ORDER,
+    searchableServices,
+    servicesIn,
+    type OsFolderId,
+    type Service,
+} from '@/lib/truthos/services';
 
-type DockItem = {
-    app: OsAppId;
-    label: string;
-    adminOnly?: boolean;
-    guestOk?: boolean;
-};
-
-/** Hut home + full 2026 program suite */
-const APPS: DockItem[] = [
-    { app: 'truth', label: 'Guide', guestOk: true },
-    { app: 'ledger', label: 'Ledger' },
-    { app: 'soul', label: 'Soul' },
-    { app: 'arcade', label: 'Arcade' },
-    { app: 'offering', label: 'Offering' },
-    { app: 'archive', label: 'Hall', guestOk: true },
-    { app: 'library', label: 'Library', guestOk: true },
-    { app: 'updates', label: 'Updates', guestOk: true },
-    { app: 'browser', label: 'Browser', guestOk: true },
-    { app: 'media', label: 'Media', guestOk: true },
-    { app: 'music', label: 'Music', guestOk: true },
-    { app: 'photos', label: 'Photos', guestOk: true },
-    { app: 'tasks', label: 'To-Do', guestOk: true },
-    { app: 'terminal', label: 'Terminal', guestOk: true },
-    { app: 'files', label: 'Files', guestOk: true },
-    { app: 'clock', label: 'Clock', guestOk: true },
-    { app: 'taskmgr', label: 'Task Manager', guestOk: true },
-    { app: 'calculator', label: 'Calc', guestOk: true },
-    { app: 'paint', label: 'Paint', guestOk: true },
-    { app: 'notepad', label: 'Notepad', guestOk: true },
-    { app: 'account', label: 'Account' },
-    { app: 'settings', label: 'Settings', guestOk: true },
-    { app: 'chamber', label: 'Leave', guestOk: true },
-    { app: 'admin', label: 'Admin', adminOnly: true },
-];
-
-/** Desktop shortcut rail (visible behind windows, desktop only) */
-const DESKTOP_ICONS: OsAppId[] = [
-    'archive',
-    'truth',
-    'browser',
-    'files',
-    'media',
-    'photos',
-    'terminal',
-    'arcade',
-    'settings',
-];
+/** Desktop shortcut rail — three doors, not a second Start menu */
+const DESKTOP_ICONS: OsAppId[] = ['archive', 'truth', 'files'];
 
 const BOOT_LINES = [
     'Truth.OS UEFI · firmware OK',
@@ -182,6 +146,7 @@ export default function TruthOSShell({
     const [clock, setClock] = useState('');
     const [phone, setPhone] = useState(() => detectDevice() === 'phone');
     const [query, setQuery] = useState('');
+    const [startFolder, setStartFolder] = useState<OsFolderId | null>(null);
     const [switcher, setSwitcher] = useState<{ open: boolean; index: number }>({
         open: false,
         index: 0,
@@ -466,14 +431,18 @@ export default function TruthOSShell({
         };
     });
 
-    const visibleApps = APPS.filter((a) => !a.adminOnly || isAdmin);
-    const filteredApps = query.trim()
-        ? visibleApps.filter(
-              (a) =>
-                  a.label.toLowerCase().includes(query.trim().toLowerCase()) ||
-                  a.app.includes(query.trim().toLowerCase()),
+    const catalog = searchableServices({ admin: isAdmin });
+    const q = query.trim().toLowerCase();
+    const filteredServices = q
+        ? catalog.filter(
+              (s) =>
+                  s.label.toLowerCase().includes(q) ||
+                  s.hint.toLowerCase().includes(q) ||
+                  s.id.includes(q),
           )
-        : visibleApps;
+        : startFolder
+          ? servicesIn(startFolder, { admin: isAdmin })
+          : [];
     const deskWindows = windows.filter((w) => w.desktop === desktop);
     const openWindows = deskWindows.filter((w) => !w.minimized);
 
@@ -481,6 +450,21 @@ export default function TruthOSShell({
         openApp(app);
         setFlyout(null);
         setQuery('');
+        setStartFolder(null);
+        hubAudio.osWindowOpen();
+        sacredUi.click();
+    };
+
+    const launchService = (s: Service) => {
+        if (s.launch.kind === 'app') {
+            launch(s.launch.app);
+            return;
+        }
+        openApp('browser', { payload: { content: s.launch.path, name: s.launch.name } });
+        setFlyout(null);
+        setQuery('');
+        setStartFolder(null);
+        setStartOpen(false);
         hubAudio.osWindowOpen();
         sacredUi.click();
     };
@@ -730,8 +714,8 @@ export default function TruthOSShell({
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && filteredApps.length > 0) {
-                                            launch(filteredApps[0].app);
+                                        if (e.key === 'Enter' && filteredServices.length > 0) {
+                                            launchService(filteredServices[0]);
                                         }
                                     }}
                                     autoFocus={!phone}
@@ -749,25 +733,75 @@ export default function TruthOSShell({
                                 )}
                             </div>
                         </div>
+                        {startFolder && !q && (
+                            <div className="px-3 pt-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setStartFolder(null)}
+                                    className="text-[11px] text-white/50 hover:text-white min-h-[36px] px-1"
+                                >
+                                    ← {FOLDER_META[startFolder].label}
+                                </button>
+                            </div>
+                        )}
                         <div
                             className={`p-3 grid gap-2 overflow-y-auto flex-1 overscroll-contain ${
-                                phone ? 'grid-cols-4' : 'grid-cols-4'
+                                phone ? 'grid-cols-4' : 'grid-cols-3'
                             }`}
                             style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
                         >
-                            {filteredApps.map((d) => (
-                                <OsAppButton
-                                    key={d.app}
-                                    app={d.app}
-                                    label={d.label}
-                                    open={openAppIds.has(d.app)}
-                                    compact={phone}
-                                    onClick={() => launch(d.app)}
-                                />
-                            ))}
-                            {filteredApps.length === 0 && (
+                            {!q && !startFolder &&
+                                FOLDER_ORDER.map((id) => {
+                                    const meta = FOLDER_META[id];
+                                    return (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => {
+                                                setStartFolder(id);
+                                                sacredUi.click();
+                                            }}
+                                            className="flex flex-col items-center gap-1.5 rounded-xl p-2 hover:bg-white/10 border border-transparent hover:border-white/12 min-h-[72px] touch-manipulation"
+                                        >
+                                            <span className="w-11 h-11 rounded-[13px] border border-white/15 bg-white/8 flex items-center justify-center text-white/80">
+                                                <FolderOpen size={20} />
+                                            </span>
+                                            <span className="text-[11px] text-white/85 leading-tight text-center">
+                                                {meta.label}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            {(q || startFolder) &&
+                                filteredServices.map((s) =>
+                                    s.launch.kind === 'app' ? (
+                                        <OsAppButton
+                                            key={s.id}
+                                            app={s.launch.app}
+                                            label={s.label}
+                                            open={openAppIds.has(s.launch.app)}
+                                            compact={phone}
+                                            onClick={() => launchService(s)}
+                                        />
+                                    ) : (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => launchService(s)}
+                                            className="flex flex-col items-center gap-1.5 rounded-xl p-2 hover:bg-white/10 border border-transparent hover:border-white/12 min-h-[72px] touch-manipulation"
+                                        >
+                                            <span className="w-11 h-11 rounded-[13px] border border-cyan-400/30 bg-cyan-500/10 flex items-center justify-center text-cyan-200 text-[10px] font-mono">
+                                                ://
+                                            </span>
+                                            <span className="text-[11px] text-white/85 leading-tight text-center">
+                                                {s.label}
+                                            </span>
+                                        </button>
+                                    ),
+                                )}
+                            {(q || startFolder) && filteredServices.length === 0 && (
                                 <p className="col-span-full text-center text-[12px] text-white/40 py-6">
-                                    No programs match “{query}”.
+                                    {q ? `No programs match “${query}”.` : 'This folder is empty.'}
                                 </p>
                             )}
                         </div>
@@ -1056,6 +1090,7 @@ export default function TruthOSShell({
                 onLaunchpad={() => {
                     const next = !startOpen;
                     setStartOpen(next);
+                    if (!next) setStartFolder(null);
                     setFlyout(null);
                     if (next) hubAudio.osStartMenu();
                     else sacredUi.click();

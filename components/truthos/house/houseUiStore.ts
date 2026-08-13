@@ -14,7 +14,9 @@ export type HousePanelId =
     | 'offering'
     | 'studio'
     | 'arcade'
-    | 'news';
+    | 'news'
+    | 'wall'
+    | 'cineworks';
 
 type HouseUiState = {
     panel: HousePanelId | null;
@@ -34,7 +36,7 @@ type HouseUiState = {
     stopCinema: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v8';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v9';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -90,7 +92,7 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'The main floor',
-        body: 'Rec room, bedrooms and the garage. The computer at your desk boots Truth.OS; the arcade cabinet and the envelope on the table open their own rooms.',
+        body: 'Rec room, The Mark (west, one mark a year), and the garage. The computer at your desk boots Truth.OS; the arcade cabinet and the mail tray open their own rooms.',
         tip: 'Gold rings mark what opens',
     },
     {
@@ -99,8 +101,13 @@ export const WALKTHROUGH_STEPS = [
         tip: 'Follow the stair',
     },
     {
+        title: 'The Mark',
+        body: 'Once a year every soul may leave a small painting on the west-room plaster. Your name sits under it. It stays for everyone to see.',
+        tip: 'One email, one year',
+    },
+    {
         title: 'Out into the jungle',
-        body: 'Step outside and four paths leave the clearing: the Cinema Grove east, the Hall Stones west, the Mirror Pool southeast, the Signal Studio southwest.',
+        body: 'Step outside and four paths leave the clearing: the Cinema Grove east (films and Cineworks), the Hall Stones west, the Mirror Pool southeast, the Signal Studio southwest. An offering bowl sits on the front stoop.',
         tip: 'The wayfinder maps them',
     },
     {

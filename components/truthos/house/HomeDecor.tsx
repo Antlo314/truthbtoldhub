@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import HouseProp from './HouseProp';
 import { useHouseMaterials } from './HouseMaterials';
 import { DESK, MAIN_Y, SHELL, UPPER_Y, u } from './homeMap';
+import WallMural from './WallMural';
 
 const Z1 = SHELL.maxZ;
 const X1 = SHELL.maxX;
@@ -49,6 +50,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
 
     return (
         <group>
+            <WallMural />
             {/* ═══ REC ROOM — where you wake up ═══════════════ */}
             <On level="main" x={DESK.x} z={DESK.z}>
                 {/* The desk, facing the seat (player sits at z < desk) */}
@@ -93,7 +95,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="main" x={u(-4.2)} z={u(5.4)}>
+            <On level="main" x={u(-4.2)} z={u(6.55)}>
                 <HouseProp model="coffeeTable" fit={{ w: 1.1 }} >{null}</HouseProp>
             </On>
             <On level="main" x={u(-6.4)} z={u(7.3)}>
@@ -110,8 +112,8 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
             </On>
-            {/* Mail tray by the front door */}
-            <On level="main" x={u(-1.6)} z={u(6.9)}>
+            {/* Mail tray — north foyer, east of the front door */}
+            <On level="main" x={u(-0.1)} z={u(6.95)}>
                 <HouseProp model="sideTable" fit={{ w: 0.9 }}>
                     <mesh position={[0, 0.4, 0]} castShadow={sh}>
                         <boxGeometry args={[0.9, 0.8, 0.4]} />
@@ -137,18 +139,29 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 </HouseProp>
             </On>
 
-            {/* ═══ MAIN BEDROOMS ══════════════════════════════ */}
-            <On level="main" x={u(-5.9)} z={u(-2.4)}>
-                <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.1 }}>
-                    <mesh position={[0, 0.35, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.1, 0.7, 1.7]} />
-                        <primitive object={m.linen} attach="material" />
-                    </mesh>
-                </HouseProp>
+            {/* ═══ THE MARK — west room, plaster walls, one bench ══ */}
+            <On level="main" x={u(-3.55)} z={u(-3.4)}>
+                <mesh position={[0, 0.28, 0]} castShadow={sh}>
+                    <boxGeometry args={[0.46, 0.56, 1.3]} />
+                    <primitive object={m.wood} attach="material" />
+                </mesh>
             </On>
-            <On level="main" x={u(-6.4)} z={u(-3.9)}>
-                <HouseProp model="nightstand" fit={{ w: 0.55 }} >{null}</HouseProp>
-            </On>
+            {/* West mural wall */}
+            <mesh position={[X0 + 0.08, 1.55, (u(-4.4) + u(0.6)) / 2]} rotation={[0, Math.PI / 2, 0]}>
+                <planeGeometry args={[u(0.6) - u(-4.4) - 0.3, 2.2]} />
+                <primitive object={m.marble} attach="material" />
+            </mesh>
+            {/* South mural wall */}
+            <mesh position={[(X0 + u(-3.1)) / 2, 1.55, u(-4.4) + 0.08]}>
+                <planeGeometry args={[u(-3.1) - X0 - 0.3, 2.2]} />
+                <primitive object={m.marble} attach="material" />
+            </mesh>
+            {/* North mural wall (door is further east on this run — keep plaster west of it) */}
+            <mesh position={[(X0 + u(-6.8)) / 2, 1.55, u(0.6) - 0.08]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[u(-6.8) - X0 - 0.2, 2.2]} />
+                <primitive object={m.marble} attach="material" />
+            </mesh>
+
             <On level="main" x={u(-1.0)} z={u(-6.2)}>
                 <HouseProp model="bed" fit={{ w: 2.1 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
@@ -171,15 +184,13 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
 
             {/* ═══ UPPER — KITCHEN ════════════════════════════ */}
             <On level="upper" x={u(3.4)} z={u(-2.6)}>
-                {/* Island with stools */}
+                {/* Island with stools tucked under the north lip */}
                 <mesh position={[0, 0.5, 0]} castShadow={sh}>
-                    <boxGeometry args={[4.4, 1.0, 1.4]} />
-                    {/* Terrazzo worktop - the entry marble read as one stone
-                        for the whole house */}
+                    <boxGeometry args={[3.2, 1.0, 1.2]} />
                     <primitive object={m.counter} attach="material" />
                 </mesh>
-                {[-1.4, 0, 1.4].map((dx) => (
-                    <HouseProp key={dx} model="barStool" position={[dx, 0, 1.05]} fit={{ h: 0.75 }} >{null}</HouseProp>
+                {[-1.0, 0, 1.0].map((dx) => (
+                    <HouseProp key={dx} model="barStool" position={[dx, 0, 0.52]} fit={{ h: 0.75 }} >{null}</HouseProp>
                 ))}
             </On>
             {/* Counter run along the north wall */}
@@ -222,7 +233,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                         <HouseProp
                             key={i}
                             model="diningChair"
-                            position={[Math.cos(a) * 1.5, 0, Math.sin(a) * 1.5]}
+                            position={[Math.cos(a) * 1.05, 0, Math.sin(a) * 1.05]}
                             rotation={[0, -a + Math.PI / 2, 0]}
                             fit={{ h: 0.9 }}
                         >{null}</HouseProp>
@@ -353,7 +364,7 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
             {[
                 { level: 'upper' as const, x: u(6.6), z: u(3.5) },
                 { level: 'upper' as const, x: u(1.2), z: u(-4.0) },
-                { level: 'main' as const, x: u(-0.4), z: u(7.2) },
+                { level: 'main' as const, x: u(-6.4), z: u(4.2) },
             ].map((p, i) => (
                 <On key={i} level={p.level} x={p.x} z={p.z}>
                     <HouseProp model="pottedPlant" fit={{ h: 0.9 }} >{null}</HouseProp>

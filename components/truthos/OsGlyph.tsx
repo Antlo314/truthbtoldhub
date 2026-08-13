@@ -400,6 +400,8 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     browser: BrowserG,
     music: MusicG,
     tasks: TasksG,
+    wall: PaintG,
+    studio: MediaG,
 };
 
 export function OsGlyph({ app, size = 20 }: { app: OsAppId; size?: number }) {

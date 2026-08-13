@@ -13,8 +13,11 @@ const BOOKMARKS: { path: string; label: string }[] = [
     { path: '/library', label: 'Library' },
     { path: '/archive', label: 'The Hall' },
     { path: '/cinema', label: 'Cinema' },
+    { path: '/cineworks', label: 'Cineworks' },
     { path: '/codex', label: 'Codex' },
     { path: '/support', label: 'Support' },
+    { path: '/treasury', label: 'Treasury' },
+    { path: '/self', label: 'Soul page' },
 ];
 
 const HOME_PATH = '/library';

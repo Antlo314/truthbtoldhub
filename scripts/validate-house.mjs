@@ -44,7 +44,7 @@ try {
 function run(M) {
     const {
         FURNITURE, DOORWAYS, MAIN_DOORWAYS_END, STAIR, SHELL, ROOMS,
-        PLAYER_R, INTRO, collidersFor, roomsOn, artFootprints,
+        PLAYER_R, INTRO, collidersFor, roomsOn, artFootprints, AISLES,
     } = M;
     const fail = [];
     const R = PLAYER_R;
@@ -175,6 +175,18 @@ function run(M) {
             if (f.level !== room.level) continue;
             if (overlaps(band, f)) {
                 fail.push(`HALLWAY  ${room.level} "${f.name}" pinches the ${room.name} walking band`);
+            }
+        }
+    }
+
+    /* 3b ── lived-in room aisles ─────────────────────────────── */
+    if (Array.isArray(AISLES)) {
+        for (const a of AISLES) {
+            for (const f of FURNITURE) {
+                if (f.level !== a.level) continue;
+                if (overlaps(a, f)) {
+                    fail.push(`AISLE    ${a.level} "${f.name}" sits in the ${a.name} walk`);
+                }
             }
         }
     }

@@ -1,28 +1,21 @@
 'use client';
 
 /**
- * Truth.OS home.
+ * Truth.OS home — a room, not a directory.
  *
- * The old home was a grid of identical cards carrying a static one-line blurb —
- * every tile the same weight, nothing on it true. This replaces it with a
- * layout that has a hierarchy and shows live state: a hero strip that greets
- * you by the actual hour, and tiles that read real values (soul power, tier,
- * discoveries, the latest dispatch, reel count) so the desktop tells you
- * something instead of describing itself.
- *
- * Tiles vary in size and treatment on purpose — a flat uniform grid is what
- * made it look plain.
+ * Programs live in Start (Launchpad folders). The idle desktop greets you,
+ * shows two live numbers, and offers at most three doors. That is the
+ * breathing room: wallpaper, hour, and a way in — not twenty-one rows.
  */
-import { useEffect, useState } from 'react';
 import type { OsAppId } from './truthOsStore';
-import OsAppList from './OsAppList';
+import { OsIconTile, getAppIconMeta } from './OsIcon';
 import { useOsSystem } from './osSystemStore';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
-import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
-import { HOUSE_FILMS } from '@/lib/truthos/houseCinemaFilms';
-import { hutCompletion, HOUSE_CORE } from './house/stationProgress';
 import { useLiveSouls } from '@/lib/truthos/liveSouls';
+import { WALL_YEAR } from '@/lib/truthos/wallYear';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 function greeting(h: number): string {
     if (h < 5) return 'Still awake';
@@ -31,6 +24,12 @@ function greeting(h: number): string {
     if (h < 21) return 'Good evening';
     return 'Good night';
 }
+
+const RECENT: { app: OsAppId; hint: string }[] = [
+    { app: 'archive', hint: 'gather' },
+    { app: 'chamber', hint: 'the house' },
+    { app: 'wall', hint: 'one mark a year' },
+];
 
 export default function OsHome({
     email,
@@ -48,31 +47,39 @@ export default function OsHome({
     const snapshot = useOsSystem((s) => s.snapshot);
     const character = useGameStore((s) => s.character);
     const profile = useSoulStore((s) => s.profile);
-    const [now, setNow] = useState(() => new Date());
-    const [bulletin, setBulletin] = useState<Bulletin | null>(null);
-    /** Real house progress — stations this soul has actually opened. */
-    const [house, setHouse] = useState({ seen: 0, total: HOUSE_CORE.length });
-    /** Live souls on the channel — the one number that says 'people are here'. */
+    const now = new Date();
     const souls = useLiveSouls();
+    const [wallLine, setWallLine] = useState<string | null>(null);
 
     useEffect(() => {
-        const t = setInterval(() => setNow(new Date()), 20_000);
-        setHouse(hutCompletion());
-        fetchBulletins(1)
-            .then((b) => setBulletin(b[0] ?? null))
-            .catch(() => setBulletin(null));
-        return () => clearInterval(t);
-    }, []);
+        let alive = true;
+        const year = WALL_YEAR();
+        (async () => {
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            if (!token) {
+                if (alive) setWallLine('The wall has a space.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/wall/me', { headers: { Authorization: `Bearer ${token}` } });
+                const json = await res.json();
+                if (!alive) return;
+                setWallLine(json.marked ? 'Your mark still stands.' : `The wall has a space for ${year}.`);
+            } catch {
+                if (alive) setWallLine(null);
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [email]);
 
     const name = character?.name?.trim() || profile?.display_name || null;
     const soul = snapshot.soulPower;
-    // Next round hundred, so the ring always has somewhere to go
-    const soulTarget = Math.max(100, Math.ceil((soul + 1) / 100) * 100);
 
     return (
-        <div className="flex flex-col gap-4 pb-10">
-            {/* One quiet line, not a hero pane: who, when, and the only two
-                numbers that are actually live. */}
+        <div className={`flex flex-col gap-8 ${phone ? 'pt-2 pb-8' : 'pt-6 pb-10 max-w-md'}`}>
             <div className="flex items-baseline gap-3 flex-wrap">
                 <p className="text-[10px] uppercase tracking-[0.34em] text-emerald-300/90 font-mono font-semibold">
                     {greeting(now.getHours())}
@@ -103,40 +110,53 @@ export default function OsHome({
                 )}
             </div>
 
-            {/* The list. Live values ride their own row instead of each one
-                claiming a coloured pane of its own. */}
-            <OsAppList
-                phone={phone}
-                email={email}
-                onLaunch={onLaunch}
-                rows={[
-                    {
-                        app: 'archive',
-                        hint: souls === null ? 'gather with other souls' : souls === 1 ? 'you are the first here' : 'souls in the room',
-                        value: souls === null ? null : String(souls),
-                    },
-                    { app: 'truth', hint: 'guide' },
-                    { app: 'chamber', hint: 'the house', value: `${house.seen}/${house.total}` },
-                    { app: 'ledger', hint: 'daily word', value: email ? String(soul) : null, gated: true },
-                    { app: 'updates', hint: bulletin?.title ? 'new dispatch' : 'dispatches' },
-                    { app: 'media', group: 'Rooms', hint: 'cinema', value: String(HOUSE_FILMS.length) },
-                    { app: 'arcade', hint: 'three cabinets', gated: true },
-                    { app: 'library', hint: 'scrolls' },
-                    { app: 'soul', hint: 'vessel', gated: true },
-                    { app: 'browser', group: 'Tools', hint: 'codex · web' },
-                    { app: 'music', hint: 'sound' },
-                    { app: 'photos', hint: 'images' },
-                    { app: 'files', hint: 'documents' },
-                    { app: 'notepad', hint: 'notes' },
-                    { app: 'paint', hint: 'canvas' },
-                    { app: 'calculator', hint: 'sums' },
-                    { app: 'tasks', hint: 'to-do' },
-                    { app: 'clock', hint: 'time' },
-                    { app: 'terminal', hint: 'console' },
-                    { app: 'taskmgr', hint: 'system' },
-                    { app: 'settings', hint: 'preferences' },
-                ]}
-            />
+            <div className="flex items-baseline gap-6 text-white/45">
+                {souls !== null && (
+                    <p className="text-[12px]">
+                        <span className="text-white/80 font-medium tabular-nums">{souls}</span>
+                        <span className="ml-1.5">{souls === 1 ? 'soul here' : 'souls here'}</span>
+                    </p>
+                )}
+                {email && (
+                    <p className="text-[12px]">
+                        <span className="text-white/80 font-medium tabular-nums">{soul}</span>
+                        <span className="ml-1.5">soul power</span>
+                    </p>
+                )}
+            </div>
+
+            <ul className={phone ? 'grid grid-cols-1 gap-1' : 'flex flex-col gap-0.5 w-[248px]'}>
+                {RECENT.map(({ app, hint }) => {
+                    const meta = getAppIconMeta(app);
+                    return (
+                        <li key={app}>
+                            <button
+                                type="button"
+                                onClick={() => onLaunch(app)}
+                                className="group w-full flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-white/10 border border-transparent hover:border-white/12 transition-colors touch-manipulation min-h-[44px]"
+                            >
+                                <OsIconTile app={app} size="md" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block text-[13px] text-white/90 group-hover:text-white leading-tight truncate">
+                                        {meta.label}
+                                    </span>
+                                    <span className="block text-[10px] text-white/40 leading-tight truncate">
+                                        {hint}
+                                    </span>
+                                </span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+
+            {wallLine && (
+                <p className="text-[12px] text-amber-200/70">{wallLine}</p>
+            )}
+
+            <p className="text-[10px] uppercase tracking-[0.28em] text-white/25 font-mono">
+                {phone ? 'Dock · Launchpad for the rest' : 'Start holds the rest · six folders'}
+            </p>
         </div>
     );
 }

@@ -24,7 +24,9 @@ export type HotspotId =
     | 'front_bench'
     | 'back_gate'
     | 'fireplace'
-    | 'mailbox';
+    | 'mailbox'
+    | 'wall'
+    | 'cineworks';
 
 export type Hotspot = {
     id: HotspotId;

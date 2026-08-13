@@ -29,6 +29,8 @@ import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
 import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
+import WallApp from './WallApp';
+import StudioPanel from '@/components/truthos/house/StudioPanel';
 import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
 import { Lock } from 'lucide-react';
@@ -200,6 +202,7 @@ export function WebLinksApp() {
                     { href: '/codex', label: 'Codex', tag: 'study' },
                     { href: '/cineworks', label: 'Cineworks', tag: 'catalog' },
                     { href: '/self', label: 'Soul page', tag: 'profile' },
+                    { href: '/treasury', label: 'Treasury', tag: 'pool' },
                 ]}
             />
         </Panel>
@@ -354,9 +357,11 @@ export function SettingsApp({
     const wallpaper = useOsSystem((s) => s.wallpaper);
     const accent = useOsSystem((s) => s.accent);
     const nightLight = useOsSystem((s) => s.nightLight);
+    const wallNeighbor = useOsSystem((s) => s.wallNeighbor);
     const setWallpaper = useOsSystem((s) => s.setWallpaper);
     const setAccent = useOsSystem((s) => s.setAccent);
     const setNightLight = useOsSystem((s) => s.setNightLight);
+    const setWallNeighbor = useOsSystem((s) => s.setWallNeighbor);
     const snapshot = useOsSystem((s) => s.snapshot);
     const unlockedCount = OS_WALLPAPERS.filter((w) => isUnlocked(w, snapshot)).length;
 
@@ -526,6 +531,14 @@ export function SettingsApp({
                                 sacredUi.click();
                             }}
                         />
+                        <Row
+                            label="Wall neighbor marks"
+                            value={wallNeighbor ? 'On' : 'Off'}
+                            onClick={() => {
+                                setWallNeighbor(!wallNeighbor);
+                                sacredUi.click();
+                            }}
+                        />
                         {onEnterChamber && (
                             <Row label="Leave terminal → 3D world" onClick={onEnterChamber} />
                         )}
@@ -638,6 +651,14 @@ export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
             return <TasksApp />;
         case 'chamber':
             return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
+        case 'wall':
+            return <WallApp onEnterChamber={ctx.onEnterChamber} />;
+        case 'studio':
+            return (
+                <div className="h-full min-h-[280px] bg-zinc-950">
+                    <StudioPanel onClose={() => ctx.onExit?.()} />
+                </div>
+            );
         default:
             return (
                 <Panel>

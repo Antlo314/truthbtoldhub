@@ -29,6 +29,8 @@ export type OsAppId =
     | 'browser'
     | 'music'
     | 'tasks'
+    | 'wall'
+    | 'studio'
 ;
 
 export type BentoSlot =
@@ -68,6 +70,7 @@ export const PROTECTED_APPS = new Set<OsAppId>([
     'offering',
     'admin',
     'account',
+    'wall',
 ]);
 
 export function detectDevice(): 'desktop' | 'phone' {
@@ -180,6 +183,8 @@ export const APP_META: Record<
     browser: { title: 'Sanctum Browser', w: 820, h: 560, label: 'Browser', accent: 'cyan' },
     music: { title: 'Music', w: 620, h: 500, label: 'Music', accent: 'violet' },
     tasks: { title: 'To-Do', w: 520, h: 560, label: 'To-Do', accent: 'gold' },
+    wall: { title: 'The Wall', w: 640, h: 520, label: 'The Wall', accent: 'amber', protected: true },
+    studio: { title: 'Signal Studio', w: 560, h: 520, label: 'Studio', accent: 'rose' },
 };
 
 /** Preferred bento slot order when opening apps */

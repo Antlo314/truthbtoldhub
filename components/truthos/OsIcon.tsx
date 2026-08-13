@@ -30,6 +30,7 @@ import {
     Music,
     Newspaper,
     Palette,
+    Paintbrush,
     Settings,
     Shield,
     Sparkles,
@@ -153,6 +154,8 @@ const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId }> = {
     browser: { Icon: Globe, accent: 'cyan' },
     music: { Icon: Music, accent: 'violet' },
     tasks: { Icon: ListChecks, accent: 'gold' },
+    wall: { Icon: Paintbrush, accent: 'amber' },
+    studio: { Icon: Sparkles, accent: 'rose' },
 };
 
 export function getAppAccent(app: OsAppId): OsAccentId {

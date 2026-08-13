@@ -48,6 +48,8 @@ type OsTheme = {
     volume: number;
     /** Silences toasts; notifications still land in the centre */
     doNotDisturb: boolean;
+    /** Notify when a neighbor leaves a mark on The Wall */
+    wallNeighbor: boolean;
 };
 
 const DEFAULT_THEME: OsTheme = {
@@ -57,6 +59,7 @@ const DEFAULT_THEME: OsTheme = {
     nightLight: false,
     volume: 0.7,
     doNotDisturb: false,
+    wallNeighbor: true,
 };
 
 function loadTheme(): OsTheme {
@@ -88,6 +91,7 @@ function patchTheme(current: OsTheme, patch: Partial<OsTheme>): Partial<OsTheme>
         nightLight: current.nightLight,
         volume: current.volume,
         doNotDisturb: current.doNotDisturb,
+        wallNeighbor: current.wallNeighbor ?? true,
         ...patch,
     };
     persistTheme(next);
@@ -112,6 +116,7 @@ type OsSystemState = OsTheme & {
     setNightLight: (v: boolean) => void;
     setVolume: (v: number) => void;
     setDoNotDisturb: (v: boolean) => void;
+    setWallNeighbor: (v: boolean) => void;
 
     overlay: OsOverlay;
     setOverlay: (o: OsOverlay) => void;
@@ -150,6 +155,7 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
     setNightLight: (v) => set((s) => patchTheme(s, { nightLight: v })),
     setVolume: (v) => set((s) => patchTheme(s, { volume: Math.min(1, Math.max(0, v)) })),
     setDoNotDisturb: (v) => set((s) => patchTheme(s, { doNotDisturb: v })),
+    setWallNeighbor: (v) => set((s) => patchTheme(s, { wallNeighbor: v })),
 
     setOverlay: (o) => set({ overlay: o, flyout: null, ctxMenu: null }),
     setSnapshot: (snap) => set({ snapshot: snap }),

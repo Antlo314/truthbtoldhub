@@ -86,7 +86,7 @@ export const ROOMS: Room[] = [
     { id: 'foyer', name: 'Foyer', level: 'main', minX: W_E, maxX: C_E, minZ: u(2.3), maxZ: Z1 },
     { id: 'bath', name: 'Bath', level: 'main', minX: X0, maxX: W_E, minZ: u(0.6), maxZ: u(2.3) },
     { id: 'mud', name: 'Mud', level: 'main', minX: W_E, maxX: C_E, minZ: u(0.6), maxZ: u(2.3) },
-    { id: 'bed_w', name: 'Bedroom', level: 'main', minX: X0, maxX: u(-3.1), minZ: u(-4.4), maxZ: u(0.6) },
+    { id: 'bed_w', name: 'The Mark', level: 'main', minX: X0, maxX: u(-3.1), minZ: u(-4.4), maxZ: u(0.6) },
     { id: 'bed_n', name: 'Bedroom', level: 'main', minX: u(-3.1), maxX: u(1.27), minZ: Z0, maxZ: u(-4.4) },
     // The circulation spine: bedrooms -> mud -> foyer. It existed as
     // walkable space but had no room, therefore no floor.
@@ -283,9 +283,9 @@ export const MAIN_COLLIDERS: Collider[] = [
     // Rec / bath · bath / bedroom
     ...withDoor(X0, u(2.3), W_E, u(2.3), u(-4.0), 1.35),
     ...withDoor(X0, u(0.6), W_E, u(0.6), u(-5.6), 1.35),
-    // Bedrooms
+    // Bedrooms — The Mark opens off the hall, not only through the bath
     ...withDoor(u(-3.1), u(-4.4), u(1.27), u(-4.4), u(-1.0), 1.35),
-    seg(u(-3.1), u(-4.4), u(-3.1), u(0.6)),
+    ...withDoor(u(-3.1), u(-4.4), u(-3.1), u(0.6), u(-1.9), 1.4),
     // Mud / mech — and mech's south face, which was open to the corridor
     seg(C_E, u(0.6), u(1.27), u(0.6)),
     seg(C_E, u(-1.0), u(1.27), u(-1.0)),
@@ -375,28 +375,32 @@ export const FURNITURE: (Collider & { level: Level; name: string })[] = [
     /* ── MAIN: rec room ───────────────────────────────── */
     { name: 'desk', level: 'main', x: DESK.x, z: DESK.z, hx: 1.0, hz: 0.45 },
     { name: 'rec sofa', level: 'main', x: u(-4.2), z: u(7.2), hx: 1.25, hz: 0.5 },
-    { name: 'rec coffee table', level: 'main', x: u(-4.2), z: u(5.4), hx: 0.58, hz: 0.36 },
+    // Pulled against the sofa — used to sit on the desk→door line
+    { name: 'rec coffee table', level: 'main', x: u(-4.2), z: u(6.55), hx: 0.58, hz: 0.36 },
     { name: 'floor lamp', level: 'main', x: u(-6.4), z: u(7.3), hx: 0.22, hz: 0.22 },
     { name: 'arcade cabinet', level: 'main', x: u(-3.0), z: u(7.2), hx: 0.42, hz: 0.37 },
-    { name: 'rec side table', level: 'main', x: u(-1.6), z: u(6.9), hx: 0.46, hz: 0.36 },
+    // North foyer, east of the front door — clear of the stair mouth
+    { name: 'rec side table', level: 'main', x: u(-0.1), z: u(6.95), hx: 0.4, hz: 0.32 },
     { name: 'rec plant', level: 'main', x: u(-6.55), z: u(3.0), hx: 0.3, hz: 0.3 },
+    { name: 'rec plant south', level: 'main', x: u(-6.4), z: u(4.2), hx: 0.28, hz: 0.28 },
 
-    /* ── MAIN: bedrooms + bath ────────────────────────── */
-    { name: 'bed (west)', level: 'main', x: u(-5.9), z: u(-2.4), hx: 1.15, hz: 1.25 },
-    // Was at z u(-0.6), standing squarely in the bedroom doorway
-    { name: 'nightstand', level: 'main', x: u(-6.4), z: u(-3.9), hx: 0.3, hz: 0.3 },
+    /* ── MAIN: The Mark (was west bedroom) + north bedroom + bath ── */
+    // Bench on the door wall, not in the mural walk
+    { name: 'mark bench', level: 'main', x: u(-3.55), z: u(-3.4), hx: 0.28, hz: 0.7 },
     { name: 'bed (north)', level: 'main', x: u(-1.0), z: u(-6.2), hx: 1.25, hz: 1.15 },
     { name: 'dresser', level: 'main', x: u(0.6), z: u(-6.9), hx: 0.58, hz: 0.32 },
     { name: 'bath vanity', level: 'main', x: u(-6.2), z: u(1.4), hx: 0.88, hz: 0.42 },
 
     /* ── UPPER: kitchen ───────────────────────────────── */
-    { name: 'island', level: 'upper', x: u(3.4), z: u(-2.6), hx: 2.2, hz: 0.7 },
+    // Narrower island + stools tucked under the north lip (one footprint)
+    { name: 'island', level: 'upper', x: u(3.4), z: u(-2.6), hx: 1.6, hz: 0.78 },
     { name: 'counter run', level: 'upper', x: u(3.2), z: -SHELL.maxZ + 0.9, hx: 3.85, hz: 0.4 },
     { name: 'fridge', level: 'upper', x: u(1.6), z: u(-6.78), hx: 0.42, hz: 0.37 },
     { name: 'stove', level: 'upper', x: u(4.4), z: u(-6.78), hx: 0.47, hz: 0.34 },
 
     /* ── UPPER: dining + the Ledger ───────────────────── */
-    { name: 'dining table', level: 'upper', x: u(1.1), z: u(2.0), hx: 1.3, hz: 0.9 },
+    // Table + pulled-in chairs as one conversation group — east aisle stays ≥1.1 m
+    { name: 'dining table', level: 'upper', x: u(1.1), z: u(2.0), hx: 1.5, hz: 1.2 },
     // Was at x u(-0.3), overhanging the stair's top landing
     { name: 'sideboard (Ledger)', level: 'upper', x: u(0.2), z: u(3.3), hx: 0.98, hz: 0.28 },
 
@@ -449,10 +453,24 @@ export const ART: ArtSpec[] = [
     { art: 'artDomain', x: u(-2.7) + 0.16, y: 1.7, z: u(7.1), ry: Math.PI / 2, w: 1.6, h: 1.15 },
     { art: 'artAsWithin', x: u(-2.66) + 0.16, y: UPPER_Y + 1.8, z: u(4.6), ry: Math.PI / 2, w: 1.5, h: 1.1 },
     { art: 'artStillPoint', x: 0, y: UPPER_Y + 1.75, z: SHELL.minZ + 0.16, ry: 0, w: 1.9, h: 1.3 },
-    { art: 'artUnnamed', x: SHELL.minX + 0.16, y: 1.65, z: u(-2.2), ry: Math.PI / 2, w: 1.5, h: 1.1 },
 ];
 
 /** Art as floor footprints, for the doorway/stair clearance checks. */
+/**
+ * Clear walking bands through lived-in rooms (not just named halls).
+ * Furniture must not overlap these. Width is a 1.1 m body (0.55 half).
+ */
+export const AISLES: (Collider & { level: Level; name: string })[] = [
+    { name: 'rec desk to door', level: 'main', x: u(-4.05), z: u(5.2), hx: 2.5, hz: 0.55 },
+    { name: 'foyer throat', level: 'main', x: u(-1.2), z: u(7.6), hx: 0.7, hz: 2.0 },
+    { name: 'main hall spine', level: 'main', x: (u(-3.1) + C_E) / 2, z: (u(-4.4) + u(0.6)) / 2, hx: 0.55, hz: (u(0.6) - u(-4.4)) / 2 },
+    { name: 'kitchen north aisle', level: 'upper', x: u(4.2), z: u(-1.65), hx: 2.8, hz: 0.55 },
+    { name: 'kitchen south aisle', level: 'upper', x: u(4.2), z: u(-3.55), hx: 2.8, hz: 0.55 },
+    { name: 'dining east aisle', level: 'upper', x: u(2.35), z: u(2.0), hx: 0.55, hz: 1.3 },
+    { name: 'living pass', level: 'upper', x: u(3.1), z: u(1.1), hx: 0.55, hz: 1.8 },
+    { name: 'landing clear', level: 'upper', x: (u(-2.66) + u(-0.5)) / 2, z: (u(0.6) + u(1.7)) / 2, hx: 0.55, hz: 0.45 },
+];
+
 export function artFootprints(): (Collider & { name: string; level: Level })[] {
     return ART.map((a) => {
         const alongZ = Math.abs(Math.sin(a.ry)) > 0.5;
@@ -611,7 +629,9 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
     /* House — main floor */
     { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [u(-5.9), 1.2, u(5.6)], radius: 1.6, action: { type: 'os' } },
     { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [u(-4.2), 1.1, u(7.2)], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
-    { id: 'envelope', label: 'Mail tray', hint: 'Word from outside', level: 'main', position: [u(-1.6), 1.1, u(6.9)], radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'envelope', label: 'Mail tray', hint: 'Word from outside', level: 'main', position: [u(-0.1), 1.1, u(6.95)], radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'mailbox', label: 'Offering bowl', hint: 'Sustain the work', level: 'main', position: [u(0.4), 1.1, Z1 + 1.6], radius: 1.5, action: { type: 'panel', panel: 'offering' } },
+    { id: 'wall', label: 'The Mark', hint: 'One mark a year · it stays', level: 'main', position: [u(-6.8), 1.2, u(-1.9)], radius: 2.2, action: { type: 'panel', panel: 'wall' } },
     { id: 'front_door', label: 'Front door', hint: 'The clearing · the paths', level: 'main', position: [u(-1.2), 1.2, Z1 - 0.6], radius: 1.5, action: { type: 'soon', message: 'The door is open. The jungle holds four paths — the wall map upstairs shows them.' } },
 
     /* House — upper floor */
@@ -635,6 +655,19 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
             action: { type: 'panel', panel: meta.panel } as Hotspot['action'],
         };
     }),
+    /* Cineworks sits in the Cinema Grove — same clearing, second station */
+    (() => {
+        const c = destCenter(DESTINATIONS.find((d) => d.id === 'cinema')!);
+        return {
+            id: 'cineworks' as const,
+            label: 'Cineworks table',
+            hint: 'The catalog · posters',
+            level: 'main' as const,
+            position: [c.x + 4.2, 1.15, c.z - 2.4] as [number, number, number],
+            radius: 1.8,
+            action: { type: 'panel' as const, panel: 'cineworks' as const },
+        };
+    })(),
 ];
 
 export function hotspotWorldY(h: HomeHotspot): number {
