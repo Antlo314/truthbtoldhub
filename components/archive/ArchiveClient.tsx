@@ -24,6 +24,7 @@ export default function ArchiveClient() {
     } = useArchiveStore();
 
     const [isLoading, setIsLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     /** Signed-out soul reading the room — everything renders, nothing sends. */
     const [guestReading, setGuestReading] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
@@ -71,9 +72,10 @@ export default function ArchiveClient() {
                     }
                 } catch (e) {
                     console.error('guest hall load failed', e);
+                    setLoadFailed(true);
                 }
                 setIsLoading(false);
-            }, 1200);
+            }, 0);
             return () => clearTimeout(t);
         }
         if (initializedRef.current) return;
@@ -130,6 +132,7 @@ export default function ArchiveClient() {
                     setActiveWorkspaceId(sanctum.id);
                 }
             }
+            setIsLoading(false);
 
             // 3. Presence — global online + the Hall each soul is currently in.
             // `sync` carries the authoritative full state (fires on join/leave/track),
@@ -190,7 +193,6 @@ export default function ArchiveClient() {
                 .subscribe();
             channels.push(dmSub);
 
-            setIsLoading(false);
             // First-visit welcome + house rules.
             try { if (!localStorage.getItem('tbth-sanctum-welcomed')) setShowWelcome(true); } catch { /* */ }
         };
@@ -215,6 +217,29 @@ export default function ArchiveClient() {
             online_at: new Date().toISOString(),
         });
     }, [activeWorkspaceId]);
+
+    if (loadFailed && !isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-void">
+                <div className="flex flex-col items-center px-6 text-center gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.45em] text-aether-gold/60">The Hall</p>
+                    <p className="text-zinc-400 text-sm">The chamber did not open.</p>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setLoadFailed(false);
+                            setIsLoading(true);
+                            initializedRef.current = false;
+                            window.location.reload();
+                        }}
+                        className="px-4 py-2 rounded-xl border border-white/20 text-white/80 text-sm min-h-[44px]"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

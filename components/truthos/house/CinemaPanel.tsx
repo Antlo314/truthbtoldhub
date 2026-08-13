@@ -66,6 +66,19 @@ export default function CinemaPanel({ onClose }: { onClose: () => void }) {
                     </button>
                 </header>
 
+                {HOUSE_FILMS.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                        <p className="text-white/80 text-lg">Nothing on the reel.</p>
+                        <p className="text-white/45 text-sm">The grove is dark until a film is hung.</p>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-xl border border-white/20 text-white/80 text-sm min-h-[44px]"
+                        >
+                            Close
+                        </button>
+                    </div>
+                ) : (
                 <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[1fr_280px]">
                     {/* Player */}
                     <div className="relative bg-black flex flex-col min-h-[40vh] md:min-h-0">
@@ -160,6 +173,7 @@ export default function CinemaPanel({ onClose }: { onClose: () => void }) {
                         </ul>
                     </div>
                 </div>
+                )}
             </div>
         </div>
     );

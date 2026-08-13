@@ -1,48 +1,35 @@
 'use client';
 
 /**
- * Furnishing the Safe House — every room lived-in.
- *
- * Kenney CC0 furniture through the existing HouseProp pipeline (each
- * prop keeps a primitive fallback, so a missing model never leaves a
- * hole). Positions ride the same u() scale as the plan.
- *
- * The rec-room desk matters most: it is where every session BEGINS —
- * the player wakes sitting in front of this monitor, and the monitor's
- * glow is the first light they see. The bookshelf wall in the living
- * room is the Library; the sideboard against the dining wall carries
- * the Ledger — the Daily Word, off the floor, onto furniture.
+ * One-storey furnishings. Every prop here has a FURNITURE collider.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import HouseProp from './HouseProp';
 import { useHouseMaterials } from './HouseMaterials';
-import { DESK, MAIN_Y, SHELL, UPPER_Y, u } from './homeMap';
+import { DESK, MAIN_Y, SHELL, u } from './homeMap';
 import WallMural from './WallMural';
 
-const Z1 = SHELL.maxZ;
-const X1 = SHELL.maxX;
 const X0 = SHELL.minX;
+const X1 = SHELL.maxX;
+const Z0 = SHELL.minZ;
+const Z1 = SHELL.maxZ;
 
-/** A prop standing on a storey's floor */
 function On({
-    level,
     x,
     z,
     children,
 }: {
-    level: 'main' | 'upper';
     x: number;
     z: number;
     children: React.ReactNode;
 }) {
-    return <group position={[x, level === 'upper' ? UPPER_Y : MAIN_Y, z]}>{children}</group>;
+    return <group position={[x, MAIN_Y, z]}>{children}</group>;
 }
 
 export default function HomeDecor({ low = false }: { low?: boolean }) {
     const m = useHouseMaterials(low);
     const sh = !low;
-
     const screenGlow = useMemo(
         () => new THREE.MeshBasicMaterial({ color: '#8ff2ff', toneMapped: false }),
         [],
@@ -51,9 +38,9 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
     return (
         <group>
             <WallMural />
-            {/* ═══ REC ROOM — where you wake up ═══════════════ */}
-            <On level="main" x={DESK.x} z={DESK.z}>
-                {/* The desk, facing the seat (player sits at z < desk) */}
+
+            {/* Rec — wake at the desk */}
+            <On x={DESK.x} z={DESK.z}>
                 <group rotation={[0, Math.PI, 0]}>
                     <HouseProp model="desk" position={[0, 0, 0]} fit={{ w: 1.8 }}>
                         <mesh position={[0, 0.38, 0]} castShadow={sh}>
@@ -70,15 +57,13 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <HouseProp model="keyboard" position={[0, 0.79, 0.22]} fit={{ w: 0.42 }} >{null}</HouseProp>
                     <HouseProp model="mouse" position={[0.32, 0.79, 0.22]} fit={{ w: 0.07 }} >{null}</HouseProp>
                 </group>
-                {/* The live screen — the room's light source */}
                 <mesh position={[0, DESK.monitorY, 0.28]} rotation={[0, Math.PI, 0]}>
                     <planeGeometry args={[0.56, 0.34]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
                 {!low && (
-                    <pointLight position={[0, 1.4, -0.6]} intensity={1.7} color="#8ff2ff" distance={5} decay={2} />
+                    <pointLight position={[0, 1.4, -0.6]} intensity={1.5} color="#8ff2ff" distance={5} decay={2} />
                 )}
-                {/* The chair you rise from */}
                 <HouseProp model="deskChair" position={[0, 0, -1.05]} rotation={[0, Math.PI, 0]}>
                     <mesh position={[0, 0.45, 0]} castShadow={sh}>
                         <boxGeometry args={[0.5, 0.9, 0.5]} />
@@ -86,144 +71,181 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </mesh>
                 </HouseProp>
             </On>
-
-            <On level="main" x={u(-4.2)} z={u(7.2)}>
-                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 2.4 }}>
+            <On x={u(-4.1)} z={u(7.15)}>
+                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 2.2 }}>
                     <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.4, 0.8, 1.0]} />
+                        <boxGeometry args={[2.2, 0.8, 0.95]} />
                         <primitive object={m.fabric} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="main" x={u(-4.2)} z={u(6.55)}>
-                <HouseProp model="coffeeTable" fit={{ w: 1.1 }} >{null}</HouseProp>
+            <On x={u(-4.1)} z={u(6.5)}>
+                <HouseProp model="coffeeTable" fit={{ w: 1.0 }} >{null}</HouseProp>
             </On>
-            <On level="main" x={u(-6.4)} z={u(7.3)}>
+            <On x={u(-6.35)} z={u(7.25)}>
                 <HouseProp model="floorLamp" fit={{ h: 1.5 }} >{null}</HouseProp>
             </On>
-            <On level="main" x={u(-3.0)} z={u(7.2)}>
-                {/* Arcade cabinet — a tall dark box with a glowing marquee */}
+            <On x={u(-3.05)} z={u(7.15)}>
                 <mesh position={[0, 0.9, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.8, 1.8, 0.7]} />
+                    <boxGeometry args={[0.72, 1.8, 0.62]} />
                     <primitive object={m.metalDark} attach="material" />
                 </mesh>
-                <mesh position={[0, 1.35, 0.36]}>
-                    <planeGeometry args={[0.6, 0.45]} />
+                <mesh position={[0, 1.35, 0.32]}>
+                    <planeGeometry args={[0.55, 0.4]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
             </On>
-            {/* Mail tray — north foyer, east of the front door */}
-            <On level="main" x={u(-0.1)} z={u(6.95)}>
-                <HouseProp model="sideTable" fit={{ w: 0.9 }}>
+            <On x={u(-6.45)} z={u(3.1)}>
+                <HouseProp model="pottedPlant" fit={{ h: 1.0 }} >{null}</HouseProp>
+            </On>
+            <On x={u(-4.5)} z={u(6.3)}>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                    <planeGeometry args={[3.2, 2.2]} />
+                    <primitive object={m.rug} attach="material" />
+                </mesh>
+            </On>
+
+            {/* Foyer — Daily Word */}
+            <On x={u(1.15)} z={u(6.9)}>
+                <HouseProp model="sideTable" fit={{ w: 0.8 }}>
                     <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[0.9, 0.8, 0.4]} />
+                        <boxGeometry args={[0.76, 0.78, 0.38]} />
                         <primitive object={m.wood} attach="material" />
                     </mesh>
                 </HouseProp>
-                <mesh position={[0, 0.84, 0]} rotation={[0, 0.4, 0]}>
-                    <boxGeometry args={[0.32, 0.02, 0.22]} />
+                <mesh position={[0, 0.84, 0]} rotation={[0, 0.3, 0]}>
+                    <boxGeometry args={[0.3, 0.02, 0.2]} />
                     <primitive object={m.book} attach="material" />
                 </mesh>
             </On>
-            <On level="main" x={u(-6.55)} z={u(3.0)}>
-                <HouseProp model="pottedPlant" fit={{ h: 1.0 }} >{null}</HouseProp>
-            </On>
 
-            {/* Rugs ground the rooms */}
-            <On level="main" x={u(-4.6)} z={u(6.2)}>
-                <HouseProp model="rugRect" fit={{ w: 3.6 }}>
-                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-                        <planeGeometry args={[3.6, 2.6]} />
-                        <primitive object={m.rug} attach="material" />
-                    </mesh>
-                </HouseProp>
-            </On>
+            {/* The Mark — explicit open doorway (no brick in the hole) */}
+            <mesh position={[u(-2.55), 1.15, u(-1.9)]} rotation={[0, Math.PI / 2, 0]}>
+                <planeGeometry args={[1.65, 2.25]} />
+                <meshBasicMaterial color="#0b0a09" />
+            </mesh>
 
-            {/* ═══ THE MARK — west room, plaster walls, one bench ══ */}
-            <On level="main" x={u(-3.55)} z={u(-3.4)}>
+            {/* The Mark */}
+            <On x={u(-3.05)} z={u(-3.35)}>
                 <mesh position={[0, 0.28, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.46, 0.56, 1.3]} />
+                    <boxGeometry args={[0.46, 0.56, 1.25]} />
                     <primitive object={m.wood} attach="material" />
                 </mesh>
             </On>
-            {/* West mural wall */}
-            <mesh position={[X0 + 0.08, 1.55, (u(-4.4) + u(0.6)) / 2]} rotation={[0, Math.PI / 2, 0]}>
-                <planeGeometry args={[u(0.6) - u(-4.4) - 0.3, 2.2]} />
+            <mesh position={[X0 + 0.08, 1.55, (u(-4.2) + u(0.5)) / 2]} rotation={[0, Math.PI / 2, 0]}>
+                <planeGeometry args={[u(0.5) - u(-4.2) - 0.35, 2.15]} />
                 <primitive object={m.marble} attach="material" />
             </mesh>
-            {/* South mural wall */}
-            <mesh position={[(X0 + u(-3.1)) / 2, 1.55, u(-4.4) + 0.08]}>
-                <planeGeometry args={[u(-3.1) - X0 - 0.3, 2.2]} />
-                <primitive object={m.marble} attach="material" />
-            </mesh>
-            {/* North mural wall (door is further east on this run — keep plaster west of it) */}
-            <mesh position={[(X0 + u(-6.8)) / 2, 1.55, u(0.6) - 0.08]} rotation={[0, Math.PI, 0]}>
-                <planeGeometry args={[u(-6.8) - X0 - 0.2, 2.2]} />
+            <mesh position={[(X0 + u(-2.55)) / 2, 1.55, u(-4.2) + 0.08]}>
+                <planeGeometry args={[u(-2.55) - X0 - 0.35, 2.15]} />
                 <primitive object={m.marble} attach="material" />
             </mesh>
 
-            <On level="main" x={u(-1.0)} z={u(-6.2)}>
-                <HouseProp model="bed" fit={{ w: 2.1 }}>
+            {/* Bath + spare */}
+            <On x={u(-6.15)} z={u(1.3)}>
+                <mesh position={[0, 0.3, 0]} castShadow={sh}>
+                    <boxGeometry args={[1.55, 0.58, 0.72]} />
+                    <primitive object={m.marble} attach="material" />
+                </mesh>
+            </On>
+            <On x={u(-5.7)} z={u(-6.15)}>
+                <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.0 }}>
                     <mesh position={[0, 0.35, 0]} castShadow={sh}>
-                        <boxGeometry args={[1.7, 0.7, 2.1]} />
+                        <boxGeometry args={[2.0, 0.68, 1.55]} />
                         <primitive object={m.linen} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="main" x={u(0.6)} z={u(-6.9)}>
-                <HouseProp model="dresser" fit={{ w: 1.1 }} >{null}</HouseProp>
-            </On>
 
-            {/* Bath fixtures — simple volumes read as a bath at a glance */}
-            <On level="main" x={u(-6.2)} z={u(1.4)}>
-                <mesh position={[0, 0.3, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.7, 0.6, 0.8]} />
-                    <primitive object={m.marble} attach="material" />
+            {/* Living — library + fire */}
+            <On x={u(5.4)} z={u(2.4)}>
+                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 2.8 }}>
+                    <mesh position={[0, 0.4, 0]} castShadow={sh}>
+                        <boxGeometry args={[2.8, 0.78, 1.05]} />
+                        <primitive object={m.fabric} attach="material" />
+                    </mesh>
+                </HouseProp>
+            </On>
+            <On x={u(5.4)} z={u(0.85)}>
+                <HouseProp model="coffeeTable" fit={{ w: 1.2 }} >{null}</HouseProp>
+            </On>
+            <On x={u(6.0)} z={u(3.4)}>
+                <HouseProp model="accentChair" rotation={[0, -1.1, 0]} fit={{ w: 0.85 }} >{null}</HouseProp>
+            </On>
+            {[u(0.8), u(2.1), u(3.4)].map((z, i) => (
+                <On key={i} x={X1 - 0.52} z={z}>
+                    <HouseProp model={i === 1 ? 'bookcaseOpen' : 'bookcaseClosed'} rotation={[0, -Math.PI / 2, 0]} fit={{ h: 2.15 }}>
+                        <mesh position={[0, 1.08, 0]} castShadow={sh}>
+                            <boxGeometry args={[0.38, 2.15, 1.05]} />
+                            <primitive object={m.woodDark} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </On>
+            ))}
+            <On x={X1 - 0.5} z={u(-0.2)}>
+                <mesh position={[0, 1.25, 0]} castShadow={sh}>
+                    <boxGeometry args={[0.62, 2.5, 1.4]} />
+                    <primitive object={m.stone} attach="material" />
+                </mesh>
+                <mesh position={[-0.34, 0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                    <planeGeometry args={[0.8, 0.55]} />
+                    <meshBasicMaterial color="#ff9a3d" toneMapped={false} />
+                </mesh>
+                {!low && (
+                    <pointLight position={[-0.7, 0.75, 0]} intensity={1.6} color="#ff9a3d" distance={6} decay={2} />
+                )}
+            </On>
+            <On x={u(5.4)} z={u(1.6)}>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                    <planeGeometry args={[4.0, 3.0]} />
+                    <primitive object={m.rug} attach="material" />
                 </mesh>
             </On>
 
-            {/* ═══ UPPER — KITCHEN ════════════════════════════ */}
-            <On level="upper" x={u(3.4)} z={u(-2.6)}>
-                {/* Island with stools tucked under the north lip */}
-                <mesh position={[0, 0.5, 0]} castShadow={sh}>
-                    <boxGeometry args={[3.2, 1.0, 1.2]} />
+            {/* Kitchen + codex */}
+            <On x={u(5.2)} z={u(-3.4)}>
+                <mesh position={[0, 0.48, 0]} castShadow={sh}>
+                    <boxGeometry args={[2.8, 0.96, 1.2]} />
                     <primitive object={m.counter} attach="material" />
                 </mesh>
-                {[-1.0, 0, 1.0].map((dx) => (
-                    <HouseProp key={dx} model="barStool" position={[dx, 0, 0.52]} fit={{ h: 0.75 }} >{null}</HouseProp>
+                {[-0.85, 0, 0.85].map((dx) => (
+                    <HouseProp key={dx} model="barStool" position={[dx, 0, 0.48]} fit={{ h: 0.72 }} >{null}</HouseProp>
                 ))}
             </On>
-            {/* Counter run along the north wall */}
-            <On level="upper" x={u(3.2)} z={Z1 * 0 - SHELL.maxZ + 0.9}>
-                <mesh position={[0, 0.48, 0]} castShadow={sh}>
-                    <boxGeometry args={[7.6, 0.96, 0.75]} />
+            <On x={u(5.0)} z={Z0 + 0.85}>
+                <mesh position={[0, 0.46, 0]} castShadow={sh}>
+                    <boxGeometry args={[6.2, 0.92, 0.7]} />
                     <primitive object={m.woodDark} attach="material" />
                 </mesh>
-                <mesh position={[0, 0.98, 0]}>
-                    <boxGeometry args={[7.6, 0.05, 0.8]} />
+                <mesh position={[0, 0.94, 0]}>
+                    <boxGeometry args={[6.2, 0.05, 0.74]} />
                     <primitive object={m.counter} attach="material" />
                 </mesh>
             </On>
-            <On level="upper" x={u(1.6)} z={u(-6.78)}>
-                <HouseProp model="fridge" fit={{ h: 1.9 }}>
-                    <mesh position={[0, 0.95, 0]} castShadow={sh}>
-                        <boxGeometry args={[0.9, 1.9, 0.8]} />
+            <On x={u(3.4)} z={Z0 + 0.85}>
+                <HouseProp model="fridge" fit={{ h: 1.85 }}>
+                    <mesh position={[0, 0.92, 0]} castShadow={sh}>
+                        <boxGeometry args={[0.82, 1.85, 0.7]} />
                         <primitive object={m.metal} attach="material" />
                     </mesh>
                 </HouseProp>
             </On>
-            <On level="upper" x={u(4.4)} z={u(-6.78)}>
-                <HouseProp model="kitchenStove" fit={{ w: 0.9 }} >{null}</HouseProp>
-            </On>
-            <On level="upper" x={u(5.6)} z={u(-6.9)}>
-                <HouseProp model="coffeeMachine" position={[0, 1.0, 0]} fit={{ w: 0.35 }} >{null}</HouseProp>
+            <On x={u(3.5)} z={u(-2.2)}>
+                <mesh position={[0, 0.48, 0]} castShadow={sh}>
+                    <boxGeometry args={[1.0, 0.96, 0.46]} />
+                    <primitive object={m.woodDark} attach="material" />
+                </mesh>
+                <mesh position={[0, 1.2, 0]} rotation={[-0.1, 0, 0]}>
+                    <planeGeometry args={[0.62, 0.4]} />
+                    <primitive object={screenGlow} attach="material" />
+                </mesh>
             </On>
 
-            {/* ═══ UPPER — DINING + THE LEDGER ════════════════ */}
-            <On level="upper" x={u(1.1)} z={u(2.0)}>
-                <HouseProp model="diningTable" fit={{ w: 1.9 }}>
+            {/* Dining + Ledger */}
+            <On x={u(-0.3)} z={u(-5.8)}>
+                <HouseProp model="diningTable" fit={{ w: 1.8 }}>
                     <mesh position={[0, 0.38, 0]} castShadow={sh}>
-                        <cylinderGeometry args={[0.95, 0.9, 0.76, 12]} />
+                        <cylinderGeometry args={[0.88, 0.84, 0.74, 12]} />
                         <primitive object={m.wood} attach="material" />
                     </mesh>
                 </HouseProp>
@@ -233,151 +255,30 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                         <HouseProp
                             key={i}
                             model="diningChair"
-                            position={[Math.cos(a) * 1.05, 0, Math.sin(a) * 1.05]}
+                            position={[Math.cos(a) * 1.02, 0, Math.sin(a) * 1.02]}
                             rotation={[0, -a + Math.PI / 2, 0]}
-                            fit={{ h: 0.9 }}
+                            fit={{ h: 0.88 }}
                         >{null}</HouseProp>
                     );
                 })}
             </On>
-            {/* The sideboard — the Daily Word lives HERE now, against the
-                wall, not in the middle of the floor */}
-            <On level="upper" x={u(0.2)} z={u(3.3)}>
-                <mesh position={[0, 0.45, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.9, 0.9, 0.5]} />
+            <On x={u(-0.3)} z={Z0 + 0.55}>
+                <mesh position={[0, 0.44, 0]} castShadow={sh}>
+                    <boxGeometry args={[1.85, 0.88, 0.48]} />
                     <primitive object={m.woodDark} attach="material" />
                 </mesh>
-                <mesh position={[-0.1, 0.95, 0]} rotation={[-0.14, 0.25, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.4, 0.06, 0.3]} />
+                <mesh position={[-0.1, 0.93, 0]} rotation={[-0.12, 0.2, 0]} castShadow={sh}>
+                    <boxGeometry args={[0.38, 0.05, 0.28]} />
                     <primitive object={m.leather} attach="material" />
                 </mesh>
-                <mesh position={[-0.08, 0.99, 0.01]} rotation={[-0.14, 0.25, 0]}>
-                    <boxGeometry args={[0.32, 0.012, 0.23]} />
-                    <primitive object={m.book} attach="material" />
-                </mesh>
-                <HouseProp model="tableLamp" position={[0.65, 0.9, 0]} fit={{ h: 0.45 }} >{null}</HouseProp>
             </On>
 
-            {/* ═══ UPPER — LIVING: THE BOOKSHELF WALL ═════════ */}
-            {/* The Library — a full wall of shelves on the east side */}
-            {[u(0.1), u(1.3), u(2.5)].map((z, i) => (
-                <On key={i} level="upper" x={X1 - 0.55} z={z}>
-                    <HouseProp
-                        model={i === 1 ? 'bookcaseOpen' : 'bookcaseClosed'}
-                        rotation={[0, -Math.PI / 2, 0]}
-                        fit={{ h: 2.2 }}
-                    >
-                        <mesh position={[0, 1.1, 0]} castShadow={sh}>
-                            <boxGeometry args={[0.4, 2.2, 1.1]} />
-                            <primitive object={m.woodDark} attach="material" />
-                        </mesh>
-                    </HouseProp>
-                    <HouseProp model="booksStack" position={[-0.35, 1.15, 0]} fit={{ w: 0.3 }} >{null}</HouseProp>
-                </On>
-            ))}
-
-            <On level="upper" x={u(4.6)} z={u(1.6)}>
-                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 3.0 }}>
-                    <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[3.0, 0.8, 1.1]} />
-                        <primitive object={m.fabric} attach="material" />
-                    </mesh>
-                </HouseProp>
-            </On>
-            <On level="upper" x={u(4.6)} z={u(-0.1)}>
-                <HouseProp model="coffeeTable" fit={{ w: 1.3 }} >{null}</HouseProp>
-            </On>
-            <On level="upper" x={u(6.2)} z={u(3.2)}>
-                <HouseProp model="accentChair" rotation={[0, -Math.PI / 1.6, 0]} fit={{ w: 0.9 }} >{null}</HouseProp>
-            </On>
-            {/* Fireplace mass on the east wall, south of the shelves */}
-            <On level="upper" x={X1 - 0.52} z={u(-0.9)}>
-                <mesh position={[0, 1.3, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.7, 2.6, 1.6]} />
-                    <primitive object={m.stone} attach="material" />
-                </mesh>
-                <mesh position={[-0.36, 0.62, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                    <planeGeometry args={[0.9, 0.6]} />
-                    <meshBasicMaterial color="#ff9a3d" toneMapped={false} />
-                </mesh>
-                {!low && (
-                    <pointLight position={[-0.8, 0.8, 0]} intensity={1.9} color="#ff9a3d" distance={7} decay={2} />
-                )}
-            </On>
-            {/* Living rug */}
-            <On level="upper" x={u(4.6)} z={u(0.8)}>
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-                    <planeGeometry args={[4.6, 3.4]} />
-                    <primitive object={m.rug} attach="material" />
-                </mesh>
-            </On>
-
-            {/* ═══ UPPER — CODEX niche in the kitchen's east end ═ */}
-            <On level="upper" x={u(2.6)} z={u(-4.0)}>
-                <mesh position={[0, 0.5, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.1, 1.0, 0.5]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-                <mesh position={[0, 1.25, 0]} rotation={[-0.1, 0, 0]}>
-                    <planeGeometry args={[0.7, 0.45]} />
-                    <primitive object={screenGlow} attach="material" />
-                </mesh>
-            </On>
-
-            {/* ═══ UPPER — WALL MAP on the landing ════════════ */}
-            <On level="upper" x={u(-2.55)} z={u(2.2)}>
-                <mesh rotation={[0, Math.PI / 2, 0]} position={[0, 1.5, 0]}>
-                    <planeGeometry args={[1.6, 1.1]} />
-                    <primitive object={m.book} attach="material" />
-                </mesh>
-                <mesh rotation={[0, Math.PI / 2, 0]} position={[0.02, 1.5, 0]}>
-                    <planeGeometry args={[1.7, 1.2]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-            </On>
-
-            {/* ═══ UPPER — MASTER ═════════════════════════════ */}
-            <On level="upper" x={u(-5.2)} z={u(5.6)}>
-                <HouseProp model="bed" rotation={[0, Math.PI, 0]} fit={{ w: 2.4 }}>
-                    <mesh position={[0, 0.35, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.4, 0.7, 2.2]} />
-                        <primitive object={m.linen} attach="material" />
-                    </mesh>
-                </HouseProp>
-            </On>
-            {[u(-6.55), u(-3.7)].map((x, i) => (
-                <On key={i} level="upper" x={x} z={u(6.8)}>
-                    <HouseProp model="bedsideTable" fit={{ w: 0.55 }} >{null}</HouseProp>
-                    <HouseProp model="tableLamp" position={[0, 0.55, 0]} fit={{ h: 0.4 }} >{null}</HouseProp>
-                </On>
-            ))}
-            <On level="upper" x={u(-3.95)} z={u(-2.8)}>
-                <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.0 }}>
-                    <mesh position={[0, 0.35, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.0, 0.7, 1.6]} />
-                        <primitive object={m.linen} attach="material" />
-                    </mesh>
-                </HouseProp>
-            </On>
-
-            {/* Plants soften the corners */}
-            {[
-                { level: 'upper' as const, x: u(6.6), z: u(3.5) },
-                { level: 'upper' as const, x: u(1.2), z: u(-4.0) },
-                { level: 'main' as const, x: u(-6.4), z: u(4.2) },
-            ].map((p, i) => (
-                <On key={i} level={p.level} x={p.x} z={p.z}>
-                    <HouseProp model="pottedPlant" fit={{ h: 0.9 }} >{null}</HouseProp>
-                </On>
-            ))}
-
-            {/* Balcony furniture — the render's outdoor room */}
-            <On level="upper" x={u(4.6)} z={u(5.6)}>
-                <HouseProp model="accentChair" rotation={[0, Math.PI, 0]} fit={{ w: 0.9 }} >{null}</HouseProp>
-            </On>
-            <On level="upper" x={u(5.9)} z={u(5.6)}>
-                <HouseProp model="coffeeTable" fit={{ w: 0.8 }} >{null}</HouseProp>
-            </On>
+            {/* Hall wayfinder */}
+            {/* Paths board — living west wall, south of the living door */}
+            <mesh position={[u(1.7) - 0.16, 1.55, u(0.15)]} rotation={[0, -Math.PI / 2, 0]}>
+                <planeGeometry args={[1.2, 0.95]} />
+                <primitive object={m.book} attach="material" />
+            </mesh>
         </group>
     );
 }

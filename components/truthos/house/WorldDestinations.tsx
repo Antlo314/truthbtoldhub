@@ -16,7 +16,6 @@
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import CinemaScreen from './CinemaScreen';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import { DESTINATIONS, destCenter, type Destination } from './jungleMap';
@@ -48,8 +47,8 @@ function SiteBase({
 }) {
     return (
         <group>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.01, z]} receiveShadow={!low}>
-                <circleGeometry args={[r * 0.55, low ? 20 : 32]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.015, z]} receiveShadow={!low}>
+                <circleGeometry args={[Math.min(3.2, r * 0.22), low ? 16 : 24]} />
                 <primitive object={m.dirt} attach="material" />
             </mesh>
             {!low && (
@@ -102,16 +101,10 @@ function CinemaGrove({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low:
             ))}
             {/* The screen is ALIVE on desktop — the panel's film plays here
                 via VideoTexture; phones keep the cheap static surface. */}
-            {low ? (
-                <mesh position={[0, 2.4, 0.02]}>
-                    <planeGeometry args={[6.4, 3.0]} />
-                    <primitive object={m.screen} attach="material" />
-                </mesh>
-            ) : (
-                <group position={[0, 2.4, 0.02]}>
-                    <CinemaScreen w={6.4} h={3.0} />
-                </group>
-            )}
+            <mesh position={[0, 2.4, 0.02]}>
+                <planeGeometry args={[6.4, 3.0]} />
+                <primitive object={m.screen} attach="material" />
+            </mesh>
             <mesh position={[0, 2.4, -0.04]}>
                 <planeGeometry args={[6.9, 3.5]} />
                 <primitive object={m.woodDark} attach="material" />
@@ -175,39 +168,40 @@ function MirrorPool({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: 
     const { c } = useDest('soul_mirror');
     const water = useMemo(
         () =>
-            new THREE.MeshStandardMaterial({
-                color: '#16283f',
-                metalness: 0.92,
-                roughness: 0.06,
-                envMapIntensity: 1.6,
+            new THREE.MeshLambertMaterial({
+                color: '#1a3348',
             }),
         [],
     );
     const rnd = useMemo(() => seededRng(52525), []);
     const rim = useMemo(
         () =>
-            Array.from({ length: 14 }, (_, i) => {
-                const a = (i / 14) * Math.PI * 2;
+            Array.from({ length: 8 }, (_, i) => {
+                const a = (i / 8) * Math.PI * 2;
                 return {
-                    x: Math.cos(a) * 4.4,
-                    z: Math.sin(a) * 4.4,
-                    s: 0.4 + rnd() * 0.4,
+                    x: Math.cos(a) * 4.5,
+                    z: Math.sin(a) * 4.5,
+                    s: 0.45 + rnd() * 0.25,
                     rot: rnd() * Math.PI,
                 };
             }),
         [rnd],
     );
+    const rockMat = useMemo(
+        () => new THREE.MeshLambertMaterial({ color: '#6b7280' }),
+        [],
+    );
 
     return (
         <group position={[c.x, 0, c.z]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
-                <circleGeometry args={[4.2, low ? 24 : 40]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+                <circleGeometry args={[4.2, low ? 16 : 24]} />
                 <primitive object={water} attach="material" />
             </mesh>
             {rim.map((s, i) => (
-                <mesh key={i} position={[s.x, s.s * 0.35, s.z]} rotation={[rnd() * 0.4, s.rot, 0]} castShadow={!low}>
-                    <icosahedronGeometry args={[s.s, 0]} />
-                    <primitive object={m.stone} attach="material" />
+                <mesh key={i} position={[s.x, s.s * 0.42, s.z]} rotation={[0, s.rot, 0]}>
+                    <boxGeometry args={[s.s * 1.4, s.s * 0.85, s.s]} />
+                    <primitive object={rockMat} attach="material" />
                 </mesh>
             ))}
             {/* The pool keeps a little aether of its own */}
@@ -270,6 +264,22 @@ function SignalStudio({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low
     );
 }
 
+/** Dead south walk cap — "the house is behind you", not a station. */
+function ScenicPost({ m }: { m: ReturnType<typeof useHouseMaterials> }) {
+    return (
+        <group position={[0, 0, 46]}>
+            <mesh position={[0, 0.72, 0]}>
+                <boxGeometry args={[0.18, 1.44, 0.12]} />
+                <primitive object={m.woodDark} attach="material" />
+            </mesh>
+            <mesh position={[0, 1.15, 0.07]}>
+                <boxGeometry args={[0.42, 0.22, 0.03]} />
+                <meshLambertMaterial color="#c4b59a" />
+            </mesh>
+        </group>
+    );
+}
+
 export default function WorldDestinations({ low = false }: { low?: boolean }) {
     const m = useHouseMaterials(low);
 
@@ -283,6 +293,7 @@ export default function WorldDestinations({ low = false }: { low?: boolean }) {
             <HallStones m={m} low={low} />
             <MirrorPool m={m} low={low} />
             <SignalStudio m={m} low={low} />
+            <ScenicPost m={m} />
         </group>
     );
 }

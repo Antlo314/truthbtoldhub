@@ -1,17 +1,52 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import {
     useHouseUi,
     WALKTHROUGH_STEPS,
     markWalkthroughDone,
 } from './houseUiStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { isOutdoors } from './homeMap';
+import { getWalkerPose } from './walkerPose';
 
-export default function HouseWalkthrough() {
+export default function HouseWalkthrough({
+    activity,
+    usedAt,
+}: {
+    activity: 'move' | 'look' | 'jump' | 'idle' | null;
+    usedAt: number;
+}) {
     const open = useHouseUi((s) => s.walkthroughOpen);
     const step = useHouseUi((s) => s.walkthroughStep);
     const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
     const nextWalkthrough = useHouseUi((s) => s.nextWalkthrough);
+    const usedAtOnStep = useRef(0);
+    const armed = useRef(false);
+
+    useEffect(() => {
+        usedAtOnStep.current = usedAt;
+        armed.current = false;
+        const t = window.setTimeout(() => {
+            armed.current = true;
+        }, 400);
+        return () => window.clearTimeout(t);
+        // Capture usedAt at the step change only — a later use must beat this.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
+
+    useEffect(() => {
+        if (!open) return;
+        const current = WALKTHROUGH_STEPS[Math.min(step, WALKTHROUGH_STEPS.length - 1)];
+        if (!current || current.wait === 'tap' || !armed.current) return;
+        if (current.wait === 'look' && activity === 'look') nextWalkthrough();
+        if (current.wait === 'move' && activity === 'move') nextWalkthrough();
+        if (current.wait === 'use' && usedAt > usedAtOnStep.current) nextWalkthrough();
+        if (current.wait === 'out') {
+            const p = getWalkerPose();
+            if (isOutdoors(p.x, p.z)) nextWalkthrough();
+        }
+    }, [activity, usedAt, open, step, nextWalkthrough]);
 
     if (!open) return null;
 
@@ -26,81 +61,56 @@ export default function HouseWalkthrough() {
     };
 
     const advance = () => {
+        if (current.wait !== 'tap' && !isLast) return;
         sacredUi.click();
         if (isLast) finish();
         else nextWalkthrough();
     };
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-3 sm:p-6">
+        <div className="fixed inset-x-0 bottom-0 z-[70] flex justify-center p-3 pointer-events-none">
             <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
-                onClick={finish}
-                aria-hidden
-            />
-            <div
-                className="relative w-full max-w-md rounded-2xl border border-emerald-500/30 bg-[#0c0a14]/95 shadow-2xl overflow-hidden"
+                className="pointer-events-auto w-full max-w-md rounded-2xl border border-emerald-500/30 bg-[#0c0a14]/92 shadow-2xl backdrop-blur-md overflow-hidden"
                 role="dialog"
                 aria-labelledby="walkthrough-title"
             >
-                <div className="px-5 pt-5 pb-3 border-b border-white/10 flex items-center justify-between gap-3">
+                <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-400/80 font-mono">
-                            House tour · {step + 1}/{total}
+                        <p className="text-[10px] uppercase tracking-[0.32em] text-emerald-400/80 font-mono">
+                            Tour · {step + 1}/{total}
                         </p>
-                        <h2 id="walkthrough-title" className="text-xl text-white font-semibold mt-1">
+                        <h2 id="walkthrough-title" className="text-base text-white font-semibold mt-0.5">
                             {current.title}
                         </h2>
                     </div>
                     <button
                         type="button"
                         onClick={finish}
-                        className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white shrink-0"
+                        className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white shrink-0 min-h-[36px]"
                     >
                         Skip
                     </button>
                 </div>
-
-                <div className="px-5 py-4 space-y-3">
+                <div className="px-4 pb-3 space-y-2">
                     <p className="text-sm text-white/75 leading-relaxed">{current.body}</p>
-                    <p className="text-[11px] text-emerald-400/80 font-mono border-l-2 border-emerald-500/40 pl-3">
-                        {current.tip}
-                    </p>
-
-                    {/* Progress dots */}
-                    <div className="flex gap-1.5 pt-1">
+                    <p className="text-[11px] text-emerald-400/80 font-mono">{current.tip}</p>
+                    <div className="flex gap-1">
                         {WALKTHROUGH_STEPS.map((_, i) => (
                             <div
                                 key={i}
-                                className={[
-                                    'h-1 flex-1 rounded-full transition-colors',
-                                    i <= step ? 'bg-emerald-400' : 'bg-white/10',
-                                ].join(' ')}
+                                className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-emerald-400' : 'bg-white/10'}`}
                             />
                         ))}
                     </div>
-                </div>
-
-                <div className="px-5 pb-5 flex gap-2">
-                    {step > 0 && (
+                    {current.wait === 'tap' && (
                         <button
                             type="button"
-                            onClick={() => {
-                                sacredUi.hover();
-                                setWalkthrough(true, step - 1);
-                            }}
-                            className="flex-1 py-3 rounded-xl border border-white/15 text-sm text-white/70 uppercase tracking-wider hover:bg-white/5"
+                            onClick={advance}
+                            className="w-full mt-1 py-2.5 rounded-xl bg-emerald-500/90 text-black text-sm font-semibold min-h-[44px]"
                         >
-                            Back
+                            {isLast ? 'Begin' : 'Continue'}
                         </button>
                     )}
-                    <button
-                        type="button"
-                        onClick={advance}
-                        className="flex-[1.4] py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/45 text-emerald-100 text-sm font-semibold uppercase tracking-wider hover:bg-emerald-500/30"
-                    >
-                        {isLast ? 'Enter house' : 'Continue'}
-                    </button>
                 </div>
             </div>
         </div>

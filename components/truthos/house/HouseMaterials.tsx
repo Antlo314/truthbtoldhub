@@ -152,15 +152,15 @@ function buildHouseMaterials(low: boolean) {
         bulbWarm.userData.lampEmissive = true;
 
         return {
-            wood: photo(mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62), 'oak', [2.5, 2.5], { normalScale: 0.6, keepTint: 0.2 }),
-            woodDark: photo(mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68), 'woodDark', [2.5, 2.5], { normalScale: 0.6, keepTint: 0.3 }),
-            woodFloor: photo(mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72), 'woodFloor', [10, 10], { normalScale: 0.7, aniso: 12, keepTint: 0.18 }),
-            stone: photo(mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78), 'stone', [6, 3.5], { normalScale: 1.0, keepTint: 0.2 }),
-            plaster: photo(mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52), 'plaster', [5, 3.5], { normalScale: 0.5, keepTint: 0.5 }),
-            rug: photo(mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85), 'rug', [2.5, 2.5], { normalScale: 0.7, keepTint: 0.4 }),
-            fabric: photo(mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72), 'fabric', [3, 3], { normalScale: 0.7, keepTint: 0.45 }),
+            wood: mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62),
+            woodDark: mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68),
+            woodFloor: mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72),
+            stone: mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78),
+            plaster: mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52),
+            rug: mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85),
+            fabric: mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72),
             fabricLight: mk(fabricLightMap, '#bca8d4', { roughness: 0.9 }, 0.68),
-            leather: photo(mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58), 'leather', [2.5, 2.5], { normalScale: 0.8, keepTint: 0.25 }),
+            leather: mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58),
             metal: mk(metalMap, '#ccd0d8', { roughness: 0.24, metalness: 0.82 }, 0.38),
             metalDark: mk(metalDarkMap, '#8a8a98', { roughness: 0.34, metalness: 0.74 }, 0.42),
             gold: mk(goldMap, '#ffe08a', {
@@ -171,9 +171,9 @@ function buildHouseMaterials(low: boolean) {
             }, 0.32),
             book: mk(bookMap, '#d0b0c0', { roughness: 0.8 }, 0.55),
             leaf: mk(leafMap, '#88c898', { roughness: 0.88 }, 0.6),
-            grass: photo(mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82), 'grass', [14, 14], { normalScale: 0.9, aniso: 12, keepTint: 0.3 }),
-            path: photo(mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75), 'path', [6, 10], { normalScale: 1.0, keepTint: 0.15 }),
-            dirt: photo(mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88), 'dirt', [4, 4], { normalScale: 0.9, keepTint: 0.25 }),
+            grass: mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82),
+            path: mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75),
+            dirt: mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88),
             screen: mk(screenMap, '#88e8f8', {
                 roughness: 0.16,
                 metalness: 0.28,
@@ -181,30 +181,19 @@ function buildHouseMaterials(low: boolean) {
                 emissiveIntensity: 0.55,
                 toneMapped: false,
             }, 0.22),
-            tile: photo(mk(tileMap, '#cfd4d6', { roughness: 0.42, metalness: 0.1 }, 0.48), 'ceramic', [8, 8], { normalScale: 0.5, keepTint: 0.2 }),
-            /** Per-room flooring — kitchen tile, bedroom carpet, library boards, entry marble */
-            tileKitchen: photo(mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5), 'tile', [4, 3.5], { normalScale: 0.45, keepTint: 0.25 }),
-            carpet: photo(mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9), 'carpet', [5, 4.5], { normalScale: 0.8, keepTint: 0.4 }),
-            woodFloorDark: photo(mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74), 'woodDark', [6, 6], { normalScale: 0.7, aniso: 12, keepTint: 0.35 }),
-            marble: photo(mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3), 'marble', [2.5, 3], { normalScale: 0.3, aniso: 12, keepTint: 0.12 }),
-            concrete: photo(mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72), 'concrete', [5, 5], { normalScale: 0.7, keepTint: 0.3 }),
-
-            /* One DISTINCT scan per surface family, so the eye stops meeting
-               the same texture wearing different tints. */
-            /** Interior walls - near-white painted plaster (2k) */
-            wallPlaster: photo(mk(plasterMap, '#e9e7e2', { roughness: 0.94, metalness: 0.02 }, 0.5), 'plaster', [7, 4], { normalScale: 0.55, keepTint: 0.1 }),
-            /** Dining + living hero floor - herringbone parquet (2k) */
-            woodHerring: photo(mk(woodFloorMap, '#b09068', { roughness: 0.55, metalness: 0.05 }, 0.7), 'woodHerring', [7, 7], { normalScale: 0.75, aniso: 12, keepTint: 0.12 }),
-            /** Kitchen counters + island top - terrazzo */
-            counter: photo(mk(marbleMap, '#cfc9c2', { roughness: 0.35, metalness: 0.08 }, 0.4), 'counter', [3, 3], { normalScale: 0.5, keepTint: 0.12 }),
-            /** Bedding + curtains */
-            linen: photo(mk(fabricLightMap, '#d8cfc4', { roughness: 0.95 }, 0.75), 'linen', [3, 3], { normalScale: 0.7, keepTint: 0.2 }),
-            /** Sofas - boucle wool, distinct from the patterned fabric */
-            wool: photo(mk(fabricMap, '#b9af9f', { roughness: 0.97 }, 0.8), 'wool', [2.5, 2.5], { normalScale: 0.9, keepTint: 0.2 }),
-            /** Jungle trunks - the flat brown cylinders were the loudest fake outdoors */
-            bark: photo(mk(woodDarkMap, '#6e5a48', { roughness: 0.95 }, 0.8), 'bark', [1.5, 2.5], { normalScale: 1.1, keepTint: 0.2 }),
-            /** The forest band beyond the clearing edge */
-            forestFloor: photo(mk(dirtMap, '#4e4436', { roughness: 0.98 }, 0.85), 'forestFloor', [18, 18], { normalScale: 0.9, aniso: 8, keepTint: 0.2 }),
+            tile: mk(tileMap, '#cfd4d6', { roughness: 0.42, metalness: 0.1 }, 0.48),
+            tileKitchen: mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5),
+            carpet: mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9),
+            woodFloorDark: mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74),
+            marble: mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3),
+            concrete: mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72),
+            wallPlaster: mk(plasterMap, '#e9e7e2', { roughness: 0.94, metalness: 0.02 }, 0.5),
+            woodHerring: mk(woodFloorMap, '#b09068', { roughness: 0.55, metalness: 0.05 }, 0.7),
+            counter: mk(marbleMap, '#cfc9c2', { roughness: 0.35, metalness: 0.08 }, 0.4),
+            linen: mk(fabricLightMap, '#d8cfc4', { roughness: 0.95 }, 0.75),
+            wool: mk(fabricMap, '#b9af9f', { roughness: 0.97 }, 0.8),
+            bark: mk(woodDarkMap, '#6e5a48', { roughness: 0.95 }, 0.8),
+            forestFloor: mk(dirtMap, '#4e4436', { roughness: 0.98 }, 0.85),
             artDomain: mk(artDomainMap, '#ffffff', {
                 roughness: 0.55,
                 metalness: 0.12,

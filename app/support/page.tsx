@@ -3,7 +3,7 @@ import DonationSection from '@/components/DonationSection';
 
 export const metadata = {
     title: 'The Offering | Truth B Told Hub',
-    description: 'Lay a stone for the awakening — the 400 Series, the Sanctum, and the ground the chamber stands on.',
+    description: 'Keep the house open — The Hall, The Mark, the daily Word, a place souls can return to.',
 };
 
 export default function SupportPage() {
@@ -46,7 +46,7 @@ export default function SupportPage() {
                 </div>
 
                 <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.5em] text-aether-gold/70 mb-3">
-                    Sustain the work
+                    For the people in the room
                 </p>
                 <div
                     className="h-px w-16 mb-5 rule-draw"
@@ -56,8 +56,8 @@ export default function SupportPage() {
                     The Offering
                 </h1>
                 <p className="mt-3 mb-10 max-w-lg text-sm text-white/50 leading-relaxed">
-                    Every gift — one-time or monthly — is fuel for the 400 Series, the living Sanctum,
-                    and the ground this chamber stands on. You are not checking out. You are laying a stone.
+                    Every gift — one-time or monthly — keeps the house standing for the souls who
+                    gather here. You are not checking out. You are laying a stone.
                 </p>
 
                 <div className="rounded-3xl border border-aether-gold/15 bg-white/[0.02] p-5 sm:p-7 backdrop-blur-sm">

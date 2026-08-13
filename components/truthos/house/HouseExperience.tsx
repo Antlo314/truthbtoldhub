@@ -30,20 +30,60 @@ import HouseMobileControls from './HouseMobileControls';
 import HouseHints from './HouseHints';
 import HouseCinematicChrome from './HouseCinematicChrome';
 import WorldHud from './WorldHud';
+import HousePause, { hydrateLookFeel } from './HousePause';
 import { useHouseImmersion } from './useHouseImmersion';
 import { markVisited } from './stationProgress';
+import { savePose } from './housePose';
+import { getWalkerPose } from './walkerPose';
+
+import HouseLoadBar from './HouseLoadBar';
 
 const HouseCanvas = dynamic(() => import('./HouseCanvas'), {
     ssr: false,
-    loading: () => (
-        <div
-            className="fixed inset-0 z-0 flex items-center justify-center bg-[#1a1528] font-mono text-emerald-300 text-sm"
-            style={{ width: '100vw', height: '100dvh' }}
-        >
-            loading 3D house…
-        </div>
-    ),
+    loading: () => <HouseLoadBar label="Building the house" />,
 });
+
+function prefetchFor(h: Hotspot) {
+    const a = h.action;
+    if (a.type !== 'panel') return;
+    switch (a.panel) {
+        case 'library':
+            void import('@/components/library/LibraryClient');
+            break;
+        case 'ledger':
+            void import('@/components/game/HutLedger');
+            break;
+        case 'offering':
+            void import('@/components/DonationSection');
+            break;
+        case 'hall':
+            void import('@/components/archive/ArchiveClient');
+            break;
+        case 'cineworks':
+            void import('@/app/cineworks/components/CineworksClient');
+            break;
+        case 'soul':
+            void import('@/components/hut3d/hud/SoulPanel');
+            break;
+        case 'studio':
+            void import('./StudioPanel');
+            break;
+        case 'arcade':
+            void import('@/components/game/arcade/ArcadeLobby');
+            break;
+        case 'cinema':
+            void import('./CinemaPanel');
+            break;
+        case 'news':
+            void import('./NewspaperPanel');
+            break;
+        case 'wall':
+            void import('./WallPanel');
+            break;
+        default:
+            break;
+    }
+}
 
 function isGuestSession(): boolean {
     if (typeof window === 'undefined') return false;
@@ -99,13 +139,18 @@ export default function HouseExperience({
     const closePanel = useHouseUi((s) => s.closePanel);
     const setSoonMessage = useHouseUi((s) => s.setSoonMessage);
     const soonMessage = useHouseUi((s) => s.soonMessage);
+    const toggleSeated = useHouseUi((s) => s.toggleSeated);
+    const [usedAt, setUsedAt] = useState(0);
     const panel = useHouseUi((s) => s.panel);
     const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
-    const walkthroughOpen = useHouseUi((s) => s.walkthroughOpen);
+    const paused = useHouseUi((s) => s.paused);
+    const setPaused = useHouseUi((s) => s.setPaused);
+
     /** After guest signs in from the computer, open OS once session lands */
     const pendingOsLogin = useRef(false);
 
     const [ready, setReady] = useState(true);
+    const [sceneReady, setSceneReady] = useState(false);
     const [authed, setAuthed] = useState(true);
     const [guest, setGuest] = useState(true);
     const [authOpen, setAuthOpen] = useState(false);
@@ -139,13 +184,16 @@ export default function HouseExperience({
     const [osOpen, setOsOpen] = useState(false);
     const [canvasError, setCanvasError] = useState<string | null>(null);
     const [activity, setActivity] = useState<'move' | 'look' | 'jump' | 'idle' | null>(null);
+    const [hasLooked, setHasLooked] = useState(false);
+    const [hasMoved, setHasMoved] = useState(false);
+    const [speakHint, setSpeakHint] = useState(false);
     const presence = useRef<HousePresenceApi | null>(null);
     const selfId = useRef<string>('');
     const [presenceKey, setPresenceKey] = useState('');
     const hotspotRef = useRef<Hotspot | null>(null);
 
     const isMobile = device === 'mobile';
-    const uiLocked = osOpen || authOpen || !!panel || walkthroughOpen;
+    const uiLocked = osOpen || authOpen || !!panel || paused;
     const {
         shellRef,
         pointerLocked,
@@ -157,16 +205,35 @@ export default function HouseExperience({
         mobile: isMobile,
         uiLocked,
     });
+    const wasPaused = useRef(false);
+    useEffect(() => {
+        if (paused) {
+            wasPaused.current = true;
+            return;
+        }
+        if (wasPaused.current && !isMobile) {
+            wasPaused.current = false;
+            requestPointerLock();
+        }
+    }, [paused, isMobile, requestPointerLock]);
 
     useEffect(() => {
         hubAudio.unlock();
         hubAudio.enterHouse();
-        return () => hubAudio.leaveHouse();
+        hydrateLookFeel();
+        return () => {
+            const p = getWalkerPose();
+            savePose({ x: p.x, z: p.z, yaw: p.yaw, pitch: 0 });
+            hubAudio.leaveHouse();
+        };
     }, []);
 
     useEffect(() => {
         hotspotRef.current = hotspot;
-        if (hotspot && !uiLocked) hubAudio.approachHotspot(hotspot.id);
+        if (hotspot && !uiLocked) {
+            hubAudio.approachHotspot(hotspot.id);
+            prefetchFor(hotspot);
+        }
     }, [hotspot, uiLocked]);
 
     useEffect(() => {
@@ -190,6 +257,7 @@ export default function HouseExperience({
         // and landed straight back in the arcade. Clear it before the
         // deep-link read below, so an explicit deep-link still wins.
         closePanel();
+        setPaused(false);
 
         // Deep-link from /world or other redirects
         let pendingPanel: string | null = null;
@@ -208,7 +276,7 @@ export default function HouseExperience({
             const t = window.setTimeout(() => setWalkthrough(true, 0), 900);
             return () => window.clearTimeout(t);
         }
-    }, [openPanel, closePanel, setWalkthrough]);
+    }, [openPanel, closePanel, setWalkthrough, setPaused]);
 
     useEffect(() => {
         let cancelled = false;
@@ -340,6 +408,7 @@ export default function HouseExperience({
             sacredUi.click();
             hubAudio.useHotspot(h.id);
             markVisited(h.id);
+            setUsedAt(Date.now());
             if (h.action.type === 'os') {
                 markVisited('computer');
                 // Terminal is the primary surface — no re-entry from chamber
@@ -368,12 +437,16 @@ export default function HouseExperience({
                 openPanel(h.action.panel as HousePanelId);
                 return;
             }
+            if (h.action.type === 'sit') {
+                toggleSeated();
+                return;
+            }
             if (h.action.type === 'soon') {
                 setSoonMessage(h.action.message);
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal],
+        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal, toggleSeated],
     );
 
     const tryInteract = useCallback(() => {
@@ -384,6 +457,8 @@ export default function HouseExperience({
     const onMoveActivity = useCallback((kind: 'move' | 'look' | 'jump' | 'idle') => {
         setActivity(kind);
         movingRef.current = kind === 'move';
+        if (kind === 'look') setHasLooked(true);
+        if (kind === 'move') setHasMoved(true);
         if (kind === 'jump') {
             // land cue shortly after jump impulse
             window.setTimeout(() => hubAudio.jumpLand(), 280);
@@ -392,6 +467,8 @@ export default function HouseExperience({
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
             // Enter speaks. Guarded on uiLocked so it cannot fire behind a
             // panel, and the composer swallows its own keys.
             if (e.code === 'Enter' && !composing && !uiLocked) {
@@ -401,21 +478,29 @@ export default function HouseExperience({
             }
             if (composing) return;
             if (e.code === 'KeyE' && hotspot && !uiLocked) activateHotspot(hotspot);
+            if (e.code === 'KeyM' && !osOpen && !authOpen && !composing) {
+                e.preventDefault();
+                if (panel === 'wayfinder') closePanel();
+                else if (!panel) openPanel('wayfinder');
+                return;
+            }
             if (e.code === 'Escape') {
                 if (osOpen) {
                     setOsOpen(false);
                     closeToRoom();
                     hubAudio.osExitToHouse();
                 } else if (panel) {
-                    // The arcade panel has no close button of its own, so
-                    // without this there is no way out of it but a reload.
                     closePanel();
+                } else if (paused) {
+                    setPaused(false);
+                } else {
+                    setPaused(true);
                 }
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, uiLocked, osOpen, panel, composing, activateHotspot, closeToRoom, closePanel]);
+    }, [hotspot, uiLocked, osOpen, panel, paused, composing, activateHotspot, closeToRoom, closePanel, openPanel, setPaused, authOpen]);
 
     const onAuthSuccess = () => {
         try {
@@ -458,7 +543,23 @@ export default function HouseExperience({
         setAuthOpen(false);
     };
 
-    const showHud = ready && authed && !osOpen && !authOpen && !panel && !walkthroughOpen;
+    const showHud = ready && authed && !osOpen && !authOpen && !panel && !paused;
+
+    useEffect(() => {
+        if (!showHud || !hasMoved) return;
+        try {
+            if (localStorage.getItem('tbth-house-speak-v1') === '1') return;
+            localStorage.setItem('tbth-house-speak-v1', '1');
+        } catch {
+            return;
+        }
+        const t = window.setTimeout(() => setSpeakHint(true), 14000);
+        const hide = window.setTimeout(() => setSpeakHint(false), 20000);
+        return () => {
+            window.clearTimeout(t);
+            window.clearTimeout(hide);
+        };
+    }, [showHud, hasMoved]);
     const liveCount = peers.filter((p) => p.kind === 'live').length;
     const prevLive = useRef(0);
     useEffect(() => {
@@ -498,9 +599,14 @@ export default function HouseExperience({
                             onInteractRequest={tryInteract}
                             onMoveActivity={onMoveActivity}
                             saidBy={saidBy}
+                            onReady={() => setSceneReady(true)}
                         />
                     </ErrorBoundary>
                 </div>
+            )}
+
+            {ready && authed && !sceneReady && !canvasError && (
+                <HouseLoadBar label="Building the house" />
             )}
 
             {canvasError && (
@@ -563,6 +669,8 @@ export default function HouseExperience({
                         onRequestLock={requestPointerLock}
                         guest={guest}
                         onSignIn={() => setAuthOpen(true)}
+                        hasLooked={hasLooked}
+                        hasMoved={hasMoved}
                     />
                     {/* No “boot Truth.OS” guide when chamber is secondary to the terminal */}
                     {!isMobile && !disableOsBoot && <TruthGuideWidget placement="desktop" />}
@@ -630,8 +738,21 @@ export default function HouseExperience({
                 </div>
             )}
 
-            <HouseWalkthrough />
+            <HouseWalkthrough activity={activity} usedAt={usedAt} />
+            <HousePause
+                mobile={isMobile}
+                onTerminal={onReturnToTerminal}
+                onTour={() => setWalkthrough(true, 0)}
+            />
             <HousePanels />
+
+            {speakHint && showHud && (
+                <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[56] flex justify-center px-4">
+                    <p className="text-[12px] text-white/70 bg-black/55 border border-white/12 px-3 py-1.5 rounded-full">
+                        Enter speaks to the room
+                    </p>
+                </div>
+            )}
 
             {soonMessage && (
                 <div className="fixed inset-x-0 bottom-[18%] z-[56] flex justify-center px-4 pointer-events-none">

@@ -23,7 +23,7 @@ import { SHELL } from './homeMap';
 
 /* ── Stars ──────────────────────────────────────────────── */
 
-const STAR_COUNT = 900;
+const STAR_COUNT = 280;
 
 export function NightStars() {
     const matRef = useRef<THREE.PointsMaterial>(null);
@@ -32,7 +32,7 @@ export function NightStars() {
         const pos = new Float32Array(STAR_COUNT * 3);
         for (let i = 0; i < STAR_COUNT; i++) {
             // Upper hemisphere shell, kept above the canopy line
-            const r = 150 + rnd() * 80;
+            const r = 48 + rnd() * 28;
             const az = rnd() * Math.PI * 2;
             const el = 0.14 + rnd() * (Math.PI / 2 - 0.14);
             pos[i * 3] = Math.cos(az) * Math.cos(el) * r;
@@ -56,8 +56,8 @@ export function NightStars() {
             <pointsMaterial
                 ref={matRef}
                 color="#cdd6ff"
-                size={1.3}
-                sizeAttenuation
+                size={2.2}
+                sizeAttenuation={false}
                 transparent
                 opacity={0}
                 depthWrite={false}

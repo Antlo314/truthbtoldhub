@@ -31,6 +31,8 @@ import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
 import WallApp from './WallApp';
 import StudioPanel from '@/components/truthos/house/StudioPanel';
+import ArchiveClient from '@/components/archive/ArchiveClient';
+import LibraryClient from '@/components/library/LibraryClient';
 import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
 import { Lock } from 'lucide-react';
@@ -99,7 +101,11 @@ function RouteFrame({ href, title }: { href: string; title: string }) {
                     Open full →
                 </a>
             </div>
-            <iframe title={title} src={href} className="flex-1 w-full border-0 bg-black min-h-[240px]" />
+            <iframe
+                title={title}
+                src={href.includes('?') ? `${href}&embed=1` : `${href}?embed=1`}
+                className="flex-1 w-full border-0 bg-black min-h-[240px]"
+            />
         </div>
     );
 }
@@ -315,11 +321,19 @@ export function OfferingApp() {
 }
 
 export function LibraryApp() {
-    return <RouteFrame href="/library" title="Library" />;
+    return (
+        <div className="h-full min-h-[280px] bg-zinc-950 overflow-hidden">
+            <LibraryClient />
+        </div>
+    );
 }
 
 export function ArchiveApp() {
-    return <RouteFrame href="/archive" title="The Hall" />;
+    return (
+        <div className="h-full min-h-[280px] bg-zinc-950 overflow-hidden">
+            <ArchiveClient />
+        </div>
+    );
 }
 
 export function ChamberApp({ onEnterChamber }: { onEnterChamber: () => void }) {

@@ -5,7 +5,8 @@
  * Truth never opens here — only via Truth.OS on the computer.
  */
 import dynamic from 'next/dynamic';
-import { useHouseUi, type HousePanelId } from './houseUiStore';
+import { useEffect, useState } from 'react';
+import { useHouseUi } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
 import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
@@ -15,6 +16,9 @@ import WallPanel from './WallPanel';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { hubAudio } from '@/lib/truthos/hubAudio';
+import { getWalkerPose } from './walkerPose';
+import { loadVisited } from './stationProgress';
+import DonationSection from '@/components/DonationSection';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
@@ -25,47 +29,41 @@ const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby')
     ),
 });
 
-const PANEL_META: Record<
-    Exclude<HousePanelId, 'soul' | 'studio' | 'wayfinder' | 'arcade' | 'cinema' | 'news' | 'wall'>,
-    { title: string; accent: string; src: string; blurb: string }
-> = {
-    library: {
-        title: 'Library',
-        accent: 'text-violet-300',
-        src: '/library',
-        blurb: 'Scrolls and sealed texts.',
-    },
-    codex: {
-        title: 'Codex',
-        accent: 'text-fuchsia-300',
-        src: '/codex',
-        blurb: 'Memory and whispers.',
-    },
-    hall: {
-        title: 'The Hall',
-        accent: 'text-sky-300',
-        src: '/archive',
-        blurb: 'Voices gather.',
-    },
-    offering: {
-        title: 'The Offering',
-        accent: 'text-amber-300',
-        src: '/support',
-        blurb: 'Sustain the work.',
-    },
-    ledger: {
-        title: 'The Ledger',
-        accent: 'text-amber-200',
-        src: '/archive',
-        blurb: 'Daily word and dispatches.',
-    },
-    cineworks: {
-        title: 'Cineworks',
-        accent: 'text-violet-200',
-        src: '/cineworks',
-        blurb: 'The catalog.',
-    },
-};
+const ArchiveClient = dynamic(() => import('@/components/archive/ArchiveClient'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-sky-300/60 font-mono text-xs tracking-widest">
+            opening the hall…
+        </div>
+    ),
+});
+
+const LibraryClient = dynamic(() => import('@/components/library/LibraryClient'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-violet-300/60 font-mono text-xs tracking-widest">
+            opening the library…
+        </div>
+    ),
+});
+
+const HutLedger = dynamic(() => import('@/components/game/HutLedger'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-amber-200/60 font-mono text-xs tracking-widest">
+            opening the ledger…
+        </div>
+    ),
+});
+
+const CineworksClient = dynamic(() => import('@/app/cineworks/components/CineworksClient'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-violet-200/60 font-mono text-xs tracking-widest">
+            opening cineworks…
+        </div>
+    ),
+});
 
 function Shell({
     title,
@@ -120,21 +118,26 @@ function Shell({
 }
 
 function FramePanel({
-    id,
+    title,
+    accent,
+    src,
+    blurb,
     onClose,
 }: {
-    id: keyof typeof PANEL_META;
+    title: string;
+    accent: string;
+    src: string;
+    blurb: string;
     onClose: () => void;
 }) {
-    const meta = PANEL_META[id];
     return (
-        <Shell title={meta.title} accent={meta.accent} onClose={onClose} full>
+        <Shell title={title} accent={accent} onClose={onClose} full>
             <p className="absolute top-0 inset-x-0 z-10 px-4 py-2 text-[11px] text-white/50 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-                {meta.blurb}
+                {blurb}
             </p>
             <iframe
-                title={meta.title}
-                src={meta.src}
+                title={title}
+                src={src}
                 className="absolute inset-0 w-full h-full border-0 bg-black"
                 allow="autoplay; fullscreen"
             />
@@ -147,6 +150,14 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
     // lay the colliders. Open a corridor in the worldplan and it appears
     // here without anyone remembering to update a picture.
     const toMap = (x: number, z: number) => ({ mx: x, my: -z }); // north up
+    const [, tick] = useState(0);
+    useEffect(() => {
+        const t = window.setInterval(() => tick((n) => n + 1), 250);
+        return () => window.clearInterval(t);
+    }, []);
+    const pose = getWalkerPose();
+    const here = toMap(pose.x, pose.z);
+    const visited = loadVisited();
     return (
         <Shell title="Wall map · The Paths" accent="text-emerald-300" onClose={onClose}>
             <div className="p-4 h-full flex flex-col gap-3 overflow-y-auto">
@@ -182,8 +193,15 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                             const m = toMap(c.x, c.z);
                             return (
                                 <g key={d.id}>
-                                    <circle cx={m.mx} cy={m.my} r={d.r} fill="#1d3a28" stroke="#fbbf24" strokeWidth="1.2" />
-                                    <circle cx={m.mx} cy={m.my} r={2.4} fill="#fbbf24" />
+                                    <circle
+                                        cx={m.mx}
+                                        cy={m.my}
+                                        r={d.r}
+                                        fill="#1d3a28"
+                                        stroke={visited.has(d.id) ? '#34d399' : '#fbbf24'}
+                                        strokeWidth="1.2"
+                                    />
+                                    <circle cx={m.mx} cy={m.my} r={2.4} fill={visited.has(d.id) ? '#34d399' : '#fbbf24'} />
                                     <text x={m.mx} y={m.my - d.r - 3} textAnchor="middle" fontSize="6.4" fill="#fde68a" fontFamily="monospace" fontWeight="bold">
                                         {d.name.toUpperCase()}
                                     </text>
@@ -193,10 +211,18 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                                 </g>
                             );
                         })}
-                        {/* The north walk — goes nowhere, and says so */}
-                        <text x={0} y={-52} textAnchor="middle" fontSize="4.8" fill="#8f9a8a" fontFamily="monospace">
-                            the north walk · unfinished
+                        <text x={0} y={-48} textAnchor="middle" fontSize="4.4" fill="#8f9a8a" fontFamily="monospace">
+                            scenic walk · turns back
                         </text>
+                        <text x={0} y={52} textAnchor="middle" fontSize="4.8" fill="#8f9a8a" fontFamily="monospace">
+                            one floor · four paths
+                        </text>
+                        <polygon
+                            points={`${here.mx},${here.my - 3.2} ${here.mx - 2.1},${here.my + 2.4} ${here.mx + 2.1},${here.my + 2.4}`}
+                            fill="#fbbf24"
+                            transform={`rotate(${(-pose.yaw * 180) / Math.PI} ${here.mx} ${here.my})`}
+                        />
+                        <circle cx={here.mx} cy={here.my} r="1.4" fill="#111" />
                         {/* Compass */}
                         <g transform="translate(84,-84)">
                             <circle r="9" fill="#0b1410" stroke="#3f7d46" strokeWidth="0.8" />
@@ -206,8 +232,8 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                     </svg>
                 </div>
                 <p className="text-[10px] text-white/45 text-center leading-relaxed shrink-0">
-                    Four stations left the house and took root in the jungle. Follow a path;
-                    the torches are lit.
+                    Rec, hall, living, kitchen, The Mark — one floor. Four groves
+                    wait at the ends of the paths.
                 </p>
             </div>
         </Shell>
@@ -268,6 +294,7 @@ export default function HousePanels() {
     const panel = useHouseUi((s) => s.panel);
     const closePanel = useHouseUi((s) => s.closePanel);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
+    const characterName = useGameStore((s) => s.character?.name);
 
     if (!panel) return null;
 
@@ -288,8 +315,55 @@ export default function HousePanels() {
     if (panel === 'cinema') return <CinemaPanel onClose={onClose} />;
     if (panel === 'news') return <NewspaperPanel onClose={onClose} />;
     if (panel === 'wall') return <WallPanel onClose={onClose} />;
-    if (panel in PANEL_META) {
-        return <FramePanel id={panel as keyof typeof PANEL_META} onClose={onClose} />;
+    if (panel === 'hall') {
+        return (
+            <Shell title="The Hall" accent="text-sky-300" onClose={onClose} full>
+                <ArchiveClient />
+            </Shell>
+        );
+    }
+    if (panel === 'library') {
+        return (
+            <Shell title="Library" accent="text-violet-300" onClose={onClose} full>
+                <LibraryClient />
+            </Shell>
+        );
+    }
+    if (panel === 'ledger') {
+        return (
+            <Shell title="The Ledger" accent="text-amber-200" onClose={onClose} full>
+                <div className="h-full overflow-y-auto p-4">
+                    <HutLedger characterName={characterName} />
+                </div>
+            </Shell>
+        );
+    }
+    if (panel === 'offering') {
+        return (
+            <Shell title="The Offering" accent="text-amber-300" onClose={onClose} full>
+                <div className="h-full overflow-y-auto p-4">
+                    <DonationSection variant="hut" />
+                </div>
+            </Shell>
+        );
+    }
+    if (panel === 'cineworks') {
+        return (
+            <Shell title="Cineworks" accent="text-violet-200" onClose={onClose} full>
+                <CineworksClient />
+            </Shell>
+        );
+    }
+    if (panel === 'codex') {
+        return (
+            <FramePanel
+                title="Codex"
+                accent="text-fuchsia-300"
+                src="/codex?embed=1"
+                blurb="Memory and whispers."
+                onClose={onClose}
+            />
+        );
     }
     return null;
 }

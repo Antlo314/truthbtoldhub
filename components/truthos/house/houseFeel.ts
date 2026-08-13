@@ -36,7 +36,7 @@ export const MOBILE = {
     stickR: 72,
     knobR: 30,
     action: 74,
-    actionSecondary: 60,
+    actionSecondary: 48,
     moveZone: 0.5,
     idleOpacity: 0.5,
     activeOpacity: 0.92,

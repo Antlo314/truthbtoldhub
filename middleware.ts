@@ -34,6 +34,7 @@ export function middleware(request: NextRequest) {
     '/mission-confirmed',  // post-action confirmation (Stripe return)
     '/trial',              // trial / entry flow
     '/archive',            // the Hall - guests READ the room; speaking still needs a soul
+    '/library',            // scrolls — also the in-OS browser home
   ];
   if (pathname === '/' || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();

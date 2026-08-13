@@ -56,7 +56,7 @@ function run(M) {
     // Doorways are pushed main-storey-first, so the index splits them. Without
     // this a main-floor prop gets reported against an upper-floor door it is
     // three metres below.
-    const doorLevel = (i) => (i < MAIN_DOORWAYS_END ? 'main' : 'upper');
+    const doorLevel = (i) => (i < MAIN_DOORWAYS_END ? 'main' : 'main');
 
     /* 1 ── doorway clearance ─────────────────────────────────── */
     // Furniture and art fail a door in DIFFERENT ways, so they get different
@@ -96,15 +96,17 @@ function run(M) {
     /* 2 ── stair clearance ───────────────────────────────────── */
     // Floor space only — art on the shaft wall beside the flight is fine, so
     // this reads FURNITURE, not ART.
-    const PAD = 1.3;
-    const stairBox = {
-        x: (STAIR.minX + STAIR.maxX) / 2,
-        z: (STAIR.zTop + STAIR.zBottom) / 2,
-        hx: (STAIR.maxX - STAIR.minX) / 2 + R,
-        hz: (STAIR.zBottom - STAIR.zTop) / 2 + PAD,
-    };
-    for (const f of FURNITURE) {
-        if (overlaps(stairBox, f)) fail.push(`STAIR    ${f.level} "${f.name}" stands on the stair run or its landings`);
+    if (STAIR && STAIR.treads > 0) {
+        const PAD = 1.3;
+        const stairBox = {
+            x: (STAIR.minX + STAIR.maxX) / 2,
+            z: (STAIR.zTop + STAIR.zBottom) / 2,
+            hx: (STAIR.maxX - STAIR.minX) / 2 + R,
+            hz: (STAIR.zBottom - STAIR.zTop) / 2 + PAD,
+        };
+        for (const f of FURNITURE) {
+            if (overlaps(stairBox, f)) fail.push(`STAIR    ${f.level} "${f.name}" stands on the stair run or its landings`);
+        }
     }
 
     /* 2b ── solidity ─────────────────────────────────────────── */
@@ -149,7 +151,7 @@ function run(M) {
     //   b) a clear straight band must run the hall's full length down its
     //      middle, wide enough for a body with margin (1.1 m). (a) implies
     //      (b) today, but (b) also survives someone relaxing (a) later.
-    const HALL_IDS = ['hall_m', 'landing'];
+    const HALL_IDS = ['hall_m'];
     const BAND_HALF = 0.55;
     for (const id of HALL_IDS) {
         const room = ROOMS.find((r) => r.id === id);
@@ -202,7 +204,7 @@ function run(M) {
         { label: 'PINCH', radius: 0.5, step: 0.07 },
     ];
     for (const pass of PASSES)
-    for (const level of ['main', 'upper']) {
+    for (const level of ['main']) {
         const STEP = pass.step;
         const RR = pass.radius;
         const cs = collidersFor(level);

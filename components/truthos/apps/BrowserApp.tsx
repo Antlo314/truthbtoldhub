@@ -10,17 +10,17 @@ import { ArrowLeft, ArrowRight, ExternalLink, Home, RotateCw, Star } from 'lucid
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 const BOOKMARKS: { path: string; label: string }[] = [
-    { path: '/library', label: 'Library' },
-    { path: '/archive', label: 'The Hall' },
-    { path: '/cinema', label: 'Cinema' },
-    { path: '/cineworks', label: 'Cineworks' },
-    { path: '/codex', label: 'Codex' },
-    { path: '/support', label: 'Support' },
-    { path: '/treasury', label: 'Treasury' },
-    { path: '/self', label: 'Soul page' },
+    { path: '/archive?embed=1', label: 'The Hall' },
+    { path: '/library?embed=1', label: 'Library' },
+    { path: '/cinema?embed=1', label: 'Cinema' },
+    { path: '/cineworks?embed=1', label: 'Cineworks' },
+    { path: '/codex?embed=1', label: 'Codex' },
+    { path: '/support?embed=1', label: 'Support' },
+    { path: '/treasury?embed=1', label: 'Treasury' },
+    { path: '/self?embed=1', label: 'Soul page' },
 ];
 
-const HOME_PATH = '/library';
+const HOME_PATH = '/archive?embed=1';
 
 function normalize(raw: string): { internal: string | null; external: string | null } {
     const t = raw.trim();

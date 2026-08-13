@@ -14,6 +14,9 @@ export interface GameSettings {
     /** auto = detect device; touch = on-screen controls; keyboard = WASD + keys only */
     controlScheme: ControlScheme;
     controlSize: ControlSize;
+    lookInvert: boolean;
+    /** Multiplier on house look speed. 1 = default. */
+    lookSens: number;
 }
 
 const KEY = 'tbth-game-settings';
@@ -28,6 +31,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
     textScale: 'normal',
     controlScheme: 'auto',
     controlSize: 'normal',
+    lookInvert: false,
+    lookSens: 1,
 };
 
 export function loadSettings(): GameSettings {

@@ -87,3 +87,13 @@ export const WALL_CELLS: WallCell[] = [...WEST, ...SOUTH, ...NORTH];
 export function cellByKey(face: WallFace, col: number, row: number): WallCell | undefined {
     return WALL_CELLS.find((c) => c.face === face && c.col === col && c.row === row);
 }
+
+/** Which plaster you are standing in front of. */
+export function nearestWallFace(x: number, z: number): WallFace {
+    const west = Math.abs(x - (X0 + 0.07));
+    const south = Math.abs(z - MARK_SOUTH);
+    const north = Math.abs(z - MARK_NORTH);
+    if (west <= south && west <= north) return 'w';
+    if (south <= north) return 's';
+    return 'n';
+}

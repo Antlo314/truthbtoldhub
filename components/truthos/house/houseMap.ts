@@ -37,6 +37,7 @@ export type Hotspot = {
     action:
         | { type: 'os' }
         | { type: 'panel'; panel: HousePanelId }
+        | { type: 'sit' }
         | { type: 'soon'; message: string };
 };
 

@@ -1,11 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import {
-    STRIPE_SUPPORT_CODE,
-    RECURRING_TIERS,
-    ONE_TIME_TIERS,
-} from '@/lib/donationTiers';
+import { STRIPE_SUPPORT_CODE, RECURRING_TIERS, ONE_TIME_TIERS } from '@/lib/donationTiers';
 import {
     CASH_APP_URL,
     CASH_TAG,
@@ -32,21 +28,20 @@ export default function DonationSection({
     return (
         <section className={className}>
             <p className={`font-ritual text-white leading-tight ${hut ? 'text-base mb-1.5' : 'text-xl mb-2'}`}>
-                It&apos;s bigger than the 400 Series.
+                Keep the house open.
             </p>
             <p className={`text-white/60 leading-relaxed ${hut ? 'text-[11px] mb-3' : 'text-sm mb-4 max-w-lg'}`}>
-                Your offering doesn&apos;t just fund a film — it builds the infrastructure of an awakening. The
-                400 Series is the spark; the Sanctum itself is being reborn as a living{' '}
-                <span className="text-aether-gold font-semibold">3D world</span>, layered with sacred assets,
-                trials, and tools forged for real spiritual growth. Every gift lays another stone.
+                This offering is for the people in the room — The Hall, The Mark, the daily Word, a
+                place souls can return to. Hosting, the chamber, and the wall stay lit because someone
+                laid a stone.
             </p>
 
             <ul className={hut ? 'mb-4 space-y-1.5' : 'mb-6 max-w-lg space-y-2'}>
                 {[
-                    ['The 400 Series', 'Cinematic Israelite history & recovered scroll-wisdom'],
-                    ['A world reborn in 3D', 'The Sanctum rebuilt as a living, walkable realm'],
-                    ['Assets for awakening', 'Scriptures, relics, guides & trials built for real growth'],
-                    ['The engine behind it', 'Render pipeline, studio & hosting that keep it alive'],
+                    ['The Hall stays open', 'Souls can still find each other'],
+                    ['The Mark holds', 'One painting a year, still on the plaster'],
+                    ['The Word prints', 'The paper still lands on the tray'],
+                    ['The paths stay lit', 'The house and the groves remain walkable'],
                 ].map(([title, desc]) => (
                     <li key={title} className="flex gap-2">
                         <span className="text-aether-gold leading-none mt-0.5">✦</span>
@@ -59,14 +54,16 @@ export default function DonationSection({
 
             <p className={`text-white/55 leading-relaxed ${hut ? 'text-[11px] mb-4' : 'text-sm mb-6 max-w-lg'}`}>
                 Give any amount — Stripe or Cash App — then whisper{' '}
-                <span className="text-aether-gold font-bold">@truufbtold</span> with your hub name so we can
-                match your gift to your soul.
+                <span className="text-aether-gold font-bold">@truufbtold</span> with your hub name so we
+                can match your gift to your soul.
             </p>
 
             {showFundingBar && (
                 <div className={`rounded-2xl border border-aether-gold/15 bg-aether-gold/[0.04] ${hut ? 'mb-4 p-3' : 'mb-6 p-5'}`}>
                     <div className="flex items-center justify-between gap-4 mb-2">
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">The forge fund</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">
+                            The house fund
+                        </p>
                         <p className="font-mono text-xs font-black text-aether-gold">{fundingProgressLabel()}</p>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -111,13 +108,16 @@ export default function DonationSection({
             </div>
 
             <p className="mt-4 text-center text-[9px] text-white/40 leading-relaxed">
-                On Stripe, type support code <span className="font-black text-white">&quot;{STRIPE_SUPPORT_CODE}&quot;</span> if prompted.
-                Tiered in-game rewards are coming — for now every gift keeps the lights on.
+                On Stripe, type support code <span className="font-black text-white">&quot;{STRIPE_SUPPORT_CODE}&quot;</span> if
+                prompted. Every gift keeps the lights on for the people who show up.
+            </p>
+            <p className={`text-center text-white/30 leading-relaxed ${hut ? 'mt-2 text-[8px]' : 'mt-3 text-[11px]'}`}>
+                The 400 Series is a side project of the same house. This offering is not for that.
             </p>
 
             <details className="mt-5 group">
                 <summary className="cursor-pointer text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-aether-gold list-none">
-                    ▸ Planned patron tiers (coming soon)
+                    ▸ Community thanks (coming)
                 </summary>
                 <div className="mt-3 space-y-3">
                     <p className="text-[8px] uppercase tracking-widest text-white/35">Monthly</p>

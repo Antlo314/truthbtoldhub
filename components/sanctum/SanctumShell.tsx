@@ -50,7 +50,16 @@ function matchAny(path: string, patterns: RegExp[]) {
 export default function SanctumShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() || '/';
     const [open, setOpen] = useState(false);
-    const immersive = matchAny(pathname, FULL_IMMERSIVE);
+    const [embedded, setEmbedded] = useState(false);
+    useEffect(() => {
+        try {
+            const q = new URLSearchParams(window.location.search);
+            setEmbedded(q.get('embed') === '1' || window.self !== window.top);
+        } catch {
+            setEmbedded(false);
+        }
+    }, [pathname]);
+    const immersive = embedded || matchAny(pathname, FULL_IMMERSIVE);
     const ritual = matchAny(pathname, RITUAL_ROUTES);
 
     // Close veil on navigate + soft threshold tone
@@ -79,8 +88,7 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
 
     return (
         <div className="relative min-h-[100dvh] flex flex-col">
-            {/* Sound, on one button, on every route — including the 3D world */}
-            <SoundToggle />
+            {!embedded && <SoundToggle />}
 
             {/* Living atmosphere — never on immersive 3D (perf + focus) */}
             {!immersive && (

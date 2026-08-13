@@ -13,9 +13,11 @@ import {
     WALL_CELLS,
     WALL_YEAR,
     clipCaption,
+    nearestWallFace,
     type WallFace,
     type WallMark,
 } from '@/lib/truthos/wall';
+import { getWalkerPose } from './walkerPose';
 
 const PALETTE = ['#34d399', '#fbbf24', '#f87171', '#60a5fa', '#c084fc', '#f472b6', '#f5f5f4', '#0a0a0a'];
 const SIZE = 256;
@@ -36,13 +38,16 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
     const profile = useSoulStore((s) => s.profile);
     const [marks, setMarks] = useState<WallMark[]>([]);
     const [mine, setMine] = useState(false);
+    const [face] = useState<WallFace>(() => nearestWallFace(getWalkerPose().x, getWalkerPose().z));
     const [pick, setPick] = useState<{ face: WallFace; col: number; row: number } | null>(null);
+    const wallCells = WALL_CELLS.filter((c) => c.face === face);
     const [color, setColor] = useState(PALETTE[0]);
     const [tool, setTool] = useState<Tool>('brush');
     const [size, setSize] = useState(8);
     const [caption, setCaption] = useState(profile?.display_name || '');
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+    const [wallQuiet, setWallQuiet] = useState(false);
     const [done, setDone] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const drawing = useRef(false);
@@ -58,7 +63,10 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                 const json = await res.json();
                 if (alive) setMarks(json.marks ?? []);
             } catch {
-                if (alive) setMarks([]);
+                if (alive) {
+                    setMarks([]);
+                    setWallQuiet(true);
+                }
             }
             const headers = await authHeader();
             if (!('Authorization' in headers)) return;
@@ -275,11 +283,13 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                     ) : (
                         <div className="space-y-3">
                             <p className="text-sm text-white/55">
-                                {email
-                                    ? mine
-                                        ? 'Your year is spent. Walk the mural — January 1 it opens again.'
-                                        : 'Choose a small empty section.'
-                                    : 'Sign in to paint. Looking is free.'}
+                                {wallQuiet
+                                    ? 'The wall is quiet — looking still works. Marks will hold when the line returns.'
+                                    : email
+                                      ? mine
+                                          ? 'Your year is spent. Next January 1 it opens again.'
+                                          : 'Choose a small empty section.'
+                                      : 'Sign in to paint. Looking is free.'}
                             </p>
                             {!email && (
                                 <button
@@ -290,8 +300,11 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                                     Sign in
                                 </button>
                             )}
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(18px,1fr))] gap-0.5">
-                                {WALL_CELLS.map((c) => {
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-amber-200/60 font-mono">
+                                {face === 'w' ? 'West wall' : face === 's' ? 'South wall' : 'North wall'}
+                            </p>
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(22px,1fr))] gap-0.5">
+                                {wallCells.map((c) => {
                                     const fill = marks.find((m) => m.face === c.face && m.col === c.col && m.row === c.row);
                                     const locked = mine || !email;
                                     return (

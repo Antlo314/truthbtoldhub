@@ -491,6 +491,12 @@ export default function ChatArea() {
                     </div>
                     <div className="w-full h-px bg-white/5 my-6" />
 
+                    {visibleMessages.length === 0 && (
+                        <p className="text-[12px] text-zinc-500 mb-6">
+                            No one has spoken yet. Enter says the first word.
+                        </p>
+                    )}
+
                     {visibleMessages.map((msg, idx) => {
                         const prev = visibleMessages[idx - 1];
                         const isGrouped = !!prev && !msg.deleted_at && !prev.deleted_at

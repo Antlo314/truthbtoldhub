@@ -27,12 +27,8 @@ import {
     MAIN_Y,
     ROOF_Y,
     ROOMS,
-    SHAFT,
     SHELL,
     STOREY,
-    UPPER_COLLIDERS,
-    UPPER_Y,
-    VOID,
     u,
     type Collider,
 } from './homeMap';
@@ -46,7 +42,9 @@ const W = X1 - X0;
 const D = Z1 - Z0;
 
 /** House walls only — the jungle's boxes are terrain, not architecture */
-const HOUSE_MAIN = MAIN_COLLIDERS.filter((c) => !JUNGLE_COLLIDERS.includes(c));
+const HOUSE_MAIN = MAIN_COLLIDERS.filter(
+    (c) => !JUNGLE_COLLIDERS.includes(c) && !(c.hx > 1.5 && c.hz > 1.5),
+);
 
 function Walls({
     cols,
@@ -92,21 +90,25 @@ function SkyAndMoon({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: 
         if (!skyMat.transparent) skyMat.transparent = true;
         skyMat.opacity = nightness;
         moonMat.opacity = sky.moonOpacity;
-        if (moonRef.current) moonRef.current.visible = sky.moonOpacity > 0.02;
+        if (moonRef.current) {
+            moonRef.current.visible = sky.moonOpacity > 0.02;
+            moonRef.current.lookAt(0, 1.6, 0);
+        }
     });
+
+    skyMat.side = THREE.BackSide;
+    skyMat.depthWrite = false;
+    moonMat.depthWrite = false;
+    moonMat.transparent = true;
 
     return (
         <>
-            <mesh frustumCulled={false}>
-                <sphereGeometry args={[low ? 240 : 480, low ? 24 : 40, low ? 14 : 22]} />
+            <mesh frustumCulled={false} scale={[-1, 1, 1]}>
+                <sphereGeometry args={[low ? 70 : 110, 24, 16]} />
                 <primitive object={skyMat} attach="material" />
             </mesh>
-            <mesh
-                ref={moonRef}
-                position={low ? [-97, 123, -134] : [-195, 246, -267]}
-                onUpdate={(self: THREE.Mesh) => self.lookAt(0, 3, 0)}
-            >
-                <planeGeometry args={low ? [41, 41] : [82, 82]} />
+            <mesh ref={moonRef} position={[-38, 52, -44]} frustumCulled={false}>
+                <circleGeometry args={[low ? 3.2 : 4.4, 20]} />
                 <primitive object={moonMat} attach="material" />
             </mesh>
         </>
@@ -219,7 +221,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                 z: (r.minZ + r.maxZ) / 2,
                 w: r.maxX - r.minX,
                 d: r.maxZ - r.minZ,
-                y: r.level === 'upper' ? UPPER_Y : MAIN_Y,
+                y: MAIN_Y,
                 open: !!r.open,
             })),
         [],
@@ -245,133 +247,48 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                     <primitive object={floorMat(m, f)} attach="material" />
                 </mesh>
             ))}
-            {/* The upper storey is ONE slab with two holes — the stairwell
-                and the foyer void — cut as five rectangles. Room floors above
-                are finishes; this is the structure you actually stand on, and
-                it is the same shape onUpperFootprint tests against. */}
-            {[
-                { x: 0, z: (Z0 + SHAFT.minZ) / 2, w: W, d: SHAFT.minZ - Z0 },
-                { x: (X0 + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - X0, d: SHAFT.maxZ - SHAFT.minZ },
-                { x: (SHAFT.maxX + X1) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: X1 - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
-                { x: (X0 + VOID.minX) / 2, z: (VOID.minZ + Z1) / 2, w: VOID.minX - X0, d: Z1 - VOID.minZ },
-                { x: (VOID.maxX + X1) / 2, z: (VOID.minZ + Z1) / 2, w: X1 - VOID.maxX, d: Z1 - VOID.minZ },
-            ].map((p, i) => (
-                <mesh key={i} position={[p.x, UPPER_Y - 0.15, p.z]} castShadow={sh} receiveShadow={sh}>
-                    <boxGeometry args={[p.w, 0.3, p.d]} />
-                    <primitive object={mats.trim} attach="material" />
-                </mesh>
-            ))}
 
-            {/* ── Walls ──────────────────────────────────────── */}
-            {/* Painted plaster, not a flat fill. Every wall in the house was
-                one untextured colour while a 2k plaster scan sat unused in the
-                library - the single biggest reason interiors read as CAD. */}
+            {/* ── Walls — one storey ─────────────────────────── */}
             <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={m.wallPlaster} shadow={sh} />
-            <Walls cols={UPPER_COLLIDERS} y={UPPER_Y} h={STOREY} mat={m.wallPlaster} shadow={sh} />
 
             {/* The stair, its enclosure and all finish carpentry live in
                 HomeInterior — built as joinery, not extruded boxes. */}
 
-            {/* ── Entry: brick pier, door, warm two-storey glow ── */}
-            <mesh position={[u(0.55), STOREY, Z1 - 0.12]} castShadow={sh}>
-                <boxGeometry args={[2.4, ROOF_Y, 0.55]} />
+            {/* ── Entry: one-storey pier + warm door glow ── */}
+            <mesh position={[u(0.7), STOREY / 2, Z1 - 0.12]} castShadow={sh}>
+                <boxGeometry args={[2.1, STOREY, 0.5]} />
                 <primitive object={mats.brick} attach="material" />
             </mesh>
-            <mesh position={[u(-1.2), 1.25, Z1 + 0.02]}>
-                <planeGeometry args={[1.5, 2.5]} />
+            <mesh position={[u(-0.4), 1.25, Z1 + 0.02]}>
+                <planeGeometry args={[1.6, 2.5]} />
                 <primitive object={m.woodDark} attach="material" />
             </mesh>
-            <mesh position={[u(-1.2), 3.4, Z1 - 0.14]}>
-                <planeGeometry args={[3.4, 6.0]} />
+            <mesh position={[u(-0.4), 2.55, Z1 - 0.12]}>
+                <planeGeometry args={[2.8, 1.6]} />
                 <primitive object={mats.warm} attach="material" />
             </mesh>
 
-            {/* ── Glazing ────────────────────────────────────── */}
-            {/* South stack over the entry + rec-room front windows */}
+            {/* ── Glazing — one band, no stacked storeys ── */}
             {[
-                { x: u(-4.6), y: 1.7, w: 3.6, h: 2.3 },
-                { x: u(-1.9), y: 1.7, w: 2.2, h: 2.3 },
-                { x: u(-4.6), y: UPPER_Y + 1.75, w: 3.6, h: 2.6 },
-                { x: u(-1.9), y: UPPER_Y + 1.75, w: 2.2, h: 2.6 },
-                { x: u(-0.35), y: UPPER_Y + 1.75, w: 1.4, h: 2.6 },
+                { x: u(-4.8), y: 1.7, w: 3.2, h: 2.15 },
+                { x: u(1.8), y: 1.7, w: 2.4, h: 2.15 },
             ].map((wd, i) => (
                 <Window key={`s${i}`} x={wd.x} y={wd.y} z={Z1 + 0.03} w={wd.w} h={wd.h} facing="z" glass={mats.glass} frame={mats.trim} />
             ))}
-            {/* East living glazing + west master/rec windows */}
-            {[u(-0.2), u(2.4)].map((z, i) => (
-                <Window key={`e${i}`} x={X1 + 0.03} y={UPPER_Y + 1.75} z={z} w={3.2} h={2.6} facing="x" glass={mats.glass} frame={mats.trim} />
+            <Window x={X1 + 0.03} y={1.7} z={u(1.6)} w={3.0} h={2.15} facing="x" glass={mats.glass} frame={mats.trim} />
+            {[u(5.8), u(-2.2)].map((z, i) => (
+                <Window key={`w${i}`} x={X0 - 0.03} y={1.7} z={z} w={2.6} h={2.1} facing="x" glass={mats.glass} frame={mats.trim} />
             ))}
-            {[
-                { z: u(5.6), y: 1.7 },
-                { z: u(-2.0), y: 1.7 },
-                { z: u(5.6), y: UPPER_Y + 1.75 },
-                { z: u(0.9), y: UPPER_Y + 1.75 },
-            ].map((wd, i) => (
-                <Window key={`w${i}`} x={X0 - 0.03} y={wd.y} z={wd.z} w={2.8} h={2.4} facing="x" glass={mats.glass} frame={mats.trim} />
-            ))}
-            {/* Kitchen band, north */}
-            <Window x={u(2.6)} y={UPPER_Y + 1.8} z={Z0 - 0.03} w={5.2} h={2.2} facing="z" glass={mats.glass} frame={mats.trim} />
+            <Window x={u(5.2)} y={1.7} z={Z0 - 0.03} w={4.6} h={2.0} facing="z" glass={mats.glass} frame={mats.trim} />
 
-            {/* ── Garage door ────────────────────────────────── */}
-            <mesh position={[u(4.0), 1.5, Z1 + 0.04]}>
-                <planeGeometry args={[9.4, 3.0]} />
-                <primitive object={mats.garage} attach="material" />
-            </mesh>
-            {[0.25, 1.0, 1.75, 2.5].map((y, i) => (
-                <mesh key={i} position={[u(4.0), y, Z1 + 0.07]}>
-                    <boxGeometry args={[9.45, 0.06, 0.04]} />
-                    <primitive object={mats.trim} attach="material" />
-                </mesh>
-            ))}
-            <mesh position={[X1 - 0.5, STOREY / 2, Z1 - 0.16]} castShadow={sh}>
-                <boxGeometry args={[1.0, STOREY, 0.45]} />
+            <mesh position={[X1 - 0.45, STOREY / 2, Z1 - 0.16]} castShadow={sh}>
+                <boxGeometry args={[0.9, STOREY, 0.42]} />
                 <primitive object={mats.brick} attach="material" />
             </mesh>
 
-            {/* ── Balcony rails + wood soffit ────────────────── */}
-            {(() => {
-                const balcW = X1 - u(1.5);
-                const balcCX = (u(1.5) + X1) / 2;
-                const balcD = Z1 - u(3.8);
-                const balcCZ = (u(3.8) + Z1) / 2;
-                return (
-                    <>
-                        <group position={[balcCX, UPPER_Y, Z1 - 0.06]}>
-                            <mesh position={[0, 0.55, 0]}>
-                                <planeGeometry args={[balcW, 1.1]} />
-                                <primitive object={mats.rail} attach="material" />
-                            </mesh>
-                            <mesh position={[0, 1.12, 0]}>
-                                <boxGeometry args={[balcW, 0.06, 0.1]} />
-                                <primitive object={mats.trim} attach="material" />
-                            </mesh>
-                        </group>
-                        <group position={[u(1.5) + 0.06, UPPER_Y, balcCZ]} rotation={[0, Math.PI / 2, 0]}>
-                            <mesh position={[0, 0.55, 0]}>
-                                <planeGeometry args={[balcD, 1.1]} />
-                                <primitive object={mats.rail} attach="material" />
-                            </mesh>
-                            <mesh position={[0, 1.12, 0]}>
-                                <boxGeometry args={[balcD, 0.06, 0.1]} />
-                                <primitive object={mats.trim} attach="material" />
-                            </mesh>
-                        </group>
-                        <mesh rotation={[Math.PI / 2, 0, 0]} position={[balcCX, ROOF_Y - 0.18, balcCZ]} receiveShadow={sh}>
-                            <planeGeometry args={[balcW + OVER, balcD + OVER]} />
-                            <primitive object={mats.soffit} attach="material" />
-                        </mesh>
-                    </>
-                );
-            })()}
-
-            {/* ── Roofs ──────────────────────────────────────── */}
-            <mesh position={[0, ROOF_Y + 0.14, 0]} castShadow={sh} receiveShadow={sh}>
-                <boxGeometry args={[W + OVER * 2, 0.28, D + OVER * 2]} />
-                <primitive object={mats.trim} attach="material" />
-            </mesh>
-            {/* Stepped lower roof over the west wing */}
-            <mesh position={[u(-4.2), UPPER_Y - 0.02, u(5.4)]} castShadow={sh}>
-                <boxGeometry args={[u(5.6), 0.26, u(5.4)]} />
+            {/* ── One roof ───────────────────────────────────── */}
+            <mesh position={[0, ROOF_Y + 0.12, 0]} castShadow={sh} receiveShadow={sh}>
+                <boxGeometry args={[W + OVER * 2, 0.26, D + OVER * 2]} />
                 <primitive object={mats.trim} attach="material" />
             </mesh>
 
@@ -388,12 +305,9 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
             {/* ── Practicals ─────────────────────────────────── */}
             {!low && (
                 <>
-                    <pointLight position={[u(-1.2), 2.6, Z1 - 1.6]} intensity={2.6} color="#ffd9a0" distance={12} decay={2} />
-                    <pointLight position={[u(4.4), UPPER_Y + 1.7, u(1.2)]} intensity={2.4} color="#ffe6bd" distance={14} decay={2} />
-                    <pointLight position={[u(3.6), UPPER_Y + 1.7, u(-2.8)]} intensity={2.0} color="#fff1d6" distance={12} decay={2} />
-                    <pointLight position={[u(-5.0), 1.8, u(5.2)]} intensity={1.8} color="#ffd9a0" distance={10} decay={2} />
-                    <pointLight position={[u(-5.0), UPPER_Y + 1.8, u(5.4)]} intensity={1.5} color="#ffe6bd" distance={10} decay={2} />
-                    <pointLight position={[(u(1.5) + X1) / 2, ROOF_Y - 0.6, (u(3.8) + Z1) / 2]} intensity={1.6} color="#ffcf94" distance={9} decay={2} />
+                    <pointLight position={[u(-0.4), 2.5, Z1 - 1.5]} intensity={2.4} color="#ffd9a0" distance={11} decay={2} />
+                    <pointLight position={[u(5.2), 2.2, u(1.4)]} intensity={2.0} color="#ffe6bd" distance={12} decay={2} />
+                    <pointLight position={[u(-5.2), 1.8, u(5.2)]} intensity={1.6} color="#ffd9a0" distance={9} decay={2} />
                 </>
             )}
         </group>

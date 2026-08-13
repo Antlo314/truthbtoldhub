@@ -23,7 +23,14 @@ type HouseUiState = {
     walkthroughOpen: boolean;
     walkthroughStep: number;
     soonMessage: string | null;
-    /** House cinema — active film id from HOUSE_FILMS */
+    seated: boolean;
+    paused: boolean;
+    recenterToken: number;
+    faceHomeToken: number;
+    lookInvert: boolean;
+    lookSens: number;
+    /** Which plaster face The Mark panel should open on */
+    wallFace: 'w' | 's' | 'n' | null;
     cinemaFilmId: string | null;
     cinemaPlaying: boolean;
     openPanel: (id: HousePanelId) => void;
@@ -31,12 +38,19 @@ type HouseUiState = {
     setWalkthrough: (open: boolean, step?: number) => void;
     nextWalkthrough: () => void;
     setSoonMessage: (msg: string | null) => void;
+    toggleSeated: () => void;
+    setSeated: (v: boolean) => void;
+    setPaused: (v: boolean) => void;
+    requestRecenter: () => void;
+    requestFaceHome: () => void;
+    setLookFeel: (p: { invert?: boolean; sens?: number }) => void;
+    setWallFace: (f: 'w' | 's' | 'n' | null) => void;
     playCinemaFilm: (id: string) => void;
     setCinemaPlaying: (playing: boolean) => void;
     stopCinema: () => void;
 };
 
-const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v9';
+const WALKTHROUGH_KEY = 'tbth-house-walkthrough-v12';
 
 export function shouldShowWalkthrough(): boolean {
     if (typeof window === 'undefined') return false;
@@ -60,12 +74,30 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     walkthroughOpen: false,
     walkthroughStep: 0,
     soonMessage: null,
+    seated: false,
+    paused: false,
+    recenterToken: 0,
+    faceHomeToken: 0,
+    lookInvert: false,
+    lookSens: 1,
+    wallFace: null,
     cinemaFilmId: null,
     cinemaPlaying: false,
 
-    openPanel: (id) => set({ panel: id }),
+    openPanel: (id) => set({ panel: id, paused: false }),
     closePanel: () => set({ panel: null }),
     setSoonMessage: (msg) => set({ soonMessage: msg }),
+    toggleSeated: () => set((s) => ({ seated: !s.seated })),
+    setSeated: (v) => set({ seated: v }),
+    setPaused: (v) => set({ paused: v }),
+    requestRecenter: () => set((s) => ({ recenterToken: s.recenterToken + 1, paused: false, seated: false })),
+    requestFaceHome: () => set((s) => ({ faceHomeToken: s.faceHomeToken + 1, paused: false })),
+    setLookFeel: (p) =>
+        set((s) => ({
+            lookInvert: p.invert ?? s.lookInvert,
+            lookSens: p.sens ?? s.lookSens,
+        })),
+    setWallFace: (f) => set({ wallFace: f }),
 
     setWalkthrough: (open, step = 0) => set({ walkthroughOpen: open, walkthroughStep: step }),
 
@@ -81,43 +113,39 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 
 export const WALKTHROUGH_STEPS = [
     {
-        title: 'Welcome home',
-        body: 'You wake at the rec-room desk on the main floor. This is a two-storey house drawn from real plans — a full stair connects it to the living floor above.',
-        tip: 'Continue',
+        title: 'You’re here',
+        body: 'You wake at the rec-room desk. One floor. Gold rings open things. The front door is just a door — walk through it.',
+        tip: 'Continue, then the house will wait on you',
+        wait: 'tap' as const,
     },
     {
-        title: 'How to move',
-        body: 'Desktop: WASD or arrows · click the scene to look · Shift to run · Space to jump. Mobile: left stick move · right drag look · Use button to interact.',
-        tip: 'Try a few steps',
+        title: 'Look',
+        body: 'Desktop: click the scene, then move the mouse. Phone: drag the right pad.',
+        tip: 'Look left or right',
+        wait: 'look' as const,
     },
     {
-        title: 'The main floor',
-        body: 'Rec room, The Mark (west, one mark a year), and the garage. The computer at your desk boots Truth.OS; the arcade cabinet and the mail tray open their own rooms.',
-        tip: 'Gold rings mark what opens',
+        title: 'Walk',
+        body: 'WASD or arrows. Shift runs. Phone: left stick.',
+        tip: 'Take a few steps',
+        wait: 'move' as const,
     },
     {
-        title: 'Upstairs',
-        body: 'Take the stair up to kitchen, dining, living and the master wing. The library, the ledger, the codex niche and the wayfinder map all live on that floor.',
-        tip: 'Follow the stair',
+        title: 'Use',
+        body: 'Walk into a gold ring. Press E, or tap Use. The paper, the arcade, The Mark, the library and the ledger all answer.',
+        tip: 'Open anything that glows',
+        wait: 'use' as const,
     },
     {
-        title: 'The Mark',
-        body: 'Once a year every soul may leave a small painting on the west-room plaster. Your name sits under it. It stays for everyone to see.',
-        tip: 'One email, one year',
-    },
-    {
-        title: 'Out into the jungle',
-        body: 'Step outside and four paths leave the clearing: the Cinema Grove east (films and Cineworks), the Hall Stones west, the Mirror Pool southeast, the Signal Studio southwest. An offering bowl sits on the front stoop.',
-        tip: 'The wayfinder maps them',
-    },
-    {
-        title: 'The world has a clock',
-        body: 'A full day passes about every twelve minutes. Lamps warm at dusk and fade by morning, stars come and go, and weather rolls on its own.',
-        tip: 'Watch the sky',
+        title: 'The door',
+        body: 'The front opening is not a menu. Walk out. Four paths leave the clearing.',
+        tip: 'Step outside',
+        wait: 'out' as const,
     },
     {
         title: 'You’re home',
-        body: 'Only LIVE players share the space — you will see them walking, upstairs or down. Tour again anytime from the house menu.',
-        tip: 'Enter the house',
+        body: 'Live souls share this floor. Esc or Pause opens Map and Tour. Enter speaks to the room.',
+        tip: 'Esc or Pause · Map and Tour',
+        wait: 'tap' as const,
     },
 ] as const;

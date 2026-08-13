@@ -1,11 +1,7 @@
 'use client';
 
 /**
- * Truth.OS home — a room, not a directory.
- *
- * Programs live in Start (Launchpad folders). The idle desktop greets you,
- * shows two live numbers, and offers at most three doors. That is the
- * breathing room: wallpaper, hour, and a way in — not twenty-one rows.
+ * Truth.OS home — greeting + live doors. Programs live in Start.
  */
 import type { OsAppId } from './truthOsStore';
 import { OsIconTile, getAppIconMeta } from './OsIcon';
@@ -14,6 +10,7 @@ import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { useLiveSouls } from '@/lib/truthos/liveSouls';
 import { WALL_YEAR } from '@/lib/truthos/wallYear';
+import { hutCompletion } from '@/components/truthos/house/stationProgress';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -24,12 +21,6 @@ function greeting(h: number): string {
     if (h < 21) return 'Good evening';
     return 'Good night';
 }
-
-const RECENT: { app: OsAppId; hint: string }[] = [
-    { app: 'archive', hint: 'gather' },
-    { app: 'chamber', hint: 'the house' },
-    { app: 'wall', hint: 'one mark a year' },
-];
 
 export default function OsHome({
     email,
@@ -50,6 +41,8 @@ export default function OsHome({
     const now = new Date();
     const souls = useLiveSouls();
     const [wallLine, setWallLine] = useState<string | null>(null);
+    const [lead, setLead] = useState<string | null>(null);
+    const house = hutCompletion();
 
     useEffect(() => {
         let alive = true;
@@ -59,17 +52,28 @@ export default function OsHome({
             const token = data.session?.access_token;
             if (!token) {
                 if (alive) setWallLine('The wall has a space.');
-                return;
-            }
-            try {
-                const res = await fetch('/api/wall/me', { headers: { Authorization: `Bearer ${token}` } });
-                const json = await res.json();
-                if (!alive) return;
-                setWallLine(json.marked ? 'Your mark still stands.' : `The wall has a space for ${year}.`);
-            } catch {
-                if (alive) setWallLine(null);
+            } else {
+                try {
+                    const res = await fetch('/api/wall/me', { headers: { Authorization: `Bearer ${token}` } });
+                    const json = await res.json();
+                    if (alive) {
+                        setWallLine(json.marked ? 'Your mark still stands.' : `The wall has a space for ${year}.`);
+                    }
+                } catch {
+                    if (alive) setWallLine(null);
+                }
             }
         })();
+        fetch('/api/ticker')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (!alive || !d) return;
+                const raw = (d.breaking?.[0] as string | undefined) ?? null;
+                if (!raw) return;
+                const clean = raw.replace(/^[^\w"'(]+/, '').replace(/^BREAKING:\s*/i, '').trim();
+                if (clean && !/unavailable|check back/i.test(clean)) setLead(clean);
+            })
+            .catch(() => undefined);
         return () => {
             alive = false;
         };
@@ -77,6 +81,26 @@ export default function OsHome({
 
     const name = character?.name?.trim() || profile?.display_name || null;
     const soul = snapshot.soulPower;
+
+    const doors: { app: OsAppId; hint: string; value?: string | null }[] = [
+        {
+            app: 'archive',
+            hint: souls === 1 ? 'you are the first here' : 'souls in the room',
+            value: souls === null ? null : String(souls),
+        },
+        {
+            app: 'chamber',
+            hint: 'the house',
+            value: `${house.seen}/${house.total}`,
+        },
+        {
+            app: 'wall',
+            hint: wallLine ?? 'one mark a year',
+        },
+    ];
+    if (lead) {
+        doors.push({ app: 'updates', hint: lead });
+    }
 
     return (
         <div className={`flex flex-col gap-8 ${phone ? 'pt-2 pb-8' : 'pt-6 pb-10 max-w-md'}`}>
@@ -110,23 +134,15 @@ export default function OsHome({
                 )}
             </div>
 
-            <div className="flex items-baseline gap-6 text-white/45">
-                {souls !== null && (
-                    <p className="text-[12px]">
-                        <span className="text-white/80 font-medium tabular-nums">{souls}</span>
-                        <span className="ml-1.5">{souls === 1 ? 'soul here' : 'souls here'}</span>
-                    </p>
-                )}
-                {email && (
-                    <p className="text-[12px]">
-                        <span className="text-white/80 font-medium tabular-nums">{soul}</span>
-                        <span className="ml-1.5">soul power</span>
-                    </p>
-                )}
-            </div>
+            {email && (
+                <p className="text-[12px] text-white/45">
+                    <span className="text-white/80 font-medium tabular-nums">{soul}</span>
+                    <span className="ml-1.5">soul power</span>
+                </p>
+            )}
 
-            <ul className={phone ? 'grid grid-cols-1 gap-1' : 'flex flex-col gap-0.5 w-[248px]'}>
-                {RECENT.map(({ app, hint }) => {
+            <ul className={phone ? 'grid grid-cols-1 gap-1' : 'flex flex-col gap-0.5 w-[280px]'}>
+                {doors.map(({ app, hint, value }) => {
                     const meta = getAppIconMeta(app);
                     return (
                         <li key={app}>
@@ -144,15 +160,16 @@ export default function OsHome({
                                         {hint}
                                     </span>
                                 </span>
+                                {value && (
+                                    <span className="shrink-0 text-[11px] font-mono tabular-nums text-white/55">
+                                        {value}
+                                    </span>
+                                )}
                             </button>
                         </li>
                     );
                 })}
             </ul>
-
-            {wallLine && (
-                <p className="text-[12px] text-amber-200/70">{wallLine}</p>
-            )}
 
             <p className="text-[10px] uppercase tracking-[0.28em] text-white/25 font-mono">
                 {phone ? 'Dock · Launchpad for the rest' : 'Start holds the rest · six folders'}

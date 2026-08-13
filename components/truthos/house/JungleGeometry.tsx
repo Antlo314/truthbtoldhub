@@ -128,7 +128,7 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
 
     // ── The green wall: three rings, each taller and darker ──
     const wallA = useMemo(() => ringPoints(seededRng(11801), Math.floor(150 * (low ? 0.6 : 1)), 37, 4), [low]);
-    const wallAlow = useMemo(() => ringPoints(seededRng(11901), Math.floor(150 * (low ? 0.6 : 1)), 35.5, 3), [low]);
+    const wallAlow = useMemo(() => (low ? [] : ringPoints(seededRng(11901), 150, 35.5, 3)), [low]);
     const wallB = useMemo(() => ringPoints(seededRng(22802), Math.floor(110 * (low ? 0.55 : 1)), 52, 7), [low]);
     const wallC = useMemo(() => (low ? [] : ringPoints(seededRng(33803), 84, 70, 9)), [low]);
 
@@ -357,9 +357,9 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
         <group>
             {/* The jungle floor — the texture is now the DISTANCE only;
                 everything you walk through is real blades (GrassField). */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow={sh}>
-                <circleGeometry args={[240, low ? 40 : 64]} />
-                <primitive object={m.grass} attach="material" />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow={sh}>
+                <circleGeometry args={[240, low ? 24 : 40]} />
+                <meshLambertMaterial color="#2a4a2e" />
             </mesh>
 
             <GrassField low={low} />
@@ -381,7 +381,7 @@ export default function JungleGeometry({ low = false }: { low?: boolean }) {
                         position={[(c.ax + c.bx) / 2, 0.02, (c.az + c.bz) / 2]}
                         receiveShadow={sh}
                     >
-                        <planeGeometry args={[c.halfWidth * 2, len]} />
+                        <planeGeometry args={[Math.min(1.5, c.halfWidth), len]} />
                         <primitive object={m.dirt} attach="material" />
                     </mesh>
                 );

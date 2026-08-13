@@ -1,23 +1,9 @@
 /**
- * The Safe House — two storeys, built from the real drawings, then
- * scaled up to live at world size.
+ * The Safe House — one storey.
  *
- * Source plan: main floor 1,064.3 sqft · upper 1,393.4 sqft · width
- * 44'-7" · depth 50'-2". Every coordinate below is the drawing in
- * plan-metres, passed through u() — one scale knob. At S = 2 the house
- * runs 27.2 × 30.6 m, the same presence as the original safe house,
- * with the drawing's exact proportions.
- *
- * What scales and what doesn't: room coordinates scale; ceilings stay
- * 10 ft (a 20 ft bedroom ceiling is a cathedral, not a home); the
- * player, doors and wall thickness stay human-sized (doors widen 1.5×,
- * not 2×, because a 2.4 m door void reads as a missing wall).
- *
- * Orientation: the street, driveway, garage and front door face +Z.
- * The rear patio faces -Z. Origin is the centre of the footprint.
- *
- * This file is the single source: geometry, colliders, floor heights,
- * the stair ramp, the intro desk and the hotspots all read these tables.
+ * The second floor was the stair ghosts, the overlapping ceilings, and
+ * half the draw cost. Everything that lived upstairs now lives on this
+ * plate. S is 2.2 so the ground floor is a tad larger than the old main.
  */
 import type { Hotspot } from './houseMap';
 import { DESTINATIONS, destCenter, JUNGLE_BOUNDS, JUNGLE_COLLIDERS } from './jungleMap';
@@ -25,17 +11,12 @@ import { DESTINATIONS, destCenter, JUNGLE_BOUNDS, JUNGLE_COLLIDERS } from './jun
 const FT = 0.3048;
 export const ft = (feet: number, inches = 0) => (feet + inches / 12) * FT;
 
-/** The scale knob. 2 = the drawing, doubled. */
-export const S = 2;
-/** Plan-metres → world-metres */
+export const S = 2.2;
 export const u = (n: number) => n * S;
-/** Door gaps grow slower than rooms */
-const DOOR = 1.5;
+const DOOR = 1.45;
 
-/* ── Envelope ─────────────────────────────────────────────── */
-
-export const HOME_W = u(ft(44, 7)); // 27.18
-export const HOME_D = u(ft(50, 2)); // 30.58
+export const HOME_W = u(ft(44, 7));
+export const HOME_D = u(ft(50, 2));
 
 export const SHELL = {
     minX: -HOME_W / 2,
@@ -45,17 +26,15 @@ export const SHELL = {
     t: 0.24,
 } as const;
 
-/** Ceilings stay true to the plan — 10 ft clear per storey */
 export const STOREY = ft(10);
 export const MAIN_Y = 0;
-export const UPPER_Y = STOREY + 0.3;
-export const ROOF_Y = UPPER_Y + STOREY;
+/** Kept so leftover callers compile — there is no upper storey. */
+export const UPPER_Y = MAIN_Y;
+export const ROOF_Y = STOREY + 0.28;
 
 export const EYE_HEIGHT = 1.62;
 export const SIT_HEIGHT = 1.12;
 export const PLAYER_R = 0.34;
-
-/* ── Rooms ────────────────────────────────────────────────── */
 
 export type Level = 'main' | 'upper';
 
@@ -76,133 +55,50 @@ const X1 = SHELL.maxX;
 const Z0 = SHELL.minZ;
 const Z1 = SHELL.maxZ;
 
-/* Band edges (plan-metres, scaled) */
-const W_E = u(-2.7);
-const C_E = u(0.2);
+const W_E = u(-2.55);
+const E_W = u(1.7);
 
 export const ROOMS: Room[] = [
-    /* ── MAIN FLOOR ─────────────────────────────── */
-    { id: 'rec', name: 'Rec Room', level: 'main', minX: X0, maxX: W_E, minZ: u(2.3), maxZ: Z1 },
-    { id: 'foyer', name: 'Foyer', level: 'main', minX: W_E, maxX: C_E, minZ: u(2.3), maxZ: Z1 },
-    { id: 'bath', name: 'Bath', level: 'main', minX: X0, maxX: W_E, minZ: u(0.6), maxZ: u(2.3) },
-    { id: 'mud', name: 'Mud', level: 'main', minX: W_E, maxX: C_E, minZ: u(0.6), maxZ: u(2.3) },
-    { id: 'bed_w', name: 'The Mark', level: 'main', minX: X0, maxX: u(-3.1), minZ: u(-4.4), maxZ: u(0.6) },
-    { id: 'bed_n', name: 'Bedroom', level: 'main', minX: u(-3.1), maxX: u(1.27), minZ: Z0, maxZ: u(-4.4) },
-    // The circulation spine: bedrooms -> mud -> foyer. It existed as
-    // walkable space but had no room, therefore no floor.
-    { id: 'hall_m', name: 'Hall', level: 'main', minX: u(-3.1), maxX: C_E, minZ: u(-4.4), maxZ: u(0.6) },
-    { id: 'mech', name: 'Mech', level: 'main', minX: C_E, maxX: u(1.27), minZ: u(-1.0), maxZ: u(0.6), solid: true },
-    { id: 'garage', name: 'Garage', level: 'main', minX: u(1.27), maxX: X1, minZ: u(0.4), maxZ: Z1, solid: true },
-    { id: 'tandem', name: 'Tandem', level: 'main', minX: u(1.27), maxX: X1, minZ: u(-4.4), maxZ: u(0.4), solid: true },
-
-    /* ── UPPER FLOOR ────────────────────────────── */
-    { id: 'master', name: 'Master', level: 'upper', minX: X0, maxX: u(-2.66), minZ: u(2.67), maxZ: Z1 },
-    { id: 'ensuite', name: 'Ensuite', level: 'upper', minX: X0, maxX: u(-4.5), minZ: u(-0.4), maxZ: u(2.67) },
-    { id: 'wic', name: 'Walk-in', level: 'upper', minX: u(-4.5), maxX: u(-2.66), minZ: u(0.6), maxZ: u(2.67) },
-    { id: 'bed_u', name: 'Bedroom', level: 'upper', minX: X0, maxX: u(-3.3), minZ: u(-4.3), maxZ: u(-0.4) },
-    { id: 'laundry', name: 'Laundry', level: 'upper', minX: u(-3.3), maxX: u(-0.5), minZ: u(-4.3), maxZ: u(-1.9) },
-    { id: 'pwdr', name: 'Powder', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(-0.4), maxZ: u(0.6) },
-    { id: 'dining', name: 'Dining', level: 'upper', minX: u(-0.5), maxX: u(2.7), minZ: u(0.4), maxZ: u(3.6) },
-    { id: 'kitchen', name: 'Kitchen', level: 'upper', minX: u(0.9), maxX: X1, minZ: u(-4.4), maxZ: u(-1.2) },
-    { id: 'living', name: 'Living', level: 'upper', minX: u(2.7), maxX: X1, minZ: u(-1.2), maxZ: u(3.6) },
-    // The platform the stair arrives on. North of it: the open shaft —
-    // no room, therefore no floor, which is what a stairwell IS.
-    { id: 'landing', name: 'Landing', level: 'upper', minX: u(-2.66), maxX: u(-0.5), minZ: u(0.6), maxZ: u(1.7) },
-    { id: 'balcony', name: 'Covered Balcony', level: 'upper', minX: u(0.9), maxX: X1, minZ: u(3.6), maxZ: Z1, open: true },
-    { id: 'patio', name: 'Covered Patio', level: 'upper', minX: u(3.3), maxX: X1, minZ: Z0, maxZ: u(-4.4), open: true },
+    { id: 'rec', name: 'Rec Room', level: 'main', minX: X0, maxX: W_E, minZ: u(2.1), maxZ: Z1 },
+    { id: 'foyer', name: 'Foyer', level: 'main', minX: W_E, maxX: E_W, minZ: u(2.1), maxZ: Z1 },
+    { id: 'bath', name: 'Bath', level: 'main', minX: X0, maxX: W_E, minZ: u(0.5), maxZ: u(2.1) },
+    { id: 'hall_m', name: 'Hall', level: 'main', minX: W_E, maxX: E_W, minZ: u(-4.2), maxZ: u(2.1) },
+    { id: 'bed_w', name: 'The Mark', level: 'main', minX: X0, maxX: W_E, minZ: u(-4.2), maxZ: u(0.5) },
+    { id: 'dining', name: 'Dining', level: 'main', minX: W_E, maxX: E_W, minZ: Z0, maxZ: u(-4.2) },
+    { id: 'bed_n', name: 'Spare', level: 'main', minX: X0, maxX: W_E, minZ: Z0, maxZ: u(-4.2) },
+    { id: 'living', name: 'Living', level: 'main', minX: E_W, maxX: X1, minZ: u(-1.2), maxZ: Z1 },
+    { id: 'kitchen', name: 'Kitchen', level: 'main', minX: E_W, maxX: X1, minZ: Z0, maxZ: u(-1.2) },
 ];
 
 export const roomsOn = (level: Level) => ROOMS.filter((r) => r.level === level);
 
-/* ── The stair ────────────────────────────────────────────── */
-
+/** Degenerate stubs — no stair, no void, no shaft. */
 export const STAIR = {
-    /** Fills the shaft between its two enclosing walls */
-    minX: u(-2.57),
-    maxX: u(-0.58),
-    zBottom: u(5.2),
-    zTop: u(1.7),
-    yBottom: MAIN_Y,
-    yTop: UPPER_Y,
-    treads: 18,
+    minX: 0,
+    maxX: 0,
+    zBottom: 0,
+    zTop: 0,
+    yBottom: 0,
+    yTop: 0,
+    treads: 0,
 } as const;
+export const VOID = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } as const;
+export const SHAFT = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } as const;
 
-/**
- * The shaft the stair lives in — the hole in the upper floor.
- * No upper room covers it, so no floor is drawn there.
- */
-/** The double-height foyer: upper storey has no floor here */
-export const VOID = {
-    minX: u(-2.66),
-    maxX: u(0.9),
-    minZ: u(5.2),
-    maxZ: Z1,
-} as const;
-
-export const SHAFT = {
-    minX: u(-2.66),
-    maxX: u(-0.5),
-    minZ: u(1.7),
-    maxZ: u(5.2),
-} as const;
-
-const inStair = (x: number, z: number) =>
-    x > STAIR.minX && x < STAIR.maxX && z > STAIR.zTop && z < STAIR.zBottom;
-
-function stairY(z: number): number {
-    const t = (STAIR.zBottom - z) / (STAIR.zBottom - STAIR.zTop);
-    return STAIR.yBottom + Math.min(1, Math.max(0, t)) * (STAIR.yTop - STAIR.yBottom);
+export function onUpperFootprint(_x: number, _z: number): boolean {
+    return false;
 }
 
-/* ── Walkable ground ──────────────────────────────────────── */
-
-const inRoom = (x: number, z: number, r: Room) =>
-    x > r.minX && x < r.maxX && z > r.minZ && z < r.maxZ;
-
-/**
- * Is (x,z) on the upper storey's floor?
- *
- * Deliberately NOT "is there a room here". Rooms describe finishes and
- * they do not tile the plate — the gaps between them (the bedroom
- * corridor, the strip behind the laundry, the space beside the kitchen)
- * were walkable AIR, and you fell through them. The upper storey is one
- * slab with exactly two holes: the stairwell and the foyer void.
- */
-export function onUpperFootprint(x: number, z: number): boolean {
-    if (x <= X0 || x >= X1 || z <= Z0 || z >= Z1) return false;
-    if (x > SHAFT.minX && x < SHAFT.maxX && z > SHAFT.minZ && z < SHAFT.maxZ) return false;
-    if (x > VOID.minX && x < VOID.maxX && z > VOID.minZ && z < VOID.maxZ) return false;
-    return true;
-}
-
-/** Floor height under the player. See v1 notes: level disambiguates. */
-export function groundAt(x: number, z: number, level: Level): number {
-    if (inStair(x, z)) return stairY(z);
-    if (level === 'upper' && onUpperFootprint(x, z)) return UPPER_Y;
+export function groundAt(_x: number, _z: number, _level: Level): number {
     return MAIN_Y;
 }
 
-/** Storey after a move — switches only at the stair's ends. */
-export function levelAfter(x: number, z: number, level: Level): Level {
-    if (!inStair(x, z)) return level;
-    if (z <= STAIR.zTop + 1.4) return 'upper';
-    // Hand over to the main floor WELL before the bottom tread, so the
-    // rail guarding the foyer void can never block a descent.
-    if (z >= STAIR.zBottom - 1.4) return 'main';
-    return level;
+export function levelAfter(_x: number, _z: number, _level: Level): Level {
+    return 'main';
 }
-
-/* ── Colliders ────────────────────────────────────────────── */
 
 export type Collider = { x: number; z: number; hx: number; hz: number };
 
-/**
- * A wall segment. Every run is EXTENDED by half a wall thickness at both
- * ends along its axis, so any two walls whose endpoints share a corner
- * physically overlap instead of kissing at a zero-width line. "Some walls
- * aren't even touching" was exactly this: segments met edge-to-edge and
- * floating-point met daylight. Overlap is invisible; a seam is not.
- */
 const seg = (x1: number, z1: number, x2: number, z2: number, t = SHELL.t): Collider => {
     const alongX = Math.abs(x2 - x1) >= Math.abs(z2 - z1);
     const ext = t / 2;
@@ -214,7 +110,6 @@ const seg = (x1: number, z1: number, x2: number, z2: number, t = SHELL.t): Colli
     };
 };
 
-/** Every doorway punched by withDoor — casings and thresholds read this */
 export type Doorway = { x: number; z: number; w: number; axis: 'x' | 'z' };
 export const DOORWAYS: Doorway[] = [];
 
@@ -222,19 +117,10 @@ function withDoor(
     x1: number, z1: number, x2: number, z2: number,
     gapC: number, gapW = DOOR, t = SHELL.t,
 ): Collider[] {
-    // seg() extends every run by t/2 at both ends to seal corners — but a
-    // stub's gap-facing end is not a corner, it is the door jamb. Left
-    // extended, every doorway was t (0.24 m) narrower to the BODY than to
-    // the EYE: a "1.2 m" door passed 0.96 m of collider, and players bumped
-    // invisible wall inside the visible opening. Pulling the gap-facing
-    // endpoint back by t/2 makes the collider edge sit exactly on the jamb.
     const ext = t / 2;
     const horizontal = Math.abs(x2 - x1) > Math.abs(z2 - z1);
     if (horizontal) {
         DOORWAYS.push({ x: gapC, z: (z1 + z2) / 2, w: gapW, axis: 'x' });
-        // Keep even tiny stubs: the old filter silently DELETED any piece
-        // shorter than the wall's own thickness, which left an open gap
-        // at the corner wherever a doorway sat near a wall end.
         return [
             seg(x1, z1, gapC - gapW / 2 - ext, z2, t),
             seg(gapC + gapW / 2 + ext, z1, x2, z2, t),
@@ -247,20 +133,7 @@ function withDoor(
     ].filter((c) => c.hz > t / 2 + 0.001 && Math.abs(z2 - z1) > 0.02);
 }
 
-/**
- * The stair enclosure — present at EVERY level, which is the fix for
- * walking off the steps. A stair is a corridor: a solid wall on the
- * west, a balustrade on the east. Both are solid to a body; only one
- * is solid to the eye. Without these the climb had open sides and you
- * could step straight out over the foyer.
- */
-export const STAIR_WALLS: Collider[] = [
-    { x: SHAFT.minX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 + 0.12 },
-    { x: SHAFT.maxX, z: (SHAFT.minZ + SHAFT.maxZ) / 2, hx: 0.12, hz: (SHAFT.maxZ - SHAFT.minZ) / 2 + 0.12 },
-];
-
-/** The stair mouth is a cased opening, not a hole */
-DOORWAYS.push({ x: (STAIR.minX + STAIR.maxX) / 2, z: STAIR.zBottom, w: STAIR.maxX - STAIR.minX, axis: 'x' });
+export const STAIR_WALLS: Collider[] = [];
 
 const SHELL_WALLS: Collider[] = [
     seg(X0, Z0, X1, Z0),
@@ -270,173 +143,53 @@ const SHELL_WALLS: Collider[] = [
 
 export const MAIN_COLLIDERS: Collider[] = [
     ...SHELL_WALLS,
-    // Front wall — door gap on the foyer axis
-    ...withDoor(X0, Z1, X1, Z1, u(-1.2), 1.8),
-    // West band / centre divider — doors to rec and mud
-    // Rec door sits NORTH of the stair shaft — at u(5.0) it opened
-    // straight into the enclosure wall and was unpassable.
-    ...withDoor(W_E, u(2.3), W_E, Z1, u(6.2), DOOR),
-    ...withDoor(W_E, u(0.6), W_E, u(2.3), u(0.9), 1.35),
-    // Centre / garage dividers
-    seg(C_E, u(-1.0), C_E, Z1),
-    seg(u(1.27), Z0, u(1.27), Z1),
-    // Rec / bath · bath / bedroom
-    ...withDoor(X0, u(2.3), W_E, u(2.3), u(-4.0), 1.35),
-    ...withDoor(X0, u(0.6), W_E, u(0.6), u(-5.6), 1.35),
-    // Bedrooms — The Mark opens off the hall, not only through the bath
-    ...withDoor(u(-3.1), u(-4.4), u(1.27), u(-4.4), u(-1.0), 1.35),
-    ...withDoor(u(-3.1), u(-4.4), u(-3.1), u(0.6), u(-1.9), 1.4),
-    // Mud / mech — and mech's south face, which was open to the corridor
-    seg(C_E, u(0.6), u(1.27), u(0.6)),
-    seg(C_E, u(-1.0), u(1.27), u(-1.0)),
-    // Under the stair: the ramp's north end is a wall at ground level.
-    // Without it you walk into the underside of the flight and the floor
-    // height jumps three metres.
-    seg(SHAFT.minX, SHAFT.minZ, SHAFT.maxX, SHAFT.minZ),
-    ...STAIR_WALLS,
-    // The jungle: outdoors the same walls that always held
+    ...withDoor(X0, Z1, X1, Z1, u(-0.4), 1.8),
+    ...withDoor(W_E, u(2.1), W_E, Z1, u(6.4), DOOR),
+    ...withDoor(W_E, u(0.5), W_E, u(2.1), u(1.3), 1.25),
+    ...withDoor(W_E, u(-4.2), W_E, u(0.5), u(-1.9), 1.7),
+    ...withDoor(W_E, Z0, W_E, u(-4.2), u(-5.6), 1.3),
+    ...withDoor(E_W, u(-1.2), E_W, Z1, u(3.4), 1.5),
+    ...withDoor(E_W, Z0, E_W, u(-1.2), u(-3.4), 1.4),
+    ...withDoor(X0, u(2.1), W_E, u(2.1), u(-5.4), 1.25),
+    ...withDoor(X0, u(0.5), W_E, u(0.5), u(-5.4), 1.25),
+    ...withDoor(X0, u(-4.2), W_E, u(-4.2), u(-5.4), 1.25),
+    ...withDoor(W_E, u(-4.2), E_W, u(-4.2), u(-0.4), 1.45),
+    ...withDoor(E_W, u(-1.2), X1, u(-1.2), u(4.6), 1.4),
     ...JUNGLE_COLLIDERS,
 ];
 
-/** Doorways pushed so far belong to the main storey (stair mouth included) */
 export const MAIN_DOORWAYS_END = DOORWAYS.length;
+export const UPPER_COLLIDERS: Collider[] = [];
 
-export const UPPER_COLLIDERS: Collider[] = [
-    ...SHELL_WALLS,
-    seg(X0, Z1, X1, Z1),
-    // Master suite
-    ...withDoor(X0, u(2.67), u(-2.66), u(2.67), u(-5.4), 1.35),
-    seg(u(-2.66), u(2.67), u(-2.66), Z1),
-    // Ensuite / WIC
-    ...withDoor(u(-4.5), u(0.6), u(-4.5), u(2.67), u(1.9), 1.2),
-    ...withDoor(X0, u(-0.4), u(-2.66), u(-0.4), u(-5.9), 1.25),
-    // Bedroom / laundry
-    seg(u(-3.3), u(-4.3), u(-3.3), u(-0.4)),
-    ...withDoor(u(-3.3), u(-1.9), u(-0.5), u(-1.9), u(-2.4), 1.25),
-    // Powder
-    ...withDoor(u(-2.66), u(0.6), u(-0.5), u(0.6), u(-1.9), 1.2),
-    seg(u(-0.5), u(-0.4), u(-0.5), u(1.0)),
-    // Walls the first pass simply never drew — every one of these was a
-    // room whose partition stopped short of its neighbour:
-    // walk-in's south face (it hung open into the ensuite)
-    seg(u(-4.5), u(0.6), u(-2.66), u(0.6)),
-    // powder's west face
-    seg(u(-2.66), u(-0.4), u(-2.66), u(0.6)),
-    // laundry's east face
-    seg(u(-0.5), u(-4.3), u(-0.5), u(-1.9)),
-    // bedroom + laundry north faces (they were open to the patio corridor)
-    seg(X0, u(-4.3), u(-3.3), u(-4.3)),
-    seg(u(-3.3), u(-4.3), u(-0.5), u(-4.3)),
-    // kitchen's north face, with the door out to the covered patio
-    ...withDoor(u(0.9), u(-4.4), X1, u(-4.4), u(4.2), 1.4),
-    // Kitchen west wall + dining/living divider (open plan, half-walls)
-    seg(u(0.9), u(-4.4), u(0.9), u(-1.2)),
-    seg(u(2.7), u(0.4), u(2.7), u(3.6)),
-    // Guard the foyer void: dining's north edge, and the balcony's west
-    seg(u(-0.5), u(3.6), u(0.9), u(3.6)),
-    seg(u(0.9), u(3.6), u(0.9), Z1),
-    // Balcony + patio rails
-    seg(u(0.9), Z1, X1, Z1),
-    seg(u(3.3), Z0, X1, Z0),
-    // Same enclosure, upper storey — you arrive between the same walls
-    ...STAIR_WALLS,
-    // …and the shaft's far end is railed, so an upper-floor walker can
-    // never stroll off the landing into the foyer drop.
-    seg(SHAFT.minX, SHAFT.maxZ, SHAFT.maxX, SHAFT.maxZ),
-    seg(SHAFT.maxX, VOID.minZ, VOID.maxX, VOID.minZ),
-];
-
-/** The rec-room desk — the anchor of the intro and of the FURNITURE table below */
 export const DESK = {
-    x: u(-5.9),
-    z: u(6.2),
+    x: u(-5.85),
+    z: u(6.15),
     monitorY: 1.35,
 } as const;
 
-/**
- * Every solid prop in the house, as a footprint.
- *
- * This table is the reason you cannot walk through the furniture: it is
- * concatenated onto the wall colliders in collidersFor(). One entry per
- * prop that HomeDecor/HomeInterior actually place, half-extents taken
- * from the prop's real size (props are human-scale metres even though
- * the ROOMS ride the u() doubling).
- *
- * Two deliberate omissions:
- *   · rugs — flat, you walk on them;
- *   · the rec-room desk chair — every session SPAWNS seated in it, and a
- *     collider you start inside blocks both slide axes, i.e. you wake up
- *     unable to move.
- *
- * scripts/validate-house.mjs asserts nothing here sits in a doorway or
- * on the stair, and that every room is still reachable from the seat.
- */
 export const FURNITURE: (Collider & { level: Level; name: string })[] = [
-    /* ── MAIN: rec room ───────────────────────────────── */
     { name: 'desk', level: 'main', x: DESK.x, z: DESK.z, hx: 1.0, hz: 0.45 },
-    { name: 'rec sofa', level: 'main', x: u(-4.2), z: u(7.2), hx: 1.25, hz: 0.5 },
-    // Pulled against the sofa — used to sit on the desk→door line
-    { name: 'rec coffee table', level: 'main', x: u(-4.2), z: u(6.55), hx: 0.58, hz: 0.36 },
-    { name: 'floor lamp', level: 'main', x: u(-6.4), z: u(7.3), hx: 0.22, hz: 0.22 },
-    { name: 'arcade cabinet', level: 'main', x: u(-3.0), z: u(7.2), hx: 0.42, hz: 0.37 },
-    // North foyer, east of the front door — clear of the stair mouth
-    { name: 'rec side table', level: 'main', x: u(-0.1), z: u(6.95), hx: 0.4, hz: 0.32 },
-    { name: 'rec plant', level: 'main', x: u(-6.55), z: u(3.0), hx: 0.3, hz: 0.3 },
-    { name: 'rec plant south', level: 'main', x: u(-6.4), z: u(4.2), hx: 0.28, hz: 0.28 },
-
-    /* ── MAIN: The Mark (was west bedroom) + north bedroom + bath ── */
-    // Bench on the door wall, not in the mural walk
-    { name: 'mark bench', level: 'main', x: u(-3.55), z: u(-3.4), hx: 0.28, hz: 0.7 },
-    { name: 'bed (north)', level: 'main', x: u(-1.0), z: u(-6.2), hx: 1.25, hz: 1.15 },
-    { name: 'dresser', level: 'main', x: u(0.6), z: u(-6.9), hx: 0.58, hz: 0.32 },
-    { name: 'bath vanity', level: 'main', x: u(-6.2), z: u(1.4), hx: 0.88, hz: 0.42 },
-
-    /* ── UPPER: kitchen ───────────────────────────────── */
-    // Narrower island + stools tucked under the north lip (one footprint)
-    { name: 'island', level: 'upper', x: u(3.4), z: u(-2.6), hx: 1.6, hz: 0.78 },
-    { name: 'counter run', level: 'upper', x: u(3.2), z: -SHELL.maxZ + 0.9, hx: 3.85, hz: 0.4 },
-    { name: 'fridge', level: 'upper', x: u(1.6), z: u(-6.78), hx: 0.42, hz: 0.37 },
-    { name: 'stove', level: 'upper', x: u(4.4), z: u(-6.78), hx: 0.47, hz: 0.34 },
-
-    /* ── UPPER: dining + the Ledger ───────────────────── */
-    // Table + pulled-in chairs as one conversation group — east aisle stays ≥1.1 m
-    { name: 'dining table', level: 'upper', x: u(1.1), z: u(2.0), hx: 1.5, hz: 1.2 },
-    // Was at x u(-0.3), overhanging the stair's top landing
-    { name: 'sideboard (Ledger)', level: 'upper', x: u(0.2), z: u(3.3), hx: 0.98, hz: 0.28 },
-
-    /* ── UPPER: living + the Library wall ─────────────── */
-    // Collider follows the MESH (X1 - 0.55), which is where the shelves
-    // actually stand — it used to sit 16 cm east of them, inside the wall.
-    { name: 'bookshelf wall', level: 'upper', x: SHELL.maxX - 0.55, z: u(1.3), hx: 0.35, hz: 2.6 },
-    { name: 'living sofa', level: 'upper', x: u(4.6), z: u(1.6), hx: 1.8, hz: 0.6 },
-    { name: 'living coffee table', level: 'upper', x: u(4.6), z: u(-0.1), hx: 0.68, hz: 0.42 },
-    { name: 'accent chair', level: 'upper', x: u(6.2), z: u(3.2), hx: 0.46, hz: 0.46 },
-    { name: 'media wall', level: 'upper', x: SHELL.maxX - 0.52, z: u(-0.9), hx: 0.36, hz: 0.82 },
-    { name: 'codex desk', level: 'upper', x: u(2.6), z: u(-4.0), hx: 0.58, hz: 0.28 },
-
-    /* ── UPPER: master + bedroom ──────────────────────── */
-    { name: 'master bed', level: 'upper', x: u(-5.2), z: u(5.6), hx: 1.3, hz: 1.4 },
-    { name: 'bedside (west)', level: 'upper', x: u(-6.55), z: u(6.8), hx: 0.3, hz: 0.3 },
-    { name: 'bedside (east)', level: 'upper', x: u(-3.7), z: u(6.8), hx: 0.3, hz: 0.3 },
-    { name: 'upper bed', level: 'upper', x: u(-3.95), z: u(-2.8), hx: 1.05, hz: 1.0 },
-
-    /* ── UPPER: balcony ───────────────────────────────── */
-    { name: 'balcony chair (w)', level: 'upper', x: u(4.6), z: u(5.6), hx: 0.46, hz: 0.46 },
-    { name: 'balcony chair (e)', level: 'upper', x: u(5.9), z: u(5.6), hx: 0.46, hz: 0.46 },
+    { name: 'rec sofa', level: 'main', x: u(-4.1), z: u(7.15), hx: 1.2, hz: 0.48 },
+    { name: 'rec coffee table', level: 'main', x: u(-4.1), z: u(6.5), hx: 0.52, hz: 0.32 },
+    { name: 'floor lamp', level: 'main', x: u(-6.35), z: u(7.25), hx: 0.2, hz: 0.2 },
+    { name: 'arcade cabinet', level: 'main', x: u(-3.05), z: u(7.15), hx: 0.4, hz: 0.34 },
+    { name: 'rec plant', level: 'main', x: u(-6.45), z: u(3.1), hx: 0.28, hz: 0.28 },
+    { name: 'daily word tray', level: 'main', x: u(1.15), z: u(6.9), hx: 0.38, hz: 0.3 },
+    { name: 'mark bench', level: 'main', x: u(-3.05), z: u(-3.35), hx: 0.26, hz: 0.65 },
+    { name: 'bath vanity', level: 'main', x: u(-6.15), z: u(1.3), hx: 0.8, hz: 0.38 },
+    { name: 'spare bed', level: 'main', x: u(-5.7), z: u(-6.15), hx: 1.05, hz: 1.1 },
+    { name: 'living sofa', level: 'main', x: u(5.4), z: u(2.4), hx: 1.7, hz: 0.55 },
+    { name: 'living coffee table', level: 'main', x: u(5.4), z: u(0.85), hx: 0.62, hz: 0.38 },
+    { name: 'accent chair', level: 'main', x: u(6.0), z: u(3.4), hx: 0.42, hz: 0.42 },
+    { name: 'bookshelf wall', level: 'main', x: X1 - 0.52, z: u(2.1), hx: 0.32, hz: 2.4 },
+    { name: 'media wall', level: 'main', x: X1 - 0.5, z: u(-0.2), hx: 0.32, hz: 0.72 },
+    { name: 'island', level: 'main', x: u(5.2), z: u(-3.4), hx: 1.45, hz: 0.7 },
+    { name: 'counter run', level: 'main', x: u(5.0), z: Z0 + 0.85, hx: 3.2, hz: 0.38 },
+    { name: 'codex desk', level: 'main', x: u(3.5), z: u(-2.2), hx: 0.52, hz: 0.26 },
+    { name: 'dining table', level: 'main', x: u(-0.3), z: u(-5.8), hx: 1.35, hz: 1.05 },
+    { name: 'sideboard (Ledger)', level: 'main', x: u(-0.3), z: Z0 + 0.55, hx: 0.95, hz: 0.26 },
 ];
 
-/**
- * Wall art, as a table.
- *
- * A framed picture is 5 cm of solid box standing off a wall, so it blocks a
- * doorway exactly as well as a bookcase does — `artDomain` hung across half
- * the opening into the stair room, and the house validator never saw it
- * because that check only ever read FURNITURE. Positions live here now so
- * scripts/validate-house.mjs can hold art to the same door clearance.
- *
- * `art` keys into useHouseMaterials(); ry is the yaw, so a rotated frame's
- * width runs along z instead of x (the validator accounts for that).
- */
 export type ArtSpec = {
     art: string;
     x: number;
@@ -448,27 +201,17 @@ export type ArtSpec = {
 };
 
 export const ART: ArtSpec[] = [
-    // Was z u(6.2) — 1.72 m of frame across a 1.5 m door. Moved north onto
-    // the solid stub: clears the casing's jamb by 0.145 and the shell by 0.11.
-    { art: 'artDomain', x: u(-2.7) + 0.16, y: 1.7, z: u(7.1), ry: Math.PI / 2, w: 1.6, h: 1.15 },
-    { art: 'artAsWithin', x: u(-2.66) + 0.16, y: UPPER_Y + 1.8, z: u(4.6), ry: Math.PI / 2, w: 1.5, h: 1.1 },
-    { art: 'artStillPoint', x: 0, y: UPPER_Y + 1.75, z: SHELL.minZ + 0.16, ry: 0, w: 1.9, h: 1.3 },
+    { art: 'artDomain', x: W_E + 0.16, y: 1.7, z: u(8.6), ry: Math.PI / 2, w: 1.2, h: 1.0 },
+    { art: 'artStillPoint', x: 0, y: 1.7, z: Z0 + 0.16, ry: 0, w: 1.7, h: 1.15 },
 ];
 
-/** Art as floor footprints, for the doorway/stair clearance checks. */
-/**
- * Clear walking bands through lived-in rooms (not just named halls).
- * Furniture must not overlap these. Width is a 1.1 m body (0.55 half).
- */
 export const AISLES: (Collider & { level: Level; name: string })[] = [
-    { name: 'rec desk to door', level: 'main', x: u(-4.05), z: u(5.2), hx: 2.5, hz: 0.55 },
-    { name: 'foyer throat', level: 'main', x: u(-1.2), z: u(7.6), hx: 0.7, hz: 2.0 },
-    { name: 'main hall spine', level: 'main', x: (u(-3.1) + C_E) / 2, z: (u(-4.4) + u(0.6)) / 2, hx: 0.55, hz: (u(0.6) - u(-4.4)) / 2 },
-    { name: 'kitchen north aisle', level: 'upper', x: u(4.2), z: u(-1.65), hx: 2.8, hz: 0.55 },
-    { name: 'kitchen south aisle', level: 'upper', x: u(4.2), z: u(-3.55), hx: 2.8, hz: 0.55 },
-    { name: 'dining east aisle', level: 'upper', x: u(2.35), z: u(2.0), hx: 0.55, hz: 1.3 },
-    { name: 'living pass', level: 'upper', x: u(3.1), z: u(1.1), hx: 0.55, hz: 1.8 },
-    { name: 'landing clear', level: 'upper', x: (u(-2.66) + u(-0.5)) / 2, z: (u(0.6) + u(1.7)) / 2, hx: 0.55, hz: 0.45 },
+    { name: 'rec to hall', level: 'main', x: u(-4.0), z: u(5.15), hx: 2.3, hz: 0.55 },
+    { name: 'foyer throat', level: 'main', x: u(-0.4), z: u(7.4), hx: 0.7, hz: 1.9 },
+    { name: 'hall spine', level: 'main', x: (W_E + E_W) / 2, z: u(-1.0), hx: 0.55, hz: 2.6 },
+    { name: 'living pass', level: 'main', x: u(3.6), z: u(1.6), hx: 0.55, hz: 2.0 },
+    { name: 'kitchen north', level: 'main', x: u(5.4), z: u(-1.85), hx: 2.4, hz: 0.55 },
+    { name: 'dining east', level: 'main', x: u(1.0), z: u(-5.8), hx: 0.55, hz: 1.1 },
 ];
 
 export function artFootprints(): (Collider & { name: string; level: Level })[] {
@@ -477,7 +220,7 @@ export function artFootprints(): (Collider & { name: string; level: Level })[] {
         const half = (a.w + 0.12) / 2;
         return {
             name: a.art,
-            level: (a.y > UPPER_Y ? 'upper' : 'main') as Level,
+            level: 'main' as Level,
             x: a.x,
             z: a.z,
             hx: alongZ ? 0.05 : half,
@@ -486,46 +229,26 @@ export function artFootprints(): (Collider & { name: string; level: Level })[] {
     });
 }
 
-/**
- * Door leaves — the doors themselves, which the house did not have.
- *
- * Every opening was a bare hole punched in a wall: you walked through the
- * front of the house through a 1.8 m gap with no door in it, which is why
- * the entry read as unfinished. A leaf is solid (you cannot walk through
- * the door itself) but stands ajar, so the opening stays passable — the
- * PINCH pass in validate-house.mjs proves a body still fits past it.
- *
- * `hinge` is the jamb it swings from; `swing` is how far open, in radians.
- */
 export type DoorLeaf = {
     name: string;
     level: Level;
-    /** Hinge point, on the wall line */
     x: number;
     z: number;
-    /** Leaf width and thickness */
     w: number;
     t: number;
-    /** Wall axis the opening runs along */
     axis: 'x' | 'z';
-    /** + or - : which way along the axis the leaf reaches from its hinge */
     dir: 1 | -1;
-    /** How far it has swung into the room (0 = shut, PI/2 = flat to the wall) */
     swing: number;
 };
 
 export const DOOR_LEAVES: DoorLeaf[] = [
-    // The front doors — a pair, both standing open into the foyer.
-    { name: 'front door (west leaf)', level: 'main', x: u(-1.2) - 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: 1, swing: 1.22 },
-    { name: 'front door (east leaf)', level: 'main', x: u(-1.2) + 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: -1, swing: 1.22 },
+    { name: 'front door (west leaf)', level: 'main', x: u(-0.4) - 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: 1, swing: 1.22 },
+    { name: 'front door (east leaf)', level: 'main', x: u(-0.4) + 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: -1, swing: 1.22 },
 ];
 
-/** A swung leaf's footprint, for collision. */
 export function leafCollider(d: DoorLeaf): Collider & { level: Level; name: string } {
-    // Swept from the hinge: along the wall by cos(swing), into the room by sin.
     const along = Math.cos(d.swing) * d.w;
     const into = Math.sin(d.swing) * d.w;
-    // Doors on an x-axis wall swing into -z (the house side)
     const cx = d.axis === 'x' ? d.x + (along / 2) * d.dir : d.x - into / 2;
     const cz = d.axis === 'x' ? d.z - into / 2 : d.z + (along / 2) * d.dir;
     return {
@@ -540,14 +263,11 @@ export function leafCollider(d: DoorLeaf): Collider & { level: Level; name: stri
 
 export function collidersFor(level: Level): Collider[] {
     return [
-        ...(level === 'upper' ? UPPER_COLLIDERS : MAIN_COLLIDERS),
-        ...FURNITURE.filter((f) => f.level === level),
-        // The doors are solid. You used to walk straight through the leaf.
-        ...DOOR_LEAVES.filter((d) => d.level === level).map(leafCollider),
+        ...MAIN_COLLIDERS,
+        ...FURNITURE.filter((f) => f.level === level || f.level === 'main'),
+        ...DOOR_LEAVES.map(leafCollider),
     ];
 }
-
-/* ── Movement ─────────────────────────────────────────────── */
 
 function hits(x: number, z: number, cs: Collider[], r: number): boolean {
     for (const c of cs) {
@@ -574,48 +294,24 @@ export function moveOn(
         else if (!hits(fromX, toZ, cs, r)) { x = fromX; z = toZ; }
         else { x = fromX; z = fromZ; }
     }
-    // The jungle's outer fence still stands
     x = Math.max(JUNGLE_BOUNDS.minX, Math.min(JUNGLE_BOUNDS.maxX, x));
     z = Math.max(JUNGLE_BOUNDS.minZ, Math.min(JUNGLE_BOUNDS.maxZ, z));
     return { x, z };
 }
 
-/* ── The intro: every session starts at the desk ──────────── */
-
-/**
- * You were always at the terminal — the 3D world opens with you
- * SITTING at the rec-room desk in front of the monitor. The controller
- * plays seat → stand → free, and the monitor is the room's light source
- * so the first thing you see is the thing you just left.
- */
 export const INTRO = {
-    /** Where the player sits (world coords, main floor) */
-    seat: { x: u(-5.9), z: u(5.05) },
-    /** Facing the monitor: desk sits at +z of the seat, and in three a
-        yaw of 0 looks down -z — so the seated gaze is a half turn. */
+    seat: { x: u(-5.85), z: u(5.0) },
     lookYaw: Math.PI,
-    /** Where they end up standing */
-    stand: { x: u(-5.9), z: u(4.55) },
-    /** Seconds: hold on the glow, then rise */
+    stand: { x: u(-5.85), z: u(4.5) },
     holdS: 1.1,
     riseS: 1.6,
 } as const;
 
-/* ── Spawn (used if the intro is skipped) ─────────────────── */
-
 export const SPAWN: [number, number, number] = [INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z];
 export const SPAWN_YAW = INTRO.lookYaw;
+export const FRONT_DOOR = { x: u(-0.4), z: Z1 };
+export const GARAGE_DOOR = { x: u(5.2), z: Z1 };
 
-export const FRONT_DOOR = { x: u(-1.2), z: Z1 };
-export const GARAGE_DOOR = { x: u(4.0), z: Z1 };
-
-/* ── Hotspots ─────────────────────────────────────────────── */
-
-/**
- * Same Hotspot shape the panel pipeline has always consumed, plus a
- * level. The four world destinations are generated from jungleMap, so
- * the map, the paths and the interaction points can never disagree.
- */
 export type HomeHotspot = Hotspot & { level: Level };
 
 const DEST_PANEL: Record<string, { label: string; hint: string; panel: string }> = {
@@ -626,22 +322,18 @@ const DEST_PANEL: Record<string, { label: string; hint: string; panel: string }>
 };
 
 export const HOME_HOTSPOTS: HomeHotspot[] = [
-    /* House — main floor */
-    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [u(-5.9), 1.2, u(5.6)], radius: 1.6, action: { type: 'os' } },
-    { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [u(-4.2), 1.1, u(7.2)], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
-    { id: 'envelope', label: 'Mail tray', hint: 'Word from outside', level: 'main', position: [u(-0.1), 1.1, u(6.95)], radius: 1.3, action: { type: 'panel', panel: 'news' } },
-    { id: 'mailbox', label: 'Offering bowl', hint: 'Sustain the work', level: 'main', position: [u(0.4), 1.1, Z1 + 1.6], radius: 1.5, action: { type: 'panel', panel: 'offering' } },
-    { id: 'wall', label: 'The Mark', hint: 'One mark a year · it stays', level: 'main', position: [u(-6.8), 1.2, u(-1.9)], radius: 2.2, action: { type: 'panel', panel: 'wall' } },
-    { id: 'front_door', label: 'Front door', hint: 'The clearing · the paths', level: 'main', position: [u(-1.2), 1.2, Z1 - 0.6], radius: 1.5, action: { type: 'soon', message: 'The door is open. The jungle holds four paths — the wall map upstairs shows them.' } },
-
-    /* House — upper floor */
-    { id: 'library', label: 'Bookshelves', hint: 'The Library · take one down', level: 'upper', position: [u(6.3), 1.3, u(1.3)], radius: 1.7, action: { type: 'panel', panel: 'library' } },
-    { id: 'ledger', label: 'The Ledger', hint: 'Daily Word', level: 'upper', position: [u(-0.3), 1.1, u(2.9)], radius: 1.35, action: { type: 'panel', panel: 'ledger' } },
-    { id: 'fireplace', label: 'Fireplace', hint: 'Living · warmth', level: 'upper', position: [u(6.5), 1.2, u(-0.9)], radius: 1.6, action: { type: 'soon', message: 'The fire is lit. Sit a while — the Word reads better warm.' } },
-    { id: 'codex', label: 'Codex', hint: 'Speak with Truth', level: 'upper', position: [u(2.6), 1.1, u(-3.9)], radius: 1.5, action: { type: 'panel', panel: 'codex' } },
-    { id: 'wayfinder', label: 'Wall map', hint: 'World map · the paths are open', level: 'upper', position: [u(-2.45), 1.3, u(2.2)], radius: 1.4, action: { type: 'panel', panel: 'wayfinder' } },
-
-    /* The world — destinations, generated from the worldplan */
+    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [DESK.x, 1.2, u(5.55)], radius: 1.6, action: { type: 'os' } },
+    { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [u(-4.1), 1.1, u(7.15)], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
+    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [u(1.15), 1.1, u(6.9)], radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'mailbox', label: 'Offering', hint: 'Keep the house open', level: 'main', position: [u(1.2), 1.1, Z1 + 1.7], radius: 1.5, action: { type: 'panel', panel: 'offering' } },
+    { id: 'wall', label: 'West plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 0.85, 1.2, (u(-4.2) + u(0.5)) / 2], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
+    { id: 'wall', label: 'South plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [(X0 + W_E) / 2, 1.2, u(-4.2) + 0.85], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
+    { id: 'wall', label: 'North plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 2.2, 1.2, u(0.5) - 0.85], radius: 1.05, action: { type: 'panel', panel: 'wall' } },
+    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: [X1 - 0.7, 1.3, u(2.1)], radius: 1.7, action: { type: 'panel', panel: 'library' } },
+    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: [u(-0.3), 1.1, Z0 + 0.7], radius: 1.35, action: { type: 'panel', panel: 'ledger' } },
+    { id: 'fireplace', label: 'Fire', hint: 'Sit by the hearth', level: 'main', position: [X1 - 0.7, 1.2, u(-0.2)], radius: 1.15, action: { type: 'sit' } },
+    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: [u(3.5), 1.1, u(-2.2)], radius: 1.5, action: { type: 'panel', panel: 'codex' } },
+    { id: 'wayfinder', label: 'Paths', hint: 'The map of this floor and the groves', level: 'main', position: [E_W - 0.25, 1.3, u(0.15)], radius: 1.15, action: { type: 'panel', panel: 'wayfinder' } },
     ...DESTINATIONS.map((d): HomeHotspot => {
         const c = destCenter(d);
         const meta = DEST_PANEL[d.id];
@@ -655,7 +347,6 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
             action: { type: 'panel', panel: meta.panel } as Hotspot['action'],
         };
     }),
-    /* Cineworks sits in the Cinema Grove — same clearing, second station */
     (() => {
         const c = destCenter(DESTINATIONS.find((d) => d.id === 'cinema')!);
         return {
@@ -671,14 +362,13 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
 ];
 
 export function hotspotWorldY(h: HomeHotspot): number {
-    return (h.level === 'upper' ? UPPER_Y : MAIN_Y) + h.position[1];
+    return MAIN_Y + h.position[1];
 }
 
-export function nearestHomeHotspot(x: number, z: number, level: Level): HomeHotspot | null {
+export function nearestHomeHotspot(x: number, z: number, _level: Level): HomeHotspot | null {
     let best: HomeHotspot | null = null;
     let bestD = Infinity;
     for (const h of HOME_HOTSPOTS) {
-        if (h.level !== level) continue;
         const d = Math.hypot(x - h.position[0], z - h.position[2]);
         if (d < h.radius && d < bestD) {
             bestD = d;
@@ -691,3 +381,51 @@ export function nearestHomeHotspot(x: number, z: number, level: Level): HomeHots
 export function isOutdoors(x: number, z: number): boolean {
     return x < X0 || x > X1 || z < Z0 || z > Z1;
 }
+
+export type Place =
+    | { kind: 'room'; id: string; name: string }
+    | { kind: 'clearing'; name: string }
+    | { kind: 'grove'; id: string; name: string; dist: number }
+    | { kind: 'path'; name: string };
+
+export function roomAt(x: number, z: number): Place {
+    if (!isOutdoors(x, z)) {
+        for (const r of ROOMS) {
+            if (x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ) {
+                return { kind: 'room', id: r.id, name: r.name };
+            }
+        }
+        return { kind: 'room', id: 'house', name: 'House' };
+    }
+    for (const d of DESTINATIONS) {
+        const c = destCenter(d);
+        const dist = Math.hypot(x - c.x, z - c.z);
+        if (dist < d.r) return { kind: 'grove', id: d.id, name: d.name, dist };
+    }
+    if (Math.hypot(x, z) < 32) return { kind: 'clearing', name: 'Clearing' };
+    return { kind: 'path', name: 'Path' };
+}
+
+export function nearestGrove(x: number, z: number): { id: string; name: string; dist: number; dx: number; dz: number } | null {
+    let best: { id: string; name: string; dist: number; dx: number; dz: number } | null = null;
+    for (const d of DESTINATIONS) {
+        const c = destCenter(d);
+        const dx = c.x - x;
+        const dz = c.z - z;
+        const dist = Math.hypot(dx, dz);
+        if (!best || dist < best.dist) best = { id: d.id, name: d.name, dist, dx, dz };
+    }
+    return best;
+}
+
+/** True if a saved pose is still walkable. */
+export function poseClear(x: number, z: number): boolean {
+    if (x < JUNGLE_BOUNDS.minX + 1 || x > JUNGLE_BOUNDS.maxX - 1) return false;
+    if (z < JUNGLE_BOUNDS.minZ + 1 || z > JUNGLE_BOUNDS.maxZ - 1) return false;
+    return !hits(x, z, collidersFor('main'), PLAYER_R);
+}
+
+/** Just inside the front door, facing the hall. */
+export const RECENTER = { x: FRONT_DOOR.x, z: Z1 - 1.35, yaw: 0 } as const;
+
+export const HALL_SPINE = { x: (W_E + E_W) / 2, z: u(-1.0) } as const;

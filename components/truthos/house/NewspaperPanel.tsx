@@ -1,18 +1,11 @@
 'use client';
 
 /**
- * The morning paper — a real front page built from live RSS.
- *
- * Pulls the existing /api/ticker feed (BBC World, CNBC, Defense One, NYT
- * Health — all free public RSS) and lays it out as newsprint: masthead with
- * today's date, a lead story, then columns by desk. Edition is keyed to the
- * calendar day, so the paper genuinely changes each morning.
- *
- * Fails soft: if the network is down the paper still prints, with an honest
- * "wire is down" notice rather than an empty page or invented headlines.
+ * The Daily Word — morning paper from live RSS.
+ * One lead, two columns of briefs, three desks. Paper stock, not a feed dump.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Newspaper, RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { useMarkPaperRead } from './usePaperWaiting';
 
@@ -24,7 +17,6 @@ type Feeds = {
     error?: string;
 };
 
-/** The API prefixes each line with an emoji + desk label; strip it for print */
 function clean(line: string): string {
     return line
         .replace(/^[^\w"'(]+/, '')
@@ -32,21 +24,16 @@ function clean(line: string): string {
         .trim();
 }
 
-/**
- * When a feed is unreachable the API substitutes a placeholder line. Printing
- * that as a headline would read as a real story about nothing, so a dead desk
- * is dropped from the paper entirely instead.
- */
 const DEAD_FEED = /real-?time updates currently unavailable|check back later/i;
 
 function headlines(lines: string[] | undefined): string[] {
     return (lines ?? []).map(clean).filter((h) => h && !DEAD_FEED.test(h));
 }
 
-const DESKS: { key: keyof Feeds; label: string; accent: string }[] = [
-    { key: 'geopolitics', label: 'World', accent: 'text-amber-800' },
-    { key: 'finance', label: 'Markets', accent: 'text-emerald-800' },
-    { key: 'health', label: 'Health', accent: 'text-rose-800' },
+const DESKS: { key: keyof Feeds; label: string }[] = [
+    { key: 'geopolitics', label: 'World' },
+    { key: 'finance', label: 'Markets' },
+    { key: 'health', label: 'Body' },
 ];
 
 export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
@@ -56,7 +43,6 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
     const [nonce, setNonce] = useState(0);
     const markRead = useMarkPaperRead();
 
-    // Opening the paper is what marks the edition read — the flag drops
     useEffect(() => {
         markRead();
     }, [markRead]);
@@ -82,11 +68,10 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
     const today = useMemo(() => new Date(), []);
     const dateLine = today.toLocaleDateString(undefined, {
         weekday: 'long',
-        year: 'numeric',
         month: 'long',
         day: 'numeric',
+        year: 'numeric',
     });
-    // Edition number advances one per day since launch — a paper has a number
     const edition = useMemo(
         () => Math.floor((today.getTime() - Date.UTC(2026, 0, 1)) / 86_400_000) + 1,
         [today],
@@ -94,54 +79,74 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
 
     const breaking = headlines(feeds?.breaking);
     const lead = breaking[0] ?? null;
+    const briefs = breaking.slice(1, 7);
+    const drop = lead?.charAt(0) ?? '';
+    const rest = lead?.slice(1) ?? '';
 
     return (
-        <div className="h-full flex flex-col bg-[#efe7d6] text-[#241f18] min-h-[280px]">
-            {/* Masthead */}
-            <div className="shrink-0 px-4 pt-3 pb-2 border-b-2 border-[#241f18]">
-                <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1 text-center">
-                        <p className="text-[9px] uppercase tracking-[0.42em] text-[#6b5f4c]">
-                            The Sanctum
-                        </p>
-                        <h1
-                            className="text-2xl sm:text-3xl font-black tracking-tight leading-none"
-                            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-                        >
-                            THE DAILY WORD
-                        </h1>
-                        <p className="text-[9px] uppercase tracking-[0.22em] text-[#6b5f4c] mt-1">
-                            {dateLine} · No. {edition}
-                        </p>
-                    </div>
+        <div
+            className="h-full flex flex-col min-h-[280px] text-[#2a2218]"
+            style={{
+                background: '#f3ead4',
+                backgroundImage:
+                    'linear-gradient(180deg, rgba(255,255,255,0.35), transparent 28%), repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(42,34,24,0.035) 28px)',
+            }}
+        >
+            <header className="shrink-0 px-5 pt-4 pb-3">
+                <div className="flex items-start justify-between gap-3">
+                    <p className="text-[10px] tracking-[0.38em] uppercase text-[#7a6a52] font-medium">
+                        {dateLine}
+                    </p>
                     <button
                         type="button"
                         onClick={() => {
                             onClose();
                             sacredUi.click();
                         }}
-                        className="shrink-0 w-9 h-9 rounded-lg border border-[#241f18]/25 flex items-center justify-center hover:bg-[#241f18]/10 touch-manipulation"
+                        className="shrink-0 w-9 h-9 rounded-full border border-[#2a2218]/20 flex items-center justify-center hover:bg-[#2a2218]/8 touch-manipulation"
                         aria-label="Put the paper down"
                     >
-                        <X size={15} />
+                        <X size={14} />
                     </button>
                 </div>
-            </div>
+                <div className="text-center mt-1 mb-2">
+                    <p className="text-[9px] tracking-[0.52em] uppercase text-[#9a8460]">The Sanctum</p>
+                    <h1
+                        className="mt-1 text-[2rem] sm:text-[2.45rem] leading-none font-semibold text-[#1c1610]"
+                        style={{ fontFamily: 'var(--font-ritual, Palatino, "Palatino Linotype", "Book Antiqua", serif)' }}
+                    >
+                        The Daily Word
+                    </h1>
+                    <div className="mt-2 flex items-center gap-3 justify-center">
+                        <span className="h-px w-10 bg-[#2a2218]/25" />
+                        <p className="text-[10px] tracking-[0.28em] uppercase text-[#7a6a52]">
+                            Morning edition · No. {edition}
+                        </p>
+                        <span className="h-px w-10 bg-[#2a2218]/25" />
+                    </div>
+                </div>
+                <div className="h-[2px] bg-[#2a2218]" />
+                <div className="h-px bg-[#2a2218] mt-[3px]" />
+            </header>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6">
                 {loading && (
-                    <p className="text-center text-[12px] text-[#6b5f4c] py-10 font-mono">
-                        the press is running…
+                    <p className="text-center text-[13px] text-[#7a6a52] py-14 italic">
+                        The press is running…
                     </p>
                 )}
 
                 {!loading && failed && (
-                    <div className="border border-[#241f18]/25 bg-[#e4d9c2] p-4 text-center">
-                        <Newspaper size={20} className="mx-auto mb-2 opacity-60" />
-                        <p className="text-[13px] font-semibold">The wire is down.</p>
-                        <p className="text-[11px] text-[#6b5f4c] mt-1 leading-relaxed">
-                            No dispatches reached the house this morning. The paper prints
-                            again when the connection returns.
+                    <div className="py-10 text-center max-w-sm mx-auto">
+                        <p
+                            className="text-xl font-semibold leading-snug"
+                            style={{ fontFamily: 'Palatino, "Palatino Linotype", serif' }}
+                        >
+                            The wire is quiet this hour.
+                        </p>
+                        <p className="mt-3 text-[13.5px] leading-relaxed text-[#5c5140]">
+                            No dispatches reached the house. The paper will print again when the line
+                            comes back.
                         </p>
                         <button
                             type="button"
@@ -149,71 +154,66 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
                                 setNonce((n) => n + 1);
                                 sacredUi.click();
                             }}
-                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 border border-[#241f18]/35 text-[11px] font-semibold hover:bg-[#241f18]/10 min-h-[38px] touch-manipulation"
+                            className="mt-5 inline-flex items-center gap-2 px-4 py-2 border border-[#2a2218]/30 text-[12px] tracking-wide hover:bg-[#2a2218]/6 min-h-[40px] touch-manipulation"
                         >
-                            <RefreshCw size={12} /> Try the wire again
+                            <RefreshCw size={12} /> Try the wire
                         </button>
                     </div>
                 )}
 
-                {!loading && !failed && !breaking.length && (
-                    <p className="text-center text-[12px] text-[#6b5f4c] py-10">
+                {!loading && !failed && !lead && (
+                    <p className="text-center text-[13px] text-[#7a6a52] py-14 italic">
                         No dispatches came over the wire this morning.
                     </p>
                 )}
 
-                {!loading && !failed && breaking.length > 0 && (
+                {!loading && !failed && lead && (
                     <>
-                        {/* Lead story */}
-                        {lead && (
-                            <div className="border-b border-[#241f18]/25 pb-3 mb-3">
-                                <p className="text-[9px] uppercase tracking-[0.3em] text-[#8a2b2b] font-bold">
-                                    Breaking
-                                </p>
-                                <h2
-                                    className="text-lg sm:text-xl font-bold leading-snug mt-1"
-                                    style={{ fontFamily: 'Georgia, serif' }}
-                                >
-                                    {lead}
-                                </h2>
-                            </div>
-                        )}
+                        <article className="pt-1 pb-5 border-b border-[#2a2218]/20">
+                            <p className="text-[10px] tracking-[0.34em] uppercase text-[#8b2e2e] font-semibold mb-2">
+                                The lead
+                            </p>
+                            <h2
+                                className="text-[1.45rem] sm:text-[1.7rem] leading-[1.22] font-semibold text-[#1c1610]"
+                                style={{ fontFamily: 'Palatino, "Palatino Linotype", "Book Antiqua", serif' }}
+                            >
+                                <span className="float-left text-[3.4rem] leading-[0.8] pr-2 pt-1 font-semibold">
+                                    {drop}
+                                </span>
+                                {rest}
+                            </h2>
+                        </article>
 
-                        {/* Remaining breaking, set as a column of briefs */}
-                        {breaking.length > 1 && (
-                            <div className="mb-4">
-                                <p className="text-[9px] uppercase tracking-[0.28em] text-[#6b5f4c] font-bold border-b border-[#241f18]/20 pb-1 mb-2">
+                        {briefs.length > 0 && (
+                            <section className="py-4 border-b border-[#2a2218]/20">
+                                <p className="text-[10px] tracking-[0.32em] uppercase text-[#7a6a52] mb-3">
                                     Also this morning
                                 </p>
-                                <ul className="space-y-1.5 sm:columns-2 sm:gap-5">
-                                    {breaking.slice(1, 7).map((h, i) => (
+                                <ul className="columns-1 sm:columns-2 gap-8">
+                                    {briefs.map((h, i) => (
                                         <li
                                             key={i}
-                                            className="text-[12px] leading-snug break-inside-avoid pl-3 relative"
+                                            className="break-inside-avoid mb-3 text-[14px] leading-[1.45] pl-3 border-l border-[#2a2218]/25"
                                         >
-                                            <span className="absolute left-0 top-[0.42em] w-1 h-1 rounded-full bg-[#241f18]/50" />
                                             {h}
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
+                            </section>
                         )}
 
-                        {/* Desks */}
-                        <div className="grid sm:grid-cols-3 gap-4">
+                        <section className="grid sm:grid-cols-3 gap-6 pt-4">
                             {DESKS.map((d) => {
                                 const items = headlines(feeds?.[d.key] as string[]).slice(0, 4);
                                 if (!items.length) return null;
                                 return (
                                     <div key={d.key}>
-                                        <p
-                                            className={`text-[9px] uppercase tracking-[0.28em] font-bold border-b border-[#241f18]/20 pb-1 mb-2 ${d.accent}`}
-                                        >
+                                        <p className="text-[10px] tracking-[0.32em] uppercase text-[#7a6a52] pb-1.5 mb-2.5 border-b border-[#2a2218]/25">
                                             {d.label}
                                         </p>
-                                        <ul className="space-y-2">
+                                        <ul className="space-y-2.5">
                                             {items.map((h, i) => (
-                                                <li key={i} className="text-[11.5px] leading-snug">
+                                                <li key={i} className="text-[13.5px] leading-[1.45]">
                                                     {h}
                                                 </li>
                                             ))}
@@ -221,11 +221,10 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
                                     </div>
                                 );
                             })}
-                        </div>
+                        </section>
 
-                        <p className="mt-5 pt-2 border-t border-[#241f18]/20 text-[9px] text-[#6b5f4c] text-center leading-relaxed">
-                            Wire copy from public feeds — BBC World, CNBC, Defense One and
-                            NYT Health. Headlines are reproduced as filed.
+                        <p className="mt-8 pt-3 border-t border-[#2a2218]/15 text-[10px] tracking-wide text-[#8a7b64] text-center leading-relaxed">
+                            Public wires · BBC World · CNBC · Defense One · NYT Health
                         </p>
                     </>
                 )}

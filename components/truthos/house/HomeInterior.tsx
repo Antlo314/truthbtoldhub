@@ -174,6 +174,7 @@ function Stair({
     const cx = (STAIR.minX + STAIR.maxX) / 2;
     const width = STAIR.maxX - STAIR.minX;
     const run = STAIR.zBottom - STAIR.zTop;
+    if (!STAIR.treads) return null;
     const going = run / STAIR.treads;
     const rise = (STAIR.yTop - STAIR.yBottom) / STAIR.treads;
 
@@ -317,26 +318,13 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
         // it just made the phone look like a different, cheaper product.
         return (
             <>
-                <Stair m={m} mats={mats} shadow={false} />
                 <RoomPracticals low />
                 <FrontDoors m={m} shadow={false} />
                 <Skirting cols={mainWalls} y={MAIN_Y} mat={mats.skirting} />
-                <Skirting cols={upperWalls} y={UPPER_Y} mat={mats.skirting} />
-                <group>
-                    {[
-                        { y: UPPER_Y - 0.32, rects: MAIN_CEILING },
-                        { y: UPPER_Y + STOREY - 0.18, rects: UPPER_CEILING },
-                    ].map((c, ci) => (
-                        <group key={ci}>
-                            {c.rects.map((r, i) => (
-                                <mesh key={i} rotation={[Math.PI / 2, 0, 0]} position={[r.x, c.y, r.z]}>
-                                    <planeGeometry args={[Math.max(0, r.w - 0.7), Math.max(0, r.d - 0.7)]} />
-                                    <primitive object={mats.ceiling} attach="material" />
-                                </mesh>
-                            ))}
-                        </group>
-                    ))}
-                </group>
+                <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, STOREY - 0.08, 0]}>
+                    <planeGeometry args={[X1 - X0 - 0.4, Z1 - Z0 - 0.4]} />
+                    <primitive object={mats.ceiling} attach="material" />
+                </mesh>
             </>
         );
     }
@@ -345,24 +333,7 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
 
     return (
         <group>
-            {/* ── The stair enclosure, built ─────────────────── */}
-            {STAIR_WALLS.map((w, i) => (
-                <mesh
-                    key={i}
-                    position={[w.x, UPPER_Y / 2 + 0.4, w.z]}
-                    castShadow={sh}
-                    receiveShadow={sh}
-                >
-                    <boxGeometry args={[w.hx * 2, UPPER_Y + 0.8, w.hz * 2]} />
-                    <primitive object={mats.shaftWall} attach="material" />
-                </mesh>
-            ))}
-
-            <Stair m={m} mats={mats} shadow={sh} />
-
-            {/* ── Skirting on both storeys ───────────────────── */}
             <Skirting cols={mainWalls} y={MAIN_Y} mat={mats.skirting} />
-            <Skirting cols={upperWalls} y={UPPER_Y} mat={mats.skirting} />
 
             {/* ── Ceilings with a shadow-gap cove ──────────────
                 Each storey's ceiling is the footprint MINUS its holes,
@@ -379,8 +350,7 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 Also dropped below the structural slab (its underside sits
                 at UPPER_Y − 0.30) instead of 12 cm inside it. */}
             {[
-                { label: 'main', y: UPPER_Y - 0.32, rects: MAIN_CEILING },
-                { label: 'upper', y: UPPER_Y + STOREY - 0.18, rects: UPPER_CEILING },
+                { label: 'main', y: STOREY - 0.08, rects: [{ x: 0, z: 0, w: X1 - X0 - 0.5, d: Z1 - Z0 - 0.5 }] },
             ].map((c) => (
                 <group key={c.label}>
                     {c.rects.map((r, i) => (
@@ -465,13 +435,13 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             })}
 
             {/* ── Kitchen uppers + range hood over the north counter ── */}
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
                 <mesh
                     key={`upper-${i}`}
-                    position={[u(1.6) + i * 1.7, UPPER_Y + 2.1, SHELL.minZ + 0.55]}
+                    position={[u(3.6) + i * 1.55, 2.15, SHELL.minZ + 0.55]}
                     castShadow={sh}
                 >
-                    <boxGeometry args={[1.5, 0.8, 0.42]} />
+                    <boxGeometry args={[1.4, 0.72, 0.4]} />
                     <primitive object={m.woodDark} attach="material" />
                 </mesh>
             ))}
@@ -479,11 +449,11 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
             {/* ── Pendants — island and dining. Emissive shades; the cove
                 system already carries the light itself. */}
             {[
-                { x: u(3.4) - 1.1, z: u(-2.6) },
-                { x: u(3.4) + 1.1, z: u(-2.6) },
-                { x: u(1.1), z: u(2.0) },
+                { x: u(5.2) - 0.9, z: u(-3.4) },
+                { x: u(5.2) + 0.9, z: u(-3.4) },
+                { x: u(-0.3), z: u(-5.8) },
             ].map((pd, i) => (
-                <group key={`pend-${i}`} position={[pd.x, UPPER_Y, pd.z]}>
+                <group key={`pend-${i}`} position={[pd.x, MAIN_Y, pd.z]}>
                     <mesh position={[0, STOREY - 0.55, 0]}>
                         <cylinderGeometry args={[0.02, 0.02, 1.0, 5]} />
                         <primitive object={m.metalDark} attach="material" />
@@ -499,16 +469,6 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 </group>
             ))}
 
-            {/* ── The shaft edge: a lining round the hole in the floor ── */}
-            {[
-                { x: (SHAFT.minX + SHAFT.maxX) / 2, z: SHAFT.minZ, w: SHAFT.maxX - SHAFT.minX, d: 0.14 },
-                { x: (SHAFT.minX + SHAFT.maxX) / 2, z: SHAFT.maxZ, w: SHAFT.maxX - SHAFT.minX, d: 0.14 },
-            ].map((e, i) => (
-                <mesh key={i} position={[e.x, UPPER_Y - 0.16, e.z]} castShadow={sh}>
-                    <boxGeometry args={[e.w, 0.32, e.d]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-            ))}
         </group>
     );
 }

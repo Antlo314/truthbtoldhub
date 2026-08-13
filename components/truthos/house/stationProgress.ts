@@ -6,53 +6,66 @@ import type { HotspotId } from './houseMap';
 
 export type { HotspotId };
 
-const KEY = 'tbth-house-stations-v5';
+const KEY = 'tbth-house-stations-v6';
 
+/** Indoor stations only — completing the house does not require a jungle trek. */
 export const HOUSE_CORE: HotspotId[] = [
-    'front_door',
-    'computer',
-    'soul_mirror',
+    'envelope',
     'arcade',
-    'fireplace',
-    'library',
-    'hall',
     'wall',
+    'library',
+    'ledger',
+    'computer',
 ];
 
+export const STATION_ROOM: Partial<Record<HotspotId, string>> = {
+    computer: 'Rec Room',
+    envelope: 'Foyer',
+    arcade: 'Rec Room',
+    wall: 'The Mark',
+    library: 'Living',
+    ledger: 'Dining',
+    fireplace: 'Living',
+    wayfinder: 'Hall',
+    mailbox: 'stoop',
+    hall: 'Hall Stones',
+    cinema: 'Cinema Grove',
+    studio: 'Signal Studio',
+    soul_mirror: 'Mirror Pool',
+    codex: 'Kitchen',
+};
+
 export const HOUSE_EXTRA: HotspotId[] = [
-    'envelope',
     'codex',
     'cinema',
-    'ledger',
     'studio',
     'wayfinder',
-    'back_door',
-    'front_bench',
-    'back_gate',
     'mailbox',
     'cineworks',
+    'fireplace',
+    'soul_mirror',
 ];
 
 export const STATION_LABELS: Record<HotspotId, string> = {
-    computer: 'Truth.OS computer',
-    envelope: 'Offering tray',
-    library: 'Library shelves',
-    codex: 'Study desk',
-    ledger: 'Ledger lectern',
-    cinema: 'Film screen',
-    hall: 'Hall arch',
+    computer: 'Truth.OS',
+    envelope: 'The Daily Word',
+    library: 'Library',
+    codex: 'Codex',
+    ledger: 'The Ledger',
+    cinema: 'Cinema Grove',
+    hall: 'The Hall',
     soul_mirror: 'Soul Mirror',
-    wayfinder: 'Wall map',
-    arcade: 'Controller · Arcade',
+    wayfinder: 'Paths',
+    arcade: 'Arcade',
     studio: 'Signal Studio',
     front_door: 'Front door',
     back_door: 'Back door',
     front_bench: 'Porch bench',
     back_gate: 'Garden gate',
-    mailbox: 'Mailbox',
-    fireplace: 'Fireplace',
+    mailbox: 'Offering',
+    fireplace: 'Fire',
     wall: 'The Mark',
-    cineworks: 'Cineworks table',
+    cineworks: 'Cineworks',
 };
 
 export function loadVisited(): Set<string> {

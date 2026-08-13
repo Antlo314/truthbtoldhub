@@ -9,6 +9,7 @@ import { houseInput } from './houseInput';
 import { shapeStick, MOBILE } from './houseFeel';
 import type { Hotspot } from './houseMap';
 import { unlockAudio } from '@/lib/game/sfx';
+import { loadSettings } from '@/lib/game/settings';
 
 type StickState = {
     active: boolean;
@@ -35,6 +36,12 @@ export default function HouseMobileControls({
         knobY: 0,
     });
     const [looking, setLooking] = useState(false);
+
+    const large = loadSettings().controlSize === 'large';
+    const stickR = large ? MOBILE.stickR + 12 : MOBILE.stickR;
+    const knobR = large ? MOBILE.knobR + 6 : MOBILE.knobR;
+    const actionR = large ? MOBILE.action + 8 : MOBILE.action;
+    const jumpR = large ? MOBILE.actionSecondary + 6 : MOBILE.actionSecondary;
 
     const movePtr = useRef<number | null>(null);
     const lookPtr = useRef<number | null>(null);
@@ -80,11 +87,11 @@ export default function HouseMobileControls({
         const dx = cx - origin.current.x;
         const dy = cy - origin.current.y;
         const len = Math.hypot(dx, dy) || 1;
-        const capped = Math.min(len, MOBILE.stickR);
+        const capped = Math.min(len, stickR);
         const kx = (dx / len) * capped;
         const ky = (dy / len) * capped;
-        const nx = kx / MOBILE.stickR;
-        const ny = ky / MOBILE.stickR;
+        const nx = kx / stickR;
+        const ny = ky / stickR;
         const shaped = shapeStick(nx, ny);
         // Thumb up (screen −Y) → forward
         houseInput.setMove(shaped.x, -shaped.y);
@@ -105,7 +112,7 @@ export default function HouseMobileControls({
         if (!visible || isActionTarget(e.target)) return;
         unlockAudio();
 
-        const topGuard = 56;
+        const topGuard = 108;
         if (e.clientY < topGuard) return;
 
         const w = window.innerWidth;
@@ -187,8 +194,8 @@ export default function HouseMobileControls({
                 <div
                     className="pointer-events-none absolute rounded-full border border-white/25 bg-black/30 backdrop-blur-sm"
                     style={{
-                        width: MOBILE.stickR * 2,
-                        height: MOBILE.stickR * 2,
+                        width: stickR * 2,
+                        height: stickR * 2,
                         left: 24,
                         bottom: `calc(28px + env(safe-area-inset-bottom))`,
                         opacity: MOBILE.idleOpacity,
@@ -198,10 +205,10 @@ export default function HouseMobileControls({
                     <div
                         className="absolute rounded-full bg-white/30 border border-white/35"
                         style={{
-                            width: MOBILE.knobR * 2,
-                            height: MOBILE.knobR * 2,
-                            left: MOBILE.stickR - MOBILE.knobR,
-                            top: MOBILE.stickR - MOBILE.knobR,
+                            width: knobR * 2,
+                            height: knobR * 2,
+                            left: stickR - knobR,
+                            top: stickR - knobR,
                         }}
                     />
                     <span className="absolute -bottom-5 inset-x-0 text-center text-[9px] uppercase tracking-widest text-white/35">
@@ -214,10 +221,10 @@ export default function HouseMobileControls({
                 <div
                     className="pointer-events-none fixed rounded-full border border-white/35 bg-black/40 backdrop-blur-md"
                     style={{
-                        width: MOBILE.stickR * 2,
-                        height: MOBILE.stickR * 2,
-                        left: stick.originX - MOBILE.stickR,
-                        top: stick.originY - MOBILE.stickR,
+                        width: stickR * 2,
+                        height: stickR * 2,
+                        left: stick.originX - stickR,
+                        top: stick.originY - stickR,
                         opacity: MOBILE.activeOpacity,
                         boxShadow: '0 0 28px rgba(167,139,250,0.3), inset 0 0 20px rgba(0,0,0,0.4)',
                     }}
@@ -225,10 +232,10 @@ export default function HouseMobileControls({
                     <div
                         className="absolute rounded-full"
                         style={{
-                            width: MOBILE.knobR * 2,
-                            height: MOBILE.knobR * 2,
-                            left: MOBILE.stickR - MOBILE.knobR + stick.knobX,
-                            top: MOBILE.stickR - MOBILE.knobR + stick.knobY,
+                            width: knobR * 2,
+                            height: knobR * 2,
+                            left: stickR - knobR + stick.knobX,
+                            top: stickR - knobR + stick.knobY,
                             background: 'radial-gradient(circle at 35% 30%, #c4b5fd, #7c3aed)',
                             border: '1px solid rgba(255,255,255,0.5)',
                             boxShadow: '0 0 16px rgba(167,139,250,0.55)',
@@ -266,7 +273,7 @@ export default function HouseMobileControls({
                             ? 'border-amber-300/70 bg-gradient-to-br from-amber-200 to-amber-600 text-black scale-105'
                             : 'border-white/18 bg-black/40 text-white/30',
                     ].join(' ')}
-                    style={{ width: MOBILE.action, height: MOBILE.action, touchAction: 'none' }}
+                    style={{ width: actionR, height: actionR, touchAction: 'none' }}
                     aria-label={hotspot ? `Use ${hotspot.label}` : 'Interact'}
                 >
                     <span className="text-[10px] font-black uppercase tracking-wider leading-none opacity-80">
@@ -276,7 +283,7 @@ export default function HouseMobileControls({
                         className="mt-0.5 px-1 font-bold leading-tight"
                         style={{
                             fontSize: hotspot && hotspot.label.length > 10 ? 9 : 11,
-                            maxWidth: MOBILE.action - 10,
+                            maxWidth: actionR - 10,
                         }}
                     >
                         {hotspot ? hotspot.label : 'Use'}
@@ -294,8 +301,8 @@ export default function HouseMobileControls({
                     }}
                     className="rounded-full border border-white/22 bg-black/45 text-white backdrop-blur-md shadow-md active:scale-95 flex flex-col items-center justify-center"
                     style={{
-                        width: MOBILE.actionSecondary,
-                        height: MOBILE.actionSecondary,
+                        width: jumpR,
+                        height: jumpR,
                         touchAction: 'none',
                     }}
                     aria-label="Jump"

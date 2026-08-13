@@ -59,19 +59,9 @@ const FIXTURES: Fixture[] = [
     { room: 'bed_w', color: LAMP, intensity: 4.6, distance: 9 },
     { room: 'bed_n', color: LAMP, intensity: 4.6, distance: 9 },
     { room: 'bath', color: TASK, intensity: 3.4, distance: 6.5 },
-    { room: 'mud', color: NEUTRAL, intensity: 2.8, distance: 6 },
-
-    /* ── upper floor ────────────────────────────────────── */
-    { room: 'living', color: LAMP, intensity: 8.5, distance: 15, core: true },
-    { room: 'kitchen', color: TASK, intensity: 7.0, distance: 13, core: true },
-    { room: 'dining', color: WARM, intensity: 6.4, distance: 12, core: true, drop: 1.9 },
-    { room: 'master', color: LAMP, intensity: 5.4, distance: 11 },
-    { room: 'bed_u', color: LAMP, intensity: 4.2, distance: 9 },
-    { room: 'ensuite', color: TASK, intensity: 3.4, distance: 7 },
-    { room: 'landing', color: WARM, intensity: 3.8, distance: 8, core: true },
-    { room: 'laundry', color: NEUTRAL, intensity: 2.6, distance: 6 },
-    { room: 'balcony', color: PORCH, intensity: 3.2, distance: 9 },
-    { room: 'patio', color: PORCH, intensity: 2.8, distance: 8 },
+    { room: 'living', color: LAMP, intensity: 8.2, distance: 14, core: true },
+    { room: 'kitchen', color: TASK, intensity: 6.6, distance: 12, core: true },
+    { room: 'dining', color: WARM, intensity: 6.0, distance: 11, core: true },
 ];
 
 function centre(id: string) {
@@ -148,13 +138,10 @@ export function DaylightFill({ low = false }: { low?: boolean }) {
     // band, and one on the main floor so downstairs is not left dark.
     return (
         <group ref={group}>
-            <pointLight position={[10.5, UPPER_Y + 2.0, 3.0]} intensity={11} color="#dceaff" distance={20} decay={2} />
-            <pointLight position={[-8.0, MAIN_Y + 2.1, 12.0]} intensity={9} color="#e2eeff" distance={18} decay={2} />
+            <pointLight position={[10.5, MAIN_Y + 2.1, 3.0]} intensity={9} color="#dceaff" distance={18} decay={2} />
+            <pointLight position={[-8.0, MAIN_Y + 2.1, 12.0]} intensity={8} color="#e2eeff" distance={16} decay={2} />
             {!low && (
-                <>
-                    <pointLight position={[7.0, UPPER_Y + 2.0, -12.0]} intensity={8} color="#e6f0ff" distance={16} decay={2} />
-                    <pointLight position={[-9.5, UPPER_Y + 2.0, 9.0]} intensity={7} color="#e2ecff" distance={16} decay={2} />
-                </>
+                <pointLight position={[7.0, MAIN_Y + 2.1, -12.0]} intensity={6.5} color="#e6f0ff" distance={14} decay={2} />
             )}
         </group>
     );

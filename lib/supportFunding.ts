@@ -29,12 +29,12 @@ export const INFRASTRUCTURE_MILESTONES = [
         label: 'Production Resume',
         amount: PRODUCTION_RESUME_AT,
         status: 'next' as const,
-        description: `At $${formatFunding(PRODUCTION_RESUME_AT)} we return to active production — a massive 400 Series rollout and the first wave of new world content.`,
+        description: `At $${formatFunding(PRODUCTION_RESUME_AT)} the house stands without strain — more souls in the room, the wall and the Hall stay fast.`,
     },
     {
         label: 'Full Infrastructure',
         amount: FUNDING_GOAL,
         status: 'goal' as const,
-        description: `At $${formatFunding(FUNDING_GOAL)}: the AI workstation, render pipeline, and studio to rebuild the Sanctum in 3D and keep the sacred assets flowing.`,
+        description: `At $${formatFunding(FUNDING_GOAL)}: the studio and hosting to keep this community house growing — rooms, marks, and the daily Word.`,
     },
 ];

@@ -10,6 +10,9 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
     Bell,
+    BookOpen,
+    Clapperboard,
+    DoorOpen,
     Flame,
     FolderOpen,
     LayoutPanelLeft,
@@ -17,6 +20,8 @@ import {
     RefreshCw,
     Search,
     Settings2,
+    Users,
+    Wrench,
     SquareStack,
 } from 'lucide-react';
 import {
@@ -64,6 +69,15 @@ import {
     type OsFolderId,
     type Service,
 } from '@/lib/truthos/services';
+
+const FOLDER_ICON = {
+    sanctum: BookOpen,
+    community: Users,
+    worlds: DoorOpen,
+    studio: Clapperboard,
+    tools: Wrench,
+    system: Settings2,
+} as const;
 
 /** Desktop shortcut rail — three doors, not a second Start menu */
 const DESKTOP_ICONS: OsAppId[] = ['archive', 'truth', 'files'];
@@ -764,7 +778,10 @@ export default function TruthOSShell({
                                             className="flex flex-col items-center gap-1.5 rounded-xl p-2 hover:bg-white/10 border border-transparent hover:border-white/12 min-h-[72px] touch-manipulation"
                                         >
                                             <span className="w-11 h-11 rounded-[13px] border border-white/15 bg-white/8 flex items-center justify-center text-white/80">
-                                                <FolderOpen size={20} />
+                                                {(() => {
+                                                    const Icon = FOLDER_ICON[id] ?? FolderOpen;
+                                                    return <Icon size={20} />;
+                                                })()}
                                             </span>
                                             <span className="text-[11px] text-white/85 leading-tight text-center">
                                                 {meta.label}

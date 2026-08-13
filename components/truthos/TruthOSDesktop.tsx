@@ -13,15 +13,13 @@ import { useTruthOs } from './truthOsStore';
 import { hubAudio } from '@/lib/truthos/hubAudio';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
+import HouseLoadBar from './house/HouseLoadBar';
+
 const HouseExperience = dynamic(
     () => import('@/components/truthos/house/HouseExperience'),
     {
         ssr: false,
-        loading: () => (
-            <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center font-mono text-emerald-500/50 text-xs tracking-[0.35em]">
-                panning into chamber…
-            </div>
-        ),
+        loading: () => <HouseLoadBar label="Entering the house" />,
     },
 );
 
@@ -94,22 +92,20 @@ export default function TruthOSDesktop() {
                         <button
                             type="button"
                             onClick={exitChamber}
-                            className="absolute top-3 left-3 z-[80] px-3 py-2 rounded-xl bg-black/75 border border-emerald-400/35 text-[11px] uppercase tracking-widest text-emerald-200 hover:bg-black/90 backdrop-blur-md min-h-[44px]"
+                            className="absolute z-[80] px-3 py-2 rounded-xl bg-black/80 border border-emerald-400/35 text-[11px] uppercase tracking-widest text-emerald-200 hover:bg-black/90 backdrop-blur-md min-h-[40px]"
+                            style={{
+                                top: 'calc(0.6rem + env(safe-area-inset-top, 0px))',
+                                left: '0.75rem',
+                            }}
                         >
-                            ← Return to terminal
+                            ← Terminal
                         </button>
                         {/* The desk hotspot and this button are the same door. */}
                         <HouseExperience disableOsBoot onReturnToTerminal={exitChamber} />
                     </motion.div>
                 )}
             </AnimatePresence>
-            {panning && (
-                <div className="pointer-events-none absolute inset-0 z-[90] flex items-center justify-center">
-                    <p className="font-mono text-[11px] tracking-[0.35em] text-emerald-400/70 animate-pulse">
-                        leaving terminal…
-                    </p>
-                </div>
-            )}
+            {panning && <HouseLoadBar label="Leaving terminal" />}
         </div>
     );
 }

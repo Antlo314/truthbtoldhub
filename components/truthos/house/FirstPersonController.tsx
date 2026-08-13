@@ -9,11 +9,14 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { type Hotspot } from './houseMap';
 import {
+    FRONT_DOOR,
     groundAt,
+    HALL_SPINE,
     INTRO,
-    levelAfter,
+    isOutdoors,
     moveOn,
     nearestHomeHotspot,
+    RECENTER,
     SIT_HEIGHT,
     SPAWN_YAW,
     type Level,
@@ -38,11 +41,13 @@ import {
     damp,
 } from './houseFeel';
 import { setWalkerPose } from './walkerPose';
+import { useHouseUi } from './houseUiStore';
+import { loadPose, savePose } from './housePose';
 
 /** Soft footsteps on the two rugs (rec room + living) */
 function onRug(x: number, z: number): boolean {
-    if (x > -12.6 && x < -5.6 && z > 9.6 && z < 15.0) return true;
-    if (x > 6.4 && x < 11.8 && z > -1.6 && z < 5.0) return true;
+    if (x > -12 && x < -7 && z > 11 && z < 16.2) return true;
+    if (x > 9 && x < 15 && z > 0 && z < 6) return true;
     return false;
 }
 
@@ -67,6 +72,15 @@ export default function FirstPersonController({
     onMoveActivity?: (kind: 'move' | 'look' | 'jump' | 'idle') => void;
 }) {
     const { camera, gl } = useThree();
+    const seated = useHouseUi((s) => s.seated);
+    const lookInvert = useHouseUi((s) => s.lookInvert);
+    const lookSensMul = useHouseUi((s) => s.lookSens);
+    const recenterToken = useHouseUi((s) => s.recenterToken);
+    const faceHomeToken = useHouseUi((s) => s.faceHomeToken);
+    const lookInvertRef = useRef(lookInvert);
+    lookInvertRef.current = lookInvert;
+    const lookSensRef = useRef(lookSensMul);
+    lookSensRef.current = lookSensMul;
     const lockedRef = useRef(locked);
     lockedRef.current = locked;
 
@@ -83,6 +97,7 @@ export default function FirstPersonController({
     const vy = useRef(0);
     const grounded = useRef(true);
     const poseT = useRef(0);
+    const saveClock = useRef(0);
     const bobT = useRef(0);
     const interactLatch = useRef(false);
     const activityT = useRef(0);
@@ -93,32 +108,81 @@ export default function FirstPersonController({
     const lastBobSin = useRef(0);
 
     useEffect(() => {
+        const saved = loadPose();
         const reduce =
             typeof window !== 'undefined' &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduce) {
+        if (saved) {
+            intro.current = { phase: 'done', t: 0 };
+            pos.current.set(saved.x, EYE_HEIGHT, saved.z);
+            yaw.current = saved.yaw;
+            pitch.current = THREE.MathUtils.clamp(saved.pitch ?? 0, -PITCH_MAX, PITCH_MAX);
+        } else if (reduce) {
             intro.current = { phase: 'done', t: 0 };
             pos.current.set(INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z);
+            yaw.current = SPAWN_YAW;
+            pitch.current = 0;
         } else {
             intro.current = { phase: 'hold', t: 0 };
             pos.current.set(INTRO.seat.x, SIT_HEIGHT, INTRO.seat.z);
+            yaw.current = SPAWN_YAW;
+            pitch.current = 0;
         }
         level.current = 'main';
         vel.current = { x: 0, z: 0 };
         vy.current = 0;
         grounded.current = true;
-        yaw.current = SPAWN_YAW;
-        pitch.current = 0;
-        yawS.current = SPAWN_YAW;
-        pitchS.current = 0;
+        yawS.current = yaw.current;
+        pitchS.current = pitch.current;
         camera.position.copy(pos.current);
         // Lock Y-up FPS orientation (no roll) — residual lookAt/quaternion roll = ceiling walk
         camera.up.set(0, 1, 0);
         camera.rotation.order = 'YXZ';
-        camera.rotation.set(0, SPAWN_YAW, 0);
+        camera.rotation.set(pitch.current, yaw.current, 0);
         houseInput.clearAll();
         keys.current.clear();
+        return () => {
+            savePose({
+                x: pos.current.x,
+                z: pos.current.z,
+                yaw: yaw.current,
+                pitch: pitch.current,
+            });
+        };
     }, [camera]);
+
+    const lastRecenter = useRef(recenterToken);
+    const lastFace = useRef(faceHomeToken);
+
+    useEffect(() => {
+        if (recenterToken === lastRecenter.current) return;
+        lastRecenter.current = recenterToken;
+        intro.current = { phase: 'done', t: 0 };
+        pos.current.set(RECENTER.x, EYE_HEIGHT, RECENTER.z);
+        yaw.current = RECENTER.yaw;
+        pitch.current = 0;
+        yawS.current = RECENTER.yaw;
+        pitchS.current = 0;
+        vel.current = { x: 0, z: 0 };
+        vy.current = 0;
+        grounded.current = true;
+        camera.position.copy(pos.current);
+        camera.rotation.set(0, RECENTER.yaw, 0);
+        savePose({ x: RECENTER.x, z: RECENTER.z, yaw: RECENTER.yaw, pitch: 0 });
+    }, [recenterToken, camera]);
+
+    useEffect(() => {
+        if (faceHomeToken === lastFace.current) return;
+        lastFace.current = faceHomeToken;
+        const target = isOutdoors(pos.current.x, pos.current.z)
+            ? { x: FRONT_DOOR.x, z: FRONT_DOOR.z }
+            : HALL_SPINE;
+        const dx = target.x - pos.current.x;
+        const dz = target.z - pos.current.z;
+        const next = Math.atan2(-dx, -dz);
+        yaw.current = next;
+        yawS.current = next;
+    }, [faceHomeToken]);
 
     // When UI locks, kill all motion input immediately
     useEffect(() => {
@@ -178,14 +242,19 @@ export default function FirstPersonController({
         };
         const onPointerMove = (e: PointerEvent) => {
             if (lockedRef.current || mobile) return;
-            const sens = LOOK_SENS_DESKTOP;
+            const sens = LOOK_SENS_DESKTOP * lookSensRef.current;
+            const sign = lookInvertRef.current ? -1 : 1;
             // Pointer lock: movementX/Y is the only reliable delta
             if (document.pointerLockElement === el) {
                 const dx = e.movementX || 0;
                 const dy = e.movementY || 0;
                 if (dx === 0 && dy === 0) return;
                 yaw.current -= dx * sens;
-                pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
+                pitch.current = THREE.MathUtils.clamp(
+                    pitch.current - dy * sens * sign,
+                    -PITCH_MAX,
+                    PITCH_MAX,
+                );
                 emit('look');
                 return;
             }
@@ -195,7 +264,11 @@ export default function FirstPersonController({
             lx = e.clientX;
             ly = e.clientY;
             yaw.current -= dx * sens;
-            pitch.current = THREE.MathUtils.clamp(pitch.current - dy * sens, -PITCH_MAX, PITCH_MAX);
+            pitch.current = THREE.MathUtils.clamp(
+                pitch.current - dy * sens * sign,
+                -PITCH_MAX,
+                PITCH_MAX,
+            );
             emit('look');
         };
         const onPointerUp = () => {
@@ -289,7 +362,8 @@ export default function FirstPersonController({
             houseInput.consumeJump();
             return;
         }
-        const lookSens = mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP;
+        const lookSens = (mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP) * lookSensRef.current;
+        const lookSign = lookInvertRef.current ? -1 : 1;
         const k = keys.current;
 
         // Safety: if keys claim held but no key event for 3s, clear (stuck key)
@@ -310,7 +384,7 @@ export default function FirstPersonController({
             if (pix.dx || pix.dy) {
                 yaw.current -= pix.dx * lookSens;
                 pitch.current = THREE.MathUtils.clamp(
-                    pitch.current - pix.dy * lookSens,
+                    pitch.current - pix.dy * lookSens * lookSign,
                     -PITCH_MAX,
                     PITCH_MAX,
                 );
@@ -330,7 +404,7 @@ export default function FirstPersonController({
         // set() applies pitch/yaw/roll together so z never drifts to π (world invert)
         camera.rotation.set(pitchS.current, yawS.current, 0);
 
-        if (!lockedNow) {
+        if (!lockedNow && !seated) {
             const yawUse = yawS.current;
             const fx = -Math.sin(yawUse);
             const fz = -Math.cos(yawUse);
@@ -424,15 +498,14 @@ export default function FirstPersonController({
                 pos.current.z = next.z;
             }
 
-            if (houseInput.consumeJump() && grounded.current) {
+            if (!seated && houseInput.consumeJump() && grounded.current) {
                 vy.current = JUMP_V;
                 grounded.current = false;
                 emit('jump');
             }
-            // Two-storey ground: the floor under you depends on where you are
-            // AND which storey you're on; the stair is a ramp between them.
-            level.current = levelAfter(pos.current.x, pos.current.z, level.current);
-            const eyeFloor = groundAt(pos.current.x, pos.current.z, level.current) + EYE_HEIGHT;
+            level.current = 'main';
+            const eyeFloor =
+                groundAt(pos.current.x, pos.current.z, 'main') + (seated ? SIT_HEIGHT : EYE_HEIGHT);
             vy.current -= GRAVITY * d;
             pos.current.y += vy.current * d;
             if (pos.current.y <= eyeFloor) {
@@ -468,6 +541,9 @@ export default function FirstPersonController({
             houseInput.consumeJump();
             vel.current = { x: 0, z: 0 };
             lastBobSin.current = 0;
+            if (seated) {
+                pos.current.y = groundAt(pos.current.x, pos.current.z, 'main') + SIT_HEIGHT;
+            }
             camera.position.set(pos.current.x, pos.current.y, pos.current.z);
         }
 
@@ -503,6 +579,18 @@ export default function FirstPersonController({
             };
             setWalkerPose(p);
             onPose(p);
+        }
+        saveClock.current += d;
+        if (saveClock.current > 2) {
+            saveClock.current = 0;
+            if (intro.current.phase === 'done') {
+                savePose({
+                    x: pos.current.x,
+                    z: pos.current.z,
+                    yaw: yaw.current,
+                    pitch: pitch.current,
+                });
+            }
         }
     });
 
