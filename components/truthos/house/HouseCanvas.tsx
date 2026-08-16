@@ -10,9 +10,9 @@ import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
 import { DaylightFill } from './HouseLights';
 import { BloomByDaylight, NightStars } from './WeatherFx';
-import JungleGeometry from './JungleGeometry';
+import AetherShelf from './AetherShelf';
+import AetherHorizon from './AetherHorizon';
 import WorldDestinations from './WorldDestinations';
-import DistantScenery from './DistantScenery';
 import * as THREE from 'three';
 import HomeGeometry from './HomeGeometry';
 import HomeDecor from './HomeDecor';
@@ -54,7 +54,7 @@ export default function HouseCanvas({
     saidBy?: Record<string, string>;
     onReady?: () => void;
 }) {
-    const bg = mobile ? '#1c1630' : '#120e1c';
+    const bg = mobile ? '#161022' : '#0a0814';
     const bloom = useRef<BloomEffect>(null);
     /**
      * ⚠ The bloom handle MUST be attached with a callback ref, never
@@ -148,8 +148,8 @@ export default function HouseCanvas({
                     enclosure reads as layered green, not swallowed grey; the
                     interior band (<15) is untouched either way. Mobile keeps
                     the short fog — there, the fog IS the wall. */}
-                {!mobile && <fog attach="fog" args={[bg, 18, 95]} />}
-                {mobile && <fog attach="fog" args={['#2a2438', 14, 52]} />}
+                {!mobile && <fog attach="fog" args={[bg, 22, 110]} />}
+                {mobile && <fog attach="fog" args={['#1a1428', 12, 48]} />}
 
                 {!mobile && <NightStars />}
 
@@ -162,9 +162,9 @@ export default function HouseCanvas({
                 {/* Interior practicals now live inside HomeGeometry/HomeDecor,
                     placed for the new plan. */}
 
-                {/* The jungle beyond the fence, and the green horizon past it */}
-                <JungleGeometry low={mobile} />
-                {!mobile && <DistantScenery low />}
+                {/* Aether Shelf — hut courtyard, cloud sea, bridges, islets */}
+                <AetherShelf low={mobile} />
+                {!mobile && <AetherHorizon low />}
 
                 {/* Everything with practicals sits in one LampGroup, so every
                     lamp, cove strip and glow pane dims as the sun comes up —

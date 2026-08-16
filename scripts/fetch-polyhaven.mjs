@@ -54,6 +54,8 @@ const WANTED = [
     { key: 'bark', slugs: ['bark_brown_01', 'bark_willow'] },
     // The forest band beyond the clearing edge
     { key: 'forestFloor', slugs: ['forest_floor', 'forest_ground_04'] },
+    { key: 'basalt', slugs: ['rock_boulder_cracked', 'rough_block_wall'] },
+    { key: 'goldMetal', slugs: ['metal_plate', 'gold'] },
 ];
 
 const MAPS = [

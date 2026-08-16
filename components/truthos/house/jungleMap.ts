@@ -30,10 +30,10 @@ export type Destination = {
  * north path (π/2), which stays a scenic walk for now.
  */
 export const DESTINATIONS: Destination[] = [
-    { id: 'cinema', name: 'The Cinema Grove', blurb: 'Films under the canopy', angle: 0.1, dist: 72, r: 15 },
-    { id: 'hall', name: 'The Hall Stones', blurb: 'The community circle', angle: Math.PI - 0.12, dist: 70, r: 14 },
-    { id: 'soul_mirror', name: 'The Mirror Pool', blurb: 'Shape your vessel', angle: -Math.PI / 3.1, dist: 64, r: 12 },
-    { id: 'studio', name: 'The Signal Studio', blurb: 'Broadcast from the wild', angle: Math.PI + 0.72, dist: 66, r: 13 },
+    { id: 'cinema', name: 'The Cinema Isle', blurb: 'Films above the cloud sea', angle: 0.1, dist: 72, r: 15 },
+    { id: 'hall', name: 'The Hall Circle', blurb: 'The community ring', angle: Math.PI - 0.12, dist: 70, r: 14 },
+    { id: 'soul_mirror', name: 'The Mirror Well', blurb: 'Shape your vessel', angle: -Math.PI / 3.1, dist: 64, r: 12 },
+    { id: 'studio', name: 'The Signal Spire', blurb: 'Broadcast from the shelf', angle: Math.PI + 0.72, dist: 66, r: 13 },
 ];
 
 export function destCenter(d: Destination): { x: number; z: number } {

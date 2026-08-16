@@ -49,7 +49,7 @@ function SiteBase({
         <group>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.015, z]} receiveShadow={!low}>
                 <circleGeometry args={[Math.min(3.2, r * 0.22), low ? 16 : 24]} />
-                <primitive object={m.dirt} attach="material" />
+                <primitive object={m.stone} attach="material" />
             </mesh>
             {!low && (
                 <pointLight position={[x, lightY, z]} intensity={2.2} color="#fbbf24" distance={r * 1.9} decay={2} />
