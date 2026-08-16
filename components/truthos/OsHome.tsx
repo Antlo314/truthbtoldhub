@@ -105,7 +105,7 @@ export default function OsHome({
     return (
         <div className={`flex flex-col gap-8 ${phone ? 'pt-2 pb-8' : 'pt-6 pb-10 max-w-md'}`}>
             <div className="flex items-baseline gap-3 flex-wrap">
-                <p className="text-[10px] uppercase tracking-[0.34em] text-emerald-300/90 font-mono font-semibold">
+                <p className="text-[10px] uppercase tracking-[0.34em] text-amber-200/85 font-mono font-semibold">
                     {greeting(now.getHours())}
                     {name ? `, ${name}` : ''}
                 </p>
@@ -127,7 +127,7 @@ export default function OsHome({
                     <button
                         type="button"
                         onClick={onSignIn}
-                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 text-black text-[11px] font-bold min-h-[36px] touch-manipulation"
+                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-300 to-violet-400 text-black text-[11px] font-bold min-h-[36px] touch-manipulation"
                     >
                         Sign in
                     </button>

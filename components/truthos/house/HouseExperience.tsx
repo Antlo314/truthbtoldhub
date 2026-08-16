@@ -646,7 +646,18 @@ export default function HouseExperience({
             )}
 
             {/* Persistent world readout: identity, clock, weather, skills */}
-            <WorldHud visible={showHud} compact={isMobile} />
+            <WorldHud
+                visible={showHud}
+                compact={isMobile}
+                onOpenOs={() => {
+                    if (onReturnToTerminal) {
+                        onReturnToTerminal();
+                        return;
+                    }
+                    setOsOpen(true);
+                    enterOs();
+                }}
+            />
 
             {showHud && (
                 <>

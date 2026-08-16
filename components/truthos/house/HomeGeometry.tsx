@@ -8,10 +8,8 @@
  * coordinates pass through the same u() the plan uses, so the geometry
  * doubled the day the plan did, without a second set of numbers.
  *
- * Exterior follows the render: white stucco masses banded in charcoal,
- * deep flat-roof overhangs, dark brick entry pier, warm wood balcony
- * soffit, black-framed glazing with a two-storey stack over the entry,
- * glass balcony rail, frosted sectional garage door.
+ * Exterior is the Aether hut: basalt masses, gold-vein trim, violet glass,
+ * a single stone walk to the Source well. No driveway, no garage, no woods.
  *
  * The sky dome and moon live here now — the old YardGeometry carried
  * them for the old house, and this file replaces it.
@@ -153,21 +151,21 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
 
     const mats = useMemo(
         () => ({
-            stucco: new THREE.MeshStandardMaterial({ color: '#e8e6e0', roughness: 0.92, metalness: 0.02 }),
-            trim: new THREE.MeshStandardMaterial({ color: '#2f3237', roughness: 0.62, metalness: 0.18 }),
-            brick: new THREE.MeshStandardMaterial({ color: '#3a3b40', roughness: 0.95, metalness: 0.03 }),
-            soffit: new THREE.MeshStandardMaterial({ color: '#a9793f', roughness: 0.72, metalness: 0.05 }),
-            inner: new THREE.MeshStandardMaterial({ color: '#dedad2', roughness: 0.95 }),
+            stucco: new THREE.MeshStandardMaterial({ color: '#1c1824', roughness: 0.88, metalness: 0.08 }),
+            trim: new THREE.MeshStandardMaterial({ color: '#e8c478', roughness: 0.32, metalness: 0.62 }),
+            brick: new THREE.MeshStandardMaterial({ color: '#141018', roughness: 0.9, metalness: 0.12 }),
+            soffit: new THREE.MeshStandardMaterial({ color: '#3a2a1c', roughness: 0.7, metalness: 0.08 }),
+            inner: new THREE.MeshStandardMaterial({ color: '#241c28', roughness: 0.92 }),
             glass: new THREE.MeshStandardMaterial({
-                color: '#9fc4d8', transparent: true, opacity: 0.28,
-                roughness: 0.05, metalness: 0.6, envMapIntensity: 1.5, side: THREE.DoubleSide,
+                color: '#6b5cff', transparent: true, opacity: 0.22,
+                roughness: 0.08, metalness: 0.45, envMapIntensity: 1.4, side: THREE.DoubleSide,
             }),
             garage: new THREE.MeshStandardMaterial({
-                color: '#b9c3c7', roughness: 0.42, metalness: 0.25, transparent: true, opacity: 0.9,
+                color: '#1a1620', roughness: 0.55, metalness: 0.2, transparent: true, opacity: 0.88,
             }),
             rail: new THREE.MeshStandardMaterial({
-                color: '#cfe0ea', transparent: true, opacity: 0.22,
-                roughness: 0.06, metalness: 0.4, side: THREE.DoubleSide,
+                color: '#e8c478', transparent: true, opacity: 0.28,
+                roughness: 0.2, metalness: 0.55, side: THREE.DoubleSide,
             }),
             warm: (() => {
                 // Entry glow pane — dims with daylight via LampGroup's glow tag
@@ -191,7 +189,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
      * wore the same boards.
      */
     const floorMat = (mm: ReturnType<typeof useHouseMaterials>, f: { id: string; open: boolean }) => {
-        if (f.open) return mm.concrete;                        // balcony + patio
+        if (f.open) return mm.stone;                            // terrace stone
         switch (f.id) {
             case 'kitchen':  return mm.tileKitchen;
             case 'dining':
@@ -249,7 +247,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
             ))}
 
             {/* ── Walls — one storey ─────────────────────────── */}
-            <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={m.wallPlaster} shadow={sh} />
+            <Walls cols={HOUSE_MAIN} y={MAIN_Y} h={STOREY} mat={m.stone} shadow={sh} />
 
             {/* The stair, its enclosure and all finish carpentry live in
                 HomeInterior — built as joinery, not extruded boxes. */}
@@ -292,14 +290,14 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
                 <primitive object={mats.trim} attach="material" />
             </mesh>
 
-            {/* ── Driveway + front walk ──────────────────────── */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[u(4.0), 0.015, Z1 + 5.4]} receiveShadow={sh}>
-                <planeGeometry args={[10.0, 10.8]} />
-                <primitive object={m.concrete} attach="material" />
+            {/* ── Gold eve band + stone walk to the Source well ─ */}
+            <mesh position={[0, ROOF_Y - 0.08, 0]}>
+                <boxGeometry args={[W + OVER * 2 + 0.2, 0.08, D + OVER * 2 + 0.2]} />
+                <primitive object={mats.trim} attach="material" />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[u(-1.2), 0.02, Z1 + 2.6]} receiveShadow={sh}>
-                <planeGeometry args={[2.4, 5.2]} />
-                <primitive object={m.path} attach="material" />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[u(-0.4), 0.02, Z1 + 2.8]} receiveShadow={sh}>
+                <planeGeometry args={[2.6, 6.0]} />
+                <primitive object={m.stone} attach="material" />
             </mesh>
 
             {/* ── Practicals ─────────────────────────────────── */}

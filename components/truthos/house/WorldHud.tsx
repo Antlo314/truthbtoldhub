@@ -15,9 +15,11 @@ const COMPASS_FOV = 1.15;
 export default function WorldHud({
     visible = true,
     compact = false,
+    onOpenOs,
 }: {
     visible?: boolean;
     compact?: boolean;
+    onOpenOs?: () => void;
 }) {
     const hour = useWorldTime((s) => s.hour);
     const setPaused = useHouseUi((s) => s.setPaused);
@@ -39,6 +41,16 @@ export default function WorldHud({
 
     return (
         <div className="pointer-events-none absolute inset-0 z-[45] select-none">
+            {onOpenOs && (
+                <button
+                    type="button"
+                    onClick={onOpenOs}
+                    className="pointer-events-auto absolute left-3 z-[46] rounded-xl border border-amber-300/40 bg-black/70 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-amber-100 backdrop-blur-md min-h-[40px]"
+                    style={{ top: `calc(0.55rem + env(safe-area-inset-top, 0px))` }}
+                >
+                    Open Truth.OS
+                </button>
+            )}
             <div
                 className="absolute inset-x-0 top-0 flex items-start justify-center gap-2 px-3"
                 style={{

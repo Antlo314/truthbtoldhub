@@ -24,7 +24,8 @@ const HouseExperience = dynamic(
 );
 
 export default function TruthOSDesktop() {
-    const [chamber, setChamber] = useState(false);
+    /** Start in the 3D world. Truth.OS is a CTA for anyone who will not walk. */
+    const [chamber, setChamber] = useState(true);
     const [panning, setPanning] = useState(false);
     const clearDesktop = useTruthOs((s) => s.clearDesktop);
     const setSessionEmail = useTruthOs((s) => s.setSessionEmail);
@@ -92,13 +93,13 @@ export default function TruthOSDesktop() {
                         <button
                             type="button"
                             onClick={exitChamber}
-                            className="absolute z-[80] px-3 py-2 rounded-xl bg-black/80 border border-emerald-400/35 text-[11px] uppercase tracking-widest text-emerald-200 hover:bg-black/90 backdrop-blur-md min-h-[40px]"
+                            className="absolute z-[80] px-3.5 py-2 rounded-xl bg-black/80 border border-amber-300/40 text-[11px] uppercase tracking-[0.18em] text-amber-100 hover:bg-black/90 backdrop-blur-md min-h-[42px] shadow-[0_0_24px_rgba(232,196,120,0.18)]"
                             style={{
                                 top: 'calc(0.6rem + env(safe-area-inset-top, 0px))',
                                 left: '0.75rem',
                             }}
                         >
-                            ← Terminal
+                            Open Truth.OS
                         </button>
                         {/* The desk hotspot and this button are the same door. */}
                         <HouseExperience disableOsBoot onReturnToTerminal={exitChamber} />

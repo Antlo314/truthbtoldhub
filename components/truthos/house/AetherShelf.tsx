@@ -203,6 +203,26 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 const c = destCenter(d);
                 return (
                     <group key={d.id} position={[c.x, 0, c.z]}>
+                        {/* Landmark beacon — BotW-style readable POI from the hut */}
+                        <mesh position={[0, 6.2, 0]}>
+                            <cylinderGeometry args={[0.07, 0.11, 12.4, 6]} />
+                            <meshStandardMaterial color="#e8c478" metalness={0.7} roughness={0.28} />
+                        </mesh>
+                        <mesh position={[0, 12.6, 0]}>
+                            <sphereGeometry args={[0.38, 10, 8]} />
+                            <meshBasicMaterial
+                                color={
+                                    d.id === 'cinema'
+                                        ? '#f97316'
+                                        : d.id === 'hall'
+                                          ? '#e8c478'
+                                          : d.id === 'soul_mirror'
+                                            ? '#7c5cff'
+                                            : '#22d3ee'
+                                }
+                                toneMapped={false}
+                            />
+                        </mesh>
                         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow={!low}>
                             <circleGeometry args={[d.r + 0.6, low ? 16 : 28]} />
                             <primitive object={basalt} attach="material" />
