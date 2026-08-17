@@ -162,17 +162,16 @@ export default function HouseCanvas({
                 {/* Interior practicals now live inside HomeGeometry/HomeDecor,
                     placed for the new plan. */}
 
-                {/* Aether Shelf — hut courtyard, cloud sea, bridges, islets */}
+                {/* One exterior: the Aether Shelf. JungleGeometry used to
+                    mount here too — trees, ferns and grove kits punching
+                    through the hut. The shelf is the world; the house is
+                    the house. */}
                 <AetherShelf low={mobile} />
                 {!mobile && <AetherHorizon low />}
 
-                {/* Everything with practicals sits in one LampGroup, so every
-                    lamp, cove strip and glow pane dims as the sun comes up —
-                    the payoff the worldTime keyframes were written for. */}
-                {/* Phones render every prop's procedural fallback instead of
-                    its GLB — ~30 fewer model downloads, parses, materials and
-                    draw calls, and the rooms stay furnished. */}
-                <PropDetailProvider primitiveOnly>
+                {/* Phones keep procedural solids (no GLB fetch). Desktop
+                    loads the Kenney meshes — HouseProp never draws both. */}
+                <PropDetailProvider primitiveOnly={mobile}>
                     <LampGroup floor={0.07}>
                         <WorldDestinations low={mobile} />
                         <HomeGeometry low={mobile} />

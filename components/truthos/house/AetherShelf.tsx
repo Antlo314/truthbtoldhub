@@ -12,7 +12,12 @@ import type { Group, Mesh, Object3D } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
+import { FRONT_DOOR, SHELL } from './homeMap';
 import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
+
+function inHouse(x: number, z: number, pad = 2.6) {
+    return x > SHELL.minX - pad && x < SHELL.maxX + pad && z > SHELL.minZ - pad && z < SHELL.maxZ + pad;
+}
 
 function CloudSea({ low }: { low: boolean }) {
     const a = useRef<Mesh>(null);
@@ -45,23 +50,29 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
         const n = low ? 8 : 14;
         return Array.from({ length: n }, (_, i) => {
             const a = (i / n) * Math.PI * 2 + 0.08;
-            const r = 20.5 + (rnd() - 0.5) * 1.4;
+            const r = 27.2 + (rnd() - 0.5) * 1.2;
             return { x: Math.cos(a) * r, z: Math.sin(a) * r };
         });
     }, [low, rnd]);
 
     const shards = useMemo(() => {
         const n = low ? 10 : 22;
-        return Array.from({ length: n }, () => {
+        const out: { x: number; z: number; y: number; s: number }[] = [];
+        let guard = n * 20;
+        while (out.length < n && guard-- > 0) {
             const a = rnd() * Math.PI * 2;
-            const r = 14 + rnd() * 48;
-            return {
-                x: Math.cos(a) * r,
-                z: Math.sin(a) * r,
+            const r = 26 + rnd() * 40;
+            const x = Math.cos(a) * r;
+            const z = Math.sin(a) * r;
+            if (inHouse(x, z)) continue;
+            out.push({
+                x,
+                z,
                 y: 3.2 + rnd() * 7,
                 s: 0.7 + rnd() * 1.4,
-            };
-        });
+            });
+        }
+        return out;
     }, [low, rnd]);
 
     const sentinels = useMemo(
@@ -99,7 +110,7 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 <primitive object={basalt} attach="material" />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-                <ringGeometry args={[8.4, 9.1, low ? 20 : 32]} />
+                <ringGeometry args={[24.0, 24.8, low ? 20 : 32]} />
                 <meshStandardMaterial color="#e8c478" metalness={0.7} roughness={0.28} />
             </mesh>
             <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -2.8, 0]}>
@@ -107,7 +118,7 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 <primitive object={basalt} attach="material" />
             </mesh>
 
-            <group position={[0, 0, 11.5]}>
+            <group position={[FRONT_DOOR.x, 0, SHELL.maxZ + 3.5]}>
                 <mesh position={[0, 0.16, 0]}>
                     <cylinderGeometry args={[1.2, 1.35, 0.34, 10]} />
                     <primitive object={basalt} attach="material" />
@@ -239,7 +250,7 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 );
             })}
 
-            <group position={[0, 5.4, 0]}>
+            <group position={[FRONT_DOOR.x, 3.4, SHELL.maxZ + 3.5]}>
                 <mesh position={[0, 0.5, 0]}>
                     <coneGeometry args={[0.22, 1.2, 6]} />
                     <primitive object={gold} attach="material" />

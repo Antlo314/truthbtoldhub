@@ -20,7 +20,6 @@ import * as THREE from 'three';
 import { getSky } from './DayNightCycle';
 import { useHouseMaterials } from './HouseMaterials';
 import {
-    FURNITURE,
     MAIN_COLLIDERS,
     MAIN_Y,
     ROOF_Y,
@@ -252,17 +251,13 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
             {/* The stair, its enclosure and all finish carpentry live in
                 HomeInterior — built as joinery, not extruded boxes. */}
 
-            {/* ── Entry: one-storey pier + warm door glow ── */}
-            <mesh position={[u(0.7), STOREY / 2, Z1 - 0.12]} castShadow={sh}>
-                <boxGeometry args={[2.1, STOREY, 0.5]} />
+            {/* ── Entry: pier east of the opening — not a slab in the door ── */}
+            <mesh position={[1.4, STOREY / 2, Z1 - 0.12]} castShadow={sh}>
+                <boxGeometry args={[1.1, STOREY, 0.42]} />
                 <primitive object={mats.brick} attach="material" />
             </mesh>
-            <mesh position={[u(-0.4), 1.25, Z1 + 0.02]}>
-                <planeGeometry args={[1.6, 2.5]} />
-                <primitive object={m.woodDark} attach="material" />
-            </mesh>
-            <mesh position={[u(-0.4), 2.55, Z1 - 0.12]}>
-                <planeGeometry args={[2.8, 1.6]} />
+            <mesh position={[u(-0.4), 2.62, Z1 - 0.12]}>
+                <planeGeometry args={[2.4, 0.9]} />
                 <primitive object={mats.warm} attach="material" />
             </mesh>
 

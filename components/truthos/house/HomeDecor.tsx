@@ -1,30 +1,46 @@
 'use client';
 
 /**
- * One-storey furnishings. Every prop here has a FURNITURE collider.
+ * One-storey furnishings. Every volume here is a FURNITURE solid —
+ * one mesh (or one HouseProp) per row, sized to that row's hx/hz/h.
+ * Nothing is nested inside another solid's box.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import HouseProp from './HouseProp';
 import { useHouseMaterials } from './HouseMaterials';
-import { DESK, MAIN_Y, SHELL, u } from './homeMap';
+import { DESK, MAIN_Y, SHELL, furn, u, type Furnishing } from './homeMap';
 import WallMural from './WallMural';
 
 const X0 = SHELL.minX;
-const X1 = SHELL.maxX;
-const Z0 = SHELL.minZ;
-const Z1 = SHELL.maxZ;
 
-function On({
-    x,
-    z,
+function Solid({
+    f,
     children,
 }: {
-    x: number;
-    z: number;
+    f: Furnishing;
     children: React.ReactNode;
 }) {
-    return <group position={[x, MAIN_Y, z]}>{children}</group>;
+    // Position only — the box stays axis-aligned with the collider.
+    // HouseProp gets f.yaw so the GLB can face the room.
+    return <group position={[f.x, MAIN_Y, f.z]}>{children}</group>;
+}
+
+function Box({
+    f,
+    mat,
+    shadow,
+}: {
+    f: Furnishing;
+    mat: THREE.Material;
+    shadow: boolean;
+}) {
+    return (
+        <mesh position={[0, f.h / 2, 0]} castShadow={shadow} receiveShadow={shadow}>
+            <boxGeometry args={[f.hx * 2, f.h, f.hz * 2]} />
+            <primitive object={mat} attach="material" />
+        </mesh>
+    );
 }
 
 export default function HomeDecor({ low = false }: { low?: boolean }) {
@@ -35,103 +51,118 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
         [],
     );
 
+    const desk = furn('desk');
+    const chair = furn('desk chair');
+    const recSofa = furn('rec sofa');
+    const recTable = furn('rec coffee table');
+    const lamp = furn('floor lamp');
+    const arcade = furn('arcade cabinet');
+    const plant = furn('rec plant');
+    const tray = furn('daily word tray');
+    const bench = furn('mark bench');
+    const vanity = furn('bath vanity');
+    const bed = furn('spare bed');
+    const livSofa = furn('living sofa');
+    const livTable = furn('living coffee table');
+    const accent = furn('accent chair');
+    const shelves = furn('bookshelf wall');
+    const hearth = furn('media wall');
+    const island = furn('island');
+    const stoolL = furn('island stool L');
+    const stoolC = furn('island stool C');
+    const stoolR = furn('island stool R');
+    const counter = furn('counter run');
+    const fridge = furn('fridge');
+    const codex = furn('codex desk');
+    const table = furn('dining table');
+    const chN = furn('dining chair N');
+    const chS = furn('dining chair S');
+    const chE = furn('dining chair E');
+    const chW = furn('dining chair W');
+    const ledger = furn('sideboard (Ledger)');
+
     return (
         <group>
             <WallMural />
 
-            {/* Rec — wake at the desk */}
-            <On x={DESK.x} z={DESK.z}>
-                <group rotation={[0, Math.PI, 0]}>
-                    <HouseProp model="desk" position={[0, 0, 0]} fit={{ w: 1.8 }}>
-                        <mesh position={[0, 0.38, 0]} castShadow={sh}>
-                            <boxGeometry args={[1.8, 0.76, 0.8]} />
-                            <primitive object={m.woodDark} attach="material" />
-                        </mesh>
-                    </HouseProp>
-                    <HouseProp model="monitor" position={[0, 0.78, -0.12]} fit={{ w: 0.62 }}>
-                        <mesh position={[0, 0.25, 0]}>
-                            <boxGeometry args={[0.62, 0.4, 0.06]} />
+            {/* Rec */}
+            <Solid f={desk}>
+                <HouseProp model="desk" rotation={[0, desk.yaw ?? 0, 0]} fit={{ w: desk.hx * 2, d: desk.hz * 2 }}>
+                    <Box f={desk} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+                <group position={[0, desk.h, -0.08]}>
+                    <HouseProp model="monitor" fit={{ w: 0.56 }}>
+                        <mesh position={[0, 0.2, 0]}>
+                            <boxGeometry args={[0.56, 0.36, 0.05]} />
                             <primitive object={m.metalDark} attach="material" />
                         </mesh>
                     </HouseProp>
-                    <HouseProp model="keyboard" position={[0, 0.79, 0.22]} fit={{ w: 0.42 }} >{null}</HouseProp>
-                    <HouseProp model="mouse" position={[0.32, 0.79, 0.22]} fit={{ w: 0.07 }} >{null}</HouseProp>
                 </group>
-                <mesh position={[0, DESK.monitorY, 0.28]} rotation={[0, Math.PI, 0]}>
-                    <planeGeometry args={[0.56, 0.34]} />
+                <group position={[0, desk.h, 0.16]}>
+                    <HouseProp model="keyboard" fit={{ w: 0.36 }}>
+                        {null}
+                    </HouseProp>
+                </group>
+                <mesh position={[0, DESK.monitorY - MAIN_Y, 0.18]}>
+                    <planeGeometry args={[0.5, 0.3]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
                 {!low && (
-                    <pointLight position={[0, 1.4, -0.6]} intensity={1.5} color="#8ff2ff" distance={5} decay={2} />
+                    <pointLight position={[0, 1.35, -0.2]} intensity={1.5} color="#8ff2ff" distance={5} decay={2} />
                 )}
-                <HouseProp model="deskChair" position={[0, 0, -1.05]} rotation={[0, Math.PI, 0]}>
-                    <mesh position={[0, 0.45, 0]} castShadow={sh}>
-                        <boxGeometry args={[0.5, 0.9, 0.5]} />
-                        <primitive object={m.leather} attach="material" />
-                    </mesh>
+            </Solid>
+            <Solid f={chair}>
+                <HouseProp model="deskChair" rotation={[0, chair.yaw ?? 0, 0]} fit={{ w: chair.hx * 2, d: chair.hz * 2 }}>
+                    <Box f={chair} mat={m.leather} shadow={sh} />
                 </HouseProp>
-            </On>
-            <On x={u(-4.1)} z={u(7.15)}>
-                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 2.2 }}>
-                    <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.2, 0.8, 0.95]} />
-                        <primitive object={m.fabric} attach="material" />
-                    </mesh>
+            </Solid>
+            <Solid f={recSofa}>
+                <HouseProp model="sofa" rotation={[0, recSofa.yaw ?? 0, 0]} fit={{ w: recSofa.hx * 2, d: recSofa.hz * 2 }}>
+                    <Box f={recSofa} mat={m.fabric} shadow={sh} />
                 </HouseProp>
-            </On>
-            <On x={u(-4.1)} z={u(6.5)}>
-                <HouseProp model="coffeeTable" fit={{ w: 1.0 }} >{null}</HouseProp>
-            </On>
-            <On x={u(-6.35)} z={u(7.25)}>
-                <HouseProp model="floorLamp" fit={{ h: 1.5 }} >{null}</HouseProp>
-            </On>
-            <On x={u(-3.05)} z={u(7.15)}>
-                <mesh position={[0, 0.9, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.72, 1.8, 0.62]} />
-                    <primitive object={m.metalDark} attach="material" />
-                </mesh>
-                <mesh position={[0, 1.35, 0.32]}>
-                    <planeGeometry args={[0.55, 0.4]} />
+            </Solid>
+            <Solid f={recTable}>
+                <HouseProp model="coffeeTable" fit={{ w: recTable.hx * 2, d: recTable.hz * 2 }}>
+                    <Box f={recTable} mat={m.wood} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={lamp}>
+                <HouseProp model="floorLamp" fit={{ h: lamp.h }}>
+                    <Box f={lamp} mat={m.metalDark} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={arcade}>
+                <Box f={arcade} mat={m.metalDark} shadow={sh} />
+                <mesh position={[0, 1.25, arcade.hz + 0.005]}>
+                    <planeGeometry args={[0.5, 0.36]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
-            </On>
-            <On x={u(-6.45)} z={u(3.1)}>
-                <HouseProp model="pottedPlant" fit={{ h: 1.0 }} >{null}</HouseProp>
-            </On>
-            <On x={u(-4.5)} z={u(6.3)}>
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-                    <planeGeometry args={[3.2, 2.2]} />
-                    <primitive object={m.rug} attach="material" />
-                </mesh>
-            </On>
-
-            {/* Foyer — Daily Word */}
-            <On x={u(1.15)} z={u(6.9)}>
-                <HouseProp model="sideTable" fit={{ w: 0.8 }}>
-                    <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[0.76, 0.78, 0.38]} />
-                        <primitive object={m.wood} attach="material" />
-                    </mesh>
+            </Solid>
+            <Solid f={plant}>
+                <HouseProp model="pottedPlant" fit={{ h: plant.h }}>
+                    <Box f={plant} mat={m.wood} shadow={sh} />
                 </HouseProp>
-                <mesh position={[0, 0.84, 0]} rotation={[0, 0.3, 0]}>
-                    <boxGeometry args={[0.3, 0.02, 0.2]} />
-                    <primitive object={m.book} attach="material" />
-                </mesh>
-            </On>
-
-            {/* The Mark — explicit open doorway (no brick in the hole) */}
-            <mesh position={[u(-2.55), 1.15, u(-1.9)]} rotation={[0, Math.PI / 2, 0]}>
-                <planeGeometry args={[1.65, 2.25]} />
-                <meshBasicMaterial color="#0b0a09" />
+            </Solid>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-12.4, 0.015, 13.0]} receiveShadow={sh}>
+                <planeGeometry args={[3.0, 3.4]} />
+                <primitive object={m.rug} attach="material" />
             </mesh>
 
-            {/* The Mark */}
-            <On x={u(-3.05)} z={u(-3.35)}>
-                <mesh position={[0, 0.28, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.46, 0.56, 1.25]} />
-                    <primitive object={m.wood} attach="material" />
+            {/* Foyer */}
+            <Solid f={tray}>
+                <HouseProp model="bedsideTable" fit={{ w: tray.hx * 2, d: tray.hz * 2 }}>
+                    <Box f={tray} mat={m.wood} shadow={sh} />
+                </HouseProp>
+                <mesh position={[0, tray.h + 0.015, 0]} rotation={[0, 0.3, 0]}>
+                    <boxGeometry args={[0.22, 0.02, 0.16]} />
+                    <primitive object={m.book} attach="material" />
                 </mesh>
-            </On>
+            </Solid>
+
+            {/* The Mark — plaster on the walls, not in the doorway */}
+            <Solid f={bench}>
+                <Box f={bench} mat={m.wood} shadow={sh} />
+            </Solid>
             <mesh position={[X0 + 0.08, 1.55, (u(-4.2) + u(0.5)) / 2]} rotation={[0, Math.PI / 2, 0]}>
                 <planeGeometry args={[u(0.5) - u(-4.2) - 0.35, 2.15]} />
                 <primitive object={m.marble} attach="material" />
@@ -142,139 +173,104 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
             </mesh>
 
             {/* Bath + spare */}
-            <On x={u(-6.15)} z={u(1.3)}>
-                <mesh position={[0, 0.3, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.55, 0.58, 0.72]} />
-                    <primitive object={m.marble} attach="material" />
-                </mesh>
-            </On>
-            <On x={u(-5.7)} z={u(-6.15)}>
-                <HouseProp model="bed" rotation={[0, Math.PI / 2, 0]} fit={{ w: 2.0 }}>
-                    <mesh position={[0, 0.35, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.0, 0.68, 1.55]} />
-                        <primitive object={m.linen} attach="material" />
-                    </mesh>
+            <Solid f={vanity}>
+                <Box f={vanity} mat={m.marble} shadow={sh} />
+            </Solid>
+            <Solid f={bed}>
+                <HouseProp model="bed" rotation={[0, bed.yaw ?? 0, 0]} fit={{ w: bed.hz * 2, d: bed.hx * 2 }}>
+                    <Box f={bed} mat={m.linen} shadow={sh} />
                 </HouseProp>
-            </On>
+            </Solid>
 
-            {/* Living — library + fire */}
-            <On x={u(5.4)} z={u(2.4)}>
-                <HouseProp model="sofa" rotation={[0, Math.PI, 0]} fit={{ w: 2.8 }}>
-                    <mesh position={[0, 0.4, 0]} castShadow={sh}>
-                        <boxGeometry args={[2.8, 0.78, 1.05]} />
-                        <primitive object={m.fabric} attach="material" />
-                    </mesh>
+            {/* Living */}
+            <Solid f={livSofa}>
+                <HouseProp model="sofa" rotation={[0, livSofa.yaw ?? 0, 0]} fit={{ w: livSofa.hz * 2, d: livSofa.hx * 2 }}>
+                    <Box f={livSofa} mat={m.fabric} shadow={sh} />
                 </HouseProp>
-            </On>
-            <On x={u(5.4)} z={u(0.85)}>
-                <HouseProp model="coffeeTable" fit={{ w: 1.2 }} >{null}</HouseProp>
-            </On>
-            <On x={u(6.0)} z={u(3.4)}>
-                <HouseProp model="accentChair" rotation={[0, -1.1, 0]} fit={{ w: 0.85 }} >{null}</HouseProp>
-            </On>
-            {[u(0.8), u(2.1), u(3.4)].map((z, i) => (
-                <On key={i} x={X1 - 0.52} z={z}>
-                    <HouseProp model={i === 1 ? 'bookcaseOpen' : 'bookcaseClosed'} rotation={[0, -Math.PI / 2, 0]} fit={{ h: 2.15 }}>
-                        <mesh position={[0, 1.08, 0]} castShadow={sh}>
-                            <boxGeometry args={[0.38, 2.15, 1.05]} />
-                            <primitive object={m.woodDark} attach="material" />
-                        </mesh>
-                    </HouseProp>
-                </On>
-            ))}
-            <On x={X1 - 0.5} z={u(-0.2)}>
-                <mesh position={[0, 1.25, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.62, 2.5, 1.4]} />
-                    <primitive object={m.stone} attach="material" />
-                </mesh>
-                <mesh position={[-0.34, 0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                    <planeGeometry args={[0.8, 0.55]} />
+            </Solid>
+            <Solid f={livTable}>
+                <HouseProp model="coffeeTable" fit={{ w: livTable.hx * 2, d: livTable.hz * 2 }}>
+                    <Box f={livTable} mat={m.wood} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={accent}>
+                <HouseProp model="accentChair" rotation={[0, accent.yaw ?? 0, 0]} fit={{ w: accent.hx * 2 }}>
+                    <Box f={accent} mat={m.leather} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={shelves}>
+                <HouseProp model="bookcase" rotation={[0, shelves.yaw ?? 0, 0]} fit={{ h: shelves.h, d: shelves.hz * 2 }}>
+                    <Box f={shelves} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={hearth}>
+                <Box f={hearth} mat={m.stone} shadow={sh} />
+                <mesh position={[-hearth.hx - 0.005, 0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                    <planeGeometry args={[0.7, 0.5]} />
                     <meshBasicMaterial color="#ff9a3d" toneMapped={false} />
                 </mesh>
                 {!low && (
-                    <pointLight position={[-0.7, 0.75, 0]} intensity={1.6} color="#ff9a3d" distance={6} decay={2} />
+                    <pointLight position={[-0.55, 0.7, 0]} intensity={1.6} color="#ff9a3d" distance={6} decay={2} />
                 )}
-            </On>
-            <On x={u(5.4)} z={u(1.6)}>
-                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-                    <planeGeometry args={[4.0, 3.0]} />
-                    <primitive object={m.rug} attach="material" />
-                </mesh>
-            </On>
+            </Solid>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[9.4, 0.015, 4.5]} receiveShadow={sh}>
+                <planeGeometry args={[3.6, 3.2]} />
+                <primitive object={m.rug} attach="material" />
+            </mesh>
 
-            {/* Kitchen + codex */}
-            <On x={u(5.2)} z={u(-3.4)}>
-                <mesh position={[0, 0.48, 0]} castShadow={sh}>
-                    <boxGeometry args={[2.8, 0.96, 1.2]} />
+            {/* Kitchen */}
+            <Solid f={island}>
+                <Box f={island} mat={m.counter} shadow={sh} />
+            </Solid>
+            {[stoolL, stoolC, stoolR].map((s) => (
+                <Solid key={s.name} f={s}>
+                    <HouseProp model="barStool" fit={{ h: s.h }}>
+                        <Box f={s} mat={m.woodDark} shadow={sh} />
+                    </HouseProp>
+                </Solid>
+            ))}
+            <Solid f={counter}>
+                <Box f={counter} mat={m.woodDark} shadow={sh} />
+                <mesh position={[0, counter.h + 0.025, 0]}>
+                    <boxGeometry args={[counter.hx * 2, 0.05, counter.hz * 2 + 0.04]} />
                     <primitive object={m.counter} attach="material" />
                 </mesh>
-                {[-0.85, 0, 0.85].map((dx) => (
-                    <HouseProp key={dx} model="barStool" position={[dx, 0, 0.48]} fit={{ h: 0.72 }} >{null}</HouseProp>
-                ))}
-            </On>
-            <On x={u(5.0)} z={Z0 + 0.85}>
-                <mesh position={[0, 0.46, 0]} castShadow={sh}>
-                    <boxGeometry args={[6.2, 0.92, 0.7]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-                <mesh position={[0, 0.94, 0]}>
-                    <boxGeometry args={[6.2, 0.05, 0.74]} />
-                    <primitive object={m.counter} attach="material" />
-                </mesh>
-            </On>
-            <On x={u(3.4)} z={Z0 + 0.85}>
-                <HouseProp model="fridge" fit={{ h: 1.85 }}>
-                    <mesh position={[0, 0.92, 0]} castShadow={sh}>
-                        <boxGeometry args={[0.82, 1.85, 0.7]} />
-                        <primitive object={m.metal} attach="material" />
-                    </mesh>
+            </Solid>
+            <Solid f={fridge}>
+                <HouseProp model="fridge" fit={{ h: fridge.h, w: fridge.hx * 2, d: fridge.hz * 2 }}>
+                    <Box f={fridge} mat={m.metal} shadow={sh} />
                 </HouseProp>
-            </On>
-            <On x={u(3.5)} z={u(-2.2)}>
-                <mesh position={[0, 0.48, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.0, 0.96, 0.46]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-                <mesh position={[0, 1.2, 0]} rotation={[-0.1, 0, 0]}>
-                    <planeGeometry args={[0.62, 0.4]} />
+            </Solid>
+            <Solid f={codex}>
+                <Box f={codex} mat={m.woodDark} shadow={sh} />
+                <mesh position={[0, codex.h + 0.22, 0]} rotation={[-0.1, 0, 0]}>
+                    <planeGeometry args={[0.56, 0.34]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
-            </On>
+            </Solid>
 
-            {/* Dining + Ledger */}
-            <On x={u(-0.3)} z={u(-5.8)}>
-                <HouseProp model="diningTable" fit={{ w: 1.8 }}>
-                    <mesh position={[0, 0.38, 0]} castShadow={sh}>
-                        <cylinderGeometry args={[0.88, 0.84, 0.74, 12]} />
-                        <primitive object={m.wood} attach="material" />
-                    </mesh>
+            {/* Dining */}
+            <Solid f={table}>
+                <HouseProp model="diningTable" fit={{ w: table.hx * 2, d: table.hz * 2 }}>
+                    <Box f={table} mat={m.wood} shadow={sh} />
                 </HouseProp>
-                {[0, 1, 2, 3, 4, 5].map((i) => {
-                    const a = (i / 6) * Math.PI * 2;
-                    return (
-                        <HouseProp
-                            key={i}
-                            model="diningChair"
-                            position={[Math.cos(a) * 1.02, 0, Math.sin(a) * 1.02]}
-                            rotation={[0, -a + Math.PI / 2, 0]}
-                            fit={{ h: 0.88 }}
-                        >{null}</HouseProp>
-                    );
-                })}
-            </On>
-            <On x={u(-0.3)} z={Z0 + 0.55}>
-                <mesh position={[0, 0.44, 0]} castShadow={sh}>
-                    <boxGeometry args={[1.85, 0.88, 0.48]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-                <mesh position={[-0.1, 0.93, 0]} rotation={[-0.12, 0.2, 0]} castShadow={sh}>
-                    <boxGeometry args={[0.38, 0.05, 0.28]} />
+            </Solid>
+            {[chN, chS, chE, chW].map((c) => (
+                <Solid key={c.name} f={c}>
+                    <HouseProp model="diningChair" rotation={[0, c.yaw ?? 0, 0]} fit={{ h: c.h }}>
+                        <Box f={c} mat={m.woodDark} shadow={sh} />
+                    </HouseProp>
+                </Solid>
+            ))}
+            <Solid f={ledger}>
+                <Box f={ledger} mat={m.woodDark} shadow={sh} />
+                <mesh position={[-0.08, ledger.h + 0.03, 0]} rotation={[-0.12, 0.2, 0]} castShadow={sh}>
+                    <boxGeometry args={[0.32, 0.04, 0.22]} />
                     <primitive object={m.leather} attach="material" />
                 </mesh>
-            </On>
+            </Solid>
 
-            {/* Hall wayfinder */}
-            {/* Paths board — living west wall, south of the living door */}
+            {/* Paths board — hall west wall, not a floor solid */}
             <mesh position={[u(1.7) - 0.16, 1.55, u(0.15)]} rotation={[0, -Math.PI / 2, 0]}>
                 <planeGeometry args={[1.2, 0.95]} />
                 <primitive object={m.book} attach="material" />

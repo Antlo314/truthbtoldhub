@@ -161,34 +161,68 @@ export const MAIN_COLLIDERS: Collider[] = [
 export const MAIN_DOORWAYS_END = DOORWAYS.length;
 export const UPPER_COLLIDERS: Collider[] = [];
 
+/**
+ * Exclusive floor solids. HomeDecor draws ONE mesh per row, sized to
+ * hx/hz/h — never a second volume inside this box. Surface kit (monitor,
+ * paper) sits on top of its parent and stays inside that parent's XZ.
+ */
+export type Furnishing = Collider & {
+    level: Level;
+    name: string;
+    /** Visual height in metres. */
+    h: number;
+    yaw?: number;
+};
+
+export const FURNITURE: Furnishing[] = [
+    // Rec — desk against the front wall, facing into the room (−Z chair)
+    { name: 'desk', level: 'main', x: -12.4, z: 15.7, hx: 0.95, hz: 0.4, h: 0.76, yaw: Math.PI },
+    { name: 'desk chair', level: 'main', x: -12.4, z: 14.88, hx: 0.26, hz: 0.26, h: 0.9, yaw: Math.PI },
+    { name: 'rec sofa', level: 'main', x: -12.4, z: 11.85, hx: 1.15, hz: 0.48, h: 0.8, yaw: Math.PI },
+    { name: 'rec coffee table', level: 'main', x: -12.4, z: 13.05, hx: 0.52, hz: 0.3, h: 0.42 },
+    { name: 'floor lamp', level: 'main', x: -14.45, z: 16.2, hx: 0.18, hz: 0.18, h: 1.5 },
+    { name: 'arcade cabinet', level: 'main', x: -7.55, z: 11.4, hx: 0.38, hz: 0.33, h: 1.8 },
+    { name: 'rec plant', level: 'main', x: -14.4, z: 5.4, hx: 0.26, hz: 0.26, h: 1.0 },
+    // Foyer
+    { name: 'daily word tray', level: 'main', x: 2.15, z: 14.8, hx: 0.4, hz: 0.26, h: 0.78 },
+    // The Mark / bath / spare
+    { name: 'mark bench', level: 'main', x: -14.2, z: -4.07, hx: 0.24, hz: 0.62, h: 0.56 },
+    { name: 'bath vanity', level: 'main', x: -14.0, z: 2.86, hx: 0.7, hz: 0.32, h: 0.58 },
+    { name: 'spare bed', level: 'main', x: -13.4, z: -15.2, hx: 0.78, hz: 1.02, h: 0.68, yaw: Math.PI / 2 },
+    // Living
+    { name: 'living sofa', level: 'main', x: 8.2, z: 4.4, hx: 0.52, hz: 1.4, h: 0.78, yaw: Math.PI / 2 },
+    { name: 'living coffee table', level: 'main', x: 10.5, z: 4.4, hx: 0.6, hz: 0.36, h: 0.42 },
+    { name: 'accent chair', level: 'main', x: 8.2, z: 6.6, hx: 0.4, hz: 0.4, h: 0.86, yaw: -0.4 },
+    { name: 'bookshelf wall', level: 'main', x: 14.48, z: 6.2, hx: 0.2, hz: 1.85, h: 2.15, yaw: -Math.PI / 2 },
+    { name: 'media wall', level: 'main', x: 14.46, z: 1.6, hx: 0.26, hz: 0.7, h: 2.5 },
+    // Kitchen — counter, fridge, island and stools are four separate boxes
+    { name: 'island', level: 'main', x: 10.2, z: -12.6, hx: 1.35, hz: 0.55, h: 0.96 },
+    { name: 'island stool L', level: 'main', x: 9.4, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
+    { name: 'island stool C', level: 'main', x: 10.2, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
+    { name: 'island stool R', level: 'main', x: 11.0, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
+    { name: 'counter run', level: 'main', x: 10.4, z: -16.2, hx: 2.2, hz: 0.36, h: 0.92 },
+    { name: 'fridge', level: 'main', x: 7.55, z: -16.2, hx: 0.4, hz: 0.36, h: 1.85 },
+    { name: 'codex desk', level: 'main', x: 5.55, z: -5.2, hx: 0.5, hz: 0.26, h: 0.96 },
+    // Dining — table and four chairs, none inside the table
+    { name: 'dining table', level: 'main', x: -0.9, z: -13.05, hx: 0.78, hz: 0.48, h: 0.74 },
+    { name: 'dining chair N', level: 'main', x: -0.9, z: -12.19, hx: 0.22, hz: 0.22, h: 0.88, yaw: Math.PI },
+    { name: 'dining chair S', level: 'main', x: -0.9, z: -13.91, hx: 0.22, hz: 0.22, h: 0.88 },
+    { name: 'dining chair E', level: 'main', x: 0.26, z: -13.05, hx: 0.22, hz: 0.22, h: 0.88, yaw: -Math.PI / 2 },
+    { name: 'dining chair W', level: 'main', x: -2.06, z: -13.05, hx: 0.22, hz: 0.22, h: 0.88, yaw: Math.PI / 2 },
+    { name: 'sideboard (Ledger)', level: 'main', x: -0.9, z: -16.28, hx: 0.9, hz: 0.24, h: 0.88 },
+];
+
+export function furn(name: string): Furnishing {
+    const f = FURNITURE.find((x) => x.name === name);
+    if (!f) throw new Error(`homeMap: no furniture named "${name}"`);
+    return f;
+}
+
 export const DESK = {
-    x: u(-5.85),
-    z: u(6.15),
+    x: furn('desk').x,
+    z: furn('desk').z,
     monitorY: 1.35,
 } as const;
-
-export const FURNITURE: (Collider & { level: Level; name: string })[] = [
-    { name: 'desk', level: 'main', x: DESK.x, z: DESK.z, hx: 1.0, hz: 0.45 },
-    { name: 'rec sofa', level: 'main', x: u(-4.1), z: u(7.15), hx: 1.2, hz: 0.48 },
-    { name: 'rec coffee table', level: 'main', x: u(-4.1), z: u(6.5), hx: 0.52, hz: 0.32 },
-    { name: 'floor lamp', level: 'main', x: u(-6.35), z: u(7.25), hx: 0.2, hz: 0.2 },
-    { name: 'arcade cabinet', level: 'main', x: u(-3.05), z: u(7.15), hx: 0.4, hz: 0.34 },
-    { name: 'rec plant', level: 'main', x: u(-6.45), z: u(3.1), hx: 0.28, hz: 0.28 },
-    { name: 'daily word tray', level: 'main', x: u(1.15), z: u(6.9), hx: 0.38, hz: 0.3 },
-    { name: 'mark bench', level: 'main', x: u(-3.05), z: u(-3.35), hx: 0.26, hz: 0.65 },
-    { name: 'bath vanity', level: 'main', x: u(-6.15), z: u(1.3), hx: 0.8, hz: 0.38 },
-    { name: 'spare bed', level: 'main', x: u(-5.7), z: u(-6.15), hx: 1.05, hz: 1.1 },
-    { name: 'living sofa', level: 'main', x: u(5.4), z: u(2.4), hx: 1.7, hz: 0.55 },
-    { name: 'living coffee table', level: 'main', x: u(5.4), z: u(0.85), hx: 0.62, hz: 0.38 },
-    { name: 'accent chair', level: 'main', x: u(6.0), z: u(3.4), hx: 0.42, hz: 0.42 },
-    { name: 'bookshelf wall', level: 'main', x: X1 - 0.52, z: u(2.1), hx: 0.32, hz: 2.4 },
-    { name: 'media wall', level: 'main', x: X1 - 0.5, z: u(-0.2), hx: 0.32, hz: 0.72 },
-    { name: 'island', level: 'main', x: u(5.2), z: u(-3.4), hx: 1.45, hz: 0.7 },
-    { name: 'counter run', level: 'main', x: u(5.0), z: Z0 + 0.85, hx: 3.2, hz: 0.38 },
-    { name: 'codex desk', level: 'main', x: u(3.5), z: u(-2.2), hx: 0.52, hz: 0.26 },
-    { name: 'dining table', level: 'main', x: u(-0.3), z: u(-5.8), hx: 1.35, hz: 1.05 },
-    { name: 'sideboard (Ledger)', level: 'main', x: u(-0.3), z: Z0 + 0.55, hx: 0.95, hz: 0.26 },
-];
 
 export type ArtSpec = {
     art: string;
@@ -201,17 +235,20 @@ export type ArtSpec = {
 };
 
 export const ART: ArtSpec[] = [
-    { art: 'artDomain', x: W_E + 0.16, y: 1.7, z: u(8.6), ry: Math.PI / 2, w: 1.2, h: 1.0 },
+    // z was u(8.6) = 18.92 — 2.1m PAST the south shell wall at 16.82, so this
+    // panel hung in the jungle outside the house. u(4.1) puts it back on the
+    // rec/foyer wall, clear of that wall's doorway (z 13.36–14.81).
+    { art: 'artDomain', x: W_E + 0.16, y: 1.7, z: u(4.1), ry: Math.PI / 2, w: 1.2, h: 1.0 },
     { art: 'artStillPoint', x: 0, y: 1.7, z: Z0 + 0.16, ry: 0, w: 1.7, h: 1.15 },
 ];
 
 export const AISLES: (Collider & { level: Level; name: string })[] = [
-    { name: 'rec to hall', level: 'main', x: u(-4.0), z: u(5.15), hx: 2.3, hz: 0.55 },
-    { name: 'foyer throat', level: 'main', x: u(-0.4), z: u(7.4), hx: 0.7, hz: 1.9 },
+    { name: 'rec to hall', level: 'main', x: -11.88, z: 8.6, hx: 0.6, hz: 2.4 },
+    { name: 'foyer throat', level: 'main', x: u(-0.4), z: 14.2, hx: 0.65, hz: 1.6 },
     { name: 'hall spine', level: 'main', x: (W_E + E_W) / 2, z: u(-1.0), hx: 0.55, hz: 2.6 },
-    { name: 'living pass', level: 'main', x: u(3.6), z: u(1.6), hx: 0.55, hz: 2.0 },
-    { name: 'kitchen north', level: 'main', x: u(5.4), z: u(-1.85), hx: 2.4, hz: 0.55 },
-    { name: 'dining east', level: 'main', x: u(1.0), z: u(-5.8), hx: 0.55, hz: 1.1 },
+    { name: 'living pass', level: 'main', x: 5.4, z: 4.0, hx: 0.5, hz: 3.2 },
+    { name: 'kitchen north', level: 'main', x: 10.2, z: -7.0, hx: 2.2, hz: 2.8 },
+    { name: 'dining east', level: 'main', x: 1.8, z: -13.05, hx: 0.5, hz: 1.0 },
 ];
 
 export function artFootprints(): (Collider & { name: string; level: Level })[] {
@@ -300,9 +337,9 @@ export function moveOn(
 }
 
 export const INTRO = {
-    seat: { x: u(-5.85), z: u(5.0) },
+    seat: { x: furn('desk chair').x, z: furn('desk chair').z },
     lookYaw: Math.PI,
-    stand: { x: u(-5.85), z: u(4.5) },
+    stand: { x: furn('desk chair').x, z: furn('desk chair').z - 0.83 },
     holdS: 1.1,
     riseS: 1.6,
 } as const;
@@ -322,17 +359,17 @@ const DEST_PANEL: Record<string, { label: string; hint: string; panel: string }>
 };
 
 export const HOME_HOTSPOTS: HomeHotspot[] = [
-    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [DESK.x, 1.2, u(5.55)], radius: 1.6, action: { type: 'os' } },
-    { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [u(-4.1), 1.1, u(7.15)], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
-    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [u(1.15), 1.1, u(6.9)], radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [DESK.x, 1.2, DESK.z - 0.55], radius: 1.6, action: { type: 'os' } },
+    { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [furn('arcade cabinet').x, 1.1, furn('arcade cabinet').z], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
+    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [furn('daily word tray').x, 1.1, furn('daily word tray').z], radius: 1.3, action: { type: 'panel', panel: 'news' } },
     { id: 'mailbox', label: 'Offering', hint: 'Keep the house open', level: 'main', position: [u(1.2), 1.1, Z1 + 1.7], radius: 1.5, action: { type: 'panel', panel: 'offering' } },
     { id: 'wall', label: 'West plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 0.85, 1.2, (u(-4.2) + u(0.5)) / 2], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
     { id: 'wall', label: 'South plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [(X0 + W_E) / 2, 1.2, u(-4.2) + 0.85], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
     { id: 'wall', label: 'North plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 2.2, 1.2, u(0.5) - 0.85], radius: 1.05, action: { type: 'panel', panel: 'wall' } },
-    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: [X1 - 0.7, 1.3, u(2.1)], radius: 1.7, action: { type: 'panel', panel: 'library' } },
-    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: [u(-0.3), 1.1, Z0 + 0.7], radius: 1.35, action: { type: 'panel', panel: 'ledger' } },
-    { id: 'fireplace', label: 'Fire', hint: 'Sit by the hearth', level: 'main', position: [X1 - 0.7, 1.2, u(-0.2)], radius: 1.15, action: { type: 'sit' } },
-    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: [u(3.5), 1.1, u(-2.2)], radius: 1.5, action: { type: 'panel', panel: 'codex' } },
+    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: [furn('bookshelf wall').x, 1.3, furn('bookshelf wall').z], radius: 1.7, action: { type: 'panel', panel: 'library' } },
+    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: [furn('sideboard (Ledger)').x, 1.1, furn('sideboard (Ledger)').z], radius: 1.35, action: { type: 'panel', panel: 'ledger' } },
+    { id: 'fireplace', label: 'Fire', hint: 'Sit by the hearth', level: 'main', position: [furn('media wall').x, 1.2, furn('media wall').z], radius: 1.15, action: { type: 'sit' } },
+    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: [furn('codex desk').x, 1.1, furn('codex desk').z], radius: 1.5, action: { type: 'panel', panel: 'codex' } },
     { id: 'wayfinder', label: 'Paths', hint: 'The map of this floor and the groves', level: 'main', position: [E_W - 0.25, 1.3, u(0.15)], radius: 1.15, action: { type: 'panel', panel: 'wayfinder' } },
     ...DESTINATIONS.map((d): HomeHotspot => {
         const c = destCenter(d);

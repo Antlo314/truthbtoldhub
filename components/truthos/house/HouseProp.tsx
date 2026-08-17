@@ -264,13 +264,17 @@ export default function HouseProp({
 }) {
     const entry = HOUSE_MODELS[model];
     const { primitiveOnly } = useContext(PropDetail);
-    if (primitiveOnly || !entry?.url) return <>{children}</>;
 
-    // The fallback meshes are authored in world space, so they must render
-    // OUTSIDE the positioning group — nesting them would double their offset.
+    // Children are LOCAL axis-aligned solids (they match the collider).
+    // Rotation applies to the GLB only so a turned sofa does not spin its
+    // fallback box out of the AABB. Exactly one representation draws.
+    const solid = <group position={position}>{children}</group>;
+
+    if (primitiveOnly || !entry?.url) return solid;
+
     return (
-        <ModelBoundary fallback={children}>
-            <Suspense fallback={children}>
+        <ModelBoundary fallback={solid}>
+            <Suspense fallback={solid}>
                 <group position={position} rotation={rotation}>
                     <Model
                         url={entry.url}

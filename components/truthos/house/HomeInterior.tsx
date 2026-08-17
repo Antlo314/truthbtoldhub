@@ -11,13 +11,10 @@
  *   · skirting at every wall/floor junction, cast from the SAME collider
  *     table the walls are, so trim can never drift from architecture
  *   · cased openings — every doorway gets a lining and a head
- *   · ceilings per storey, with a shadow-gap cove instead of a butt joint
+ *   · one ceiling, with a shadow-gap cove instead of a butt joint
  *   · concealed cove lighting washing the ceiling plane
- *   · the stair as real joinery: closed stringer, treads AND risers, a
- *     glass balustrade with a timber handrail, newels at both ends
  *
- * Everything is derived, nothing is hand-placed, and the whole file is
- * gated off on `low` — a phone gets the clean shell.
+ * One storey. No stair, no second lid. A phone gets the clean shell.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -25,18 +22,12 @@ import { useHouseMaterials } from './HouseMaterials';
 import {
     DOORWAYS,
     MAIN_COLLIDERS,
-    MAIN_DOORWAYS_END,
     MAIN_Y,
-    SHAFT,
     SHELL,
-    STAIR,
-    STAIR_WALLS,
     STOREY,
     ART,
     DOOR_LEAVES,
-    UPPER_COLLIDERS,
-    UPPER_Y,
-    VOID,
+    furn,
     u,
     type Collider,
 } from './homeMap';
@@ -47,30 +38,6 @@ const X0 = SHELL.minX;
 const X1 = SHELL.maxX;
 const Z0 = SHELL.minZ;
 const Z1 = SHELL.maxZ;
-
-/**
- * Each storey's ceiling is the footprint MINUS its holes, cut into rects.
- * Shared by both tiers so a phone and a desktop cannot disagree about where
- * the ceiling is.
- *   · main  — minus the stairwell and the foyer void, or the double-height
- *     foyer gets a lid;
- *   · upper — minus the covered balcony and patio, which carry their own
- *     soffit at ROOF_Y - 0.18. A full-footprint plane there was EXACTLY
- *     coplanar with that soffit: the blinking ceiling.
- */
-const MAIN_CEILING = [
-    { x: 0, z: (SHELL.minZ + SHAFT.minZ) / 2, w: SHELL.maxX - SHELL.minX, d: SHAFT.minZ - SHELL.minZ },
-    { x: (SHELL.minX + SHAFT.minX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHAFT.minX - SHELL.minX, d: SHAFT.maxZ - SHAFT.minZ },
-    { x: (SHAFT.maxX + SHELL.maxX) / 2, z: (SHAFT.minZ + SHAFT.maxZ) / 2, w: SHELL.maxX - SHAFT.maxX, d: SHAFT.maxZ - SHAFT.minZ },
-    { x: (SHELL.minX + VOID.minX) / 2, z: (VOID.minZ + SHELL.maxZ) / 2, w: VOID.minX - SHELL.minX, d: SHELL.maxZ - VOID.minZ },
-    { x: (VOID.maxX + SHELL.maxX) / 2, z: (VOID.minZ + SHELL.maxZ) / 2, w: SHELL.maxX - VOID.maxX, d: SHELL.maxZ - VOID.minZ },
-];
-
-const UPPER_CEILING = [
-    { x: (SHELL.minX + u(0.9)) / 2, z: 0, w: u(0.9) - SHELL.minX, d: SHELL.maxZ - SHELL.minZ },
-    { x: (u(0.9) + u(3.3)) / 2, z: (SHELL.minZ + u(3.6)) / 2, w: u(3.3) - u(0.9), d: u(3.6) - SHELL.minZ },
-    { x: (u(3.3) + SHELL.maxX) / 2, z: (u(-4.4) + u(3.6)) / 2, w: SHELL.maxX - u(3.3), d: u(3.6) - u(-4.4) },
-];
 
 /** House walls only — jungle boxes are terrain */
 const houseWalls = (cols: Collider[]) => cols.filter((c) => !JUNGLE_COLLIDERS.includes(c));
@@ -159,127 +126,6 @@ function FrontDoors({
     );
 }
 
-/* ── The stair, as joinery ─────────────────────────────────
-   Treads and risers both — a flight of floating slabs is the single
-   loudest tell that a stair was modelled rather than built. */
-function Stair({
-    m,
-    mats,
-    shadow,
-}: {
-    m: ReturnType<typeof useHouseMaterials>;
-    mats: Record<string, THREE.Material>;
-    shadow: boolean;
-}) {
-    const cx = (STAIR.minX + STAIR.maxX) / 2;
-    const width = STAIR.maxX - STAIR.minX;
-    const run = STAIR.zBottom - STAIR.zTop;
-    if (!STAIR.treads) return null;
-    const going = run / STAIR.treads;
-    const rise = (STAIR.yTop - STAIR.yBottom) / STAIR.treads;
-
-    const steps = useMemo(
-        () =>
-            Array.from({ length: STAIR.treads }, (_, i) => ({
-                y: STAIR.yBottom + (i + 1) * rise,
-                z: STAIR.zBottom - i * going - going / 2,
-                zRiser: STAIR.zBottom - (i + 1) * going,
-            })),
-        [going, rise],
-    );
-
-    // Balustrade posts march up the open (east) side
-    const posts = useMemo(
-        () =>
-            Array.from({ length: 7 }, (_, i) => {
-                const t = i / 6;
-                return {
-                    z: STAIR.zBottom - t * run,
-                    y: STAIR.yBottom + t * (STAIR.yTop - STAIR.yBottom),
-                };
-            }),
-        [run],
-    );
-
-    return (
-        <group>
-            {steps.map((s, i) => (
-                <group key={i}>
-                    {/* tread */}
-                    <mesh position={[cx, s.y - 0.025, s.z]} castShadow={shadow} receiveShadow={shadow}>
-                        <boxGeometry args={[width, 0.05, going + 0.03]} />
-                        <primitive object={m.wood} attach="material" />
-                    </mesh>
-                    {/* riser — the vertical face that makes it a stair */}
-                    <mesh position={[cx, s.y - rise / 2 - 0.02, s.zRiser]} receiveShadow={shadow}>
-                        <boxGeometry args={[width, rise, 0.04]} />
-                        <primitive object={mats.riser} attach="material" />
-                    </mesh>
-                </group>
-            ))}
-
-            {/* Closed stringers, raked under both edges */}
-            {[STAIR.minX + 0.04, STAIR.maxX - 0.04].map((x, i) => (
-                <mesh
-                    key={i}
-                    position={[x, (STAIR.yBottom + STAIR.yTop) / 2 - 0.28, (STAIR.zTop + STAIR.zBottom) / 2]}
-                    rotation={[Math.atan2(STAIR.yTop - STAIR.yBottom, run), 0, 0]}
-                    castShadow={shadow}
-                >
-                    <boxGeometry args={[0.08, 0.34, Math.hypot(run, STAIR.yTop - STAIR.yBottom)]} />
-                    <primitive object={m.woodDark} attach="material" />
-                </mesh>
-            ))}
-
-            {/* Glass balustrade on the open side + timber handrail */}
-            <mesh
-                position={[
-                    STAIR.maxX + 0.05,
-                    (STAIR.yBottom + STAIR.yTop) / 2 + 0.52,
-                    (STAIR.zTop + STAIR.zBottom) / 2,
-                ]}
-                rotation={[Math.atan2(STAIR.yTop - STAIR.yBottom, run), Math.PI / 2, 0]}
-            >
-                <planeGeometry args={[Math.hypot(run, STAIR.yTop - STAIR.yBottom), 0.95]} />
-                <primitive object={mats.rail} attach="material" />
-            </mesh>
-            <mesh
-                position={[
-                    STAIR.maxX + 0.05,
-                    (STAIR.yBottom + STAIR.yTop) / 2 + 1.02,
-                    (STAIR.zTop + STAIR.zBottom) / 2,
-                ]}
-                rotation={[Math.atan2(STAIR.yTop - STAIR.yBottom, run), 0, 0]}
-                castShadow={shadow}
-            >
-                <boxGeometry args={[0.09, 0.06, Math.hypot(run, STAIR.yTop - STAIR.yBottom)]} />
-                <primitive object={m.woodDark} attach="material" />
-            </mesh>
-            {posts.map((p, i) => (
-                <mesh key={i} position={[STAIR.maxX + 0.05, p.y + 0.52, p.z]} castShadow={shadow}>
-                    <boxGeometry args={[0.05, 1.04, 0.05]} />
-                    <primitive object={m.metalDark} attach="material" />
-                </mesh>
-            ))}
-
-            {/* Landing-edge rail around the top of the shaft */}
-            <mesh position={[cx, STAIR.yTop + 0.52, STAIR.zTop - 0.06]}>
-                <planeGeometry args={[width, 0.95]} />
-                <primitive object={mats.rail} attach="material" />
-            </mesh>
-
-            {/* Stair light — the flight is the darkest place in the house */}
-            <pointLight
-                position={[cx, STAIR.yTop - 0.4, (STAIR.zTop + STAIR.zBottom) / 2]}
-                intensity={1.7}
-                color="#ffe6bd"
-                distance={11}
-                decay={2}
-            />
-        </group>
-    );
-}
-
 export default function HomeInterior({ low = false }: { low?: boolean }) {
     const m = useHouseMaterials(low);
     const sh = !low;
@@ -288,34 +134,17 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
         () => ({
             skirting: new THREE.MeshStandardMaterial({ color: '#f2efe9', roughness: 0.55 }),
             ceiling: new THREE.MeshStandardMaterial({ color: '#f6f4f0', roughness: 0.97 }),
-            riser: new THREE.MeshStandardMaterial({ color: '#efece6', roughness: 0.8 }),
-            rail: new THREE.MeshStandardMaterial({
-                color: '#cfe0ea',
-                transparent: true,
-                opacity: 0.2,
-                roughness: 0.05,
-                metalness: 0.4,
-                side: THREE.DoubleSide,
-            }),
             cove: new THREE.MeshBasicMaterial({ color: '#ffdfae', toneMapped: false }),
-            shaftWall: new THREE.MeshStandardMaterial({ color: '#e4e0d8', roughness: 0.94 }),
         }),
         [],
     );
 
     const mainWalls = useMemo(() => houseWalls(MAIN_COLLIDERS), []);
-    const upperWalls = useMemo(() => houseWalls(UPPER_COLLIDERS), []);
 
     if (low) {
-        // Phones get the stair (you must be able to climb it) and the room
-        // lights. Skipping the lights too meant the whole lighting plan was
-        // desktop-only, so a phone saw flat ambient in every room — the
-        // fixtures are the cheapest part of this file and the most visible.
         // Phones get the carpentry that makes a room read as a room, and
         // skip only what genuinely costs: shadows, the cove strips and the
-        // per-doorway casings. Skirting is ONE instanced draw call for every
-        // wall in the house — leaving it out was never a performance saving,
-        // it just made the phone look like a different, cheaper product.
+        // per-doorway casings.
         return (
             <>
                 <RoomPracticals low />
@@ -335,20 +164,8 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
         <group>
             <Skirting cols={mainWalls} y={MAIN_Y} mat={mats.skirting} />
 
-            {/* ── Ceilings with a shadow-gap cove ──────────────
-                Each storey's ceiling is the footprint MINUS its holes,
-                cut into rectangles — never one plane across everything:
-
-                · main  — minus the stairwell and the foyer void, or the
-                  double-height foyer gets a lid;
-                · upper — minus the covered balcony and patio, which have
-                  their own soffit in HomeGeometry at ROOF_Y − 0.18. That
-                  soffit and a full-footprint ceiling plane were EXACTLY
-                  coplanar and both face down: two surfaces fighting for
-                  the same depth is the blinking ceiling upstairs.
-
-                Also dropped below the structural slab (its underside sits
-                at UPPER_Y − 0.30) instead of 12 cm inside it. */}
+            {/* One ceiling. The old two-storey cutouts used SHAFT/VOID = 0
+                and stacked a second lid on this one. */}
             {[
                 { label: 'main', y: STOREY - 0.08, rects: [{ x: 0, z: 0, w: X1 - X0 - 0.5, d: Z1 - Z0 - 0.5 }] },
             ].map((c) => (
@@ -390,11 +207,10 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 Two jambs and a head per opening, from the same DOORWAYS
                 table the colliders were punched from. */}
             {DOORWAYS.map((d, i) => {
-                const y = i < MAIN_DOORWAYS_END ? MAIN_Y : UPPER_Y;
                 const H = 2.3;
                 const along = d.axis === 'x';
                 return (
-                    <group key={`case-${i}`} position={[d.x, y, d.z]}>
+                    <group key={`case-${i}`} position={[d.x, MAIN_Y, d.z]}>
                         {[-1, 1].map((s2) => (
                             <mesh
                                 key={s2}
@@ -434,24 +250,23 @@ export default function HomeInterior({ low = false }: { low?: boolean }) {
                 );
             })}
 
-            {/* ── Kitchen uppers + range hood over the north counter ── */}
-            {[0, 1, 2].map((i) => (
+            {/* Kitchen uppers hang above the counter run only — not over the fridge. */}
+            {[9.4, 10.7, 12.0].map((x, i) => (
                 <mesh
                     key={`upper-${i}`}
-                    position={[u(3.6) + i * 1.55, 2.15, SHELL.minZ + 0.55]}
+                    position={[x, 2.22, SHELL.minZ + 0.5]}
                     castShadow={sh}
                 >
-                    <boxGeometry args={[1.4, 0.72, 0.4]} />
+                    <boxGeometry args={[1.15, 0.7, 0.36]} />
                     <primitive object={m.woodDark} attach="material" />
                 </mesh>
             ))}
 
-            {/* ── Pendants — island and dining. Emissive shades; the cove
-                system already carries the light itself. */}
+            {/* Pendants hang over the island and dining table solids. */}
             {[
-                { x: u(5.2) - 0.9, z: u(-3.4) },
-                { x: u(5.2) + 0.9, z: u(-3.4) },
-                { x: u(-0.3), z: u(-5.8) },
+                { x: furn('island').x - 0.7, z: furn('island').z },
+                { x: furn('island').x + 0.7, z: furn('island').z },
+                { x: furn('dining table').x, z: furn('dining table').z },
             ].map((pd, i) => (
                 <group key={`pend-${i}`} position={[pd.x, MAIN_Y, pd.z]}>
                     <mesh position={[0, STOREY - 0.55, 0]}>
