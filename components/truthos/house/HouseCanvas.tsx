@@ -5,11 +5,12 @@ import type { BloomEffect } from 'postprocessing';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import { PropDetailProvider } from './HouseProp';
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
+import { Bloom, DepthOfField, EffectComposer, Vignette } from '@react-three/postprocessing';
 import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
 import { DaylightFill } from './HouseLights';
 import { BloomByDaylight, NightStars } from './WeatherFx';
+import AetherSky from './AetherSky';
 import AetherShelf from './AetherShelf';
 import AetherHorizon from './AetherHorizon';
 import WorldDestinations from './WorldDestinations';
@@ -114,14 +115,14 @@ export default function HouseCanvas({
                     powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
                     // Mobile was too dark — push exposure for readability
-                    toneMappingExposure: mobile ? 1.72 : 1.38,
+                    toneMappingExposure: mobile ? 1.48 : 1.22,
                     stencil: false,
                     depth: true,
                 }}
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
-                    far: mobile ? 90 : 140,
+                    far: mobile ? 100 : 160,
                     position: [-11.8, 1.12, 10.1],
                 }}
                 onCreated={({ gl, camera }) => {
@@ -148,9 +149,10 @@ export default function HouseCanvas({
                     enclosure reads as layered green, not swallowed grey; the
                     interior band (<15) is untouched either way. Mobile keeps
                     the short fog — there, the fog IS the wall. */}
-                {!mobile && <fog attach="fog" args={[bg, 22, 110]} />}
-                {mobile && <fog attach="fog" args={['#1a1428', 12, 48]} />}
+                {!mobile && <fog attach="fog" args={[bg, 14, 88]} />}
+                {mobile && <fog attach="fog" args={['#1a1428', 10, 52]} />}
 
+                <AetherSky low={mobile} />
                 {!mobile && <NightStars />}
 
                 {/* Sun, ambient and hemisphere are owned by the day/night cycle
@@ -172,7 +174,7 @@ export default function HouseCanvas({
                 {/* Phones keep procedural solids (no GLB fetch). Desktop
                     loads the Kenney meshes — HouseProp never draws both. */}
                 <PropDetailProvider primitiveOnly={mobile}>
-                    <LampGroup floor={0.07}>
+                    <LampGroup floor={0.22}>
                         <WorldDestinations low={mobile} />
                         <HomeGeometry low={mobile} />
                         <HomeInterior low={mobile} />
@@ -197,18 +199,24 @@ export default function HouseCanvas({
                     onInteractRequest={onInteractRequest}
                     onMoveActivity={onMoveActivity}
                 />
-                {!mobile && <BloomByDaylight effect={bloom} night={0.4} day={0.08} />}
+                {!mobile && <BloomByDaylight effect={bloom} night={0.48} day={0.12} />}
                 {!mobile && (
                     <EffectComposer multisampling={0}>
+                        <DepthOfField
+                            worldFocusDistance={7.5}
+                            worldFocusRange={16}
+                            bokehScale={2.35}
+                            resolutionScale={0.6}
+                        />
                         <Bloom
                             ref={attachBloom}
-                            intensity={0.35}
-                            luminanceThreshold={1.15}
-                            luminanceSmoothing={0.32}
+                            intensity={0.32}
+                            luminanceThreshold={1.05}
+                            luminanceSmoothing={0.38}
                             mipmapBlur
-                            radius={0.7}
+                            radius={0.65}
                         />
-                        <Vignette eskil={false} offset={0.22} darkness={0.45} />
+                        <Vignette eskil={false} offset={0.18} darkness={0.38} />
                     </EffectComposer>
                 )}
             </Canvas>

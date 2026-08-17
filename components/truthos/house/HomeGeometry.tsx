@@ -9,15 +9,10 @@
  * doubled the day the plan did, without a second set of numbers.
  *
  * Exterior is the Aether hut: basalt masses, gold-vein trim, violet glass,
- * a single stone walk to the Source well. No driveway, no garage, no woods.
- *
- * The sky dome and moon live here now — the old YardGeometry carried
- * them for the old house, and this file replaces it.
+ * a single stone walk to the Source well. Sky lives in AetherSky.
  */
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { getSky } from './DayNightCycle';
 import { useHouseMaterials } from './HouseMaterials';
 import {
     MAIN_COLLIDERS,
@@ -65,50 +60,6 @@ function Walls({
                 </mesh>
             ))}
         </group>
-    );
-}
-
-/**
- * Sky that follows the world clock. The dome texture is a night gradient, so
- * instead of trying to tint it into a day sky it FADES — at noon it goes
- * transparent and the scene background (already repainted every frame by
- * DayNightCycle to the sky/fog colour) becomes the daytime sky. The moon
- * rides its own opacity from the same resolved state.
- */
-function SkyAndMoon({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
-    const skyMat = m.sky as THREE.MeshBasicMaterial;
-    const moonMat = m.moon as THREE.MeshBasicMaterial;
-    const moonRef = useRef<THREE.Mesh>(null);
-
-    useFrame(() => {
-        const sky = getSky();
-        // Night dome fully opaque below ~35% daylight, gone by ~80%
-        const nightness = Math.max(0, Math.min(1, 1 - (sky.daylight - 0.35) / 0.45));
-        if (!skyMat.transparent) skyMat.transparent = true;
-        skyMat.opacity = nightness;
-        moonMat.opacity = sky.moonOpacity;
-        if (moonRef.current) {
-            moonRef.current.visible = sky.moonOpacity > 0.02;
-            moonRef.current.lookAt(0, 1.6, 0);
-        }
-    });
-
-    skyMat.side = THREE.BackSide;
-    skyMat.depthWrite = false;
-    moonMat.depthWrite = false;
-    moonMat.transparent = true;
-
-    return (
-        <>
-            <mesh frustumCulled={false} scale={[-1, 1, 1]}>
-                <sphereGeometry args={[low ? 70 : 110, 24, 16]} />
-                <primitive object={skyMat} attach="material" />
-            </mesh>
-            <mesh ref={moonRef} position={[-38, 52, -44]} frustumCulled={false}>
-                <circleGeometry args={[low ? 3.2 : 4.4, 20]} />
-                <primitive object={moonMat} attach="material" />
-            </mesh>
-        </>
     );
 }
 
@@ -229,9 +180,6 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
 
     return (
         <group>
-            {/* ── Sky — the dome and moon this world looks up into ── */}
-            <SkyAndMoon m={m} low={low} />
-
             {/* ── Floors ─────────────────────────────────────── */}
             {floors.map((f) => (
                 <mesh
@@ -297,11 +245,7 @@ export default function HomeGeometry({ low = false }: { low?: boolean }) {
 
             {/* ── Practicals ─────────────────────────────────── */}
             {!low && (
-                <>
-                    <pointLight position={[u(-0.4), 2.5, Z1 - 1.5]} intensity={2.4} color="#ffd9a0" distance={11} decay={2} />
-                    <pointLight position={[u(5.2), 2.2, u(1.4)]} intensity={2.0} color="#ffe6bd" distance={12} decay={2} />
-                    <pointLight position={[u(-5.2), 1.8, u(5.2)]} intensity={1.6} color="#ffd9a0" distance={9} decay={2} />
-                </>
+                <pointLight position={[u(-0.4), 2.4, Z1 - 1.6]} intensity={1.15} color="#ffd9a0" distance={8} decay={2} />
             )}
         </group>
     );

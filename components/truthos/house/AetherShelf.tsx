@@ -13,7 +13,7 @@ import { useFrame } from '@react-three/fiber';
 import { useHouseMaterials } from './HouseMaterials';
 import { seededRng } from './houseSkins';
 import { FRONT_DOOR, SHELL } from './homeMap';
-import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
+import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter, inCorridor } from './jungleMap';
 
 function inHouse(x: number, z: number, pad = 2.6) {
     return x > SHELL.minX - pad && x < SHELL.maxX + pad && z > SHELL.minZ - pad && z < SHELL.maxZ + pad;
@@ -85,6 +85,25 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
         [],
     );
 
+    const rim = useMemo(() => {
+        const n = low ? 16 : 26;
+        const out: { x: number; z: number; yaw: number; h: number; w: number }[] = [];
+        for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2 + 0.04;
+            const x = Math.cos(a) * (CLEARING_R + 0.6);
+            const z = Math.sin(a) * (CLEARING_R + 0.6);
+            if (inCorridor(x, z, 3.4)) continue;
+            out.push({
+                x,
+                z,
+                yaw: a,
+                h: 2.2 + (i % 5) * 0.62,
+                w: 3.6 + (i % 3) * 0.4,
+            });
+        }
+        return out;
+    }, [low]);
+
     const shardGroup = useRef<Group>(null);
     useFrame(() => {
         if (!shardGroup.current || low) return;
@@ -98,24 +117,16 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
     return (
         <group>
             <CloudSea low={low} />
-            {!low && (
-                <mesh position={[-38, 34, -52]}>
-                    <sphereGeometry args={[7.2, 20, 16]} />
-                    <meshBasicMaterial color="#e8dff6" />
-                </mesh>
-            )}
 
+            {/* Terrace is a RING outside the hut. A full disc plus a
+                sideways 34 m cone used to occupy the entire interior. */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow={!low}>
-                <circleGeometry args={[CLEARING_R + 1.5, low ? 24 : 40]} />
+                <ringGeometry args={[23.4, CLEARING_R + 1.5, low ? 24 : 40]} />
                 <primitive object={basalt} attach="material" />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
                 <ringGeometry args={[24.0, 24.8, low ? 20 : 32]} />
                 <meshStandardMaterial color="#e8c478" metalness={0.7} roughness={0.28} />
-            </mesh>
-            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -2.8, 0]}>
-                <coneGeometry args={[CLEARING_R + 2, 8.5, low ? 8 : 12]} />
-                <primitive object={basalt} attach="material" />
             </mesh>
 
             <group position={[FRONT_DOOR.x, 0, SHELL.maxZ + 3.5]}>
@@ -238,8 +249,8 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                             <circleGeometry args={[d.r + 0.6, low ? 16 : 28]} />
                             <primitive object={basalt} attach="material" />
                         </mesh>
-                        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -2.2, 0]}>
-                            <coneGeometry args={[d.r + 0.4, 6.2, 8]} />
+                        <mesh position={[0, -3.4, 0]} rotation={[Math.PI, 0, 0]}>
+                            <coneGeometry args={[d.r * 0.55, 6.4, 8]} />
                             <primitive object={basalt} attach="material" />
                         </mesh>
                         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
@@ -249,6 +260,35 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                     </group>
                 );
             })}
+
+            {rim.map((p, i) => (
+                <mesh
+                    key={`rim-${i}`}
+                    position={[p.x, p.h / 2, p.z]}
+                    rotation={[0, p.yaw, 0]}
+                    castShadow={!low}
+                    receiveShadow={!low}
+                >
+                    <boxGeometry args={[p.w, p.h, 1.15]} />
+                    <primitive object={basalt} attach="material" />
+                </mesh>
+            ))}
+            {/* Haze curtain — the world edge blends into the sky */}
+            <mesh position={[0, 5.5, 0]}>
+                <cylinderGeometry args={[40, 52, 16, low ? 20 : 32, 1, true]} />
+                <meshBasicMaterial
+                    color="#1a142c"
+                    transparent
+                    opacity={0.32}
+                    side={2}
+                    depthWrite={false}
+                    fog
+                />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+                <ringGeometry args={[CLEARING_R - 0.15, CLEARING_R + 0.55, low ? 24 : 40]} />
+                <meshStandardMaterial color="#e8c478" metalness={0.65} roughness={0.32} />
+            </mesh>
 
             <group position={[FRONT_DOOR.x, 3.4, SHELL.maxZ + 3.5]}>
                 <mesh position={[0, 0.5, 0]}>

@@ -33,8 +33,26 @@ export default function AetherHorizon({ low = false }: { low?: boolean }) {
                 </mesh>
             ))}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -8.4, 0]}>
-                <ringGeometry args={[90, 240, 32]} />
-                <meshBasicMaterial color="#2a2040" transparent opacity={0.35} side={THREE.DoubleSide} />
+                <ringGeometry args={[70, 220, 40]} />
+                <meshBasicMaterial
+                    color="#241832"
+                    transparent
+                    opacity={0.42}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                    fog
+                />
+            </mesh>
+            <mesh position={[0, 3, 0]}>
+                <cylinderGeometry args={[78, 110, 22, 28, 1, true]} />
+                <meshBasicMaterial
+                    color="#161022"
+                    transparent
+                    opacity={0.38}
+                    side={THREE.BackSide}
+                    depthWrite={false}
+                    fog
+                />
             </mesh>
         </group>
     );
