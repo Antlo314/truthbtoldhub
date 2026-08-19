@@ -612,7 +612,10 @@ export type OsAppContext = {
 export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
     switch (app) {
         case 'truth':
-            return <TruthGuideApp />;
+            // The palette can open the guide WITH a question ("Guide me
+            // through Truth.OS"); without this it opened the window and
+            // silently dropped the ask.
+            return <TruthGuideApp initialPrompt={ctx.payload?.content} />;
         case 'updates':
             return <UpdatesApp />;
         case 'ledger':

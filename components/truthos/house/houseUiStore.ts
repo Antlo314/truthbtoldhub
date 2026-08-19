@@ -111,41 +111,54 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     stopCinema: () => set({ cinemaPlaying: false, cinemaFilmId: null }),
 }));
 
+// `voice` is the id of the line Truth speaks when the step opens — see
+// lib/truthVoice.ts and public/voice/manifest.json. The written body
+// stays as the caption; the voice says the fuller thing.
 export const WALKTHROUGH_STEPS = [
     {
         title: 'You’re here',
         body: 'You wake at the rec-room desk. One floor. Gold rings open things. The front door is just a door — walk through it.',
         tip: 'Continue, then the house will wait on you',
         wait: 'tap' as const,
+        voice: 'welcome',
     },
     {
         title: 'Look',
         body: 'Desktop: click the scene, then move the mouse. Phone: drag the right pad.',
         tip: 'Look left or right',
         wait: 'look' as const,
+        voice: 'move_pc', // swapped for move_mobile on touch devices at speak time
     },
     {
         title: 'Walk',
         body: 'WASD or arrows. Shift runs. Phone: left stick.',
         tip: 'Take a few steps',
         wait: 'move' as const,
+        voice: null,
     },
     {
         title: 'Use',
         body: 'Walk into a gold ring. Press E, or tap Use. The paper, the arcade, The Mark, the library and the ledger all answer.',
         tip: 'Open anything that glows',
         wait: 'use' as const,
+        voice: 'station_truth',
     },
     {
         title: 'The door',
         body: 'The front opening is not a menu. Walk out. Four paths leave the clearing.',
         tip: 'Step outside',
         wait: 'out' as const,
+        // Not `world_leave` — that line says "you HAVE stepped out", and the
+        // player is still indoors being told to. Firing it here also burned
+        // its once-per-session slot so the real arrival never spoke. The
+        // narrator speaks world_leave at the actual threshold instead.
+        voice: null,
     },
     {
         title: 'You’re home',
         body: 'Live souls share this floor. Esc or Pause opens Map and Tour. Enter speaks to the room.',
         tip: 'Esc or Pause · Map and Tour',
         wait: 'tap' as const,
+        voice: 'live_echo',
     },
 ] as const;

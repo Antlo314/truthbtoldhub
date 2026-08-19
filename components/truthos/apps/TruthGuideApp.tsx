@@ -6,8 +6,85 @@
 import { useEffect, useRef, useState } from 'react';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { useGameStore } from '@/lib/store/useGameStore';
+import { TRUTH_QUESTIONS } from '@/lib/game/truthLore';
+import { speak as truthSpeak, replay as truthReplay, isMuted, setMuted, subscribe as voiceSub, stop as truthStop } from '@/lib/truthVoice';
 
-type Msg = { role: 'user' | 'truth' | 'sys'; text: string };
+/**
+ * A reply may carry a `voice` id — one of the pre-generated lore lines
+ * in /voice — in which case Truth SAYS it. Free-form Gemini replies have
+ * no recording, so they get no id and stay text; the "hear" affordance
+ * only appears when there is a real voice behind it.
+ */
+type Msg = { role: 'user' | 'truth' | 'sys'; text: string; voice?: string };
+
+/**
+ * If the question is one Truth has already answered — in his own voice —
+ * find it, so "who are you" gets the recorded "who" answer rather than a
+ * fresh paraphrase.
+ *
+ * Deliberately careful. An earlier version matched on ≥60% of the prompt's
+ * long words with no stop-word list, and "Why do you follow me?" reduced
+ * to the single word "follow" — so "how do I follow the path" got the
+ * canned lore answer and never reached the model. Being wrongly certain
+ * is the worst thing a guide can do.
+ *
+ * But most prompts here genuinely have ONE content word — "What is the
+ * Source?", "Tell me about your family." — and those words are specific
+ * enough that a question containing them almost certainly wants that
+ * answer. So the rule is about the WORD, not the count:
+ *   - stop-words carry no weight
+ *   - a single-word match is allowed only if that word is on the
+ *     KEYWORDS list: nouns that name a topic of Truth's story. Generic
+ *     verbs and adjectives ("follow", "walk", "stop") never match alone.
+ *   - multi-word prompts must hit ≥ 70% of their content words
+ * If in doubt, this returns null and Gemini answers. That is the safe
+ * direction.
+ */
+/** Single words that unambiguously name one of Truth's stories. */
+const KEYWORDS = new Set([
+    'source', 'family', 'children', 'wilderness', 'drinking', 'fasting', 'sorrow',
+    'mistakes', 'freedom', 'burden', 'innocence', 'crime', 'accomplish', 'vision',
+    'series', '400', 'name', 'purpose', 'journey', 'transparency',
+]);
+const STOP = new Set([
+    'what', 'when', 'where', 'which', 'that', 'this', 'with', 'from', 'your', 'you', 'yours', 'about',
+    'tell', 'mean', 'does', 'did', 'were', 'was', 'have', 'has', 'been', 'will', 'would', 'should',
+    'could', 'really', 'ever', 'still', 'just', 'like', 'much', 'many', 'some', 'into', 'over',
+    'them', 'they', 'their', 'there', 'then', 'than', 'also', 'more', 'most', 'very', 'why', 'how',
+    'who', 'the', 'and', 'for', 'are', 'not', 'but', 'can', 'all', 'any', 'out', 'get', 'got',
+    'do', 'me', 'us', 'we', 'it', 'is', 'to', 'of', 'in', 'on', 'at', 'by', 'or', 'an', 'a', 'i',
+]);
+
+function contentWords(s: string): string[] {
+    return s
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+function loreHit(message: string): { id: string; answer: string } | null {
+    const q = new Set(contentWords(message));
+    if (!q.size) return null;
+    let best: { id: string; answer: string; score: number } | null = null;
+    for (const t of TRUTH_QUESTIONS) {
+        const words = contentWords(t.prompt || '');
+        if (!words.length) continue;
+        const hits = words.filter((w) => q.has(w));
+        if (!hits.length) continue;
+        let score: number;
+        if (words.length === 1) {
+            // One-word prompt: only a topic keyword may carry it alone.
+            if (!KEYWORDS.has(words[0])) continue;
+            score = 1;
+        } else {
+            score = hits.length / words.length;
+            if (score < 0.7) continue;
+        }
+        if (!best || score > best.score) best = { id: t.id, answer: t.answer, score };
+    }
+    return best ? { id: best.id, answer: best.answer } : null;
+}
 
 const STARTERS = [
     'What does judgment mean for us right now?',
@@ -17,7 +94,7 @@ const STARTERS = [
     'How do I love people and still speak hard truth?',
 ];
 
-export default function TruthGuideApp() {
+export default function TruthGuideApp({ initialPrompt }: { initialPrompt?: string } = {}) {
     const name = useGameStore((s) => s.character?.name?.trim()) || 'soul';
     const [msgs, setMsgs] = useState<Msg[]>([]);
     const [input, setInput] = useState('');
@@ -25,6 +102,9 @@ export default function TruthGuideApp() {
     const [err, setErr] = useState<string | null>(null);
     const bottom = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    const [muted, setMutedState] = useState(true);
+    useEffect(() => voiceSub((s) => setMutedState(s.muted)), []);
 
     useEffect(() => {
         setMsgs([
@@ -35,13 +115,32 @@ export default function TruthGuideApp() {
             {
                 role: 'truth',
                 text: `I’m Truth. Not a soft pastor bot — your brother in the signal. Ask me anything: scripture, end times, who we are, how to walk, or how this OS works. ${name !== 'soul' ? `Good to see you, ${name}.` : 'What you need?'}`,
+                voice: 'os_guide_open',
             },
         ]);
+        // Speaks once per session — opening the app a fifth time is not a
+        // fifth greeting.
+        void truthSpeak('os_guide_open');
+        return () => truthStop();
     }, [name]);
 
     useEffect(() => {
         bottom.current?.scrollIntoView({ behavior: 'smooth' });
     }, [msgs, busy]);
+
+    // A prompt handed in at open ("Guide me through Truth.OS" from the
+    // palette) is asked once, after the greeting has painted. The ref
+    // guards a Strict-Mode double mount; a re-render never re-asks.
+    const askedInitial = useRef(false);
+    useEffect(() => {
+        if (!initialPrompt || askedInitial.current) return;
+        askedInitial.current = true;
+        const t = setTimeout(() => void send(initialPrompt, 'os_help'), 350);
+        return () => clearTimeout(t);
+        // send is stable enough for a one-shot; re-running on its identity
+        // would defeat the once-only guard.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialPrompt]);
 
     const send = async (raw: string, mode: 'chat' | 'scripture' | 'os_help' = 'chat') => {
         const message = raw.trim();
@@ -54,6 +153,20 @@ export default function TruthGuideApp() {
         if (mode === 'chat') {
             setMsgs((m) => [...m, { role: 'user', text: message }]);
             setInput('');
+
+            // A question Truth has already answered — in his own recorded
+            // voice — is answered from the lore, spoken aloud, and never
+            // sent to the model. Instant, costs nothing, and it is the
+            // canonical answer rather than a paraphrase of it.
+            const hit = loreHit(message);
+            if (hit) {
+                setMsgs((m) => [...m, { role: 'truth', text: hit.answer, voice: hit.id }]);
+                void truthSpeak(hit.id, { force: true });
+                sacredUi.access();
+                setBusy(false);
+                inputRef.current?.focus();
+                return;
+            }
         } else if (mode === 'scripture') {
             setMsgs((m) => [
                 ...m,
@@ -109,14 +222,31 @@ export default function TruthGuideApp() {
                         AI brother · scripture · OS · end times · love for all
                     </p>
                 </div>
-                <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => send('', 'scripture')}
-                    className="shrink-0 px-2.5 py-1.5 rounded-lg border border-amber-500/35 text-[10px] uppercase tracking-wider text-amber-200 hover:bg-amber-500/10 disabled:opacity-40 min-h-[40px]"
-                >
-                    Daily Word
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => { setMuted(!isMuted()); sacredUi.click(); }}
+                        aria-pressed={muted}
+                        title={muted ? 'Truth is muted — tap to hear him' : 'Mute Truth’s voice'}
+                        className={[
+                            'px-2.5 py-1.5 rounded-lg border text-[10px] uppercase tracking-wider min-h-[40px] flex items-center gap-1.5',
+                            muted
+                                ? 'border-amber-900/40 text-amber-700/70 hover:text-amber-400'
+                                : 'border-amber-500/45 text-amber-200 bg-amber-500/10',
+                        ].join(' ')}
+                    >
+                        <span aria-hidden className={`inline-block w-1.5 h-1.5 rounded-full ${muted ? 'bg-amber-900' : 'bg-amber-300'}`} />
+                        {muted ? 'Voice off' : 'Voice on'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => send('', 'scripture')}
+                        className="px-2.5 py-1.5 rounded-lg border border-amber-500/35 text-[10px] uppercase tracking-wider text-amber-200 hover:bg-amber-500/10 disabled:opacity-40 min-h-[40px]"
+                    >
+                        Daily Word
+                    </button>
+                </div>
             </header>
 
             <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2.5 overscroll-contain">
@@ -132,7 +262,28 @@ export default function TruthGuideApp() {
                         }`}
                     >
                         {m.role === 'user' && <span className="text-cyan-500/70 text-[10px] uppercase tracking-wider block mb-0.5">You</span>}
-                        {m.role === 'truth' && <span className="text-amber-500/70 text-[10px] uppercase tracking-wider block mb-0.5">Truth</span>}
+                        {m.role === 'truth' && (
+                            <span className="text-amber-500/70 text-[10px] uppercase tracking-wider mb-0.5 flex items-center gap-2">
+                                Truth
+                                {m.voice && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            // An explicit "hear this" is an explicit request:
+                                            // it lifts the mute rather than silently doing nothing.
+                                            if (isMuted()) setMuted(false);
+                                            void truthReplay(m.voice!);
+                                            sacredUi.click();
+                                        }}
+                                        title="Hear Truth say this"
+                                        aria-label="Hear this in Truth’s voice"
+                                        className="normal-case tracking-normal text-[10px] px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-300/80 hover:bg-amber-500/10"
+                                    >
+                                        ▶ hear
+                                    </button>
+                                )}
+                            </span>
+                        )}
                         <p className="whitespace-pre-wrap">{m.text}</p>
                     </div>
                 ))}

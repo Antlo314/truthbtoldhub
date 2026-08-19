@@ -174,33 +174,54 @@ export type Furnishing = Collider & {
     yaw?: number;
 };
 
+/**
+ * yaw is render-only. Kenney props face their local +z, so a yaw of θ
+ * turns the front toward world (sin θ, cos θ): 0 = south (+z),
+ * π = north, π/2 = east, −π/2 = west.
+ */
 export const FURNITURE: Furnishing[] = [
     // Rec — desk against the front wall, facing into the room (−Z chair)
     { name: 'desk', level: 'main', x: -12.4, z: 15.7, hx: 0.95, hz: 0.4, h: 0.76, yaw: Math.PI },
-    { name: 'desk chair', level: 'main', x: -12.4, z: 14.88, hx: 0.26, hz: 0.26, h: 0.9, yaw: Math.PI },
-    { name: 'rec sofa', level: 'main', x: -12.4, z: 11.85, hx: 1.15, hz: 0.48, h: 0.8, yaw: Math.PI },
+    // Chair faces the desk (south); sofa faces its coffee table (south)
+    { name: 'desk chair', level: 'main', x: -12.4, z: 14.88, hx: 0.26, hz: 0.26, h: 0.9, yaw: 0 },
+    { name: 'rec sofa', level: 'main', x: -12.4, z: 11.85, hx: 1.15, hz: 0.48, h: 0.8, yaw: 0 },
     { name: 'rec coffee table', level: 'main', x: -12.4, z: 13.05, hx: 0.52, hz: 0.3, h: 0.42 },
     { name: 'floor lamp', level: 'main', x: -14.45, z: 16.2, hx: 0.18, hz: 0.18, h: 1.5 },
     { name: 'arcade cabinet', level: 'main', x: -7.55, z: 11.4, hx: 0.38, hz: 0.33, h: 1.8 },
     { name: 'rec plant', level: 'main', x: -14.4, z: 5.4, hx: 0.26, hz: 0.26, h: 1.0 },
     // Foyer
     { name: 'daily word tray', level: 'main', x: 2.15, z: 14.8, hx: 0.4, hz: 0.26, h: 0.78 },
+    // Coat rack just inside the front door, west of the swing
+    { name: 'coat rack', level: 'main', x: -3.2, z: 16.36, hx: 0.3, hz: 0.3, h: 1.7 },
     // The Mark / bath / spare
     { name: 'mark bench', level: 'main', x: -14.2, z: -4.07, hx: 0.24, hz: 0.62, h: 0.56 },
     { name: 'bath vanity', level: 'main', x: -14.0, z: 2.86, hx: 0.7, hz: 0.32, h: 0.58 },
-    { name: 'spare bed', level: 'main', x: -13.4, z: -15.2, hx: 0.78, hz: 1.02, h: 0.68, yaw: Math.PI / 2 },
+    // Bed runs north–south, headboard toward the north wall
+    { name: 'spare bed', level: 'main', x: -13.4, z: -15.2, hx: 0.78, hz: 1.02, h: 0.68, yaw: 0 },
+    // Nightstand at the head of the bed, east side; dresser on the north wall
+    { name: 'spare nightstand', level: 'main', x: -12.35, z: -16.0, hx: 0.25, hz: 0.21, h: 0.5 },
+    { name: 'spare dresser', level: 'main', x: -9.6, z: -16.42, hx: 0.6, hz: 0.25, h: 0.86 },
     // Living
     { name: 'living sofa', level: 'main', x: 8.2, z: 4.4, hx: 0.52, hz: 1.4, h: 0.78, yaw: Math.PI / 2 },
     { name: 'living coffee table', level: 'main', x: 10.5, z: 4.4, hx: 0.6, hz: 0.36, h: 0.42 },
-    { name: 'accent chair', level: 'main', x: 8.2, z: 6.6, hx: 0.4, hz: 0.4, h: 0.86, yaw: -0.4 },
+    // Accent chair turned toward the coffee table (north-east)
+    { name: 'accent chair', level: 'main', x: 8.2, z: 6.6, hx: 0.4, hz: 0.4, h: 0.86, yaw: 2.33 },
     { name: 'bookshelf wall', level: 'main', x: 14.48, z: 6.2, hx: 0.2, hz: 1.85, h: 2.15, yaw: -Math.PI / 2 },
-    { name: 'media wall', level: 'main', x: 14.46, z: 1.6, hx: 0.26, hz: 0.7, h: 2.5 },
-    // Kitchen — counter, fridge, island and stools are four separate boxes
+    // Media console on the east wall — the television stands on it
+    { name: 'media wall', level: 'main', x: 14.46, z: 1.6, hx: 0.26, hz: 0.9, h: 0.5, yaw: -Math.PI / 2 },
+    // Kitchen — counter run, fridge, island and stools are separate boxes
     { name: 'island', level: 'main', x: 10.2, z: -12.6, hx: 1.35, hz: 0.55, h: 0.96 },
     { name: 'island stool L', level: 'main', x: 9.4, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
     { name: 'island stool C', level: 'main', x: 10.2, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
     { name: 'island stool R', level: 'main', x: 11.0, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
-    { name: 'counter run', level: 'main', x: 10.4, z: -16.2, hx: 2.2, hz: 0.36, h: 0.92 },
+    // Counter run along the north wall, x 8.2 → 12.6, split into modules
+    // (1 cm seams so neighbours never share an edge). Sink is 1.0 tall so
+    // its worktop meets the others at 0.92 and the tap rises above.
+    { name: 'counter cabinet W', level: 'main', x: 8.65, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
+    { name: 'kitchen sink', level: 'main', x: 9.55, z: -16.2, hx: 0.445, hz: 0.36, h: 1.0 },
+    { name: 'counter drawers', level: 'main', x: 10.4, z: -16.2, hx: 0.395, hz: 0.36, h: 0.92 },
+    { name: 'kitchen stove', level: 'main', x: 11.25, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
+    { name: 'counter cabinet E', level: 'main', x: 12.15, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
     { name: 'fridge', level: 'main', x: 7.55, z: -16.2, hx: 0.4, hz: 0.36, h: 1.85 },
     { name: 'codex desk', level: 'main', x: 5.55, z: -5.2, hx: 0.5, hz: 0.26, h: 0.96 },
     // Dining — table and four chairs, none inside the table

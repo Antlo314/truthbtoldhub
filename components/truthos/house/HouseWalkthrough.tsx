@@ -9,6 +9,7 @@ import {
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { isOutdoors } from './homeMap';
 import { getWalkerPose } from './walkerPose';
+import { speak as truthSpeak, stop as truthStop } from '@/lib/truthVoice';
 
 export default function HouseWalkthrough({
     activity,
@@ -34,6 +35,25 @@ export default function HouseWalkthrough({
         // Capture usedAt at the step change only — a later use must beat this.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step]);
+
+    // Truth speaks each step as it opens. Once per session per line —
+    // truthVoice remembers — so reopening the tour re-shows the cards
+    // without re-running the whole monologue. Touch devices get the
+    // mobile movement line in place of the keyboard one.
+    useEffect(() => {
+        if (!open) return;
+        const current = WALKTHROUGH_STEPS[Math.min(step, WALKTHROUGH_STEPS.length - 1)];
+        let id: string | null = current?.voice ?? null;
+        if (id === 'move_pc' && typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) {
+            id = 'move_mobile';
+        }
+        if (id) void truthSpeak(id);
+    }, [open, step]);
+
+    // Closing the tour mid-sentence should end the sentence.
+    useEffect(() => {
+        if (!open) truthStop();
+    }, [open]);
 
     useEffect(() => {
         if (!open) return;

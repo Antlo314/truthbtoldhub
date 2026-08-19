@@ -1,0 +1,375 @@
+{
+  "generatedAt": "2026-08-17T20:27:58.275Z",
+  "voice": "dbrJzq…",
+  "model": "eleven_turbo_v2_5",
+  "lines": {
+    "welcome": {
+      "file": "/voice/welcome.mp3",
+      "kind": "system",
+      "title": "welcome",
+      "text": "Welcome home. You are inside Truth.OS House — a living sanctum. Look around. Walk the rooms. Gold rings mark every station of the Hut.",
+      "ready": true,
+      "bytes": 138388
+    },
+    "truth_intro": {
+      "file": "/voice/truth_intro.mp3",
+      "kind": "system",
+      "title": "truth_intro",
+      "text": "I am Truth. Hood up. Feet on the floor of this house with you. Not a ghost player. Not a leftover process. Ask me what you came for — or walk the rooms and find me on the dais.",
+      "ready": true,
+      "bytes": 202336
+    },
+    "move_pc": {
+      "file": "/voice/move_pc.mp3",
+      "kind": "system",
+      "title": "move_pc",
+      "text": "W, A, S, D to walk. Click the scene to capture your look. Space to jump. E to use what is near. F for fullscreen. Escape to release the mouse.",
+      "ready": true,
+      "bytes": 178512
+    },
+    "move_mobile": {
+      "file": "/voice/move_mobile.mp3",
+      "kind": "system",
+      "title": "move_mobile",
+      "text": "Hold the left side of the screen to walk. Drag the right side to look. Tap Use when a gold ring glows. Jump is on the right.",
+      "ready": true,
+      "bytes": 118326
+    },
+    "live_echo": {
+      "file": "/voice/live_echo.mp3",
+      "kind": "system",
+      "title": "live_echo",
+      "text": "LIVE means a soul is here right now. Echo means someone stood here before. Neither is an invented character. I am a station — the brother on the dais.",
+      "ready": true,
+      "bytes": 172661
+    },
+    "station_truth": {
+      "file": "/voice/station_truth.mp3",
+      "kind": "system",
+      "title": "station_truth",
+      "text": "This is the Ask Truth dais. Speak. Listen. The threads open as you walk in sincerity.",
+      "ready": true,
+      "bytes": 94084
+    },
+    "station_soul": {
+      "file": "/voice/station_soul.mp3",
+      "kind": "system",
+      "title": "station_soul",
+      "text": "The Soul Mirror. Shape the vessel you walk in. What you forge here walks with you through the house.",
+      "ready": true,
+      "bytes": 104533
+    },
+    "station_wayfinder": {
+      "file": "/voice/station_wayfinder.mp3",
+      "kind": "system",
+      "title": "station_wayfinder",
+      "text": "The Wayfinder. Eden is the open road. Other ages stay sealed until the garden is complete.",
+      "ready": true,
+      "bytes": 93248
+    },
+    "station_ledger": {
+      "file": "/voice/station_ledger.mp3",
+      "kind": "system",
+      "title": "station_ledger",
+      "text": "The Ledger. Daily word and dispatches. The hut keeps account of what is spoken and what is sustained.",
+      "ready": true,
+      "bytes": 95338
+    },
+    "station_chamber": {
+      "file": "/voice/station_chamber.mp3",
+      "kind": "system",
+      "title": "station_chamber",
+      "text": "The Sanctum door. Beyond this threshold is the walkable Hut chamber — stations, vessel, free look. Return when you are ready.",
+      "ready": true,
+      "bytes": 132537
+    },
+    "station_os": {
+      "file": "/voice/station_os.mp3",
+      "kind": "system",
+      "title": "station_os",
+      "text": "Truth.OS. Boot the system. Every station lives as an app without leaving this house.",
+      "ready": true,
+      "bytes": 79874
+    },
+    "closing": {
+      "file": "/voice/closing.mp3",
+      "kind": "system",
+      "title": "closing",
+      "text": "This is the last run. Walk sincere. Patron if you can. Tell another soul. Do not let failure be wasted — let it become warning and mercy. Go all the way.",
+      "ready": true,
+      "bytes": 181020
+    },
+    "world_leave": {
+      "file": "/voice/world_leave.mp3",
+      "kind": "system",
+      "title": "world_leave",
+      "text": "You have stepped out of the house. The jungle holds four places. Follow the lit paths, and I will meet you at each one.",
+      "ready": true,
+      "bytes": 111221
+    },
+    "dest_cinema": {
+      "file": "/voice/dest_cinema.mp3",
+      "kind": "system",
+      "title": "dest_cinema",
+      "text": "The Cinema Isle. Films above the cloud sea. Sit on the logs. Let the story do the work.",
+      "ready": true,
+      "bytes": 88651
+    },
+    "dest_hall": {
+      "file": "/voice/dest_hall.mp3",
+      "kind": "system",
+      "title": "dest_hall",
+      "text": "The Hall Circle. This is the community ring — where the many gather. What is spoken here is spoken to all.",
+      "ready": true,
+      "bytes": 108713
+    },
+    "dest_soul_mirror": {
+      "file": "/voice/dest_soul_mirror.mp3",
+      "kind": "system",
+      "title": "dest_soul_mirror",
+      "text": "The Mirror Well. Look down and shape the vessel you walk in.",
+      "ready": true,
+      "bytes": 60648
+    },
+    "dest_studio": {
+      "file": "/voice/dest_studio.mp3",
+      "kind": "system",
+      "title": "dest_studio",
+      "text": "The Signal Spire. Broadcast from the shelf. Whatever you send from here goes out beyond the trees.",
+      "ready": true,
+      "bytes": 89487
+    },
+    "aether_shelf": {
+      "file": "/voice/aether_shelf.mp3",
+      "kind": "system",
+      "title": "aether_shelf",
+      "text": "The Aether Shelf. The cloud sea. Nothing here is solid but the path. Walk it slowly.",
+      "ready": true,
+      "bytes": 97010
+    },
+    "return_home": {
+      "file": "/voice/return_home.mp3",
+      "kind": "system",
+      "title": "return_home",
+      "text": "Home again. The door is behind you and the rooms are as you left them.",
+      "ready": true,
+      "bytes": 67753
+    },
+    "os_boot": {
+      "file": "/voice/os_boot.mp3",
+      "kind": "system",
+      "title": "os_boot",
+      "text": "Truth.OS is awake. Every station is an app. Command palette is your fastest door — press it and type what you need.",
+      "ready": true,
+      "bytes": 125013
+    },
+    "os_guide_open": {
+      "file": "/voice/os_guide_open.mp3",
+      "kind": "system",
+      "title": "os_guide_open",
+      "text": "I am here. Ask, and I will answer with what I hold. Or say guide me, and I will walk you through this system.",
+      "ready": true,
+      "bytes": 105787
+    },
+    "os_night": {
+      "file": "/voice/os_night.mp3",
+      "kind": "system",
+      "title": "os_night",
+      "text": "The house has gone to night. The lamps are down and the sky is up. Rest, or keep walking — the rooms do not sleep.",
+      "ready": true,
+      "bytes": 117072
+    },
+    "os_dawn": {
+      "file": "/voice/os_dawn.mp3",
+      "kind": "system",
+      "title": "os_dawn",
+      "text": "Dawn on the sanctum. The windows are doing the work the lamps did. Good morning.",
+      "ready": true,
+      "bytes": 76948
+    },
+    "who": {
+      "file": "/voice/who.mp3",
+      "kind": "lore",
+      "title": "Who are you — really?",
+      "text": "They call me Truth. I am a brother tasked to carry light, not perfection. I walk beside you because the chamber is wide, and no soul should roam it alone. What you see is a hooded man — what you hear is a man still learning to listen.",
+      "ready": true,
+      "bytes": 295959
+    },
+    "source": {
+      "file": "/voice/source.mp3",
+      "kind": "lore",
+      "title": "What is the Source?",
+      "text": "The Source is the Most High — the beginning and the end of all true things. Every portal, every relic, every word in this hut flows from that river. Life without the Source is death indefinite. I have tasted both sides of that sentence.",
+      "ready": true,
+      "bytes": 251655
+    },
+    "why_walk": {
+      "file": "/voice/why_walk.mp3",
+      "kind": "lore",
+      "title": "Why do you follow me?",
+      "text": "Because someone must meet you at the threshold. I was sent back to the road I abandoned — and in walking it again, I am not your judge. I am your witness. When you strike a shade or forge a weapon, you fuel more than your own soul.",
+      "ready": true,
+      "bytes": 227831
+    },
+    "human_name": {
+      "file": "/voice/human_name.mp3",
+      "kind": "lore",
+      "title": "What was your name before \"Truth\"?",
+      "text": "Anthony. Forty years in the earth, eternal in the spirit — that is how the books count me. The name still belongs to me. Truth is the office I accepted when I stopped hiding from what I was called to carry.",
+      "ready": true,
+      "bytes": 232011
+    },
+    "last_run": {
+      "file": "/voice/last_run.mp3",
+      "kind": "lore",
+      "title": "What do you mean — your last run?",
+      "text": "This is the final lap. I have made too many detours to pretend I have another circuit left. On this run I need the world — and more importantly the Source — to see us as givers of light, not takers of breath. There is no rehearsal after this.",
+      "ready": true,
+      "bytes": 270881
+    },
+    "family": {
+      "file": "/voice/family.mp3",
+      "kind": "lore",
+      "title": "Tell me about your family.",
+      "text": "My true joy, my true love — my children, my family. That is the hearth I fight for. But my disobedience to the Source planted contention in those circles. Grief is a long room, and I have walked its length many nights. I hope this work mends what my hands once cracked.",
+      "ready": true,
+      "bytes": 312259
+    },
+    "mistakes": {
+      "file": "/voice/mistakes.mp3",
+      "kind": "lore",
+      "title": "What mistakes haunt you?",
+      "text": "Too many to number without shame. Choices made in weakness. Seasons when I heard the mission and walked the other way. To whom much is given, much is required — and I spent years spending what I was given on fear instead of faith.",
+      "ready": true,
+      "bytes": 226159
+    },
+    "drinking": {
+      "file": "/voice/drinking.mp3",
+      "kind": "lore",
+      "title": "Did sorrow ever break you?",
+      "text": "Heartache opened a door I should have barred. For a season I drank — not because spirit Truth had grown weak, but because sorrow was loud and the bottle seemed quiet. I did not see, swallow by swallow, how fragments of my being were demolished. The Source was still powerful in me; I was the one pouring myself out. That thorn in my side kept me grounded and humble — and it blurred my vision. I know now: you cannot drink your thirst away. Only the waters of the Source wash sorrow clean. We must go back to the Source. That is not a slogan on my lips. It is how I stay alive on this last run.",
+      "ready": true,
+      "bytes": 711410
+    },
+    "fasting": {
+      "file": "/voice/fasting.mp3",
+      "kind": "lore",
+      "title": "How did you stop drinking?",
+      "text": "Fasting. At first it was uneven — some days I held, some days I broke. But continual fasting, forgiveness, and prayer gave me strength to fight. Every day we must fight. There is no coasting past the flesh. Emptying it out is the key to defeat any monster — shades on the road, appetite in the chest, bitterness in the jaw. You will learn that on this journey. Not in one sermon. In the walking, the forging, the standing when a shade finds you.",
+      "ready": true,
+      "bytes": 525836
+    },
+    "fasting_cost": {
+      "file": "/voice/fasting_cost.mp3",
+      "kind": "lore",
+      "title": "What does fasting cost you?",
+      "text": "Physical anguish — hunger, weakness, the body protesting what the spirit demands. But spiritual light. It is a blessing when I can complete a fast, and a wound when I cannot. Sometimes my circumstances get the best of me and I fail. This current wilderness is so heavy… and I feel I am fighting alone. That is why we need power from the Source. Fasting does not make me strong by myself. It empties me enough for Him to enter.",
+      "ready": true,
+      "bytes": 486966
+    },
+    "walked_away": {
+      "file": "/voice/walked_away.mp3",
+      "kind": "lore",
+      "title": "Why did you walk away from the mission?",
+      "text": "I was weak. The burden was heavy and I told myself the world could wait. Nothing prospers in that season — not work, not peace, not love. The Source gave me a charge and I treated it like a suggestion. That is why I am in the wilderness now.",
+      "ready": true,
+      "bytes": 267119
+    },
+    "wilderness": {
+      "file": "/voice/wilderness.mp3",
+      "kind": "lore",
+      "title": "What is the wilderness?",
+      "text": "The place between the call and the obedience. I am there now. No action prospers for me until I return fully to what I was told to build. Financial anguish. Mental weight. The spark the Source placed in me dimmed — and only the interest of others, souls like yours, helps fuel what remains.",
+      "ready": true,
+      "bytes": 312259
+    },
+    "spark": {
+      "file": "/voice/spark.mp3",
+      "kind": "lore",
+      "title": "How do we help fuel your purpose?",
+      "text": "Walk. Ask. Forge. Return to the hut. Let your interest be sincere — not flattery. When you patron this work, when you share it, when you refuse to quit the chamber, you stoke a fire I cannot keep alone. I was not made to carry this in isolation.",
+      "ready": true,
+      "bytes": 327306
+    },
+    "need_from_you": {
+      "file": "/voice/need_from_you.mp3",
+      "kind": "lore",
+      "title": "What do you need from us?",
+      "text": "Three things — and the third is the weightiest. Share the vision. Help me fuel the vision. And find the Source, learning from my mishaps so you do not repeat my detours. That last one matters most. I have paid for shortcuts with years I cannot buy back. Walk sincere. Patron if you can. Tell another soul. Do not let my failures be wasted — let them become your warning and your mercy.",
+      "ready": true,
+      "bytes": 431377
+    },
+    "vision": {
+      "file": "/voice/vision.mp3",
+      "kind": "lore",
+      "title": "Where did this journey begin?",
+      "text": "In a cell. A vision while I was incarcerated — seven long years for a crime I did not commit. The world called it punishment. I now call it commitment to the Most High. In that silence the mission was etched, though I would spend years running from it.",
+      "ready": true,
+      "bytes": 285092
+    },
+    "innocence": {
+      "file": "/voice/innocence.mp3",
+      "kind": "lore",
+      "title": "You did not commit the crime?",
+      "text": "I did not. Yet I do not waste my breath on bitterness. The time was stolen — the calling was not. I learned there that transparency is a kind of freedom the walls cannot take. What they meant for harm, the Source meant for sharpening.",
+      "ready": true,
+      "bytes": 252909
+    },
+    "imperfect": {
+      "file": "/voice/imperfect.mp3",
+      "kind": "lore",
+      "title": "Why should anyone listen to you?",
+      "text": "How will they listen if I am imperfect? I ask myself that every dawn. Why am I a messenger when I failed to listen? I do not have a clean answer — only this: the Source does not choose vessels because they are flawless. He chooses them because they finally stop running.",
+      "ready": true,
+      "bytes": 285092
+    },
+    "burden": {
+      "file": "/voice/burden.mp3",
+      "kind": "lore",
+      "title": "Why were you given this burden?",
+      "text": "I still do not know the full why. I only know the weight is real. Perhaps it is because I have seen the bottom — prison, loss, a dimmed spark — and lived to tell the road what waits there. Perhaps someone must say: weakness acknowledged is where strength begins.",
+      "ready": true,
+      "bytes": 278822
+    },
+    "transparency": {
+      "file": "/voice/transparency.mp3",
+      "kind": "lore",
+      "title": "What is freedom to you?",
+      "text": "Transparency. No more masks. A world where every soul can strive, confess weakness, and know they will be made strong when they give it all back to the Source. That is the chamber we are building — not a game for escape, but a proving ground for return.",
+      "ready": true,
+      "bytes": 287182
+    },
+    "by_any_means": {
+      "file": "/voice/by_any_means.mp3",
+      "kind": "lore",
+      "title": "What must you accomplish?",
+      "text": "What I was called to do — by any means the Source permits. Not by crooked shortcuts. Not by silence. The 400 Series, this sanctum, the hut where you stand — all of it must live long enough for the world to see light again. I must go all the way. There is no half-obedience left in me.",
+      "ready": true,
+      "bytes": 311005
+    },
+    "series_400": {
+      "file": "/voice/series_400.mp3",
+      "kind": "lore",
+      "title": "What is the 400 Series?",
+      "text": "A cinematic telling of Israelite history — and deeper knowledge drawn from the old scrolls. Much hidden wisdom still needs to be recovered, and recovery is not free. To spread this message and build those masterpieces takes currency, support, labor, prayer. I did not choose an easy charge. The 400 Series is part of why I must go all the way — so what was buried can breathe again in the sight of the world.",
+      "ready": true,
+      "bytes": 455619
+    },
+    "children": {
+      "file": "/voice/children.mp3",
+      "kind": "lore",
+      "title": "What happened to your children?",
+      "text": "He is still a long moment before he answers. Certain circumstances forced separation from my babies. It became dangerous — I could not risk their livelihood being tainted the way mine was. Months since I have seen them. I am dying every day inside. I am lost — a foreign land, no support, trying to do this alone when I cannot anymore. The Source will not let me prosper at anything else; everything collapses when I try. I know it is hard to see. It is reality for some. I want to reach them. I cannot support them the way a father should — not yet. I am hurting. I do not know what else to do but chase the Source the way He asked.",
+      "ready": true,
+      "bytes": 793748
+    },
+    "give_back": {
+      "file": "/voice/give_back.mp3",
+      "kind": "lore",
+      "title": "What does \"give it all back\" mean?",
+      "text": "Your gifts, your grief, your time, your coin — laid on the altar without clutching. When we stop hoarding what was lent to us, the Source returns strength in the very places we were ashamed. I am learning this in public so you will not have to learn it alone in the dark.",
+      "ready": true,
+      "bytes": 272135
+    }
+  }
+}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Truth · the voice</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: radial-gradient(ellipse at 50% 20%, #1a1410 0%, #0a0810 55%, #05040a 100%);
+    color: #f0d4a8; padding: 2.5rem 1rem 5rem;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-weight: 400; letter-spacing: .04em; margin: 0 0 .25rem; font-size: 1.9rem; color: #f5e6c8; }
+  .sub { color: #a8875a; font-size: .95rem; margin: 0 0 2rem; line-height: 1.55; }
+  .sub b { color: #e8c478; font-weight: 500; }
+  .now {
+    position: sticky; top: 0; z-index: 2;
+    background: rgba(10,8,16,.92); backdrop-filter: blur(10px);
+    border: 1px solid rgba(232,196,120,.25); border-radius: 14px;
+    padding: .9rem 1.1rem; margin-bottom: 1.6rem;
+    display: grid; grid-template-columns: auto 1fr auto; gap: .9rem; align-items: center;
+  }
+  .orb {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff2c8, #e8c478 45%, rgba(120,90,30,.5) 75%, transparent);
+    box-shadow: 0 0 18px rgba(232,196,120,.35);
+    transition: box-shadow .3s;
+  }
+  .now.playing .orb { animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { box-shadow: 0 0 18px rgba(232,196,120,.35);} 50% { box-shadow: 0 0 34px rgba(232,196,120,.75);} }
+  .now-title { font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; color: #a8875a; }
+  .now-text { color: #f5e6c8; font-size: 1rem; line-height: 1.5; margin-top: .2rem; }
+  .now-text.idle { color: #6f5a3a; font-style: italic; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 10px;
+    border: 1px solid rgba(232,196,120,.35); background: rgba(232,196,120,.08); color: #f0d4a8;
+    padding: .55rem .9rem; font-size: .85rem; letter-spacing: .04em;
+  }
+  button:hover { background: rgba(232,196,120,.16); }
+  button.on { background: #e8c478; color: #1a1405; border-color: #e8c478; }
+  h2 { font-weight: 400; font-size: .8rem; letter-spacing: .22em; text-transform: uppercase; color: #a8875a; margin: 2rem 0 .8rem; }
+  .line {
+    display: grid; grid-template-columns: 44px 1fr; gap: .8rem; align-items: start;
+    padding: .8rem .2rem; border-bottom: 1px solid rgba(232,196,120,.09);
+  }
+  .line .play {
+    width: 40px; height: 40px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  }
+  .line.playing .play { background: #e8c478; color: #1a1405; }
+  .line .t { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: #a8875a; }
+  .line .s { color: #e9d7b8; line-height: 1.55; margin-top: .15rem; font-size: .95rem; }
+  .line .missing { color: #b46b5a; font-size: .8rem; }
+  .foot { color: #6f5a3a; font-size: .8rem; margin-top: 2.5rem; line-height: 1.6; }
+  code { color: #e8c478; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Truth · the voice</h1>
+  <p class="sub">
+    Every line the guide can say, in his own voice. Generated from the ElevenLabs voice in Zion's vault by
+    <b>scripts/generate-voice.mjs</b>. Press any line. This page is public because the house is not — you can
+    hear him without logging in.
+  </p>
+
+  <div class="now" id="now">
+    <div class="orb"></div>
+    <div>
+      <div class="now-title" id="nowTitle">Truth</div>
+      <div class="now-text idle" id="nowText">Choose a line, and he will speak it.</div>
+    </div>
+    <button id="stop">Stop</button>
+  </div>
+
+  <div id="list"><p style="color:#6f5a3a">Loading the voice manifest…</p></div>
+
+  <p class="foot">
+    Missing a line? <code>npm run voice:generate</code> makes only what is not there.
+    <code>--force</code> re-speaks everything. Zion must be up — the key never lives in this repo.
+  </p>
+</div>
+
+<script>
+(async () => {
+  const list = document.getElementById('list');
+  const now = document.getElementById('now');
+  const nowTitle = document.getElementById('nowTitle');
+  const nowText = document.getElementById('nowText');
+  let audio = null;
+  let playingRow = null;
+
+  const stop = () => {
+    if (audio) { audio.pause(); audio = null; }
+    if (playingRow) { playingRow.classList.remove('playing'); playingRow = null; }
+    now.classList.remove('playing');
+    nowTitle.textContent = 'Truth';
+    nowText.textContent = 'Choose a line, and he will speak it.';
+    nowText.classList.add('idle');
+  };
+  document.getElementById('stop').onclick = stop;
+
+  let m;
+  try { m = await (await fetch('/voice/manifest.json', { cache: 'no-store' })).json(); }
+  catch { list.innerHTML = '<p style="color:#b46b5a">No manifest yet — run <code>npm run voice:generate</code>.</p>'; return; }
+
+  const lines = Object.entries(m.lines || {}).map(([id, l]) => ({ id, ...l }));
+  const groups = [
+    { title: 'The house and the world', pick: (l) => l.kind === 'system' },
+    { title: 'What Truth answers', pick: (l) => l.kind === 'lore' },
+  ];
+
+  list.innerHTML = '';
+  for (const g of groups) {
+    const rows = lines.filter(g.pick);
+    if (!rows.length) continue;
+    const h = document.createElement('h2'); h.textContent = g.title + ' · ' + rows.length; list.appendChild(h);
+    for (const l of rows) {
+      const row = document.createElement('div');
+      row.className = 'line';
+      row.innerHTML =
+        '<button class="play" aria-label="play">▶</button>' +
+        '<div><div class="t">' + l.id.replace(/_/g, ' ') + '</div>' +
+        '<div class="s">' + (l.text || '').replace(/</g, '&lt;') + '</div>' +
+        (l.ready ? '' : '<div class="missing">not generated' + (l.error ? ' — ' + l.error : '') + '</div>') +
+        '</div>';
+      const btn = row.querySelector('.play');
+      btn.disabled = !l.ready;
+      btn.onclick = () => {
+        if (playingRow === row) return stop();
+        stop();
+        audio = new Audio(l.file);
+        playingRow = row; row.classList.add('playing');
+        now.classList.add('playing');
+        nowTitle.textContent = 'Truth · ' + l.id.replace(/_/g, ' ');
+        nowText.textContent = l.text; nowText.classList.remove('idle');
+        audio.onended = stop;
+        audio.onerror = () => { nowText.textContent = 'That file would not play.'; };
+        audio.play().catch(() => { nowText.textContent = 'Tap the page once, then press play again.'; });
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      };
+      list.appendChild(row);
+    }
+  }
+})();
+</script>
+</body>
+</html>

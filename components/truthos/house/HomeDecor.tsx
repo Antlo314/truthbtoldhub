@@ -3,13 +3,17 @@
 /**
  * One-storey furnishings. Every volume here is a FURNITURE solid —
  * one mesh (or one HouseProp) per row, sized to that row's hx/hz/h.
- * Nothing is nested inside another solid's box.
+ * Nothing is nested inside another solid's box. Surface kit (books, a
+ * lamp, pillows, the coffee machine, the range hood) has no collider and
+ * sits inside its parent's XZ at y = parent.h (or above it).
+ *
+ * Kenney props face local +z; a yaw of θ points the front at (sin θ, cos θ).
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import HouseProp from './HouseProp';
 import { useHouseMaterials } from './HouseMaterials';
-import { DESK, MAIN_Y, SHELL, furn, u, type Furnishing } from './homeMap';
+import { DESK, FRONT_DOOR, MAIN_Y, SHELL, furn, u, type Furnishing } from './homeMap';
 import WallMural from './WallMural';
 
 const X0 = SHELL.minX;
@@ -59,19 +63,26 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
     const arcade = furn('arcade cabinet');
     const plant = furn('rec plant');
     const tray = furn('daily word tray');
+    const coatRack = furn('coat rack');
     const bench = furn('mark bench');
     const vanity = furn('bath vanity');
     const bed = furn('spare bed');
+    const nightstand = furn('spare nightstand');
+    const dresser = furn('spare dresser');
     const livSofa = furn('living sofa');
     const livTable = furn('living coffee table');
     const accent = furn('accent chair');
     const shelves = furn('bookshelf wall');
-    const hearth = furn('media wall');
+    const media = furn('media wall');
     const island = furn('island');
     const stoolL = furn('island stool L');
     const stoolC = furn('island stool C');
     const stoolR = furn('island stool R');
-    const counter = furn('counter run');
+    const cabW = furn('counter cabinet W');
+    const sink = furn('kitchen sink');
+    const drawers = furn('counter drawers');
+    const stove = furn('kitchen stove');
+    const cabE = furn('counter cabinet E');
     const fridge = furn('fridge');
     const codex = furn('codex desk');
     const table = furn('dining table');
@@ -87,7 +98,8 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
 
             {/* Rec */}
             <Solid f={desk}>
-                <HouseProp model="desk" rotation={[0, desk.yaw ?? 0, 0]} fit={{ w: desk.hx * 2, d: desk.hz * 2 }}>
+                {/* h is pinned so the desktop lands at desk.h, where the kit sits */}
+                <HouseProp model="desk" rotation={[0, desk.yaw ?? 0, 0]} fit={{ w: desk.hx * 2, h: desk.h, d: desk.hz * 2 }}>
                     <Box f={desk} mat={m.woodDark} shadow={sh} />
                 </HouseProp>
                 <group position={[0, desk.h, -0.08]}>
@@ -101,6 +113,24 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <group position={[0, desk.h, 0.16]}>
                     <HouseProp model="keyboard" fit={{ w: 0.36 }}>
                         {null}
+                    </HouseProp>
+                </group>
+                {/* A stack of books at the desk's west end — reading kept close */}
+                <group position={[-0.68, desk.h, -0.06]} rotation={[0, 0.25, 0]}>
+                    <HouseProp model="booksStack" fit={{ w: 0.28 }}>
+                        <mesh position={[0, 0.09, 0]} castShadow={sh}>
+                            <boxGeometry args={[0.28, 0.18, 0.18]} />
+                            <primitive object={m.book} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
+                {/* A small plant on the east corner — something alive at the terminal */}
+                <group position={[0.7, desk.h, -0.12]}>
+                    <HouseProp model="plantSmall" fit={{ h: 0.4 }}>
+                        <mesh position={[0, 0.2, 0]} castShadow={sh}>
+                            <cylinderGeometry args={[0.1, 0.08, 0.4, 8]} />
+                            <primitive object={m.wood} attach="material" />
+                        </mesh>
                     </HouseProp>
                 </group>
                 <mesh position={[0, DESK.monitorY - MAIN_Y, 0.18]}>
@@ -120,6 +150,21 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="sofa" rotation={[0, recSofa.yaw ?? 0, 0]} fit={{ w: recSofa.hx * 2, d: recSofa.hz * 2 }}>
                     <Box f={recSofa} mat={m.fabric} shadow={sh} />
                 </HouseProp>
+                {/* Two throw pillows on the seat, leaning into the backrest (sofa faces +z,
+                    seat top sits at ~0.54 once the sofa is fitted to its width) */}
+                {[
+                    { x: -0.72, ry: 0.18 },
+                    { x: 0.72, ry: -0.12 },
+                ].map((p) => (
+                    <group key={p.x} position={[p.x, 0.54, -0.16]} rotation={[-0.22, p.ry, 0]}>
+                        <HouseProp model="throwPillow" fit={{ w: 0.44 }}>
+                            <mesh position={[0, 0.2, 0]} castShadow={sh}>
+                                <boxGeometry args={[0.44, 0.4, 0.14]} />
+                                <primitive object={m.fabricLight} attach="material" />
+                            </mesh>
+                        </HouseProp>
+                    </group>
+                ))}
             </Solid>
             <Solid f={recTable}>
                 <HouseProp model="coffeeTable" fit={{ w: recTable.hx * 2, d: recTable.hz * 2 }}>
@@ -158,6 +203,21 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <primitive object={m.book} attach="material" />
                 </mesh>
             </Solid>
+            {/* Coat rack inside the front door — somewhere to hang what you carried in */}
+            <Solid f={coatRack}>
+                <HouseProp model="coatRack" fit={{ h: coatRack.h }}>
+                    <Box f={coatRack} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            {/* Entry rug just inside the door — flat, walk-over, no collider */}
+            <group position={[FRONT_DOOR.x, MAIN_Y + 0.004, 14.6]}>
+                <HouseProp model="rugRect" fit={{ w: 2.4 }} shadows={false}>
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow={sh}>
+                        <planeGeometry args={[2.4, 1.4]} />
+                        <primitive object={m.rug} attach="material" />
+                    </mesh>
+                </HouseProp>
+            </group>
 
             {/* The Mark — plaster on the walls, not in the doorway */}
             <Solid f={bench}>
@@ -177,8 +237,32 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <Box f={vanity} mat={m.marble} shadow={sh} />
             </Solid>
             <Solid f={bed}>
-                <HouseProp model="bed" rotation={[0, bed.yaw ?? 0, 0]} fit={{ w: bed.hz * 2, d: bed.hx * 2 }}>
+                {/* Bed's long axis is z (headboard at local −z → north wall), so w↔x, d↔z */}
+                <HouseProp model="bed" rotation={[0, bed.yaw ?? 0, 0]} fit={{ w: bed.hx * 2, d: bed.hz * 2 }}>
                     <Box f={bed} mat={m.linen} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            {/* Nightstand at the head of the bed with a small lamp on it */}
+            <Solid f={nightstand}>
+                <HouseProp model="nightstand" fit={{ w: nightstand.hx * 2, h: nightstand.h, d: nightstand.hz * 2 }}>
+                    <Box f={nightstand} mat={m.wood} shadow={sh} />
+                </HouseProp>
+                <group position={[0, nightstand.h, -0.02]}>
+                    <HouseProp model="tableLamp" fit={{ h: 0.5 }}>
+                        <mesh position={[0, 0.25, 0]} castShadow={sh}>
+                            <cylinderGeometry args={[0.12, 0.05, 0.5, 8]} />
+                            <primitive object={m.linen} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                    {!low && (
+                        <pointLight position={[0, 0.42, 0]} intensity={0.7} color="#ffd9a8" distance={4} decay={2} />
+                    )}
+                </group>
+            </Solid>
+            {/* Dresser on the north wall, facing the room */}
+            <Solid f={dresser}>
+                <HouseProp model="dresser" fit={{ w: dresser.hx * 2, h: dresser.h, d: dresser.hz * 2 }}>
+                    <Box f={dresser} mat={m.woodDark} shadow={sh} />
                 </HouseProp>
             </Solid>
 
@@ -199,19 +283,50 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 </HouseProp>
             </Solid>
             <Solid f={shelves}>
-                <HouseProp model="bookcase" rotation={[0, shelves.yaw ?? 0, 0]} fit={{ h: shelves.h, d: shelves.hz * 2 }}>
-                    <Box f={shelves} mat={m.woodDark} shadow={sh} />
-                </HouseProp>
+                {/* Turned −π/2 to face west, so the model's width runs along world z.
+                    Four narrow bays tile the 3.7 m run instead of one unit stretched 9× wide. */}
+                {[-1.5, -0.5, 0.5, 1.5].map((k, i) => (
+                    <group key={k} position={[0, 0, k * (shelves.hz / 2)]}>
+                        <HouseProp
+                            model="bookcase"
+                            rotation={[0, shelves.yaw ?? 0, 0]}
+                            fit={{ w: shelves.hz / 2, h: shelves.h, d: shelves.hx * 2 }}
+                        >
+                            {i === 0 ? (
+                                <group position={[0, 0, -k * (shelves.hz / 2)]}>
+                                    <Box f={shelves} mat={m.woodDark} shadow={sh} />
+                                </group>
+                            ) : null}
+                        </HouseProp>
+                    </group>
+                ))}
             </Solid>
-            <Solid f={hearth}>
-                <Box f={hearth} mat={m.stone} shadow={sh} />
-                <mesh position={[-hearth.hx - 0.005, 0.58, 0]} rotation={[0, -Math.PI / 2, 0]}>
-                    <planeGeometry args={[0.7, 0.5]} />
-                    <meshBasicMaterial color="#ff9a3d" toneMapped={false} />
-                </mesh>
-                {!low && (
-                    <pointLight position={[-0.55, 0.7, 0]} intensity={1.6} color="#ff9a3d" distance={6} decay={2} />
-                )}
+            {/* Media console on the east wall (faces west); the row's h is the console height */}
+            <Solid f={media}>
+                <HouseProp model="mediaConsole" rotation={[0, media.yaw ?? 0, 0]} fit={{ w: media.hz * 2, h: media.h, d: media.hx * 2 }}>
+                    <Box f={media} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+                {/* Television standing on the console, screen toward the room */}
+                <group position={[0.04, media.h, 0]}>
+                    <HouseProp model="television" rotation={[0, media.yaw ?? 0, 0]} fit={{ w: 1.1 }}>
+                        <mesh position={[0, 0.36, 0]} castShadow={sh}>
+                            <boxGeometry args={[0.12, 0.66, 1.1]} />
+                            <primitive object={m.metalDark} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
+                {/* A lamp at the console's south end keeps the corner warm now the fire is gone */}
+                <group position={[0, media.h, 0.74]}>
+                    <HouseProp model="tableLamp" fit={{ h: 0.5 }}>
+                        <mesh position={[0, 0.25, 0]} castShadow={sh}>
+                            <cylinderGeometry args={[0.12, 0.05, 0.5, 8]} />
+                            <primitive object={m.linen} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                    {!low && (
+                        <pointLight position={[-0.2, 0.45, 0]} intensity={1.1} color="#ffc98a" distance={5} decay={2} />
+                    )}
+                </group>
             </Solid>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[9.4, 0.015, 4.5]} receiveShadow={sh}>
                 <planeGeometry args={[3.6, 3.2]} />
@@ -229,12 +344,50 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     </HouseProp>
                 </Solid>
             ))}
-            <Solid f={counter}>
-                <Box f={counter} mat={m.woodDark} shadow={sh} />
-                <mesh position={[0, counter.h + 0.025, 0]}>
-                    <boxGeometry args={[counter.hx * 2, 0.05, counter.hz * 2 + 0.04]} />
-                    <primitive object={m.counter} attach="material" />
-                </mesh>
+            {/* Counter run on the north wall — five kitchen modules, each filling its own
+                collider box, all facing +z into the room */}
+            <Solid f={cabW}>
+                <HouseProp model="kitchenCabinet" fit={{ w: cabW.hx * 2, h: cabW.h, d: cabW.hz * 2 }}>
+                    <Box f={cabW} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+                {/* Coffee machine on the counter beside the fridge, back to the wall */}
+                <group position={[0.06, cabW.h, -0.12]}>
+                    <HouseProp model="coffeeMachine" fit={{ h: 0.34 }}>
+                        <mesh position={[0, 0.17, 0]} castShadow={sh}>
+                            <boxGeometry args={[0.36, 0.34, 0.44]} />
+                            <primitive object={m.metalDark} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
+            </Solid>
+            <Solid f={sink}>
+                <HouseProp model="kitchenSink" fit={{ w: sink.hx * 2, h: sink.h, d: sink.hz * 2 }}>
+                    <Box f={sink} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={drawers}>
+                <HouseProp model="kitchenDrawers" fit={{ w: drawers.hx * 2, h: drawers.h, d: drawers.hz * 2 }}>
+                    <Box f={drawers} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+            </Solid>
+            <Solid f={stove}>
+                <HouseProp model="kitchenStove" fit={{ w: stove.hx * 2, h: stove.h, d: stove.hz * 2 }}>
+                    <Box f={stove} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
+                {/* Slim range hood over the stove, tucked under the upper cabinets (their bottom is 1.87) */}
+                <group position={[0, 1.52, -0.22]}>
+                    <HouseProp model="rangeHood" fit={{ w: 0.9, h: 0.34, d: 0.56 }}>
+                        <mesh position={[0, 0.17, 0]} castShadow={sh}>
+                            <boxGeometry args={[0.9, 0.34, 0.56]} />
+                            <primitive object={m.metal} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
+            </Solid>
+            <Solid f={cabE}>
+                <HouseProp model="kitchenCabinet" fit={{ w: cabE.hx * 2, h: cabE.h, d: cabE.hz * 2 }}>
+                    <Box f={cabE} mat={m.woodDark} shadow={sh} />
+                </HouseProp>
             </Solid>
             <Solid f={fridge}>
                 <HouseProp model="fridge" fit={{ h: fridge.h, w: fridge.hx * 2, d: fridge.hz * 2 }}>

@@ -3,9 +3,11 @@
 /**
  * Truth.OS wallpaper catalogue.
  *
- * Three families:
+ * Four families:
  *  · Sanctum  — the game's own key art
  *  · Abstract — procedural CSS mesh gradients (crisp at any resolution, 0 bytes)
+ *  · Quiet    — procedural too, but in the sanctum's own palette: obsidian,
+ *               amber, emerald, violet. Low light, nothing loud. Always open.
  *  · Living   — repaints itself from the player's local clock
  *
  * Because this OS lives inside the game, several wallpapers are earned rather
@@ -16,7 +18,7 @@
  */
 import type { OsAccentId } from './OsIcon';
 
-export type WallpaperFamily = 'Sanctum' | 'Abstract' | 'Living';
+export type WallpaperFamily = 'Sanctum' | 'Abstract' | 'Quiet' | 'Living';
 
 /** Real progress fields the unlock predicates are allowed to read */
 export type GameSnapshot = {
@@ -312,6 +314,86 @@ const ABSTRACT: OsWallpaper[] = [
     },
 ];
 
+/* ── Quiet: the sanctum's own light ──────────────────────── */
+
+/**
+ * Same machinery as Abstract, different intent. These are the rooms of the
+ * house rendered as light: a hearth burning low, a sea of cloud, a night with
+ * one signal in it, the aether at first light. Layered radial + linear, kept
+ * dim so windows sit forward. No gates — the quiet is for everyone.
+ */
+const QUIET: OsWallpaper[] = [
+    {
+        id: 'ember-hearth',
+        name: 'Ember Hearth',
+        family: 'Quiet',
+        accent: 'amber',
+        kind: 'gradient',
+        css: mesh(
+            [
+                // the fire, low and off the bottom edge
+                'radial-gradient(ellipse 72% 46% at 50% 108%, rgba(245,158,11,0.50) 0%, rgba(180,83,9,0.26) 34%, transparent 70%)',
+                // warm smoke rising up the left wall
+                'radial-gradient(at 18% 24%, rgba(120,53,15,0.32) 0px, transparent 56%)',
+                'radial-gradient(at 84% 30%, rgba(69,26,3,0.55) 0px, transparent 50%)',
+            ],
+            'linear-gradient(180deg, #0a0806 0%, #14100c 55%, #1f130a 100%)',
+        ),
+    },
+    {
+        id: 'cloud-sea',
+        name: 'Cloud Sea',
+        family: 'Quiet',
+        accent: 'violet',
+        kind: 'gradient',
+        css: mesh(
+            [
+                // banks of cloud, lit faintly from beneath
+                'radial-gradient(ellipse 84% 30% at 30% 78%, rgba(167,139,250,0.20) 0%, transparent 70%)',
+                'radial-gradient(ellipse 92% 26% at 72% 90%, rgba(196,181,253,0.15) 0%, transparent 70%)',
+                'radial-gradient(ellipse 60% 24% at 50% 64%, rgba(139,92,246,0.13) 0%, transparent 70%)',
+                // the sky above the cloud, still dark
+                'radial-gradient(at 50% 0%, #1e1b3a 0px, transparent 60%)',
+            ],
+            'linear-gradient(180deg, #08070f 0%, #100e1f 60%, #1a1630 100%)',
+        ),
+    },
+    {
+        id: 'signal-night',
+        name: 'Signal Night',
+        family: 'Quiet',
+        accent: 'emerald',
+        kind: 'gradient',
+        css: mesh(
+            [
+                // one signal, small and steady, high in the dark
+                'radial-gradient(circle at 74% 26%, rgba(52,211,153,0.34) 0px, rgba(16,185,129,0.12) 7%, transparent 19%)',
+                // emerald light along the horizon
+                'radial-gradient(ellipse 100% 40% at 50% 110%, rgba(6,78,59,0.55) 0%, transparent 70%)',
+                'radial-gradient(at 20% 30%, #0b1a24 0px, transparent 55%)',
+            ],
+            'linear-gradient(180deg, #030507 0%, #05090d 60%, #061412 100%)',
+        ),
+    },
+    {
+        id: 'aether-dawn',
+        name: 'Aether Dawn',
+        family: 'Quiet',
+        accent: 'gold',
+        kind: 'gradient',
+        css: mesh(
+            [
+                // first light at the horizon
+                'radial-gradient(ellipse 90% 40% at 50% 100%, rgba(251,191,36,0.40) 0%, rgba(217,119,6,0.18) 35%, transparent 70%)',
+                // the aether overhead, violet going to indigo
+                'radial-gradient(at 22% 28%, rgba(76,29,149,0.55) 0px, transparent 55%)',
+                'radial-gradient(at 80% 18%, rgba(49,46,129,0.50) 0px, transparent 50%)',
+            ],
+            'linear-gradient(180deg, #07061a 0%, #140f2b 55%, #2a1a24 100%)',
+        ),
+    },
+];
+
 /* ── Living: repaints from the local clock ───────────────── */
 
 type Phase = { from: number; name: string; accent: OsAccentId; css: string };
@@ -399,9 +481,9 @@ const LIVING: OsWallpaper[] = [
     },
 ];
 
-export const OS_WALLPAPERS: OsWallpaper[] = [...SANCTUM, ...ABSTRACT, ...LIVING];
+export const OS_WALLPAPERS: OsWallpaper[] = [...SANCTUM, ...ABSTRACT, ...QUIET, ...LIVING];
 
-export const WALLPAPER_FAMILIES: WallpaperFamily[] = ['Sanctum', 'Abstract', 'Living'];
+export const WALLPAPER_FAMILIES: WallpaperFamily[] = ['Sanctum', 'Abstract', 'Quiet', 'Living'];
 
 /** True when a wallpaper has no gate, or the player has met it */
 export function isUnlocked(w: OsWallpaper, snap: GameSnapshot): boolean {

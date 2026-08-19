@@ -6,7 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "validate": "npm run validate:house && npm run validate:layout && npm run validate:props && npm run validate:grove",
+    "validate:house": "node --experimental-strip-types scripts/validate-house.mjs",
+    "validate:layout": "node --experimental-strip-types scripts/audit-layout.mjs",
+    "validate:props": "node scripts/audit-props.mjs",
+    "validate:grove": "node --experimental-strip-types scripts/validate-grove.mjs",
+    "audit:scene": "node scripts/audit-scene.mjs",
+    "measure:models": "node scripts/measure-models.mjs",
+    "voice:generate": "node scripts/generate-voice.mjs",
+    "voice:force": "node scripts/generate-voice.mjs --force"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

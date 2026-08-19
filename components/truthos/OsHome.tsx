@@ -90,7 +90,7 @@ export default function OsHome({
         },
         {
             app: 'chamber',
-            hint: 'the house',
+            hint: house.seen === house.total ? 'every room seen' : 'rooms of the house seen',
             value: `${house.seen}/${house.total}`,
         },
         {
@@ -172,7 +172,7 @@ export default function OsHome({
             </ul>
 
             <p className="text-[10px] uppercase tracking-[0.28em] text-white/25 font-mono">
-                {phone ? 'Dock · Launchpad for the rest' : 'Start holds the rest · six folders'}
+                {phone ? 'Launchpad holds the rest' : 'Start holds the rest · Ctrl+K asks'}
             </p>
         </div>
     );

@@ -9,6 +9,8 @@ import { getWalkerPose } from './walkerPose';
 import { formatClock, useWorldTime } from './worldTime';
 import { isOutdoors, roomAt } from './homeMap';
 import { useHouseUi } from './houseUiStore';
+import { useTruthNarrator } from './useTruthNarrator';
+import { TruthVoiceChip } from './TruthVoiceChip';
 
 const COMPASS_FOV = 1.15;
 
@@ -28,6 +30,9 @@ export default function WorldHud({
         const t = setInterval(() => tick((n) => n + 1), 400);
         return () => clearInterval(t);
     }, []);
+    // Truth greets each place on arrival — hooked here because this is
+    // the one component that is mounted exactly when the player walks.
+    useTruthNarrator(visible);
 
     if (!visible) return null;
 
@@ -81,6 +86,19 @@ export default function WorldHud({
                         ☰
                     </button>
                 </div>
+            </div>
+
+            {/* Truth's voice — visible while he speaks, one tap to silence.
+                Bottom-LEFT. The right column is the phone's Use/Jump stack
+                (HouseMobileControls, right-3, ~76–150px up), and a chip
+                placed there sat exactly on the Use button and ate its taps.
+                Left is the walk stick's column, but the stick lives lower;
+                on phones the chip is lifted clear of it. */}
+            <div
+                className="absolute left-3 z-[46]"
+                style={{ bottom: `calc(${compact ? '11.5rem' : '1rem'} + env(safe-area-inset-bottom, 0px))` }}
+            >
+                <TruthVoiceChip compact={compact} />
             </div>
         </div>
     );

@@ -14,12 +14,27 @@
  * busy. Parallax is the only JS, throttled to pointer moves and written
  * straight to a CSS variable rather than through state.
  *
+ * The world's clock also reaches in: a thin tint over the whole layer goes
+ * warm at dawn and dusk and cool at night, so the desktop keeps time with the
+ * house outside. Written as a CSS variable from a store subscription — the
+ * hour ticks every frame in the world, but the tint only changes when the
+ * PHASE does, so React never re-renders for it.
+ *
  * Honours prefers-reduced-motion by dropping the drift and the parallax.
  */
 import { useEffect, useRef } from 'react';
 import { ACCENT_HEX } from './osSystemStore';
 import type { OsAccentId } from './OsIcon';
 import AetherDust from './AetherDust';
+import { useWorldTime, phaseOf, type Phase } from './house/worldTime';
+
+/** Colour of the time-of-day tint per phase; day is no tint at all */
+const PHASE_TINT: Record<Phase, string> = {
+    dawn: 'rgba(245,158,11,0.10)',
+    dusk: 'rgba(245,158,11,0.11)',
+    night: 'rgba(96,120,235,0.12)',
+    day: 'rgba(0,0,0,0)',
+};
 
 export default function OsAmbient({
     accent,
@@ -29,6 +44,22 @@ export default function OsAmbient({
     phone?: boolean;
 }) {
     const root = useRef<HTMLDivElement>(null);
+
+    // Time-of-day tint. Subscribe to the world clock outside React and only
+    // touch the DOM when the phase flips — four writes a day, not sixty a second.
+    useEffect(() => {
+        const el = root.current;
+        if (!el) return;
+        let last: Phase | null = null;
+        const apply = (hour: number) => {
+            const phase = phaseOf(hour);
+            if (phase === last) return;
+            last = phase;
+            el.style.setProperty('--os-phase-tint', PHASE_TINT[phase]);
+        };
+        apply(useWorldTime.getState().hour);
+        return useWorldTime.subscribe((s) => apply(s.hour));
+    }, []);
 
     useEffect(() => {
         if (phone) return;
@@ -64,7 +95,11 @@ export default function OsAmbient({
             ref={root}
             aria-hidden
             className="pointer-events-none absolute inset-0 overflow-hidden"
-            style={{ ['--px' as string]: '0', ['--py' as string]: '0' }}
+            style={{
+                ['--px' as string]: '0',
+                ['--py' as string]: '0',
+                ['--os-phase-tint' as string]: 'rgba(0,0,0,0)',
+            }}
         >
             <style>{`
                 @keyframes os-drift-a {
@@ -145,6 +180,16 @@ export default function OsAmbient({
                     }}
                 />
             )}
+
+            {/* The hour, as light: amber at dawn and dusk, cool blue at night.
+                Crossfades over a few seconds so a phase change is felt, not seen. */}
+            <div
+                className="absolute inset-0"
+                style={{
+                    background: 'var(--os-phase-tint, rgba(0,0,0,0))',
+                    transition: 'background-color 4s ease',
+                }}
+            />
 
             {/* Depth: darken the edges so content sits forward */}
             <div className="absolute inset-0 bg-[radial-gradient(120%_95%_at_50%_38%,transparent_38%,rgba(0,0,0,0.55)_100%)]" />

@@ -8,6 +8,8 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { speak as truthSpeak } from '@/lib/truthVoice';
+import { useWorldTime, phaseOf } from './house/worldTime';
 import {
     Bell,
     BookOpen,
@@ -223,7 +225,9 @@ export default function TruthOSShell({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bootKey]);
 
-    // Welcome toast once per boot
+    // Welcome toast once per boot — and Truth says it, once per session.
+    // A restart re-shows the toast (bootKey) but does not re-run the voice;
+    // truthVoice remembers, so the OS greets you the first time only.
     useEffect(() => {
         if (bootDone && welcomed.current !== bootKey) {
             welcomed.current = bootKey;
@@ -232,8 +236,24 @@ export default function TruthOSShell({
                 body: 'Press Ctrl+K to search everything, or Ctrl+/ for the shortcut sheet.',
                 accent: 'emerald',
             });
+            void truthSpeak('os_boot');
         }
     }, [bootDone, bootKey, notify]);
+
+    // Truth marks the turning of the day. Transitions only — the phase is
+    // sampled, and a line fires when it CHANGES into night or dawn, never
+    // because the OS happens to be open at 2am. First sample just records.
+    const lastPhase = useRef<string | null>(null);
+    const worldHour = useWorldTime((s) => s.hour);
+    useEffect(() => {
+        if (!bootDone) return;
+        const phase = phaseOf(worldHour);
+        const prev = lastPhase.current;
+        lastPhase.current = phase;
+        if (prev === null || prev === phase) return;
+        if (phase === 'night') void truthSpeak('os_night');
+        if (phase === 'dawn') void truthSpeak('os_dawn');
+    }, [worldHour, bootDone]);
 
     useEffect(() => {
         const tick = () => {

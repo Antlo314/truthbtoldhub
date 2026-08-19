@@ -16,12 +16,22 @@ import {
     Settings2,
     Sparkles,
     SquareStack,
+    Volume2,
+    VolumeX,
 } from 'lucide-react';
 import { APP_META, useTruthOs, type OsAppId } from './truthOsStore';
 import { useOsSystem } from './osSystemStore';
 import { ACCENT_STYLES, OsIconTile, getAppAccent } from './OsIcon';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { isAdminEmail } from '@/lib/adminEmails';
+import { isMuted, setMuted, subscribe as voiceSub } from '@/lib/truthVoice';
+
+/**
+ * What the palette hands the guide when you ask to be shown around. The
+ * guide's own greeting says "say guide me, and I will walk you through this
+ * system" — this is that, typed for you.
+ */
+const GUIDE_PROMPT = 'Guide me through Truth.OS';
 
 type CmdKind = 'app' | 'action' | 'file' | 'route' | 'math';
 
@@ -131,6 +141,10 @@ export default function OsCommandPalette({
 
     const sys = useOsSystem();
 
+    // Truth's voice — mirrored so the toggle's label is right while the palette is open
+    const [voiceMuted, setVoiceMuted] = useState(true);
+    useEffect(() => voiceSub((s) => setVoiceMuted(s.muted)), []);
+
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
@@ -155,6 +169,45 @@ export default function OsCommandPalette({
         // System actions
         const action = (id: string, title: string, sub: string, run: () => void, icon?: ReactNode) =>
             list.push({ id: `act:${id}`, kind: 'action', title, sub, run, icon, keywords: id });
+
+        // Truth — the guide is a program like any other, so it opens the same way
+        list.push({
+            id: 'act:ask',
+            kind: 'action',
+            title: 'Ask Truth',
+            sub: 'Truth',
+            app: 'truth',
+            keywords: 'ask truth guide help question',
+            run: () => openApp('truth'),
+        });
+        list.push({
+            id: 'act:guide',
+            kind: 'action',
+            title: 'Guide me through Truth.OS',
+            sub: 'Truth',
+            app: 'truth',
+            keywords: 'guide tour walkthrough help how',
+            // The guide app receives this as initialPrompt and asks it for you
+            // (OsApps.tsx → TruthGuideApp). No spoken replay here: the answer
+            // Truth writes back IS the walkthrough, and playing a canned boot
+            // line over the top of him talking was the wrong idea.
+            run: () => openApp('truth', { payload: { content: GUIDE_PROMPT } }),
+        });
+        action(
+            'voice',
+            `Truth · voice ${voiceMuted ? 'on' : 'off'}`,
+            'Truth',
+            () => {
+                const next = !isMuted();
+                setMuted(next);
+                useOsSystem.getState().notify({
+                    title: next ? 'Truth is quiet' : 'Truth will speak',
+                    body: next ? 'Turn the voice back on any time.' : 'Guide lines play once, in his own voice.',
+                    accent: 'amber',
+                });
+            },
+            voiceMuted ? <Volume2 size={15} /> : <VolumeX size={15} />,
+        );
 
         action('lock', 'Lock screen', 'System', () => sys.setLocked(true));
         action('restart', 'Restart Truth.OS', 'System', onRestart);
@@ -204,7 +257,7 @@ export default function OsCommandPalette({
 
         return list;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [layoutMode, sessionEmail, sys.nightLight, sys.doNotDisturb]);
+    }, [layoutMode, sessionEmail, sys.nightLight, sys.doNotDisturb, voiceMuted]);
 
     const results = useMemo(() => {
         const query = q.trim();

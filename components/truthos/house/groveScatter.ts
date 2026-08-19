@@ -25,6 +25,7 @@ import { SHELL } from './homeMap';
 export const TREES = ['treeDefault', 'treeOak', 'treeDetailed', 'treeFat'] as const;
 export const BUSHES = ['bush', 'bushSmall', 'bushLarge'] as const;
 export const FLOWERS = ['flowerPurple', 'flowerRed', 'flowerYellow'] as const;
+export const GRASSES = ['grassTuft', 'grassLarge'] as const;
 
 /**
  * Native width in metres, measured from the GLB accessors.
@@ -43,6 +44,8 @@ export const FOOTPRINT: Record<string, number> = {
     flowerYellow: 0.159,
     rock: 0.361,
     stone: 0.361,
+    grassTuft: 0.381,
+    grassLarge: 0.409,
 };
 
 export function rng(seed: number) {
@@ -171,11 +174,18 @@ export function verges(seed: number, count: number, against: Placed[] = []): Pla
  * trees claim their ground first and the undergrowth parts around them.
  */
 export function buildGrove(k = 1): {
-    trees: Placed[]; bushes: Placed[]; rocks: Placed[]; blooms: Placed[]; all: Placed[];
+    trees: Placed[]; bushes: Placed[]; rocks: Placed[]; blooms: Placed[]; edge: Placed[]; all: Placed[];
 } {
     const trees = band(20250811, Math.round(46 * k), CLEARING_R - 1, CLEARING_R + 16, TREES, [0.85, 1.5], 1.2);
     const bushes = band(731145, Math.round(60 * k), CLEARING_R - 3, CLEARING_R + 12, BUSHES, [0.7, 1.35], 0.8, trees);
     const rocks = band(908812, Math.round(18 * k), CLEARING_R - 4, CLEARING_R + 10, ['rock', 'stone'], [0.8, 1.6], 0.9, [...trees, ...bushes]);
     const blooms = verges(559021, Math.round(38 * k), [...trees, ...bushes, ...rocks]);
-    return { trees, bushes, rocks, blooms, all: [...trees, ...bushes, ...rocks, ...blooms] };
+    // Clearing edge: tufts and small stones where the open ground frays
+    // into undergrowth. The band straddles CLEARING_R, so the open-ground
+    // margin goes NEGATIVE (-2) to let it stand a step inside the ring;
+    // band() still keeps it 1.4m off every path on its own.
+    const edgeGrass = band(174233, Math.round(14 * k), CLEARING_R - 2, CLEARING_R + 1, GRASSES, [0.8, 1.4], -2, [...trees, ...bushes, ...rocks, ...blooms]);
+    const edgeRock = band(613027, Math.round(6 * k), CLEARING_R - 2, CLEARING_R + 1, ['rock', 'stone'], [0.7, 1.3], -2, [...trees, ...bushes, ...rocks, ...blooms, ...edgeGrass]);
+    const edge = [...edgeGrass, ...edgeRock];
+    return { trees, bushes, rocks, blooms, edge, all: [...trees, ...bushes, ...rocks, ...blooms, ...edge] };
 }

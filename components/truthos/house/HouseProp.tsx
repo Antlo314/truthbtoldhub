@@ -196,22 +196,38 @@ function Model({
         const box = new THREE.Box3().setFromObject(clone);
         const size = box.getSize(new THREE.Vector3());
 
-        // Uniform scale so the requested axis lands on its real-world size
-        let k = 1;
-        if (fit?.w && size.x > 1e-4) k = fit.w / size.x;
-        else if (fit?.h && size.y > 1e-4) k = fit.h / size.y;
-        else if (fit?.d && size.z > 1e-4) k = fit.d / size.z;
+        // Every requested axis lands on its real-world size; axes not
+        // requested follow the first one uniformly, preserving the
+        // model's proportions there.
+        //
+        // This used to be uniform-only — first axis wins, the rest
+        // silently ignored. Fine for `fit={{w}}`, but the furn() rework
+        // now writes calls like `fit={{h, w, d}}` meaning "fill the
+        // collider box", and under the old rule the fridge rendered
+        // 1.42m tall against the 1.85m box the walker collides with:
+        // an invisible ledge of blocked air. Multi-axis requests are a
+        // deliberate non-uniform stretch; single-axis calls behave
+        // exactly as before.
+        const kw = fit?.w && size.x > 1e-4 ? fit.w / size.x : null;
+        const kh = fit?.h && size.y > 1e-4 ? fit.h / size.y : null;
+        const kd = fit?.d && size.z > 1e-4 ? fit.d / size.z : null;
+        const base = kw ?? kh ?? kd ?? 1;
+        const kx = kw ?? base;
+        const ky = kh ?? base;
+        const kz = kd ?? base;
 
         const wrapper = new THREE.Group();
         wrapper.add(clone);
-        if (k !== 1) wrapper.scale.setScalar(k);
+        if (kx !== 1 || ky !== 1 || kz !== 1) wrapper.scale.set(kx, ky, kz);
 
-        // Re-measure after scaling and park the model on its anchor
+        // Re-measure after scaling and park the model on its anchor.
+        // The centre offset is applied to the CHILD, inside the scaled
+        // wrapper, so each component divides by its own axis scale.
         const scaled = new THREE.Box3().setFromObject(wrapper);
         const c = scaled.getCenter(new THREE.Vector3());
-        clone.position.x -= c.x / k;
-        clone.position.z -= c.z / k;
-        clone.position.y -= (anchor === 'base' ? scaled.min.y : c.y) / k;
+        clone.position.x -= c.x / kx;
+        clone.position.z -= c.z / kz;
+        clone.position.y -= (anchor === 'base' ? scaled.min.y : c.y) / ky;
 
         return wrapper;
     }, [scene, shadows, fit?.w, fit?.h, fit?.d, anchor]);
