@@ -40,7 +40,8 @@ export default function LampGroup({
         const map = base.current;
         g.traverse((o) => {
             const l = o as THREE.Light;
-            if (l.isLight && !map.has(l)) map.set(l, l.intensity);
+            // Lights that animate themselves (the fire, the screen, the pool) opt out
+            if (l.isLight && !l.userData.noLampDim && !map.has(l)) map.set(l, l.intensity);
             const mesh = o as THREE.Mesh;
             if (mesh.isMesh) {
                 const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];

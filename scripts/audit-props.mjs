@@ -52,6 +52,16 @@ const urlFor = (k) => {
 
 // ── every model="..." used anywhere in the scene ────────────
 const used = new Map(); // name -> [{file, line}]
+// The plan declares most props as data (homeMap SOLIDS: `model: 'key'`)
+{
+    const plan = readFileSync(join(HOUSE, 'homeMap.ts'), 'utf8').split(/\r?\n/);
+    plan.forEach((line, i) => {
+        for (const m of line.matchAll(/model:\s*'([\w]+)'/g)) {
+            if (!used.has(m[1])) used.set(m[1], []);
+            used.get(m[1]).push({ file: 'homeMap.ts', line: i + 1 });
+        }
+    });
+}
 for (const f of readdirSync(HOUSE).filter((f) => f.endsWith('.tsx'))) {
     const src = readFileSync(join(HOUSE, f), 'utf8').split(/\r?\n/);
     src.forEach((line, i) => {

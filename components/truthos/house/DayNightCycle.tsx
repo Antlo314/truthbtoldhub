@@ -31,6 +31,13 @@ export function getSky(): SkyState {
 
 const SUN_DIST = 60;
 const SHADOW_HALF = 26;
+/**
+ * The sky keyframes were tuned for an open clearing. The lair is one
+ * interior ninety metres end to end; at the old distances the far end of
+ * the Processional sat in haze and every room read smaller than it is.
+ */
+const FOG_NEAR_SCALE = 2.4;
+const FOG_FAR_SCALE = 2.0;
 
 export default function DayNightCycle({
     mobile = false,
@@ -101,8 +108,8 @@ export default function DayNightCycle({
         const fog = scene.fog as THREE.Fog | null;
         if (fog) {
             fog.color.copy(tmp.fog);
-            fog.near = sky.fogNear;
-            fog.far = sky.fogFar;
+            fog.near = sky.fogNear * FOG_NEAR_SCALE;
+            fog.far = sky.fogFar * FOG_FAR_SCALE;
         }
         if (scene.background instanceof THREE.Color) scene.background.copy(tmp.fog);
     });

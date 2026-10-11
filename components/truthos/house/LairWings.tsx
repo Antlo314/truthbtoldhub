@@ -3,43 +3,34 @@
 /**
  * Beyond the arch — the Processional, the Overlook and the four chambers.
  *
- * Walls are boxes along each room's inner rectangle (homeMap.ROOMS), split
- * around the doorways (homeMap.DOORS); the corridor owns the walls it
- * shares with the chambers so no two boxes ever share a face. Every prop
- * is a SOLID drawn at its own circle. The Cinema's screen is the live
- * VideoTexture surface the Cinema panel drives; the Hall's fire, the
- * Well's water and the Studio's neon each keep a light that never dims.
+ * Walls are boxes hugging each room's floor rectangle (homeMap.ROOMS),
+ * split around the doorways (homeMap.DOORS). The corridor owns the walls
+ * it shares with the chambers; a wall between two chambers is drawn as
+ * two half-thickness slabs, one per room, so no two boxes ever share a
+ * face (shared faces are what flickered). Every model-backed prop is
+ * drawn by LairProps; this file draws the shells and the bespoke pieces
+ * — the fire, the pool, the stage, the studio desk, the mast, planters —
+ * and the things that sit on props.
  */
 import { Suspense, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { MeshReflectorMaterial, Sparkles, useTexture } from '@react-three/drei';
-import { useHouseMaterials } from './HouseMaterials';
+import { useHouseMaterials, type HouseMaterials } from './HouseMaterials';
 import HouseProp from './HouseProp';
 import CinemaScreen from './CinemaScreen';
 import { getSky } from './DayNightCycle';
-import { DOORS, FIRE, POOL, ROOMS, WALL_T, room, roomCenter, solid, solidWorld, type Rect, type Solid } from './homeMap';
+import { CORRIDOR_WALL_H, DOORS, FIRE, POOL, SCREEN, SOLIDS, WALL_T, room, roomCenter, solid, type Room } from './homeMap';
+import { SolidGroup } from './LairProps';
 import { PADS } from './worldPads';
 import { getWalkerPose } from './walkerPose';
 import type { QualityProfile } from './renderQuality';
 
-type Mats = ReturnType<typeof useHouseMaterials>;
+type Mats = HouseMaterials;
 
 /* ── Building blocks ────────────────────────────────────────── */
 
-function Box({
-    pos,
-    size,
-    mat,
-    shadow = true,
-    rot,
-}: {
-    pos: [number, number, number];
-    size: [number, number, number];
-    mat: THREE.Material;
-    shadow?: boolean;
-    rot?: [number, number, number];
-}) {
+function Box({ pos, size, mat, shadow = true, rot }: { pos: [number, number, number]; size: [number, number, number]; mat: THREE.Material; shadow?: boolean; rot?: [number, number, number] }) {
     return (
         <mesh position={pos} rotation={rot} castShadow={shadow} receiveShadow={shadow}>
             <boxGeometry args={size} />
@@ -48,34 +39,11 @@ function Box({
     );
 }
 
-/** A world-placed solid: group at its centre, turned its way. */
-function At({ s, children }: { s: Solid; children: React.ReactNode }) {
-    const w = solidWorld(s);
-    return (
-        <group position={[w.x, 0, w.z]} rotation={[0, s.yaw ?? 0, 0]}>
-            {children}
-        </group>
-    );
-}
-
-function Block({ s, mat, shadow, w, d, y = 0 }: { s: Solid; mat: THREE.Material; shadow: boolean; w?: number; d?: number; y?: number }) {
-    return (
-        <mesh position={[0, y + s.h / 2, 0]} castShadow={shadow} receiveShadow={shadow}>
-            <boxGeometry args={[w ?? s.r * 1.6, s.h, d ?? s.r * 1.2]} />
-            <primitive object={mat} attach="material" />
-        </mesh>
-    );
-}
-
-/**
- * A wall along z (constant x) from z0 to z1, with door holes cut out.
- * Each hole is {z0, z1, h}; the wall above a hole stays.
- */
+/** A wall along z (constant x) from z0 to z1, with door holes; the wall above each hole stays. */
 function WallZ({ x, z0, z1, h, holes = [], mat, shadow, t = WALL_T }: { x: number; z0: number; z1: number; h: number; holes?: { z0: number; z1: number; h: number }[]; mat: THREE.Material; shadow: boolean; t?: number }) {
     const parts: { z0: number; z1: number; y0: number; y1: number }[] = [];
     let cur = z0;
-    const sorted = [...holes].sort((a, b) => a.z0 - b.z0);
-    for (const hole of sorted) {
+    for (const hole of [...holes].sort((a, b) => a.z0 - b.z0)) {
         if (hole.z0 > cur) parts.push({ z0: cur, z1: hole.z0, y0: 0, y1: h });
         parts.push({ z0: hole.z0, z1: hole.z1, y0: hole.h, y1: h });
         cur = hole.z1;
@@ -83,34 +51,12 @@ function WallZ({ x, z0, z1, h, holes = [], mat, shadow, t = WALL_T }: { x: numbe
     if (cur < z1) parts.push({ z0: cur, z1, y0: 0, y1: h });
     return (
         <group>
-            {parts.map((p, i) =>
-                p.y1 - p.y0 > 0.01 ? (
-                    <Box key={i} pos={[x, (p.y0 + p.y1) / 2, (p.z0 + p.z1) / 2]} size={[t, p.y1 - p.y0, p.z1 - p.z0]} mat={mat} shadow={shadow} />
-                ) : null,
-            )}
+            {parts.map((p, i) => (p.y1 - p.y0 > 0.01 ? <Box key={i} pos={[x, (p.y0 + p.y1) / 2, (p.z0 + p.z1) / 2]} size={[t, p.y1 - p.y0, p.z1 - p.z0]} mat={mat} shadow={shadow} /> : null))}
         </group>
     );
 }
 
-/** A wall along x (constant z). */
-function WallX({ z, x0, x1, h, mat, shadow, t = WALL_T }: { z: number; x0: number; x1: number; h: number; mat: THREE.Material; shadow: boolean; t?: number }) {
-    return <Box pos={[(x0 + x1) / 2, h / 2, z]} size={[x1 - x0, h, t]} mat={mat} shadow={shadow} />;
-}
-
-/** A gold door frame around a hole in a z-wall. */
-function DoorFrame({ x, z0, z1, h, mat, side }: { x: number; z0: number; z1: number; h: number; mat: THREE.Material; side: 'e' | 'w' }) {
-    const w = z1 - z0;
-    const inX = side === 'e' ? x - WALL_T / 2 - 0.02 : x + WALL_T / 2 + 0.02;
-    return (
-        <group position={[inX, 0, (z0 + z1) / 2]}>
-            <Box pos={[0, h / 2, -(w / 2 + 0.08)]} size={[0.1, h, 0.16]} mat={mat} shadow={false} />
-            <Box pos={[0, h / 2, w / 2 + 0.08]} size={[0.1, h, 0.16]} mat={mat} shadow={false} />
-            <Box pos={[0, h + 0.08, 0]} size={[0.1, 0.16, w + 0.32]} mat={mat} shadow={false} />
-        </group>
-    );
-}
-
-/** A framed picture on a wall, facing `yaw`. Falls back to a dark panel while the image loads. */
+/** A framed picture. Falls back to a dark panel while the image loads. */
 function PosterImage({ url, w, h }: { url: string; w: number; h: number }) {
     const tex = useTexture(url);
     tex.colorSpace = THREE.SRGBColorSpace;
@@ -123,7 +69,7 @@ function PosterImage({ url, w, h }: { url: string; w: number; h: number }) {
     );
 }
 
-function Poster({ url, x, y, z, yaw, w = 1.2, h = 1.7, m }: { url: string; x: number; y: number; z: number; yaw: number; w?: number; h?: number; m: Mats }) {
+function Poster({ url, x, y, z, yaw, w, h, m }: { url: string; x: number; y: number; z: number; yaw: number; w: number; h: number; m: Mats }) {
     return (
         <group position={[x, y, z]} rotation={[0, yaw, 0]}>
             <Suspense
@@ -137,410 +83,436 @@ function Poster({ url, x, y, z, yaw, w = 1.2, h = 1.7, m }: { url: string; x: nu
                 <PosterImage url={url} w={w} h={h} />
             </Suspense>
             <mesh position={[0, 0, -0.03]}>
-                <boxGeometry args={[w + 0.12, h + 0.12, 0.05]} />
+                <boxGeometry args={[w + 0.14, h + 0.14, 0.05]} />
                 <primitive object={m.woodDark} attach="material" />
             </mesh>
-            <mesh position={[0, 0, -0.01]}>
-                <boxGeometry args={[w + 0.06, h + 0.06, 0.02]} />
+            <mesh position={[0, 0, -0.012]}>
+                <boxGeometry args={[w + 0.07, h + 0.07, 0.02]} />
                 <primitive object={m.gold} attach="material" />
             </mesh>
         </group>
     );
 }
 
-/** A bench solid — the Fantasy Town stall bench, a wooden block beneath it */
-function Bench({ s, m, shadow }: { s: Solid; m: Mats; shadow: boolean }) {
+/** A banner that hangs flat against a wall; yaw turns its face into the room. */
+function Banner({ x, y, z, yaw, red = true, h = 1.8 }: { x: number; y: number; z: number; yaw: number; red?: boolean; h?: number }) {
     return (
-        <At s={s}>
-            <HouseProp model="ftStallBench" fit={{ w: 1.4 }} shadows={shadow}>
-                <Block s={s} mat={m.wood} shadow={shadow} w={1.4} d={0.45} />
+        <group position={[x, y, z]} rotation={[0, yaw, 0]}>
+            <HouseProp model={red ? 'ftBannerRed' : 'ftBannerGreen'} fit={{ h }} shadows={false}>
+                {null}
             </HouseProp>
-        </At>
+        </group>
     );
 }
 
-/** Column with a sconce near the top */
-function Column({ s, m, shadow, light }: { s: Solid; m: Mats; shadow: boolean; light: boolean }) {
+/** Column with marble base, gold capital and a sconce bulb */
+function Column({ name, m, shadow }: { name: string; m: Mats; shadow: boolean }) {
+    const s = solid(name);
     return (
-        <At s={s}>
-            <HouseProp model="nkStatueColumn" fit={{ w: 0.8, h: s.h - 0.1, d: 0.8 }} shadows={shadow}>
+        <SolidGroup s={s}>
+            <HouseProp model="nkStatueColumn" fit={{ w: 0.9, h: s.h - 0.3, d: 0.9 }} shadows={shadow}>
                 <mesh position={[0, s.h / 2, 0]} castShadow={shadow}>
-                    <cylinderGeometry args={[0.36, 0.42, s.h, 10]} />
+                    <cylinderGeometry args={[0.4, 0.46, s.h, 12]} />
                     <primitive object={m.basalt} attach="material" />
                 </mesh>
             </HouseProp>
-            <mesh position={[0, 0.1, 0]}>
-                <cylinderGeometry args={[0.56, 0.6, 0.2, 10]} />
+            <mesh position={[0, 0.12, 0]}>
+                <cylinderGeometry args={[0.5, 0.5, 0.24, 12]} />
                 <primitive object={m.marble} attach="material" />
             </mesh>
-            <mesh position={[0, 3.1, 0]}>
-                <sphereGeometry args={[0.1, 10, 8]} />
+            <mesh position={[0, s.h - 0.15, 0]}>
+                <cylinderGeometry args={[0.5, 0.42, 0.3, 12]} />
+                <primitive object={m.gold} attach="material" />
+            </mesh>
+            <mesh position={[0, 3.6, 0]}>
+                <sphereGeometry args={[0.12, 10, 8]} />
                 <primitive object={m.bulbWarm} attach="material" />
             </mesh>
-            {light && <pointLight position={[0, 3.2, 0]} color="#ffd2a1" intensity={1.0} distance={8} decay={2} />}
-        </At>
+        </SolidGroup>
+    );
+}
+
+/** A ceiling slab with an optional round skylight hole, at height h over the room. */
+function Ceiling({ r, mat, hole = 0 }: { r: Room; mat: THREE.Material; hole?: number }) {
+    const c = roomCenter(r);
+    const w = r.x1 - r.x0;
+    const d = r.z1 - r.z0;
+    const geo = useMemo(() => {
+        const shape = new THREE.Shape();
+        shape.moveTo(-w / 2, -d / 2);
+        shape.lineTo(w / 2, -d / 2);
+        shape.lineTo(w / 2, d / 2);
+        shape.lineTo(-w / 2, d / 2);
+        shape.lineTo(-w / 2, -d / 2);
+        if (hole > 0) {
+            const p = new THREE.Path();
+            p.absarc(0, 0, hole, 0, Math.PI * 2, true);
+            shape.holes.push(p);
+        }
+        return new THREE.ShapeGeometry(shape, 32);
+    }, [w, d, hole]);
+    // +π/2 about x: shape y → world z, face points down into the room
+    return (
+        <group position={[c.x, r.h, c.z]}>
+            <mesh geometry={geo} rotation={[Math.PI / 2, 0, 0]}>
+                <primitive object={mat} attach="material" />
+            </mesh>
+            {/* the slab's top, so nothing reads as paper from the skylight */}
+            <mesh geometry={geo} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.25, 0]}>
+                <meshStandardMaterial color="#1c1824" side={THREE.BackSide} />
+            </mesh>
+        </group>
+    );
+}
+
+/**
+ * A chamber shell: floor, its own north / south / outer walls (half
+ * thickness, hugging the room), a ceiling, a cove line. The corridor
+ * draws the fourth wall.
+ */
+function Shell({ r, floor, wall, ceiling, m, sh, outer, hole = 0 }: { r: Room; floor: THREE.Material; wall: THREE.Material; ceiling: THREE.Material; m: Mats; sh: boolean; outer: 'x0' | 'x1'; hole?: number }) {
+    const c = roomCenter(r);
+    const w = r.x1 - r.x0;
+    const d = r.z1 - r.z0;
+    const t = WALL_T / 2;
+    const xa = outer === 'x0' ? r.x0 - t : r.x0;
+    const xb = outer === 'x1' ? r.x1 + t : r.x1;
+    return (
+        <group>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, 0, c.z]} receiveShadow={sh}>
+                <planeGeometry args={[w, d]} />
+                <primitive object={floor} attach="material" />
+            </mesh>
+            <Box pos={[(xa + xb) / 2, r.h / 2, r.z0 - t / 2]} size={[xb - xa, r.h, t]} mat={wall} shadow={sh} />
+            <Box pos={[(xa + xb) / 2, r.h / 2, r.z1 + t / 2]} size={[xb - xa, r.h, t]} mat={wall} shadow={sh} />
+            <Box pos={[outer === 'x0' ? r.x0 - t / 2 : r.x1 + t / 2, r.h / 2, c.z]} size={[t, r.h, d]} mat={wall} shadow={sh} />
+            <Ceiling r={r} mat={ceiling} hole={hole} />
+            {/* skirting and a cove line on the three walls the chamber owns */}
+            <Box pos={[c.x, 0.09, r.z0 + 0.04]} size={[w, 0.18, 0.08]} mat={m.basalt} shadow={false} />
+            <Box pos={[c.x, 0.09, r.z1 - 0.04]} size={[w, 0.18, 0.08]} mat={m.basalt} shadow={false} />
+            <Box pos={[c.x, r.h - 0.35, r.z0 + 0.05]} size={[w, 0.07, 0.06]} mat={m.cove} shadow={false} />
+            <Box pos={[c.x, r.h - 0.35, r.z1 - 0.05]} size={[w, 0.07, 0.06]} mat={m.cove} shadow={false} />
+            <Box pos={[outer === 'x0' ? r.x0 + 0.05 : r.x1 - 0.05, r.h - 0.35, c.z]} size={[0.06, 0.07, d]} mat={m.cove} shadow={false} />
+        </group>
     );
 }
 
 /* ── The Processional + the Overlook ───────────────────────── */
 
-const GALLERY_ART = [
-    '/assets/cutscenes/dest-eden.jpg',
-    '/assets/cutscenes/dest-giza.jpg',
-    '/assets/cutscenes/dest-kolbrin.jpg',
-    '/assets/cutscenes/dest-emerald.jpg',
-    '/assets/cutscenes/dest-fair.jpg',
-    '/assets/cutscenes/cutscene-source-return.jpg',
+const GALLERY_ART: { url: string; z: number; side: -1 | 1 }[] = [
+    { url: '/assets/cutscenes/dest-eden.jpg', z: 19.2, side: -1 },
+    { url: '/assets/cutscenes/dest-giza.jpg', z: 19.2, side: 1 },
+    { url: '/assets/cutscenes/dest-kolbrin.jpg', z: 36.8, side: -1 },
+    { url: '/assets/cutscenes/dest-emerald.jpg', z: 36.8, side: 1 },
+    { url: '/assets/cutscenes/dest-fair.jpg', z: 56.0, side: -1 },
+    { url: '/assets/cutscenes/cutscene-source-return.jpg', z: 56.0, side: 1 },
 ];
 
 function Processional({ m, sh, low, profile }: { m: Mats; sh: boolean; low: boolean; profile?: QualityProfile }) {
     const P = room('processional');
     const O = room('overlook');
+    const z0 = P.z0;
+    const z1 = O.z1;
+    const len = z1 - z0;
+    const zc = (z0 + z1) / 2;
+    const half = P.x1;
     const H = P.h;
     const glass = useMemo(
-        () =>
-            new THREE.MeshStandardMaterial({
-                color: '#9fb4ff',
-                transparent: true,
-                opacity: 0.16,
-                roughness: 0.04,
-                metalness: 0.5,
-                envMapIntensity: 1.6,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-            }),
+        () => new THREE.MeshStandardMaterial({ color: '#9fb4ff', transparent: true, opacity: 0.16, roughness: 0.04, metalness: 0.5, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false }),
         [],
     );
-    const holes = DOORS.map((d) => ({ z0: d.rect.z0, z1: d.rect.z1, h: d.h }));
-    const z0 = 11.6; // the Sanctum's outer face
-    const z1 = O.z1 + WALL_T; // past the glass
     const skylight = useRef<THREE.Mesh>(null);
     useFrame(() => {
         if (!skylight.current) return;
-        const mat = skylight.current.material as THREE.MeshBasicMaterial;
-        mat.opacity = 0.02 + getSky().daylight * 0.05;
+        (skylight.current.material as THREE.MeshBasicMaterial).opacity = 0.02 + getSky().daylight * 0.05;
     });
+    const holes = (side: 'e' | 'w') => DOORS.filter((d) => d.side === side).map((d) => ({ z0: d.rect.z0, z1: d.rect.z1, h: d.h }));
+    const columns = useMemo(() => SOLIDS.filter((s) => s.name.startsWith('gallery column')).map((s) => s.name), []);
+    const planters = useMemo(() => SOLIDS.filter((s) => s.name.startsWith('gallery planter')), []);
 
     return (
         <group>
-            {/* floor: marble, a carpet runner down the centre, a gold border */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, (z0 + O.z1) / 2]} receiveShadow={sh}>
-                <planeGeometry args={[P.x1 - P.x0, O.z1 - z0]} />
+            {/* floor: marble, a long runner, gold borders */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, zc]} receiveShadow={sh}>
+                <planeGeometry args={[half * 2, len]} />
                 <primitive object={m.marble} attach="material" />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, (P.z0 + P.z1) / 2 + 0.6]} receiveShadow={sh}>
-                <planeGeometry args={[2.2, P.z1 - P.z0 - 1.2]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.016, (z0 + P.z1) / 2 + 0.4]} receiveShadow={sh}>
+                <planeGeometry args={[2.8, P.z1 - z0 - 1.6]} />
                 <primitive object={m.rug} attach="material" />
             </mesh>
-            {[-1.15, 1.15].map((x) => (
-                <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, (P.z0 + P.z1) / 2 + 0.6]}>
-                    <planeGeometry args={[0.08, P.z1 - P.z0 - 1.2]} />
+            {[-1.46, 1.46].map((x) => (
+                <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.024, (z0 + P.z1) / 2 + 0.4]}>
+                    <planeGeometry args={[0.1, P.z1 - z0 - 1.6]} />
                     <primitive object={m.gold} attach="material" />
                 </mesh>
             ))}
 
-            {/* the side walls, pierced by the four chamber doors */}
-            <WallZ x={P.x1 + WALL_T / 2} z0={z0} z1={z1} h={H} holes={holes.filter((h) => DOORS.find((d) => d.rect.z0 === h.z0)?.side === 'e')} mat={m.plaster} shadow={sh} />
-            <WallZ x={P.x0 - WALL_T / 2} z0={z0} z1={z1} h={H} holes={holes.filter((h) => DOORS.find((d) => d.rect.z0 === h.z0)?.side === 'w')} mat={m.plaster} shadow={sh} />
-            {DOORS.map((d) => (
-                <DoorFrame key={d.id} x={d.side === 'e' ? P.x1 + WALL_T / 2 : P.x0 - WALL_T / 2} z0={d.rect.z0} z1={d.rect.z1} h={d.h} mat={m.gold} side={d.side} />
-            ))}
-            {/* banners over each door */}
-            {DOORS.map((d, i) => (
-                <group key={`b-${d.id}`} position={[d.side === 'e' ? P.x1 - 0.1 : P.x0 + 0.1, d.h + 0.3, (d.rect.z0 + d.rect.z1) / 2]} rotation={[0, d.side === 'e' ? -Math.PI / 2 : Math.PI / 2, 0]}>
-                    <HouseProp model={i % 2 ? 'ftBannerGreen' : 'ftBannerRed'} fit={{ h: 1.4 }} shadows={false}>
-                        {null}
-                    </HouseProp>
-                </group>
-            ))}
+            {/* side walls, pierced by the chamber doors; tall enough to meet every chamber ceiling */}
+            <WallZ x={half + WALL_T / 2} z0={z0} z1={z1 + WALL_T} h={CORRIDOR_WALL_H} holes={holes('e')} mat={m.plaster} shadow={sh} />
+            <WallZ x={-half - WALL_T / 2} z0={z0} z1={z1 + WALL_T} h={CORRIDOR_WALL_H} holes={holes('w')} mat={m.plaster} shadow={sh} />
+            {DOORS.map((d, i) => {
+                const zc2 = (d.rect.z0 + d.rect.z1) / 2;
+                const wd = d.rect.z1 - d.rect.z0;
+                const xin = d.side === 'e' ? half - 0.02 : -half + 0.02;
+                const xout = d.side === 'e' ? half + WALL_T + 0.02 : -half - WALL_T - 0.02;
+                return (
+                    <group key={d.id}>
+                        {/* threshold */}
+                        <Box pos={[(d.rect.x0 + d.rect.x1) / 2, 0.012, zc2]} size={[WALL_T, 0.024, wd]} mat={m.basalt} shadow={false} />
+                        {/* gold frame on both faces */}
+                        {[xin, xout].map((x) => (
+                            <group key={x} position={[x, 0, zc2]}>
+                                <Box pos={[0, d.h / 2, -(wd / 2 + 0.09)]} size={[0.06, d.h, 0.18]} mat={m.gold} shadow={false} />
+                                <Box pos={[0, d.h / 2, wd / 2 + 0.09]} size={[0.06, d.h, 0.18]} mat={m.gold} shadow={false} />
+                                <Box pos={[0, d.h + 0.09, 0]} size={[0.06, 0.18, wd + 0.36]} mat={m.gold} shadow={false} />
+                            </group>
+                        ))}
+                        {/* a banner over each door, gallery side */}
+                        <Banner x={d.side === 'e' ? half - 0.12 : -half + 0.12} y={d.h + 0.5} z={zc2} yaw={0} red={i % 2 === 0} h={1.8} />
+                    </group>
+                );
+            })}
 
-            {/* a skirting of basalt and a gold cove line */}
-            {[P.x0 + 0.04, P.x1 - 0.04].map((x) => (
+            {/* skirting and a cove line along both walls */}
+            {[-half + 0.04, half - 0.04].map((x) => (
                 <group key={x}>
-                    <Box pos={[x, 0.08, (z0 + O.z1) / 2]} size={[0.08, 0.16, O.z1 - z0]} mat={m.basalt} shadow={false} />
-                    <Box pos={[x, H - 0.35, (z0 + O.z1) / 2]} size={[0.06, 0.08, O.z1 - z0]} mat={m.cove} shadow={false} />
+                    <Box pos={[x, 0.09, zc]} size={[0.08, 0.18, len]} mat={m.basalt} shadow={false} />
+                    <Box pos={[x, H - 0.4, zc]} size={[0.06, 0.08, len]} mat={m.cove} shadow={false} />
                 </group>
             ))}
 
-            {/* ceiling with a glass skylight strip down the middle and beams across */}
-            <Box pos={[-(P.x1 - P.x0) / 4 - 0.45, H + 0.1, (z0 + O.z1) / 2]} size={[(P.x1 - P.x0) / 2 - 0.9 + WALL_T, 0.2, O.z1 - z0]} mat={m.woodDark} shadow={sh} />
-            <Box pos={[(P.x1 - P.x0) / 4 + 0.45, H + 0.1, (z0 + O.z1) / 2]} size={[(P.x1 - P.x0) / 2 - 0.9 + WALL_T, 0.2, O.z1 - z0]} mat={m.woodDark} shadow={sh} />
-            <mesh position={[0, H + 0.1, (z0 + O.z1) / 2]}>
-                <boxGeometry args={[1.8, 0.06, O.z1 - z0]} />
+            {/* ceiling: two timber halves, a glass skylight down the middle, beams across */}
+            {[-1, 1].map((s) => (
+                <Box key={s} pos={[s * ((half - 1.2) / 2 + 1.2), H + 0.1, zc]} size={[half - 1.2 + WALL_T, 0.2, len]} mat={m.woodDark} shadow={sh} />
+            ))}
+            <mesh position={[0, H + 0.1, zc]}>
+                <boxGeometry args={[2.4, 0.06, len]} />
                 <primitive object={glass} attach="material" />
             </mesh>
-            <mesh ref={skylight} position={[0, H / 2, (z0 + O.z1) / 2]}>
-                <boxGeometry args={[1.8, H, O.z1 - z0]} />
+            <mesh ref={skylight} position={[0, H / 2, zc]}>
+                <boxGeometry args={[2.4, H, len]} />
                 <meshBasicMaterial color="#d7ccff" transparent opacity={0.03} depthWrite={false} toneMapped={false} />
             </mesh>
-            {Array.from({ length: 9 }, (_, i) => z0 + 1.6 + i * 3.0).map((z) => (
+            {Array.from({ length: Math.floor(len / 4) }, (_, i) => z0 + 2 + i * 4).map((z) => (
                 <group key={z}>
-                    <Box pos={[0, H - 0.14, z]} size={[P.x1 - P.x0 + WALL_T * 2, 0.26, 0.26]} mat={m.woodDark} shadow={false} />
-                    <Box pos={[0, H - 0.02, z]} size={[P.x1 - P.x0 + WALL_T * 2 + 0.1, 0.04, 0.3]} mat={m.gold} shadow={false} />
+                    <Box pos={[0, H - 0.16, z]} size={[half * 2, 0.3, 0.3]} mat={m.woodDark} shadow={false} />
+                    <Box pos={[0, H - 0.02, z]} size={[half * 2 + 0.1, 0.04, 0.34]} mat={m.gold} shadow={false} />
                 </group>
             ))}
 
-            {/* columns with sconces — every other one carries a light */}
-            {SOLIDS_GALLERY_COLUMNS.map((s, i) => (
-                <Column key={s.name} s={s} m={m} shadow={sh} light={!low && i % 2 === 0} />
+            {columns.map((n) => (
+                <Column key={n} name={n} m={m} shadow={sh} />
             ))}
 
-            {/* the gallery between the columns */}
-            {GALLERY_ART.map((url, i) => {
-                const side = i % 2 === 0 ? -1 : 1;
-                const z = [14.8, 14.8, 21.6, 21.6, 24.6, 24.6][i];
-                return <Poster key={url} url={url} x={side * (P.x1 - 0.33)} y={2.1} z={z} yaw={side < 0 ? Math.PI / 2 : -Math.PI / 2} w={1.5} h={1.0} m={m} />;
-            })}
+            {/* the gallery: stills between the columns */}
+            {GALLERY_ART.map((a) => (
+                <Poster key={a.url} url={a.url} x={a.side * (half - 0.33)} y={2.7} z={a.z} yaw={a.side < 0 ? Math.PI / 2 : -Math.PI / 2} w={2.0} h={1.3} m={m} />
+            ))}
 
-            {/* the Daily Word and the Offering at the head of the gallery */}
-            {(() => {
-                const l = solid('daily word lectern');
-                return (
-                    <At s={l}>
-                        <HouseProp model="bedsideTable" fit={{ w: 0.62, h: l.h - 0.15, d: 0.5 }} shadows={sh}>
-                            <Block s={l} mat={m.wood} shadow={sh} w={0.6} d={0.5} />
-                        </HouseProp>
-                        <mesh position={[0, l.h - 0.13, 0]} rotation={[0, 0.3, 0]}>
-                            <boxGeometry args={[0.24, 0.02, 0.17]} />
-                            <primitive object={m.book} attach="material" />
-                        </mesh>
-                    </At>
-                );
-            })()}
-            <At s={solid('offering chest')}>
-                <HouseProp model="pkChest" fit={{ w: 0.9 }} shadows={sh}>
-                    <Block s={solid('offering chest')} mat={m.woodDark} shadow={sh} w={0.9} d={0.7} />
-                </HouseProp>
-                <mesh position={[0, solid('offering chest').h + 0.25, 0]}>
-                    <sphereGeometry args={[0.07, 8, 6]} />
+            {/* the Daily Word's paper; the Offering's glow */}
+            <SolidGroup s="daily word lectern">
+                <mesh position={[0, 0.82, 0]} rotation={[0, 0.3, 0]}>
+                    <boxGeometry args={[0.26, 0.02, 0.18]} />
+                    <primitive object={m.book} attach="material" />
+                </mesh>
+            </SolidGroup>
+            <SolidGroup s="offering chest">
+                <mesh position={[0, 1.1, 0]}>
+                    <sphereGeometry args={[0.08, 10, 8]} />
                     <meshBasicMaterial color="#e8c478" toneMapped={false} />
                 </mesh>
-            </At>
+            </SolidGroup>
+
             {/* planters with young pines */}
-            {(['gallery planter W', 'gallery planter E', 'gallery planter W2', 'gallery planter E2'] as const).map((n) => {
-                const s = solid(n);
-                return (
-                    <At key={n} s={s}>
-                        <mesh position={[0, s.h / 2, 0]} castShadow={sh}>
-                            <boxGeometry args={[0.8, s.h, 0.8]} />
-                            <primitive object={m.basalt} attach="material" />
-                        </mesh>
-                        <HouseProp model="nkTreePineRoundA" position={[0, s.h, 0]} fit={{ h: 2.4 }} shadows={sh}>
-                            <mesh position={[0, 1.2, 0]}>
-                                <coneGeometry args={[0.5, 2.2, 7]} />
-                                <primitive object={m.leaf} attach="material" />
-                            </mesh>
-                        </HouseProp>
-                    </At>
-                );
-            })}
-
-            {/* gallery lights */}
-            {!low && [16.0, 23.0, 30.0].map((z) => <pointLight key={z} position={[0, H - 0.8, z]} color="#ffe2bf" intensity={1.1} distance={10} decay={2} />)}
-
-            {/* ── The Overlook: floor to ceiling glass at the end, a balustrade, two benches ── */}
-            <group>
-                <mesh position={[0, H / 2, O.z1 + WALL_T / 2]}>
-                    <boxGeometry args={[O.x1 - O.x0 + WALL_T * 2, H, 0.06]} />
-                    <primitive object={glass} attach="material" />
-                </mesh>
-                {/* gold frame and mullions */}
-                {[-3.9, -1.3, 1.3, 3.9].map((x) => (
-                    <Box key={x} pos={[x, H / 2, O.z1 + WALL_T / 2]} size={[0.12, H, 0.14]} mat={m.gold} shadow={false} />
-                ))}
-                <Box pos={[0, H - 0.08, O.z1 + WALL_T / 2]} size={[O.x1 - O.x0 + WALL_T * 2, 0.16, 0.16]} mat={m.gold} shadow={false} />
-                <Box pos={[0, 0.08, O.z1 + WALL_T / 2]} size={[O.x1 - O.x0 + WALL_T * 2, 0.16, 0.16]} mat={m.gold} shadow={false} />
-                {/* balustrade: rail on the posts the plan reserves */}
-                <Box pos={[0, 1.0, 36.35]} size={[6.6, 0.06, 0.08]} mat={m.gold} shadow={false} />
-                {[-3, -2, -1, 0, 1, 2, 3].map((x) => (
-                    <Box key={x} pos={[x, 0.5, 36.35]} size={[0.06, 1.0, 0.06]} mat={m.metalDark} shadow={false} />
-                ))}
-                <Bench s={solid('overlook bench W')} m={m} shadow={sh} />
-                <Bench s={solid('overlook bench E')} m={m} shadow={sh} />
-                {!low && <pointLight position={[0, H - 1, 34]} color="#c9d2ff" intensity={0.9} distance={9} decay={2} />}
-                {profile?.sparkles && <Sparkles count={30} scale={[6, 3, 4]} position={[0, 2, 34.5]} size={1.6} speed={0.2} color="#c9c0ff" opacity={0.5} />}
-            </group>
-        </group>
-    );
-}
-
-const SOLIDS_GALLERY_COLUMNS = [0, 1, 2, 3].flatMap((i) => [solid(`gallery column W${i}`), solid(`gallery column E${i}`)]);
-
-/* ── A chamber shell: floor, outer walls, ceiling, cove ───────── */
-
-function Shell({
-    r,
-    floor,
-    wall,
-    ceiling,
-    m,
-    sh,
-    outerX,
-    skylight,
-}: {
-    r: Rect & { h: number };
-    floor: THREE.Material;
-    wall: THREE.Material;
-    ceiling: THREE.Material;
-    m: Mats;
-    sh: boolean;
-    /** which x wall is the chamber's own (the other is the corridor's) */
-    outerX: 'x0' | 'x1';
-    /** a round hole in the ceiling, radius */
-    skylight?: number;
-}) {
-    const c = roomCenter(r);
-    const w = r.x1 - r.x0;
-    const d = r.z1 - r.z0;
-    return (
-        <group>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, 0.012, c.z]} receiveShadow={sh}>
-                <planeGeometry args={[w, d]} />
-                <primitive object={floor} attach="material" />
-            </mesh>
-            {/* north + south walls span the chamber and its own outer wall */}
-            <WallX z={r.z0 - WALL_T / 2} x0={Math.min(r.x0, r.x0 - (outerX === 'x0' ? WALL_T : 0))} x1={Math.max(r.x1, r.x1 + (outerX === 'x1' ? WALL_T : 0))} h={r.h} mat={wall} shadow={sh} />
-            <WallX z={r.z1 + WALL_T / 2} x0={Math.min(r.x0, r.x0 - (outerX === 'x0' ? WALL_T : 0))} x1={Math.max(r.x1, r.x1 + (outerX === 'x1' ? WALL_T : 0))} h={r.h} mat={wall} shadow={sh} />
-            <WallZ x={outerX === 'x0' ? r.x0 - WALL_T / 2 : r.x1 + WALL_T / 2} z0={r.z0} z1={r.z1} h={r.h} mat={wall} shadow={sh} />
-            {/* ceiling (with a hole if asked) and a cove line */}
-            {skylight ? (
-                <mesh rotation={[Math.PI / 2, 0, 0]} position={[c.x, r.h, c.z]}>
-                    <ringGeometry args={[skylight, Math.hypot(w, d), 40]} />
-                    <primitive object={ceiling} attach="material" />
-                </mesh>
-            ) : (
-                <mesh rotation={[Math.PI / 2, 0, 0]} position={[c.x, r.h, c.z]}>
-                    <planeGeometry args={[w, d]} />
-                    <primitive object={ceiling} attach="material" />
-                </mesh>
-            )}
-            {skylight && (
-                <group position={[c.x, r.h, c.z]}>
-                    {/* the ring mask hides the ceiling outside the room; a frame around the hole */}
-                    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-                        <ringGeometry args={[skylight, skylight + 0.3, 40]} />
-                        <primitive object={m.gold} attach="material" />
+            {planters.map((s) => (
+                <SolidGroup key={s.name} s={s}>
+                    <mesh position={[0, s.h / 2, 0]} castShadow={sh}>
+                        <boxGeometry args={[s.w, s.h, s.d]} />
+                        <primitive object={m.basalt} attach="material" />
                     </mesh>
-                </group>
-            )}
-            <Box pos={[c.x, r.h - 0.3, r.z0 + 0.05]} size={[w, 0.06, 0.06]} mat={m.cove} shadow={false} />
-            <Box pos={[c.x, r.h - 0.3, r.z1 - 0.05]} size={[w, 0.06, 0.06]} mat={m.cove} shadow={false} />
-            <Box pos={[outerX === 'x0' ? r.x0 + 0.05 : r.x1 - 0.05, r.h - 0.3, c.z]} size={[0.06, 0.06, d]} mat={m.cove} shadow={false} />
+                    <mesh position={[0, s.h + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                        <planeGeometry args={[s.w - 0.12, s.d - 0.12]} />
+                        <primitive object={m.dirt} attach="material" />
+                    </mesh>
+                    <HouseProp model="nkTreePineRoundA" position={[0, s.h, 0]} fit={{ h: 2.6 }} shadows={sh}>
+                        <mesh position={[0, 1.3, 0]}>
+                            <coneGeometry args={[0.45, 2.4, 7]} />
+                            <primitive object={m.leaf} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </SolidGroup>
+            ))}
+
+            {/* gallery light */}
+            {[22, 33, 44].filter((z) => !low || z !== 33).map((z) => <pointLight key={z} position={[0, H - 1.0, z]} color="#ffe2bf" intensity={low ? 2.6 : 2.0} distance={low ? 20 : 16} decay={2} />)}
+
+            {/* ── The Overlook: floor-to-ceiling glass at the end, a balustrade ── */}
+            <mesh position={[0, H / 2, z1 + WALL_T / 2]}>
+                <boxGeometry args={[half * 2 + WALL_T * 2, H, 0.06]} />
+                <primitive object={glass} attach="material" />
+            </mesh>
+            {[-3.3, -1.1, 1.1, 3.3].map((x) => (
+                <Box key={x} pos={[x, H / 2, z1 + WALL_T / 2]} size={[0.14, H, 0.16]} mat={m.gold} shadow={false} />
+            ))}
+            <Box pos={[0, H - 0.08, z1 + WALL_T / 2]} size={[half * 2 + WALL_T * 2, 0.16, 0.18]} mat={m.gold} shadow={false} />
+            <Box pos={[0, 0.08, z1 + WALL_T / 2]} size={[half * 2 + WALL_T * 2, 0.16, 0.18]} mat={m.gold} shadow={false} />
+            {(() => {
+                const b = solid('balustrade');
+                return (
+                    <SolidGroup s={b}>
+                        <Box pos={[0, 1.0, 0]} size={[b.w, 0.07, 0.1]} mat={m.gold} shadow={false} />
+                        <Box pos={[0, 0.06, 0]} size={[b.w, 0.12, b.d]} mat={m.basalt} shadow={false} />
+                        {Array.from({ length: 10 }, (_, i) => -b.w / 2 + 0.3 + i * ((b.w - 0.6) / 9)).map((x) => (
+                            <Box key={x} pos={[x, 0.52, 0]} size={[0.07, 0.92, 0.07]} mat={m.metalDark} shadow={false} />
+                        ))}
+                    </SolidGroup>
+                );
+            })()}
+            {!low && <pointLight position={[0, H - 1.2, 57.5]} color="#c9d2ff" intensity={1.4} distance={12} decay={2} />}
+            {profile?.sparkles && <Sparkles count={40} scale={[9, 4, 6]} position={[0, 2.4, 58.5]} size={1.6} speed={0.2} color="#c9c0ff" opacity={0.5} />}
         </group>
     );
 }
 
 /* ── The Cinema ─────────────────────────────────────────────── */
 
-const CINEMA_POSTERS = ['/cineworks/poster1.png', '/cineworks/poster2.png', '/cineworks/poster3.png', '/assets/cutscenes/combat-eden.jpg', '/assets/cutscenes/combat-giza.jpg', '/assets/cutscenes/combat-kolbrin.jpg'];
+const CINEMA_POSTERS = [
+    '/cineworks/poster1.png',
+    '/cineworks/poster2.png',
+    '/cineworks/poster3.png',
+    '/assets/cutscenes/combat-eden.jpg',
+    '/assets/cutscenes/combat-giza.jpg',
+    '/assets/cutscenes/combat-kolbrin.jpg',
+    '/assets/cutscenes/combat-emerald.jpg',
+    '/assets/cutscenes/combat-fair.jpg',
+];
 
 function Cinema({ m, sh, low }: { m: Mats; sh: boolean; low: boolean }) {
     const r = room('cinema');
     const c = roomCenter(r);
     const dark = useMemo(() => new THREE.MeshStandardMaterial({ color: '#15111c', roughness: 0.95 }), []);
-    const benches = useMemo(() => [0, 1, 2, 3].flatMap((row) => [0, 1, 2, 3].map((i) => solid(`cinema bench ${row}${i}`))), []);
-    const beam = useRef<THREE.Mesh>(null);
+    /**
+     * The projector beam: brightest at the lens, gone a metre before the
+     * screen, thin at its silhouette — dust in a light, not a grey cone.
+     * (A flat additive cone composited in linear light read as a veil
+     * over the whole screen on the desktop tiers.)
+     */
+    const beamMat = useMemo(
+        () =>
+            new THREE.ShaderMaterial({
+                uniforms: { uColor: { value: new THREE.Color('#a9c2ee') }, uK: { value: 0.04 } },
+                vertexShader: `
+                    varying float vAlong;
+                    varying float vFacing;
+                    void main() {
+                        vAlong = uv.y;
+                        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                        vec3 n = normalize(normalMatrix * normal);
+                        vFacing = abs(dot(n, normalize(-mv.xyz)));
+                        gl_Position = projectionMatrix * mv;
+                    }`,
+                fragmentShader: `
+                    uniform vec3 uColor;
+                    uniform float uK;
+                    varying float vAlong;
+                    varying float vFacing;
+                    void main() {
+                        float along = smoothstep(0.08, 0.9, vAlong);
+                        float a = uK * along * along * pow(vFacing, 2.0);
+                        gl_FragColor = vec4(uColor * a, 1.0);
+                    }`,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                toneMapped: false,
+                fog: false,
+            }),
+        [],
+    );
     useFrame(({ clock }) => {
-        if (!beam.current) return;
-        (beam.current.material as THREE.MeshBasicMaterial).opacity = 0.05 + Math.sin(clock.elapsedTime * 7) * 0.012;
+        beamMat.uniforms.uK.value = (low ? 0.045 : 0.04) * (1 + Math.sin(clock.elapsedTime * 7) * 0.12);
     });
+    const stage = solid('cinema stage');
+    const beamLen = SCREEN.x - (r.x0 + 0.9);
     return (
         <group>
-            <Shell r={r} floor={m.carpet} wall={m.basalt} ceiling={dark} m={m} sh={sh} outerX="x1" />
-            {/* the screen on the east wall, with a timber surround */}
-            <group position={[r.x1 - 0.32, 2.95, c.z]} rotation={[0, -Math.PI / 2, 0]}>
-                <CinemaScreen w={9.2} h={4.5} low={low} />
+            <Shell r={r} floor={m.carpet} wall={m.basalt} ceiling={dark} m={m} sh={sh} outer="x1" />
+            {/* acoustic panels down both long walls */}
+            {[r.z0 + 0.06, r.z1 - 0.06].map((z) =>
+                [8.4, 12.0, 15.6, 19.2, 22.8].map((x) => <Box key={`${z}-${x}`} pos={[x, 4.8, z]} size={[2.6, 1.6, 0.08]} mat={m.fabric} shadow={false} />),
+            )}
+            {/* the screen, its surround, a gold proscenium */}
+            <group position={[SCREEN.x, SCREEN.y, SCREEN.z]} rotation={[0, -Math.PI / 2, 0]}>
+                <CinemaScreen w={SCREEN.w} h={SCREEN.h} low={low} />
                 <mesh position={[0, 0, -0.06]}>
-                    <planeGeometry args={[9.9, 5.2]} />
-                    <primitive object={m.woodDark} attach="material" />
+                    <planeGeometry args={[SCREEN.w + 0.8, SCREEN.h + 0.8]} />
+                    <primitive object={m.black} attach="material" />
                 </mesh>
-                <Box pos={[0, -2.9, 0.1]} size={[10.4, 0.6, 0.3]} mat={m.basalt} shadow={false} />
+                <Box pos={[0, SCREEN.h / 2 + 0.5, 0.05]} size={[SCREEN.w + 1.4, 0.24, 0.12]} mat={m.gold} shadow={false} />
+                <Box pos={[-(SCREEN.w / 2 + 0.6), 0, 0.05]} size={[0.24, SCREEN.h + 1.0, 0.12]} mat={m.gold} shadow={false} />
+                <Box pos={[SCREEN.w / 2 + 0.6, 0, 0.05]} size={[0.24, SCREEN.h + 1.0, 0.12]} mat={m.gold} shadow={false} />
             </group>
-            {/* the projector box high on the back wall and its beam */}
-            <Box pos={[r.x0 + 0.5, 4.4, c.z]} size={[0.7, 0.5, 0.6]} mat={m.metalDark} shadow={false} />
-            <mesh position={[r.x0 + 0.85, 4.4, c.z]}>
-                <sphereGeometry args={[0.1, 8, 6]} />
+            {/* the stage under it */}
+            <SolidGroup s={stage}>
+                <Box pos={[0, stage.h / 2, 0]} size={[stage.w, stage.h, stage.d]} mat={m.basalt} shadow={sh} />
+                <Box pos={[-stage.w / 2 - 0.01, stage.h - 0.04, 0]} size={[0.04, 0.08, stage.d]} mat={m.gold} shadow={false} />
+            </SolidGroup>
+            {/* the projector box high on the back wall, and its beam */}
+            <Box pos={[r.x0 + 0.5, 6.4, c.z]} size={[0.8, 0.55, 0.7]} mat={m.metalDark} shadow={false} />
+            <mesh position={[r.x0 + 0.92, 6.4, c.z]}>
+                <sphereGeometry args={[0.11, 8, 6]} />
                 <meshBasicMaterial color="#cfe6ff" toneMapped={false} />
             </mesh>
-            <mesh ref={beam} position={[c.x + 0.4, 3.7, c.z]} rotation={[0, 0, -Math.PI / 2 + 0.1]}>
-                <coneGeometry args={[2.3, r.x1 - r.x0 - 1.6, 20, 1, true]} />
-                <meshBasicMaterial color="#dbe8ff" transparent opacity={0.05} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+            <mesh position={[r.x0 + 0.9 + beamLen / 2, (6.4 + SCREEN.y) / 2, c.z]} rotation={[0, 0, Math.PI / 2 - Math.atan2(6.4 - SCREEN.y, beamLen)]} material={beamMat}>
+                <coneGeometry args={[SCREEN.h / 2, Math.hypot(beamLen, 6.4 - SCREEN.y), 32, 1, true]} />
             </mesh>
-            {/* benches, the catalog table, the concession stall */}
-            {benches.map((s) => (
-                <Bench key={s.name} s={s} m={m} shadow={sh} />
-            ))}
-            {(() => {
-                const t = solid('cineworks table');
-                return (
-                    <At s={t}>
-                        <HouseProp model="diningTable" fit={{ w: 1.7, h: t.h, d: 1.3 }} shadows={sh}>
-                            <Block s={t} mat={m.wood} shadow={sh} w={1.7} d={1.3} />
-                        </HouseProp>
-                        {/* posters fanned on the table, and the reel tins */}
-                        {[-0.4, 0, 0.4].map((dx, i) => (
-                            <mesh key={dx} position={[dx, t.h + 0.015 + i * 0.004, dx * 0.4]} rotation={[-Math.PI / 2, 0, dx * 0.5]}>
-                                <planeGeometry args={[0.42, 0.6]} />
-                                <primitive object={m.artAsWithin} attach="material" />
-                            </mesh>
-                        ))}
-                        <HouseProp model="fkMug" position={[0.6, t.h, -0.4]} fit={{ w: 0.1 }} shadows={false}>
-                            {null}
-                        </HouseProp>
-                    </At>
-                );
-            })()}
-            <At s={solid('cinema stall')}>
-                <HouseProp model="ftStall" fit={{ w: 2.3 }} shadows={sh}>
-                    <Block s={solid('cinema stall')} mat={m.woodDark} shadow={sh} w={2.3} d={1.0} />
-                </HouseProp>
-                <HouseProp model="fkBowl" position={[-0.5, 0.95, 0.25]} fit={{ w: 0.3 }} shadows={false}>
+            {/* the catalog table: posters fanned, a mug */}
+            <SolidGroup s="cineworks table">
+                {[-0.5, 0, 0.5].map((dx, i) => (
+                    <mesh key={dx} position={[dx, 0.81 + i * 0.004, dx * 0.3]} rotation={[-Math.PI / 2, 0, dx * 0.5]}>
+                        <planeGeometry args={[0.46, 0.66]} />
+                        <primitive object={m.artAsWithin} attach="material" />
+                    </mesh>
+                ))}
+                <HouseProp model="fkMug" position={[0.65, 0.8, -0.4]} fit={{ w: 0.1 }} shadows={false}>
                     {null}
                 </HouseProp>
-                <HouseProp model="fkPie" position={[0.5, 0.95, 0.2]} fit={{ w: 0.3 }} shadows={false}>
+            </SolidGroup>
+            {/* something on the stall's counter */}
+            <SolidGroup s="cinema stall">
+                <HouseProp model="fkBowl" position={[0, 0.9, -0.6]} fit={{ w: 0.32 }} shadows={false}>
                     {null}
                 </HouseProp>
-            </At>
-            {(['cinema stool A', 'cinema stool B'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="ftStallStool" fit={{ h: 0.5 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={0.4} d={0.4} />
-                    </HouseProp>
-                </At>
-            ))}
-            {(['cinema barrel', 'cinema barrel 2'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="skBarrel" fit={{ h: 0.95 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={0.5} d={0.5} />
-                    </HouseProp>
-                </At>
-            ))}
-            {/* posters on the north and south walls, banners by the screen */}
+                <HouseProp model="fkPie" position={[0, 0.9, 0.5]} fit={{ w: 0.32 }} shadows={false}>
+                    {null}
+                </HouseProp>
+            </SolidGroup>
+            {/* posters down both long walls, banners either side of the screen */}
             {CINEMA_POSTERS.map((url, i) => {
-                const north = i < 3;
-                const x = 7.6 + (i % 3) * 3.6;
-                return <Poster key={url} url={url} x={x} y={2.0} z={north ? r.z0 + 0.33 : r.z1 - 0.33} yaw={north ? 0 : Math.PI} w={1.3} h={1.85} m={m} />;
+                const north = i < 4;
+                const x = 9.6 + (i % 4) * 4.0;
+                return <Poster key={url} url={url} x={x} y={2.3} z={north ? r.z0 + 0.36 : r.z1 - 0.36} yaw={north ? 0 : Math.PI} w={1.3} h={1.85} m={m} />;
             })}
-            {[r.z0 + 1.2, r.z1 - 1.2].map((z) => (
-                <group key={z} position={[r.x1 - 0.14, 4.2, z]} rotation={[0, -Math.PI / 2, 0]}>
-                    <HouseProp model="ftBannerRed" fit={{ h: 1.6 }} shadows={false}>
-                        {null}
-                    </HouseProp>
-                </group>
+            {[c.z - 7.4, c.z + 7.4].map((z, i) => (
+                <Banner key={z} x={r.x1 - 0.14} y={4.6} z={z} yaw={0} red={i === 0} h={2.4} />
             ))}
-            {/* a dim amber house light either side, and the aisle lights */}
-            {!low && (
-                <>
-                    <pointLight position={[c.x - 2, 4.6, r.z0 + 1.5]} color="#ffb070" intensity={0.55} distance={9} decay={2} />
-                    <pointLight position={[c.x - 2, 4.6, r.z1 - 1.5]} color="#ffb070" intensity={0.55} distance={9} decay={2} />
-                </>
-            )}
-            {[8.6, 11.0, 13.4, 15.8].map((x) => (
-                <mesh key={x} position={[x, 0.08, c.z]}>
-                    <boxGeometry args={[0.1, 0.03, 0.4]} />
+            {/* aisle lights */}
+            {[11.2, 13.6, 16.0, 18.4].map((x) => (
+                <mesh key={x} position={[x, 0.03, c.z]}>
+                    <boxGeometry args={[0.12, 0.04, 0.5]} />
                     <meshBasicMaterial color="#ffb070" toneMapped={false} />
                 </mesh>
             ))}
+            {low ? (
+                <pointLight position={[c.x - 3, 6.8, c.z]} color="#ffb070" intensity={2.2} distance={20} decay={2} />
+            ) : (
+                <>
+                    <pointLight position={[c.x - 3, 7.2, r.z0 + 2]} color="#ffb070" intensity={1.0} distance={12} decay={2} />
+                    <pointLight position={[c.x - 3, 7.2, r.z1 - 2]} color="#ffb070" intensity={1.0} distance={12} decay={2} />
+                </>
+            )}
         </group>
     );
 }
@@ -558,115 +530,83 @@ function HallCircle({ m, sh, low, profile }: { m: Mats; sh: boolean; low: boolea
             flame.current.scale.y = 1 + Math.sin(t * 9) * 0.16;
             flame.current.rotation.y = t * 0.8;
         }
-        if (glow.current) glow.current.intensity = 2.3 + Math.sin(t * 6.3) * 0.5 + Math.sin(t * 11) * 0.2;
+        if (glow.current) glow.current.intensity = 3.2 + Math.sin(t * 6.3) * 0.6 + Math.sin(t * 11) * 0.25;
         if (shaft.current) (shaft.current.material as THREE.MeshBasicMaterial).opacity = 0.02 + getSky().daylight * 0.06;
     });
-    const stones = useMemo(() => Array.from({ length: 9 }, (_, i) => solid(`hall stone ${i}`)), []);
-    const benches = useMemo(() => Array.from({ length: 6 }, (_, i) => solid(`hall bench ${i}`)), []);
+    const fire = solid('council fire');
+    const speaker = solid('speaker stone');
     return (
         <group>
-            <Shell r={r} floor={m.basalt} wall={m.rockFace} ceiling={m.woodDark} m={m} sh={sh} outerX="x0" skylight={2.0} />
-            {/* a ring of flagstones around the fire */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FIRE.x, 0.02, FIRE.z]} receiveShadow={sh}>
-                <ringGeometry args={[1.3, 4.0, 40]} />
+            <Shell r={r} floor={m.basalt} wall={m.rockFace} ceiling={m.woodDark} m={m} sh={sh} outer="x0" hole={2.8} />
+            {/* flagstones around the fire, a gold ring at the bench line */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FIRE.x, 0.008, FIRE.z]} receiveShadow={sh}>
+                <ringGeometry args={[1.2, 4.8, 48]} />
                 <primitive object={m.cobble} attach="material" />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FIRE.x, 0.025, FIRE.z]}>
-                <ringGeometry args={[3.95, 4.2, 40]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FIRE.x, 0.016, FIRE.z]}>
+                <ringGeometry args={[4.8, 5.05, 48]} />
                 <primitive object={m.gold} attach="material" />
             </mesh>
-            {/* the council fire: hearth, logs, flame, the smoke shaft to the skylight */}
-            <group position={[FIRE.x, 0, FIRE.z]}>
+            {/* the council fire */}
+            <SolidGroup s={fire}>
                 <mesh position={[0, 0.22, 0]} castShadow={sh}>
-                    <cylinderGeometry args={[0.85, 1.05, 0.44, 10]} />
+                    <cylinderGeometry args={[fire.w / 2 - 0.15, fire.w / 2, 0.44, 12]} />
                     <primitive object={m.basalt} attach="material" />
                 </mesh>
-                <HouseProp model="campfire" position={[0, 0.44, 0]} fit={{ w: 1.1 }} shadows={sh}>
+                <HouseProp model="campfire" position={[0, 0.44, 0]} fit={{ w: 1.2 }} shadows={sh}>
                     {null}
                 </HouseProp>
-                <HouseProp model="skCampfireStand" position={[0, 0.44, 0]} fit={{ w: 1.6 }} shadows={sh}>
+                <HouseProp model="skCampfireStand" position={[0, 0.44, 0]} fit={{ w: 1.7 }} shadows={sh}>
                     {null}
                 </HouseProp>
-                <mesh ref={flame} position={[0, 0.82, 0]}>
-                    <coneGeometry args={[0.36, 0.74, 7]} />
+                <mesh ref={flame} position={[0, 0.84, 0]}>
+                    <coneGeometry args={[0.4, 0.82, 7]} />
                     <meshBasicMaterial color="#ffb347" toneMapped={false} />
                 </mesh>
-                <mesh position={[0, 0.78, 0]} scale={1.5}>
-                    <coneGeometry args={[0.36, 0.74, 7]} />
+                <mesh position={[0, 0.8, 0]} scale={1.5}>
+                    <coneGeometry args={[0.4, 0.82, 7]} />
                     <meshBasicMaterial color="#ff8a3d" transparent opacity={0.18} depthWrite={false} toneMapped={false} />
                 </mesh>
-                {!low && <pointLight ref={glow} position={[0, 1.4, 0]} color="#ff9a4a" intensity={2.3} distance={13} decay={2} />}
+                <pointLight ref={glow} position={[0, 1.5, 0]} color="#ff9a4a" intensity={3.2} distance={low ? 20 : 16} decay={2} userData={{ noLampDim: true }} />
                 <mesh ref={shaft} position={[0, r.h / 2 + 0.6, 0]}>
-                    <cylinderGeometry args={[2.0, 2.6, r.h - 1.2, 20, 1, true]} />
+                    <cylinderGeometry args={[2.8, 3.4, r.h - 1.2, 24, 1, true]} />
                     <meshBasicMaterial color="#cfc3ff" transparent opacity={0.04} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
                 </mesh>
-                {profile?.sparkles && <Sparkles count={40} scale={[2.4, 5, 2.4]} position={[0, 3.2, 0]} size={1.4} speed={0.6} color="#ffc27a" opacity={0.6} />}
-            </group>
-            {/* standing stones, with a banner between every other pair */}
-            {stones.map((s, i) => (
-                <At key={s.name} s={s}>
-                    <HouseProp model={i % 2 ? 'nkRockTallA' : 'nkStoneTallA'} fit={{ h: s.h }} shadows={sh}>
-                        <mesh position={[0, s.h / 2, 0]} castShadow={sh}>
-                            <boxGeometry args={[1.0, s.h, 0.6]} />
-                            <primitive object={m.rockFace} attach="material" />
-                        </mesh>
-                    </HouseProp>
-                </At>
-            ))}
-            {[0.7, 2.1, 3.5, 4.9].map((a) => (
-                <group key={a} position={[FIRE.x + Math.cos(a) * 6.3, 0, FIRE.z + Math.sin(a) * 6.3]} rotation={[0, -a + Math.PI / 2, 0]}>
-                    <HouseProp model="ckFlagBannerLong" fit={{ h: 3.6 }} shadows={false}>
-                        <mesh position={[0, 1.8, 0]}>
-                            <boxGeometry args={[0.07, 3.6, 0.07]} />
-                            <primitive object={m.gold} attach="material" />
-                        </mesh>
-                    </HouseProp>
-                </group>
-            ))}
-            {benches.map((s) => (
-                <Bench key={s.name} s={s} m={m} shadow={sh} />
-            ))}
-            {(['hall chest', 'hall chest 2'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="skChest" fit={{ w: 0.82 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={0.8} d={0.6} />
-                    </HouseProp>
-                </At>
-            ))}
-            {(['hall logs', 'hall logs 2', 'hall logs 3'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="nkLogStackLarge" fit={{ w: 1.0 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={1.0} d={0.7} />
-                    </HouseProp>
-                </At>
-            ))}
-            {(['hall bedroll', 'hall bedroll 2'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="skBedroll" fit={{ w: 0.8 }} shadows={false}>
-                        <Block s={solid(n)} mat={m.wool} shadow={false} w={0.8} d={1.6} />
-                    </HouseProp>
-                </At>
-            ))}
-            {/* the speaker's stone on the far side, a lectern on it */}
-            {(() => {
-                const s = solid('speaker stone');
+                {profile?.sparkles && <Sparkles count={50} scale={[2.6, 6, 2.6]} position={[0, 3.6, 0]} size={1.4} speed={0.6} color="#ffc27a" opacity={0.6} />}
+            </SolidGroup>
+            {/* banners between the stones */}
+            {[0, 2, 4, 6].map((k) => {
+                const a = 0.35 + (k + 0.5) * ((Math.PI * 2) / 9);
                 return (
-                    <At s={s}>
-                        <mesh position={[0, s.h / 2, 0]} castShadow={sh} receiveShadow={sh}>
-                            <cylinderGeometry args={[1.0, 1.1, s.h, 12]} />
-                            <primitive object={m.basalt} attach="material" />
-                        </mesh>
-                        <mesh position={[0, s.h + 0.02, 0]}>
-                            <cylinderGeometry args={[0.95, 0.95, 0.04, 12]} />
-                            <primitive object={m.gold} attach="material" />
-                        </mesh>
-                        <HouseProp model="skSignpostSingle" position={[0, s.h, 0]} rotation={[0, Math.PI / 2, 0]} fit={{ h: 1.4 }} shadows={sh}>
-                            {null}
+                    <group key={k} position={[FIRE.x + Math.cos(a) * 6.4, 0, FIRE.z + Math.sin(a) * 6.4]} rotation={[0, -a, 0]}>
+                        <HouseProp model="ckFlagBannerLong" fit={{ h: 3.8 }} shadows={false}>
+                            <mesh position={[0, 1.9, 0]}>
+                                <boxGeometry args={[0.07, 3.8, 0.07]} />
+                                <primitive object={m.gold} attach="material" />
+                            </mesh>
                         </HouseProp>
-                    </At>
+                    </group>
                 );
-            })()}
-            {!low && <pointLight position={[FIRE.x - 4, r.h - 1, FIRE.z]} color="#ffd2a1" intensity={0.7} distance={10} decay={2} />}
+            })}
+            {/* the speaker's stone on the far side */}
+            <SolidGroup s={speaker}>
+                <mesh position={[0, speaker.h / 2, 0]} castShadow={sh} receiveShadow={sh}>
+                    <cylinderGeometry args={[speaker.w / 2 - 0.06, speaker.w / 2, speaker.h, 14]} />
+                    <primitive object={m.basalt} attach="material" />
+                </mesh>
+                <mesh position={[0, speaker.h + 0.02, 0]}>
+                    <cylinderGeometry args={[speaker.w / 2 - 0.1, speaker.w / 2 - 0.1, 0.04, 14]} />
+                    <primitive object={m.gold} attach="material" />
+                </mesh>
+                <HouseProp model="skSignpostSingle" position={[0, speaker.h, 0]} rotation={[0, Math.PI / 2, 0]} fit={{ h: 1.4 }} shadows={sh}>
+                    {null}
+                </HouseProp>
+            </SolidGroup>
+            {/* tapestries on the long walls */}
+            {[r.z0 + 0.2, r.z1 - 0.2].map((z, i) =>
+                [-22.2, -10.2].map((x) => <Banner key={`${z}-${x}`} x={x} y={5.4} z={z} yaw={i === 0 ? Math.PI / 2 : -Math.PI / 2} red={x < -16} h={3.0} />),
+            )}
+            {!low && <pointLight position={[FIRE.x - 5, r.h - 1.4, FIRE.z]} color="#ffd2a1" intensity={1.0} distance={13} decay={2} />}
         </group>
     );
 }
@@ -684,13 +624,13 @@ function PoolWater({ profile }: { profile?: QualityProfile }) {
         t.current = 0;
         const p = getWalkerPose();
         const d = Math.hypot(p.x - POOL.x, p.z - POOL.z);
-        if (near && d > 26) setNear(false);
-        else if (!near && d < 22) setNear(true);
+        if (near && d > 28) setNear(false);
+        else if (!near && d < 24) setNear(true);
     });
     if (canReflect && near) {
         return (
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.05, POOL.z]}>
-                <circleGeometry args={[POOL.r, 40]} />
+                <circleGeometry args={[POOL.r, 48]} />
                 <MeshReflectorMaterial
                     resolution={profile?.reflectionResolution ?? 512}
                     mirror={0.7}
@@ -709,7 +649,7 @@ function PoolWater({ profile }: { profile?: QualityProfile }) {
     }
     return (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.05, POOL.z]}>
-            <circleGeometry args={[POOL.r, 32]} />
+            <circleGeometry args={[POOL.r, 40]} />
             <meshStandardMaterial color="#1a3348" roughness={0.2} metalness={0.5} />
         </mesh>
     );
@@ -719,96 +659,63 @@ function MirrorWell({ m, sh, low, profile }: { m: Mats; sh: boolean; low: boolea
     const r = room('soul_mirror');
     const c = roomCenter(r);
     const glass = useMemo(
-        () =>
-            new THREE.MeshStandardMaterial({
-                color: '#9fb4ff',
-                transparent: true,
-                opacity: 0.14,
-                roughness: 0.04,
-                metalness: 0.5,
-                envMapIntensity: 1.6,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-            }),
+        () => new THREE.MeshStandardMaterial({ color: '#9fb4ff', transparent: true, opacity: 0.14, roughness: 0.04, metalness: 0.5, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false }),
         [],
     );
-    const rocks = useMemo(() => Array.from({ length: 8 }, (_, i) => solid(`pool rock ${i}`)), []);
     return (
         <group>
-            <Shell r={r} floor={m.tile} wall={m.tileKitchen} ceiling={m.plaster} m={m} sh={sh} outerX="x1" skylight={3.2} />
-            {/* the skylight is glazed: the sky lies on the water */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, r.h - 0.02, c.z]}>
-                <circleGeometry args={[3.2, 32]} />
+            <Shell r={r} floor={m.tile} wall={m.tileKitchen} ceiling={m.plaster} m={m} sh={sh} outer="x1" hole={3.6} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, r.h + 0.02, c.z]}>
+                <circleGeometry args={[3.6, 32]} />
                 <primitive object={glass} attach="material" />
             </mesh>
-            {/* marble around the pool, the gold lip */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.03, POOL.z]} receiveShadow={sh}>
-                <ringGeometry args={[POOL.r - 0.1, POOL.r + 1.3, 48]} />
+            {/* marble around the pool, the gold lip, the water */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.008, POOL.z]} receiveShadow={sh}>
+                <ringGeometry args={[POOL.r, POOL.r + 1.6, 56]} />
                 <primitive object={m.marble} attach="material" />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.045, POOL.z]}>
-                <ringGeometry args={[POOL.r - 0.05, POOL.r + 0.12, 48]} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POOL.x, 0.016, POOL.z]}>
+                <ringGeometry args={[POOL.r - 0.04, POOL.r + 0.16, 56]} />
                 <primitive object={m.gold} attach="material" />
             </mesh>
             <PoolWater profile={profile} />
-            {/* lilies on the water */}
             {[
-                [1.6, -1.1, 0.4],
-                [-2.1, 0.6, 2.1],
-                [0.4, 2.4, 4.0],
-                [-1.2, -2.6, 1.2],
+                [1.9, -1.4, 0.4],
+                [-2.6, 0.8, 2.1],
+                [0.5, 3.0, 4.0],
+                [-1.5, -3.2, 1.2],
+                [3.1, 1.6, 5.1],
             ].map(([dx, dz, yaw], i) => (
-                <HouseProp key={i} model="nkLilyLarge" position={[POOL.x + dx, 0.06, POOL.z + dz]} rotation={[0, yaw, 0]} fit={{ w: 0.6 }} shadows={false}>
+                <HouseProp key={i} model="nkLilyLarge" position={[POOL.x + dx, 0.06, POOL.z + dz]} rotation={[0, yaw, 0]} fit={{ w: 0.7 }} shadows={false}>
                     {null}
                 </HouseProp>
             ))}
-            {rocks.map((s) => (
-                <At key={s.name} s={s}>
-                    <HouseProp model="nkRockLargeA" fit={{ w: 0.9 }} shadows={sh}>
-                        <Block s={s} mat={m.rockFace} shadow={sh} w={0.8} d={0.6} />
-                    </HouseProp>
-                </At>
-            ))}
-            {/* the ring and the obelisks behind the water, candles on the lip */}
-            <At s={solid('well ring')}>
-                <HouseProp model="nkStatueRing" fit={{ h: 2.8 }} shadows={sh}>
-                    <mesh position={[0, 1.4, 0]} rotation={[0, Math.PI / 2, 0]}>
-                        <torusGeometry args={[1.1, 0.14, 10, 30]} />
-                        <primitive object={m.basalt} attach="material" />
-                    </mesh>
-                </HouseProp>
-                <mesh position={[0, 1.5, 0]}>
-                    <sphereGeometry args={[0.22, 14, 10]} />
-                    <meshBasicMaterial color="#8b7cff" toneMapped={false} />
-                </mesh>
-            </At>
-            {(['well obelisk N', 'well obelisk S'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="nkStatueObelisk" fit={{ h: 2.4 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.basalt} shadow={sh} w={0.5} d={0.5} />
-                    </HouseProp>
-                </At>
-            ))}
+            {/* candles between the rim rocks */}
             {Array.from({ length: 10 }, (_, i) => {
-                const a = (i / 10) * Math.PI * 2 + 0.1;
+                const a = 0.31 + (i + 0.5) * ((Math.PI * 2) / 10);
                 return (
-                    <group key={i} position={[POOL.x + Math.cos(a) * (POOL.r + 0.95), 0.03, POOL.z + Math.sin(a) * (POOL.r + 0.95)]}>
-                        <mesh position={[0, 0.12, 0]}>
-                            <cylinderGeometry args={[0.035, 0.04, 0.24, 8]} />
+                    <group key={i} position={[POOL.x + Math.cos(a) * (POOL.r + 0.7), 0, POOL.z + Math.sin(a) * (POOL.r + 0.7)]}>
+                        <mesh position={[0, 0.13, 0]}>
+                            <cylinderGeometry args={[0.04, 0.045, 0.26, 8]} />
                             <primitive object={m.linen} attach="material" />
                         </mesh>
-                        <mesh position={[0, 0.3, 0]}>
-                            <sphereGeometry args={[0.035, 8, 6]} />
+                        <mesh position={[0, 0.32, 0]}>
+                            <sphereGeometry args={[0.04, 8, 6]} />
                             <primitive object={m.bulbWarm} attach="material" />
                         </mesh>
                     </group>
                 );
             })}
-            <Bench s={solid('well bench N')} m={m} shadow={sh} />
-            <Bench s={solid('well bench S')} m={m} shadow={sh} />
-            {!low && <pointLight position={[POOL.x, 2.2, POOL.z]} color="#a5b4fc" intensity={2.0} distance={13} decay={2} />}
-            {!low && <pointLight position={[c.x - 5, r.h - 1, c.z]} color="#ffe2bf" intensity={0.6} distance={9} decay={2} />}
-            {profile?.sparkles && <Sparkles count={50} scale={[7, 2, 7]} position={[POOL.x, 1.0, POOL.z]} size={2} speed={0.3} color="#b9c6ff" opacity={0.7} />}
+            {/* the ring's orb */}
+            <SolidGroup s="well ring">
+                <mesh position={[0, 1.7, 0]}>
+                    <sphereGeometry args={[0.26, 16, 12]} />
+                    <meshBasicMaterial color="#8b7cff" toneMapped={false} />
+                </mesh>
+            </SolidGroup>
+            <pointLight position={[POOL.x, 2.4, POOL.z]} color="#a5b4fc" intensity={low ? 3.2 : 2.6} distance={low ? 20 : 15} decay={2} userData={{ noLampDim: true }} />
+            {!low && <pointLight position={[c.x - 6, r.h - 1.2, c.z]} color="#ffe2bf" intensity={0.9} distance={11} decay={2} />}
+            {profile?.sparkles && <Sparkles count={60} scale={[9, 2, 9]} position={[POOL.x, 1.0, POOL.z]} size={2} speed={0.3} color="#b9c6ff" opacity={0.7} />}
         </group>
     );
 }
@@ -827,148 +734,114 @@ function SignalStudio({ m, sh, low, profile }: { m: Mats; sh: boolean; low: bool
         if (beacon.current) (beacon.current.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(t * 3.2) * 0.45;
     });
     const desk = solid('studio desk');
+    const mast = solid('studio mast');
     return (
         <group>
-            <Shell r={r} floor={m.concrete} wall={m.concrete} ceiling={m.metalDark} m={m} sh={sh} outerX="x0" />
-            {/* metal wainscot and a slit window band on the west wall */}
-            <Box pos={[r.x0 + 0.05, 0.6, c.z]} size={[0.08, 1.2, r.z1 - r.z0]} mat={m.metalDark} shadow={false} />
-            <Box pos={[r.x1 - 0.5, 0.6, r.z1 - 0.05]} size={[r.x1 - r.x0 - 1, 1.2, 0.08]} mat={m.metalDark} shadow={false} />
-            {/* the desk: three screens, a console, two chairs */}
-            <At s={desk}>
+            <Shell r={r} floor={m.concrete} wall={m.concrete} ceiling={m.metalDark} m={m} sh={sh} outer="x0" />
+            <Box pos={[r.x0 + 0.06, 0.65, c.z]} size={[0.1, 1.3, r.z1 - r.z0]} mat={m.metalDark} shadow={false} />
+            {/* the desk: three screens toward the chairs, a console, a mug */}
+            <SolidGroup s={desk}>
                 <mesh position={[0, desk.h / 2, 0]} castShadow={sh} receiveShadow={sh}>
-                    <boxGeometry args={[3.0, desk.h, 1.0]} />
+                    <boxGeometry args={[desk.w, desk.h, desk.d]} />
                     <primitive object={m.metalDark} attach="material" />
                 </mesh>
                 <mesh position={[0, desk.h + 0.015, 0]}>
-                    <boxGeometry args={[3.04, 0.03, 1.04]} />
+                    <boxGeometry args={[desk.w + 0.04, 0.03, desk.d + 0.04]} />
                     <primitive object={m.wood} attach="material" />
                 </mesh>
-                {[-0.95, 0, 0.95].map((x) => (
-                    <group key={x} position={[x, desk.h + 0.36, -0.3]} rotation={[-0.1, 0, 0]}>
+                {[-1.0, 0, 1.0].map((x) => (
+                    <group key={x} position={[x, desk.h + 0.4, -0.3]} rotation={[-0.1, 0, 0]}>
                         <mesh>
-                            <planeGeometry args={[0.8, 0.5]} />
+                            <planeGeometry args={[0.86, 0.52]} />
                             <primitive object={m.screen} attach="material" />
                         </mesh>
                         <mesh position={[0, 0, -0.02]}>
-                            <boxGeometry args={[0.86, 0.56, 0.03]} />
+                            <boxGeometry args={[0.92, 0.58, 0.03]} />
                             <primitive object={m.metalDark} attach="material" />
                         </mesh>
                     </group>
                 ))}
-                <mesh position={[0, desk.h + 0.04, 0.22]} rotation={[-0.3, 0, 0]}>
-                    <boxGeometry args={[1.6, 0.06, 0.34]} />
+                <mesh position={[0, desk.h + 0.05, 0.24]} rotation={[-0.3, 0, 0]}>
+                    <boxGeometry args={[1.8, 0.06, 0.36]} />
                     <primitive object={m.black} attach="material" />
                 </mesh>
-                {[-0.6, -0.3, 0, 0.3, 0.6].map((x) => (
-                    <mesh key={x} position={[x, desk.h + 0.09, 0.2]}>
-                        <boxGeometry args={[0.04, 0.02, 0.04]} />
+                {[-0.7, -0.35, 0, 0.35, 0.7].map((x) => (
+                    <mesh key={x} position={[x, desk.h + 0.1, 0.22]}>
+                        <boxGeometry args={[0.05, 0.02, 0.05]} />
                         <meshBasicMaterial color={x === 0 ? '#ff4d4d' : '#22d3ee'} toneMapped={false} />
                     </mesh>
                 ))}
-                <HouseProp model="fkMug" position={[1.3, desk.h + 0.03, 0.3]} fit={{ w: 0.1 }} shadows={false}>
+                <HouseProp model="fkMug" position={[1.4, desk.h + 0.03, 0.3]} fit={{ w: 0.1 }} shadows={false}>
                     {null}
                 </HouseProp>
-                {!low && <pointLight position={[0, 1.4, 0.4]} color="#8ff2ff" intensity={1.1} distance={6} decay={2} />}
-            </At>
-            {(['studio chair L', 'studio chair R'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="deskChair" fit={{ w: 0.6 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.leather} shadow={sh} w={0.55} d={0.55} />
-                    </HouseProp>
-                </At>
-            ))}
-            {/* ON AIR over the desk, a monitor wall behind it */}
-            <mesh ref={onAir} position={[c.x, 3.3, r.z0 + 0.1]}>
-                <boxGeometry args={[1.6, 0.4, 0.08]} />
+                {!low && <pointLight position={[0, 1.5, 0.5]} color="#8ff2ff" intensity={1.3} distance={7} decay={2} />}
+            </SolidGroup>
+            {/* ON AIR, the monitor wall on the north wall */}
+            <mesh ref={onAir} position={[c.x, 4.6, r.z0 + 0.1]}>
+                <boxGeometry args={[2.0, 0.5, 0.08]} />
                 <meshStandardMaterial color="#2a0a0a" emissive="#ff3b3b" emissiveIntensity={1.0} toneMapped={false} />
             </mesh>
-            {[-1.6, 0, 1.6].map((dx) =>
-                [1.5, 2.5].map((y) => (
+            {[-2.4, -0.8, 0.8, 2.4].map((dx) =>
+                [1.7, 2.9].map((y) => (
                     <group key={`${dx}-${y}`} position={[c.x + dx, y, r.z0 + 0.1]}>
                         <mesh>
-                            <planeGeometry args={[1.4, 0.8]} />
+                            <planeGeometry args={[1.4, 0.95]} />
                             <primitive object={m.screen} attach="material" />
                         </mesh>
                         <mesh position={[0, 0, -0.03]}>
-                            <boxGeometry args={[1.5, 0.9, 0.05]} />
+                            <boxGeometry args={[1.5, 1.05, 0.05]} />
                             <primitive object={m.metalDark} attach="material" />
                         </mesh>
                     </group>
                 )),
             )}
-            {/* neon runs along the ceiling edge */}
-            <mesh position={[c.x, r.h - 0.25, r.z0 + 0.06]}>
+            {/* neon along the ceiling edge */}
+            <mesh position={[c.x, r.h - 0.3, r.z0 + 0.06]}>
                 <boxGeometry args={[r.x1 - r.x0 - 1, 0.06, 0.04]} />
                 <primitive object={neon} attach="material" />
             </mesh>
-            <mesh position={[r.x0 + 0.06, r.h - 0.25, c.z]}>
+            <mesh position={[r.x0 + 0.06, r.h - 0.3, c.z]}>
                 <boxGeometry args={[0.04, 0.06, r.z1 - r.z0 - 1]} />
                 <primitive object={neon} attach="material" />
             </mesh>
-            {/* the mast, up through the roof, with its beacon */}
-            {(() => {
-                const s = solid('studio mast');
-                return (
-                    <At s={s}>
-                        <mesh position={[0, 0.3, 0]}>
-                            <cylinderGeometry args={[0.5, 0.6, 0.6, 8]} />
-                            <primitive object={m.concrete} attach="material" />
-                        </mesh>
-                        <mesh position={[0, r.h / 2 + 0.3, 0]}>
-                            <cylinderGeometry args={[0.07, 0.12, r.h + 1.2, 6]} />
-                            <primitive object={m.metalDark} attach="material" />
-                        </mesh>
-                        {[1.6, 2.6, 3.6].map((y) => (
-                            <mesh key={y} position={[0, y, 0]} rotation={[0, y, 0]}>
-                                <boxGeometry args={[1.2, 0.04, 0.04]} />
-                                <primitive object={m.metalDark} attach="material" />
-                            </mesh>
-                        ))}
-                        <mesh ref={beacon} position={[0, r.h + 0.9, 0]}>
-                            <sphereGeometry args={[0.14, 8, 6]} />
-                            <meshBasicMaterial color="#fbbf24" toneMapped={false} transparent opacity={1} />
-                        </mesh>
-                    </At>
-                );
-            })()}
-            {/* the workshop corner */}
-            <At s={solid('studio workbench')}>
-                <HouseProp model="skWorkbench" fit={{ w: 1.4 }} shadows={sh}>
-                    <Block s={solid('studio workbench')} mat={m.woodDark} shadow={sh} w={1.4} d={1.0} />
-                </HouseProp>
-            </At>
-            {(['studio crate', 'studio crate 2', 'studio crate 3'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="skBoxLarge" fit={{ w: 0.8 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={0.8} d={0.8} />
-                    </HouseProp>
-                </At>
+            <mesh position={[c.x, r.h - 0.3, r.z1 - 0.06]}>
+                <boxGeometry args={[r.x1 - r.x0 - 1, 0.06, 0.04]} />
+                <primitive object={neon} attach="material" />
+            </mesh>
+            {/* the mast, base to ceiling, beacon at the top */}
+            <SolidGroup s={mast}>
+                <mesh position={[0, 0.3, 0]}>
+                    <cylinderGeometry args={[mast.w / 2, mast.w / 2 + 0.06, 0.6, 10]} />
+                    <primitive object={m.concrete} attach="material" />
+                </mesh>
+                <mesh position={[0, r.h / 2, 0]}>
+                    <cylinderGeometry args={[0.07, 0.12, r.h, 6]} />
+                    <primitive object={m.metalDark} attach="material" />
+                </mesh>
+                {[1.8, 3.0, 4.2, 5.4].map((y) => (
+                    <mesh key={y} position={[0, y, 0]} rotation={[0, y, 0]}>
+                        <boxGeometry args={[1.3, 0.04, 0.04]} />
+                        <primitive object={m.metalDark} attach="material" />
+                    </mesh>
+                ))}
+                <mesh ref={beacon} position={[0, r.h - 0.5, 0]}>
+                    <sphereGeometry args={[0.16, 8, 6]} />
+                    <meshBasicMaterial color="#fbbf24" toneMapped={false} transparent opacity={1} />
+                </mesh>
+            </SolidGroup>
+            {/* broadcast stills on the south wall, flags on the west */}
+            {['/assets/cutscenes/combat-emerald.jpg', '/assets/cutscenes/combat-fair.jpg', '/brand/keyart-return-source.jpg'].map((url, i) => (
+                <Poster key={url} url={url} x={c.x - 5.4 + i * 5.4} y={2.6} z={r.z1 - 0.36} yaw={Math.PI} w={2.0} h={1.25} m={m} />
             ))}
-            {(['studio barrel', 'studio barrel 2'] as const).map((n) => (
-                <At key={n} s={solid(n)}>
-                    <HouseProp model="skBarrel" fit={{ h: 0.95 }} shadows={sh}>
-                        <Block s={solid(n)} mat={m.woodDark} shadow={sh} w={0.5} d={0.5} />
-                    </HouseProp>
-                </At>
-            ))}
-            <At s={solid('studio lever')}>
-                <HouseProp model="pkLever" fit={{ w: 0.6 }} shadows={sh}>
-                    <Block s={solid('studio lever')} mat={m.metalDark} shadow={sh} w={0.5} d={0.4} />
-                </HouseProp>
-            </At>
-            {/* broadcast stills on the south wall */}
-            {['/assets/cutscenes/combat-emerald.jpg', '/assets/cutscenes/combat-fair.jpg'].map((url, i) => (
-                <Poster key={url} url={url} x={c.x - 3 + i * 6} y={2.1} z={r.z1 - 0.33} yaw={Math.PI} w={1.6} h={1.0} m={m} />
-            ))}
-            {[r.z0 + 1.0, r.z1 - 1.0].map((z) => (
-                <group key={z} position={[r.x0 + 0.14, 3.9, z]} rotation={[0, Math.PI / 2, 0]}>
-                    <HouseProp model="ckFlag" fit={{ h: 1.6 }} shadows={false}>
+            {[r.z0 + 1.4, r.z1 - 1.4].map((z) => (
+                <group key={z} position={[r.x0 + 0.16, 4.4, z]} rotation={[0, 0, 0]}>
+                    <HouseProp model="ckFlag" fit={{ h: 1.8 }} shadows={false}>
                         {null}
                     </HouseProp>
                 </group>
             ))}
-            {!low && <pointLight position={[c.x, r.h - 0.9, c.z + 2]} color="#22d3ee" intensity={0.8} distance={12} decay={2} />}
-            {profile?.sparkles && <Sparkles count={20} scale={[2, 4, 2]} position={[c.x - 5.6, 3.5, c.z + 4.6]} size={1.4} speed={0.5} color="#9ff3ff" opacity={0.5} />}
+            <pointLight position={[c.x, r.h - 1.0, c.z + 3]} color={low ? '#bfe9f2' : '#22d3ee'} intensity={low ? 2.2 : 1.1} distance={low ? 20 : 14} decay={2} />
+            {profile?.sparkles && <Sparkles count={24} scale={[2, 5, 2]} position={[mast.x, 3.6, mast.z]} size={1.4} speed={0.5} color="#9ff3ff" opacity={0.5} />}
         </group>
     );
 }
@@ -976,11 +849,11 @@ function SignalStudio({ m, sh, low, profile }: { m: Mats; sh: boolean; low: bool
 /* ── Aether springs ─────────────────────────────────────────── */
 
 function Spring({ x, z, low }: { x: number; z: number; low: boolean }) {
-    const ring = useRef<THREE.Mesh>(null);
+    const ringRef = useRef<THREE.Mesh>(null);
     useFrame(({ clock }) => {
-        if (!ring.current) return;
+        if (!ringRef.current) return;
         const s = 1 + Math.sin(clock.elapsedTime * 2.6) * 0.08;
-        ring.current.scale.set(s, s, 1);
+        ringRef.current.scale.set(s, s, 1);
     });
     return (
         <group position={[x, 0, z]}>
@@ -996,7 +869,7 @@ function Spring({ x, z, low }: { x: number; z: number; low: boolean }) {
                     </mesh>
                 </group>
             </HouseProp>
-            <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
                 <ringGeometry args={[0.62, 0.84, 28]} />
                 <meshBasicMaterial color="#8b7cff" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
             </mesh>
@@ -1009,8 +882,6 @@ function Spring({ x, z, low }: { x: number; z: number; low: boolean }) {
 export default function LairWings({ low = false, profile }: { low?: boolean; profile?: QualityProfile }) {
     const m = useHouseMaterials(low);
     const sh = !low;
-    // The corridor owns the x walls the chambers share; chambers draw only their own
-    void ROOMS;
     return (
         <group>
             <Processional m={m} sh={sh} low={low} profile={profile} />

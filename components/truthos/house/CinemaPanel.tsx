@@ -14,9 +14,21 @@ export default function CinemaPanel({ onClose }: { onClose: () => void }) {
     const playCinemaFilm = useHouseUi((s) => s.playCinemaFilm);
     const setCinemaPlaying = useHouseUi((s) => s.setCinemaPlaying);
     const stopCinema = useHouseUi((s) => s.stopCinema);
+    const setCinemaTime = useHouseUi((s) => s.setCinemaTime);
     const videoRef = useRef<HTMLVideoElement>(null);
+    /** Closing the panel must not read as "pause" — the wall screen takes the film over */
+    const closing = useRef(false);
 
     const film = getHouseFilm(filmId);
+
+    // Hand the film to the wall screen: remember where we were, keep it playing
+    useEffect(() => {
+        const el = videoRef.current;
+        return () => {
+            closing.current = true;
+            if (el && Number.isFinite(el.currentTime)) setCinemaTime(el.currentTime);
+        };
+    }, [setCinemaTime]);
 
     // Keep panel <video> in sync with store (same src as wall)
     useEffect(() => {
@@ -90,7 +102,10 @@ export default function CinemaPanel({ onClose }: { onClose: () => void }) {
                             loop
                             poster={film?.poster}
                             onPlay={() => setCinemaPlaying(true)}
-                            onPause={() => setCinemaPlaying(false)}
+                            onPause={() => {
+                                if (!closing.current) setCinemaPlaying(false);
+                            }}
+                            onTimeUpdate={(e) => setCinemaTime(e.currentTarget.currentTime)}
                         />
                         <div className="shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-t border-white/10 bg-black/50">
                             <p className="text-sm text-white font-medium flex-1 min-w-[8rem]">
@@ -131,7 +146,7 @@ export default function CinemaPanel({ onClose }: { onClose: () => void }) {
                             </button>
                         </div>
                         {film?.blurb && (
-                            <p className="px-4 pb-3 text-[11px] text-white/45">{film.blurb} · also playing on the wall screen</p>
+                            <p className="px-4 pb-3 text-[11px] text-white/45">{film.blurb} · close this and it keeps playing on the big screen</p>
                         )}
                     </div>
 

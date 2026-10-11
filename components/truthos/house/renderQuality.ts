@@ -29,9 +29,6 @@ export type QualityProfile = {
     shadowMap: number;
     /** Post-processing composer at all */
     post: boolean;
-    /** Screen-space ambient occlusion (N8AO) */
-    ao: boolean;
-    aoHalfRes: boolean;
     /** Subpixel morphological antialiasing */
     smaa: boolean;
     bloom: boolean;
@@ -63,8 +60,6 @@ const PROFILES: Record<QualityTier, QualityProfile> = {
         shadows: true,
         shadowMap: 4096,
         post: true,
-        ao: true,
-        aoHalfRes: false,
         smaa: true,
         bloom: true,
         dof: false,
@@ -87,8 +82,6 @@ const PROFILES: Record<QualityTier, QualityProfile> = {
         shadows: true,
         shadowMap: 2048,
         post: true,
-        ao: true,
-        aoHalfRes: true,
         smaa: true,
         bloom: true,
         dof: false,
@@ -111,8 +104,6 @@ const PROFILES: Record<QualityTier, QualityProfile> = {
         shadows: true,
         shadowMap: 1024,
         post: true,
-        ao: false,
-        aoHalfRes: true,
         smaa: true,
         bloom: true,
         dof: false,
@@ -135,8 +126,6 @@ const PROFILES: Record<QualityTier, QualityProfile> = {
         shadows: false,
         shadowMap: 512,
         post: false,
-        ao: false,
-        aoHalfRes: true,
         smaa: false,
         bloom: false,
         dof: false,

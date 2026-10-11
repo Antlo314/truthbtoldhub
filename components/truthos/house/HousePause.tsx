@@ -133,7 +133,7 @@ export default function HousePause({
                             ))}
                         </div>
                         <p className="mt-1.5 text-[11px] text-white/40">
-                            Ultra and High: sharper edges, ambient shadow, live reflections and clouds. Low is the phone look.
+                            Ultra and High: sharper edges, live reflections, clouds and sky light. Low is the phone look.
                         </p>
                     </div>
 

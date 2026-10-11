@@ -39,7 +39,7 @@ import HousePause, { hydrateLookFeel } from './HousePause';
 import { useHouseImmersion } from './useHouseImmersion';
 import { markVisited } from './stationProgress';
 import { savePose } from './housePose';
-import { getWalkerPose } from './walkerPose';
+import { getWalkerPose, walkerPoseLive } from './walkerPose';
 
 import HouseLoadBar from './HouseLoadBar';
 
@@ -241,8 +241,11 @@ export default function HouseExperience({
         hubAudio.enterHouse();
         hydrateLookFeel();
         return () => {
-            const p = getWalkerPose();
-            savePose({ x: p.x, z: p.z, yaw: p.yaw, pitch: 0 });
+            // Only a pose the walker actually stood in — never the module default
+            if (walkerPoseLive()) {
+                const p = getWalkerPose();
+                savePose({ x: p.x, z: p.z, yaw: p.yaw, pitch: 0 });
+            }
             hubAudio.leaveHouse();
         };
     }, []);

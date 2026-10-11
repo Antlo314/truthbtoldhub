@@ -301,7 +301,7 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                                 </button>
                             )}
                             <p className="text-[10px] uppercase tracking-[0.28em] text-amber-200/60 font-mono">
-                                {face === 'w' ? 'West wall' : face === 's' ? 'South wall' : 'North wall'}
+                                {face === 'w' ? 'Back wall' : face === 's' ? 'Left wall' : 'Right wall'}
                             </p>
                             <div className="grid grid-cols-[repeat(auto-fill,minmax(22px,1fr))] gap-0.5">
                                 {wallCells.map((c) => {

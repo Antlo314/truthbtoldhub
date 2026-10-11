@@ -3,15 +3,19 @@
 /**
  * The post stack, by quality tier.
  *
- * Order matters and is deliberate: ambient occlusion first (it needs the
- * raw depth), bloom on the lit image, the vignette last among the colour
- * passes, and SMAA at the very end so it smooths the final frame. Depth
- * of field is opt-in — the old always-on blur, focused 7.5 m out, is what
- * made every desk and wall two metres away read soft.
+ * Bloom on the lit image, the vignette last among the colour passes, and
+ * SMAA at the very end so it smooths the final frame. Depth of field is
+ * opt-in — the old always-on blur made every desk two metres away soft.
+ *
+ * No screen-space ambient occlusion. N8AO's composite blacked out the
+ * cinema screen (unlit, untonemapped) and drew every transparent light
+ * shaft — the oculus, the skylights, the projector beam — as a grey
+ * veil; its occlusion buffer was clean, its merge was not. The lair is
+ * full of exactly those surfaces, so the pass is gone rather than tuned.
  */
 import { useCallback, useRef } from 'react';
 import type { BloomEffect } from 'postprocessing';
-import { Bloom, DepthOfField, EffectComposer, N8AO, SMAA, Vignette } from '@react-three/postprocessing';
+import { Bloom, DepthOfField, EffectComposer, SMAA, Vignette } from '@react-three/postprocessing';
 import { BloomByDaylight } from './WeatherFx';
 import type { QualityProfile } from './renderQuality';
 
@@ -36,19 +40,6 @@ export default function PostFX({ profile }: { profile: QualityProfile }) {
         <>
             {profile.bloom && <BloomByDaylight effect={bloom} night={0.5} day={0.14} />}
             <EffectComposer multisampling={0} enableNormalPass={false}>
-                {profile.ao ? (
-                    <N8AO
-                        halfRes={profile.aoHalfRes}
-                        aoRadius={1.15}
-                        intensity={2.4}
-                        distanceFalloff={0.9}
-                        quality={profile.tier === 'ultra' ? 'high' : 'performance'}
-                        color="#07050d"
-                        depthAwareUpsampling
-                    />
-                ) : (
-                    <></>
-                )}
                 {profile.bloom ? (
                     <Bloom
                         ref={attachBloom}
@@ -66,7 +57,7 @@ export default function PostFX({ profile }: { profile: QualityProfile }) {
                 ) : (
                     <></>
                 )}
-                <Vignette eskil={false} offset={0.2} darkness={0.34} />
+                <Vignette eskil={false} offset={0.22} darkness={0.4} />
                 {profile.smaa ? <SMAA /> : <></>}
             </EffectComposer>
         </>

@@ -14,6 +14,7 @@ import AetherHorizon from './AetherHorizon';
 import SanctumHall, { SourceLight } from './SanctumHall';
 import SanctumStations from './SanctumStations';
 import LairWings from './LairWings';
+import LairProps from './LairProps';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
 import LocalPlayerBody from './LocalPlayerBody';
@@ -148,11 +149,15 @@ export default function HouseCanvas({
                 camera={{
                     fov: mobile ? 78 : 68,
                     near: 0.08,
-                    far: low ? 100 : 170,
+                    far: low ? 120 : 180,
                     position: [-11.8, 1.12, 10.1],
                 }}
-                onCreated={({ gl, camera }) => {
+                onCreated={({ gl, camera, scene }) => {
                     onReady?.();
+                    // Dev only: lets a headless check inspect the live scene
+                    if (process.env.NODE_ENV !== 'production') {
+                        (window as unknown as { __house?: unknown }).__house = { gl, camera, scene, THREE };
+                    }
                     gl.setClearColor(bg, 1);
                     // Pure euler FPS pose — avoid lookAt residual roll (flips world / ceiling walk)
                     camera.up.set(0, 1, 0);
@@ -168,8 +173,8 @@ export default function HouseCanvas({
                 {/* Fog reaches to the rim (r≈70) so the enclosure reads as layered
                     haze, not swallowed grey; the interior band (<15) is untouched
                     either way. Phones keep the short fog — there, the fog IS the wall. */}
-                {!low && <fog attach="fog" args={[bg, 14, 88]} />}
-                {low && <fog attach="fog" args={['#1a1428', 10, 52]} />}
+                {!low && <fog attach="fog" args={[bg, 34, 176]} />}
+                {low && <fog attach="fog" args={['#1a1428', 24, 104]} />}
 
                 <AetherSky low={low} />
                 {profile.env && (
@@ -180,6 +185,11 @@ export default function HouseCanvas({
                 {/* Sun, ambient and hemisphere are owned by the day/night cycle
                     so there is one place the time of day is expressed. */}
                 <DayNightCycle mobile={low} shadows={profile.shadows} shadowMap={profile.shadowMap} />
+                {/* Phones get no sky-captured light, and a few room lamps with
+                    physical falloff cannot carry a 20 m room alone. The lair is
+                    all indoors now, so the phone tier keeps a constant warm fill
+                    standing in for what the environment map gives the desktop. */}
+                {low && <hemisphereLight args={['#e4d8ff', '#3a2b22', 0.75]} />}
 
                 {/* What the glass looks out on: the cloud sea and the far islets */}
                 <AetherBackdrop low={low} profile={profile} />
@@ -192,6 +202,7 @@ export default function HouseCanvas({
                         <SanctumHall low={low} profile={profile} />
                         <SanctumStations low={low} />
                         <LairWings low={low} profile={profile} />
+                        <LairProps low={low} />
                     </LampGroup>
                     {/* The Source never dims — it is the hall's light, day and night */}
                     <SourceLight low={low} />

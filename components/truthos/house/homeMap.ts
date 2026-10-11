@@ -1,20 +1,21 @@
 /**
  * The Lair — one building, every station of the Hut.
  *
- * The Sanctum: an octagonal hall with seven apses (Terminal, Library,
- * Codex, Arcade, Ledger, The Mark, Paths) around the Source. Through the
- * south arch, the Processional: a long gallery with the Daily Word and
- * the Offering at its head, four chambers off its sides — the Cinema and
- * the Hall Circle, then the Mirror Well and the Signal Studio — and the
- * Overlook at its end, a glass wall onto the cloud sea. There is no
- * outside. The sky is seen through the oculus, the skylights and the
- * glass.
+ * The Sanctum: an octagonal hall 32 m across with seven deep apses
+ * (Terminal, Library, Codex, Arcade, Ledger, The Mark, Paths) around the
+ * Source. Through the south arch, the Processional: an 11 m wide gallery
+ * with the Daily Word and the Offering at its head, four chambers off its
+ * sides — the Cinema and the Hall Circle, then the Mirror Well and the
+ * Signal Studio, each 20 × 16.6 m — and the Overlook at its end, a glass
+ * wall onto the cloud sea. There is no outside.
  *
- * Collision is analytic. `walkable()` says where the floor is (the
- * octagon, the apse pockets, the arch, the rooms, the doorways) and every
- * prop is a circle in SOLIDS. The renderer, the walker and the validator
- * all read these same functions, so a prop cannot stand inside another
- * and a station cannot be sealed off without `npm run validate` saying so.
+ * Every prop is a SOLID with its real footprint (w × d, turned by its
+ * yaw) and, when it is a model, the manifest key and fit that draw it.
+ * Collision is exactly that footprint — no circles standing in for
+ * rectangles — and `npm run validate` measures every GLB and fails if a
+ * model is drawn bigger than the footprint it claims, if two footprints
+ * overlap, if one pokes through a wall, or if any station cannot be
+ * reached. The renderer, the walker and the validator read this file.
  */
 import type { Hotspot } from './houseMap';
 
@@ -27,18 +28,18 @@ export type Level = 'main';
 export const MAIN_Y = 0;
 
 /** The roam box — a backstop; the walkable region is the real fence */
-export const JUNGLE_BOUNDS = { minX: -40, maxX: 40, minZ: -30, maxZ: 50 } as const;
+export const JUNGLE_BOUNDS = { minX: -32, maxX: 32, minZ: -26, maxZ: 66 } as const;
 
 /* ── The Sanctum ────────────────────────────────────────────── */
 
 export const HALL = {
     /** centre → inner face of each facet */
-    apothem: 11,
-    wallT: 0.6,
+    apothem: 16,
+    wallT: 0.7,
     /** wall height to the eave */
-    eave: 6.2,
-    oculusR: 2.8,
-    oculusY: 9.4,
+    eave: 8.6,
+    oculusR: 3.8,
+    oculusY: 13.4,
     facets: 8,
 } as const;
 
@@ -47,12 +48,12 @@ export const FACET_HALF = HALL.apothem * Math.tan(Math.PI / 8);
 /** Centre → a facet's end vertex (inner) */
 export const VERTEX_R = HALL.apothem / Math.cos(Math.PI / 8);
 
-export const ALCOVE = { width: 4.4, depth: 2.8, height: 3.6, apseH: 4.6 } as const;
+export const ALCOVE = { width: 7.4, depth: 6.0, height: 5.2, apseH: 6.8 } as const;
 /** The south arch into the Processional */
-export const ARCH = { width: 3.6, height: 4.0 } as const;
+export const ARCH = { width: 5.0, height: 5.8 } as const;
 /** Kept for callers that still say DOOR */
 export const DOOR = ARCH;
-export const DAIS = { r: 2.4, h: 0.28, rampR: 3.1 } as const;
+export const DAIS = { r: 3.4, h: 0.32, rampR: 4.4 } as const;
 
 export type AlcoveId = 'terminal' | 'arcade' | 'ledger' | 'library' | 'codex' | 'mark' | 'paths';
 export type Alcove = { id: AlcoveId; name: string; facet: number; soft: boolean };
@@ -104,6 +105,11 @@ export function yawFacing(nx: number, nz: number): number {
     return Math.atan2(-nx, -nz);
 }
 
+/** three.js yaw that turns a prop's local +z (its front) toward (nx, nz) */
+export function yawToward(nx: number, nz: number): number {
+    return Math.atan2(nx, nz);
+}
+
 /* ── The rooms beyond the arch ──────────────────────────────── */
 
 export type Rect = { x0: number; z0: number; x1: number; z1: number };
@@ -117,16 +123,20 @@ export type Room = Rect & {
     h: number;
 };
 
-export const WALL_T = 0.6;
+export const WALL_T = 0.7;
+/** Corridor walls rise to the tallest chamber so no slit opens above them */
+export const CORRIDOR_WALL_H = 10.2;
+
+const SANCTUM_OUTER = HALL.apothem + HALL.wallT; // 16.7
 
 /** Inner rectangles — the floor you stand on. Walls sit OUTSIDE these. */
 export const ROOMS: Room[] = [
-    { id: 'processional', name: 'The Processional', blurb: 'The long gallery', x0: -3.6, z0: 11.0, x1: 3.6, z1: 31.0, h: 5.6 },
-    { id: 'overlook', name: 'The Overlook', blurb: 'Glass onto the cloud sea', x0: -3.6, z0: 31.0, x1: 3.6, z1: 37.0, h: 5.6 },
-    { id: 'cinema', name: 'The Cinema', blurb: 'Films in the dark', x0: 4.2, z0: 13.6, x1: 19.6, z1: 25.6, h: 6.0 },
-    { id: 'hall', name: 'The Hall Circle', blurb: 'The community fire', x0: -19.6, z0: 13.6, x1: -4.2, z1: 25.6, h: 6.4 },
-    { id: 'soul_mirror', name: 'The Mirror Well', blurb: 'Shape your vessel', x0: 4.2, z0: 26.2, x1: 19.6, z1: 38.2, h: 6.5 },
-    { id: 'studio', name: 'The Signal Studio', blurb: 'Broadcast from the lair', x0: -19.6, z0: 26.2, x1: -4.2, z1: 38.2, h: 5.2 },
+    { id: 'processional', name: 'The Processional', blurb: 'The long gallery', x0: -5.5, z0: SANCTUM_OUTER, x1: 5.5, z1: 54.3, h: 8.0 },
+    { id: 'overlook', name: 'The Overlook', blurb: 'Glass onto the cloud sea', x0: -5.5, z0: 54.3, x1: 5.5, z1: 62.5, h: 8.0 },
+    { id: 'cinema', name: 'The Cinema', blurb: 'Films in the dark', x0: 6.2, z0: 20.4, x1: 26.2, z1: 37.0, h: 9.0 },
+    { id: 'hall', name: 'The Hall Circle', blurb: 'The community fire', x0: -26.2, z0: 20.4, x1: -6.2, z1: 37.0, h: 10.0 },
+    { id: 'soul_mirror', name: 'The Mirror Well', blurb: 'Shape your vessel', x0: 6.2, z0: 37.7, x1: 26.2, z1: 54.3, h: 9.6 },
+    { id: 'studio', name: 'The Signal Studio', blurb: 'Broadcast from the lair', x0: -26.2, z0: 37.7, x1: -6.2, z1: 54.3, h: 7.6 },
 ];
 
 export const room = (id: RoomId): Room => ROOMS.find((r) => r.id === id)!;
@@ -137,7 +147,7 @@ export const roomCenter = (r: Rect) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1)
  * room with a wall between — one rectangle for the floor, two names.
  */
 const FLOOR_RECTS: Rect[] = [
-    { x0: room('processional').x0, z0: room('processional').z0, x1: room('processional').x1, z1: room('overlook').z1 },
+    { x0: -5.5, z0: SANCTUM_OUTER, x1: 5.5, z1: 62.5 },
     room('cinema'),
     room('hall'),
     room('soul_mirror'),
@@ -146,20 +156,26 @@ const FLOOR_RECTS: Rect[] = [
 
 export type Door = {
     id: string;
-    /** the gap through the wall — walkable */
+    /** the gap through the corridor wall — walkable */
     rect: Rect;
-    /** the wall this door pierces runs along z (x is constant) */
     h: number;
     /** which side of the corridor */
     side: 'e' | 'w';
 };
 
-/** Doorways from the Processional into the chambers (3 m wide, 3.2 m tall) */
+const doorAt = (id: string, side: 'e' | 'w', zc: number): Door => ({
+    id,
+    side,
+    h: 4.6,
+    rect: side === 'e' ? { x0: 5.5, z0: zc - 2.1, x1: 6.2, z1: zc + 2.1 } : { x0: -6.2, z0: zc - 2.1, x1: -5.5, z1: zc + 2.1 },
+});
+
+/** Doorways from the Processional into the chambers (4.2 m wide, 4.6 m tall), centred on each chamber */
 export const DOORS: Door[] = [
-    { id: 'cinema', rect: { x0: 3.6, z0: 18.1, x1: 4.2, z1: 21.1 }, h: 3.2, side: 'e' },
-    { id: 'hall', rect: { x0: -4.2, z0: 18.1, x1: -3.6, z1: 21.1 }, h: 3.2, side: 'w' },
-    { id: 'soul_mirror', rect: { x0: 3.6, z0: 27.6, x1: 4.2, z1: 30.6 }, h: 3.2, side: 'e' },
-    { id: 'studio', rect: { x0: -4.2, z0: 27.6, x1: -3.6, z1: 30.6 }, h: 3.2, side: 'w' },
+    doorAt('cinema', 'e', 28.7),
+    doorAt('hall', 'w', 28.7),
+    doorAt('soul_mirror', 'e', 46.0),
+    doorAt('studio', 'w', 46.0),
 ];
 
 const inRect = (r: Rect, x: number, z: number, pad = 0) => x >= r.x0 + pad && x <= r.x1 - pad && z >= r.z0 + pad && z <= r.z1 - pad;
@@ -175,158 +191,289 @@ export const CHAMBERS: Chamber[] = (['cinema', 'hall', 'soul_mirror', 'studio'] 
 export const DESTINATIONS = CHAMBERS;
 export const destCenter = (d: Chamber) => ({ x: d.x, z: d.z });
 
+const C_CIN = roomCenter(room('cinema'));
+const C_HALL = roomCenter(room('hall'));
+const C_MIR = roomCenter(room('soul_mirror'));
+const C_STU = roomCenter(room('studio'));
+
+/** The council fire at the Hall Circle's heart */
+export const FIRE = { x: C_HALL.x, z: C_HALL.z } as const;
+/** The reflecting pool, a little east of the Mirror Well's centre so the west lip is a stage */
+export const POOL = { x: C_MIR.x + 1.0, z: C_MIR.z, r: 5.0 } as const;
+/** The cinema screen hangs on the east wall */
+export const SCREEN = { x: room('cinema').x1 - 0.32, y: 3.9, z: C_CIN.z, w: 12, h: 5.6 } as const;
+
 /* ── Solids — every prop that takes floor ───────────────────── */
 
 export type SolidAt = AlcoveId | 'world';
 
+export type Fit = { w?: number; h?: number; d?: number };
+
 export type Solid = {
     name: string;
-    /** which frame x/z are in: an apse, or the world */
+    /** which frame x/z/yaw are in: an apse, or the world */
     at: SolidAt;
     x: number;
     z: number;
-    /** collision radius, metres */
-    r: number;
+    /** footprint in metres: w along local x, d along local z (before yaw). Collision is exactly this. */
+    w: number;
+    d: number;
+    /** round things (columns, the fire, the pool) collide as a circle of diameter w */
+    round?: boolean;
     /** visual height, metres */
     h: number;
-    /** yaw in the local frame (props face local +z) */
+    /** yaw in its frame — props face local +z */
     yaw?: number;
-    /** A chair pushed under a desk may share its circle — name the solid it tucks into */
+    /** A chair pushed under a desk may share its footprint */
     tuck?: string;
+    /** HouseProp manifest key that draws it; omitted = procedural */
+    model?: string;
+    /** how the model is sized (HouseProp fit) — required with model */
+    fit?: Fit;
+    /** drawn by a bespoke renderer, not the generic prop pass */
+    custom?: boolean;
+    /** material key for the procedural fallback block */
+    mat?: string;
 };
 
-const ringAt = (cx: number, cz: number, a: number, r: number) => ({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r });
+const ring = (cx: number, cz: number, a: number, r: number) => ({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r });
 
-const C_HALL = roomCenter(room('hall'));
-const C_CIN = roomCenter(room('cinema'));
-const C_MIR = roomCenter(room('soul_mirror'));
-const C_STU = roomCenter(room('studio'));
-/** The pool sits a little east of the Mirror Well's centre so the west lip is a stage */
-export const POOL = { x: C_MIR.x + 1.0, z: C_MIR.z, r: 3.8 } as const;
-export const FIRE = { x: C_HALL.x, z: C_HALL.z } as const;
+/** yaw for a prop at bearing a around a centre whose local x runs along the circle */
+const tangentX = (a: number) => -a - Math.PI / 2;
+/** yaw for a prop whose local z runs along the circle (benches, which are long in z) */
+const tangentZ = (a: number) => -a;
+/** yaw for a prop whose local z points out from the centre (bedrolls) */
+const radialZ = (a: number) => Math.PI / 2 - a;
+
+/** The Fantasy Town stall bench is long in z: 1.6 m × 0.45 m, 0.38 m high */
+const bench = (name: string, at: SolidAt, x: number, z: number, yaw = 0): Solid => ({
+    name,
+    at,
+    x,
+    z,
+    w: 0.5,
+    d: 1.65,
+    h: 0.4,
+    yaw,
+    model: 'ftStallBench',
+    fit: { d: 1.6 },
+    mat: 'wood',
+});
+
+const plant = (name: string, at: SolidAt, x: number, z: number, h = 1.1): Solid => ({
+    name,
+    at,
+    x,
+    z,
+    w: +((0.212 * h) / 0.654 + 0.06).toFixed(2),
+    d: +((0.241 * h) / 0.654 + 0.06).toFixed(2),
+    h,
+    model: 'pottedPlant',
+    fit: { h },
+    mat: 'leaf',
+});
+
+const floorLamp = (name: string, at: SolidAt, x: number, z: number): Solid => ({
+    name,
+    at,
+    x,
+    z,
+    w: 0.34,
+    d: 0.38,
+    h: 1.7,
+    model: 'floorLamp',
+    fit: { h: 1.7 },
+    mat: 'metalDark',
+});
+
+const VERTEX_BEARING = (k: number) => facetAngle(k) + Math.PI / 8;
 
 export const SOLIDS: Solid[] = [
-    // ── Terminal (north) — desk against the back wall, chair facing it
-    { name: 'desk', at: 'terminal', x: 0, z: 2.3, r: 0.95, h: 0.76, yaw: Math.PI },
-    { name: 'desk chair', at: 'terminal', x: 0, z: 1.42, r: 0.3, h: 0.9, yaw: 0, tuck: 'desk' },
-    { name: 'terminal lamp', at: 'terminal', x: 1.75, z: 2.25, r: 0.2, h: 1.6 },
-    { name: 'terminal plant', at: 'terminal', x: -1.75, z: 2.25, r: 0.26, h: 1.0 },
-    // ── Library — three bays on the back wall, a chair to read in
-    { name: 'library bay W', at: 'library', x: -1.25, z: 2.5, r: 0.55, h: 2.4, yaw: Math.PI },
-    { name: 'library bay C', at: 'library', x: 0, z: 2.5, r: 0.55, h: 2.4, yaw: Math.PI },
-    { name: 'library bay E', at: 'library', x: 1.25, z: 2.5, r: 0.55, h: 2.4, yaw: 2.9 },
-    { name: 'reading chair', at: 'library', x: 1.35, z: 0.85, r: 0.42, h: 0.9, yaw: Math.PI + 0.7 },
-    { name: 'library lamp', at: 'library', x: -1.7, z: 1.0, r: 0.2, h: 1.6 },
-    // ── Codex — scribe's desk
-    { name: 'codex desk', at: 'codex', x: 0, z: 2.35, r: 0.8, h: 0.78, yaw: Math.PI },
-    { name: 'codex chair', at: 'codex', x: 0, z: 1.5, r: 0.3, h: 0.9, yaw: 0, tuck: 'codex desk' },
-    { name: 'codex plant', at: 'codex', x: 1.7, z: 2.25, r: 0.26, h: 1.0 },
-    // ── Arcade — two cabinets, screens toward the hall
-    { name: 'arcade cabinet L', at: 'arcade', x: -0.78, z: 2.4, r: 0.46, h: 1.85 },
-    { name: 'arcade cabinet R', at: 'arcade', x: 0.78, z: 2.4, r: 0.46, h: 1.85 },
-    { name: 'arcade stool', at: 'arcade', x: 1.8, z: 1.55, r: 0.22, h: 0.72 },
-    // ── Ledger — the record on a sideboard
-    { name: 'ledger sideboard', at: 'ledger', x: 0, z: 2.4, r: 0.78, h: 0.9 },
-    // ── The Mark — a bench to sit and look
-    { name: 'mark bench', at: 'mark', x: -1.55, z: 0.7, r: 0.32, h: 0.5, yaw: Math.PI / 2 },
-    // ── Paths — the map, two artworks, a bench and a plant
-    { name: 'paths bench', at: 'paths', x: 1.55, z: 0.7, r: 0.32, h: 0.5, yaw: -Math.PI / 2 },
-    { name: 'paths plant', at: 'paths', x: -1.75, z: 2.25, r: 0.26, h: 1.0 },
-    // ── The Source — four low seats on the marble around the dais
-    { name: 'source seat S', at: 'world', x: 0, z: 3.7, r: 0.42, h: 0.46, yaw: Math.PI },
-    { name: 'source seat N', at: 'world', x: 0, z: -3.7, r: 0.42, h: 0.46, yaw: 0 },
-    { name: 'source seat E', at: 'world', x: 3.7, z: 0, r: 0.42, h: 0.46, yaw: -Math.PI / 2 },
-    { name: 'source seat W', at: 'world', x: -3.7, z: 0, r: 0.42, h: 0.46, yaw: Math.PI / 2 },
-    // ── Eight columns at the hall's vertices, between the apses
-    ...Array.from({ length: 8 }, (_, k) => {
-        const a = facetAngle(k) + Math.PI / 8;
-        const r = VERTEX_R - 0.75;
-        return { name: `column ${k}`, at: 'world' as const, x: Math.cos(a) * r, z: Math.sin(a) * r, r: 0.5, h: HALL.eave };
-    }),
+    /* ── Terminal (north) — the desk you wake at ── */
+    { name: 'desk', at: 'terminal', x: 0, z: 5.5, w: 2.0, d: 0.9, h: 0.76, yaw: Math.PI, model: 'desk', fit: { w: 2.0, h: 0.76, d: 0.9 }, mat: 'woodDark', custom: false },
+    { name: 'desk chair', at: 'terminal', x: 0, z: 4.55, w: 0.64, d: 0.62, h: 1.0, yaw: 0, tuck: 'desk', model: 'deskChair', fit: { w: 0.62, h: 1.0, d: 0.6 }, mat: 'leather' },
+    floorLamp('terminal lamp', 'terminal', 3.1, 5.5),
+    plant('terminal plant', 'terminal', -3.1, 5.5),
+    { name: 'terminal lounge chair', at: 'terminal', x: -2.3, z: 2.6, w: 0.94, d: 0.8, h: 0.85, yaw: 0.5, model: 'accentChair', fit: { w: 0.9 }, mat: 'leather' },
 
-    // ── The Processional — columns clear of every doorway, the Word and the Offering at its head
-    ...[13.2, 16.4, 23.2, 26.0].flatMap((z, i) => [
-        { name: `gallery column W${i}`, at: 'world' as const, x: -3.0, z, r: 0.42, h: 5.6 },
-        { name: `gallery column E${i}`, at: 'world' as const, x: 3.0, z, r: 0.42, h: 5.6 },
-    ]),
-    { name: 'daily word lectern', at: 'world', x: -2.3, z: 15.0, r: 0.34, h: 0.95, yaw: 0.9 },
-    { name: 'offering chest', at: 'world', x: 2.3, z: 15.0, r: 0.46, h: 0.6, yaw: -Math.PI / 2 },
-    { name: 'gallery planter W', at: 'world', x: -2.9, z: 20.0, r: 0.45, h: 0.6 },
-    { name: 'gallery planter E', at: 'world', x: 2.9, z: 20.0, r: 0.45, h: 0.6 },
-    { name: 'gallery planter W2', at: 'world', x: -2.9, z: 29.0, r: 0.45, h: 0.6 },
-    { name: 'gallery planter E2', at: 'world', x: 2.9, z: 29.0, r: 0.45, h: 0.6 },
-
-    // ── The Overlook — two benches at the glass, a balustrade you cannot pass
-    { name: 'overlook bench W', at: 'world', x: -2.0, z: 34.6, r: 0.6, h: 0.5, yaw: 0 },
-    { name: 'overlook bench E', at: 'world', x: 2.0, z: 34.6, r: 0.6, h: 0.5, yaw: 0 },
-    ...[-3, -2, -1, 0, 1, 2, 3].map((x) => ({ name: `balustrade ${x}`, at: 'world' as const, x, z: 36.35, r: 0.32, h: 1.0 })),
-
-    // ── The Cinema — four rows of benches either side of the aisle, screen on the east wall
-    ...[8.6, 11.0, 13.4, 15.8].flatMap((x, row) =>
-        [-3.2, -1.6, 1.6, 3.2].map((dz, i) => ({
-            name: `cinema bench ${row}${i}`,
-            at: 'world' as const,
-            x,
-            z: C_CIN.z + dz,
-            r: 0.6,
-            h: 0.5,
-            yaw: -Math.PI / 2,
-        })),
-    ),
-    { name: 'cineworks table', at: 'world', x: 6.4, z: 15.2, r: 0.9, h: 0.8 },
-    { name: 'cinema stall', at: 'world', x: 6.4, z: 24.0, r: 1.15, h: 1.8, yaw: Math.PI },
-    { name: 'cinema stool A', at: 'world', x: 8.3, z: 24.4, r: 0.3, h: 0.5 },
-    { name: 'cinema stool B', at: 'world', x: 9.4, z: 24.9, r: 0.3, h: 0.5 },
-    { name: 'cinema barrel', at: 'world', x: 5.0, z: 25.0, r: 0.3, h: 0.95 },
-    { name: 'cinema barrel 2', at: 'world', x: 18.8, z: 14.4, r: 0.3, h: 0.95 },
-
-    // ── The Hall Circle — the fire, nine stones, six benches, a camp
-    { name: 'council fire', at: 'world', x: FIRE.x, z: FIRE.z, r: 1.15, h: 0.9 },
-    ...Array.from({ length: 9 }, (_, i) => {
-        const a = 0.35 + i * ((Math.PI * 2) / 9);
-        return { name: `hall stone ${i}`, at: 'world' as const, ...ringAt(FIRE.x, FIRE.z, a, 5.0), r: 0.55, h: 2.4 + (i % 3) * 0.5, yaw: -a };
-    }),
-    ...[0.7, 1.75, 2.6, 3.7, 4.55, 5.6].map((a, i) => ({
-        name: `hall bench ${i}`,
-        at: 'world' as const,
-        ...ringAt(FIRE.x, FIRE.z, a, 3.0),
-        r: 0.6,
-        h: 0.5,
-        yaw: -a - Math.PI / 2,
+    /* ── Library — four bays on the back wall, a table, two chairs ── */
+    ...[-2.625, -0.875, 0.875, 2.625].map((x, i): Solid => ({
+        name: `library bay ${i}`,
+        at: 'library',
+        x,
+        z: 5.7,
+        w: 1.6,
+        d: 0.5,
+        h: 2.6,
+        yaw: Math.PI,
+        model: 'bookcase',
+        fit: { w: 1.6, h: 2.6, d: 0.5 },
+        mat: 'woodDark',
     })),
-    { name: 'hall chest', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.2, 6.6), r: 0.45, h: 0.6, yaw: -2.2 - Math.PI },
-    { name: 'hall chest 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 4.1, 6.6), r: 0.45, h: 0.6, yaw: -4.1 - Math.PI },
-    { name: 'hall logs', at: 'world', ...ringAt(FIRE.x, FIRE.z, 1.3, 5.6), r: 0.5, h: 0.7, yaw: -1.3 },
-    { name: 'hall logs 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.7, 6.5), r: 0.5, h: 0.7, yaw: -2.7 },
-    { name: 'hall logs 3', at: 'world', ...ringAt(FIRE.x, FIRE.z, 5.0, 5.6), r: 0.5, h: 0.7, yaw: -5.0 },
-    { name: 'hall bedroll', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.0, 4.1), r: 0.45, h: 0.14, yaw: -2.0 + Math.PI / 2 },
-    { name: 'hall bedroll 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 4.3, 4.1), r: 0.45, h: 0.14, yaw: -4.3 + Math.PI / 2 },
-    { name: 'speaker stone', at: 'world', x: C_HALL.x - 6.6, z: C_HALL.z, r: 1.0, h: 0.42 },
+    { name: 'library table', at: 'library', x: 0, z: 2.6, w: 1.3, d: 0.8, h: 0.45, model: 'coffeeTable', fit: { w: 1.3, h: 0.45, d: 0.8 }, mat: 'wood' },
+    { name: 'reading chair E', at: 'library', x: 2.0, z: 2.5, w: 0.94, d: 0.8, h: 0.85, yaw: yawToward(-1, 0.05), model: 'accentChair', fit: { w: 0.9 }, mat: 'leather' },
+    { name: 'reading chair W', at: 'library', x: -2.0, z: 2.5, w: 0.94, d: 0.8, h: 0.85, yaw: yawToward(1, 0.05), model: 'accentChair', fit: { w: 0.9 }, mat: 'leather' },
+    floorLamp('library lamp', 'library', -3.2, 4.4),
 
-    // ── The Mirror Well — the pool itself, its rim, the ring and the obelisks behind it
-    { name: 'pool', at: 'world', x: POOL.x, z: POOL.z, r: POOL.r, h: 0.05 },
-    ...Array.from({ length: 8 }, (_, i) => {
-        const a = (i / 8) * Math.PI * 2 + 0.2;
-        return { name: `pool rock ${i}`, at: 'world' as const, ...ringAt(POOL.x, POOL.z, a, POOL.r + 0.5), r: 0.4, h: 0.45, yaw: a };
+    /* ── Codex — the scribe's desk, a closed case, a plant ── */
+    { name: 'codex desk', at: 'codex', x: 0, z: 5.5, w: 1.8, d: 0.85, h: 0.78, yaw: Math.PI, model: 'desk', fit: { w: 1.8, h: 0.78, d: 0.85 }, mat: 'woodDark' },
+    { name: 'codex chair', at: 'codex', x: 0, z: 4.55, w: 0.64, d: 0.62, h: 1.0, yaw: 0, tuck: 'codex desk', model: 'deskChair', fit: { w: 0.62, h: 1.0, d: 0.6 }, mat: 'leather' },
+    { name: 'codex case', at: 'codex', x: -2.75, z: 5.7, w: 1.6, d: 0.5, h: 2.0, yaw: Math.PI, model: 'bookcaseClosed', fit: { w: 1.6, h: 2.0, d: 0.5 }, mat: 'woodDark' },
+    plant('codex plant', 'codex', 3.1, 5.5),
+
+    /* ── Arcade — four cabinets, two stools, a sofa facing them ── */
+    ...[-2.7, -0.9, 0.9, 2.7].map((x, i): Solid => ({ name: `arcade cabinet ${i}`, at: 'arcade', x, z: 5.5, w: 0.8, d: 0.7, h: 1.85, custom: true, mat: 'metalDark' })),
+    ...[-1.8, 1.8].map((x, i): Solid => ({ name: `arcade stool ${i}`, at: 'arcade', x, z: 4.4, w: 0.48, d: 0.42, h: 0.72, model: 'barStool', fit: { h: 0.72 }, mat: 'woodDark' })),
+    { name: 'arcade sofa', at: 'arcade', x: 0, z: 2.0, w: 2.25, d: 0.96, h: 1.0, yaw: 0, model: 'sofa', fit: { w: 2.2 }, mat: 'fabric' },
+
+    /* ── Ledger — the record on a sideboard, two candle stands, a table for two ── */
+    { name: 'ledger sideboard', at: 'ledger', x: 0, z: 5.6, w: 2.2, d: 0.6, h: 0.9, custom: true, mat: 'woodDark' },
+    ...[-2.4, 2.4].map((x, i): Solid => ({ name: `ledger candle stand ${i}`, at: 'ledger', x, z: 5.6, w: 0.3, d: 0.3, h: 1.5, custom: true, mat: 'metalDark' })),
+    { name: 'ledger table', at: 'ledger', x: 0, z: 2.8, w: 1.4, d: 1.0, h: 0.74, model: 'diningTable', fit: { w: 1.4, h: 0.74, d: 1.0 }, mat: 'wood' },
+    { name: 'ledger chair W', at: 'ledger', x: -1.2, z: 2.8, w: 0.42, d: 0.42, h: 0.92, yaw: Math.PI / 2, model: 'diningChair', fit: { h: 0.92 }, mat: 'woodDark' },
+    { name: 'ledger chair E', at: 'ledger', x: 1.2, z: 2.8, w: 0.42, d: 0.42, h: 0.92, yaw: -Math.PI / 2, model: 'diningChair', fit: { h: 0.92 }, mat: 'woodDark' },
+
+    /* ── The Mark — one bench to sit and look; the walls stay clear for the marks ── */
+    bench('mark bench', 'mark', 0, 2.2, Math.PI / 2),
+
+    /* ── Paths — a bench, a signpost, two plants under the art ── */
+    bench('paths bench', 'paths', 0, 2.2, Math.PI / 2),
+    { name: 'paths signpost', at: 'paths', x: -2.6, z: 3.9, w: 0.98, d: 0.24, h: 2.0, yaw: 0.4, model: 'skSignpost', fit: { h: 2.0 }, mat: 'woodDark' },
+    plant('paths plant W', 'paths', -3.1, 5.5),
+    plant('paths plant E', 'paths', 3.1, 5.5),
+
+    /* ── The Sanctum floor — seats at the Source, lanterns, columns at the vertices ── */
+    ...[0, 2, 4, 6].map((k): Solid => {
+        const a = VERTEX_BEARING(k);
+        const p = ring(0, 0, a, 6.2);
+        return { name: `source seat ${k}`, at: 'world', ...p, w: 2.2, d: 0.6, h: 0.46, yaw: yawToward(-Math.cos(a), -Math.sin(a)), custom: true, mat: 'basalt' };
     }),
-    { name: 'well ring', at: 'world', x: POOL.x + POOL.r + 1.4, z: POOL.z, r: 0.6, h: 2.8, yaw: -Math.PI / 2 },
-    { name: 'well obelisk N', at: 'world', x: POOL.x + POOL.r + 0.9, z: POOL.z - 3.6, r: 0.35, h: 2.4 },
-    { name: 'well obelisk S', at: 'world', x: POOL.x + POOL.r + 0.9, z: POOL.z + 3.6, r: 0.35, h: 2.4 },
-    { name: 'well bench N', at: 'world', x: C_MIR.x - 5.4, z: C_MIR.z - 3.4, r: 0.6, h: 0.5, yaw: Math.PI / 2 },
-    { name: 'well bench S', at: 'world', x: C_MIR.x - 5.4, z: C_MIR.z + 3.4, r: 0.6, h: 0.5, yaw: Math.PI / 2 },
+    ...Array.from({ length: 8 }, (_, k): Solid => {
+        const p = ring(0, 0, VERTEX_BEARING(k), 11.6);
+        return { name: `sanctum lantern ${k}`, at: 'world', ...p, w: 0.42, d: 0.42, h: 2.8, model: 'ftLantern', fit: { h: 2.8 }, mat: 'basalt' };
+    }),
+    ...Array.from({ length: 8 }, (_, k): Solid => {
+        const p = ring(0, 0, VERTEX_BEARING(k), VERTEX_R - 1.0);
+        return { name: `column ${k}`, at: 'world', ...p, w: 1.0, d: 1.0, round: true, h: HALL.eave, custom: true, mat: 'basalt' };
+    }),
 
-    // ── The Signal Studio — the desk, its chairs, the mast, the workshop
-    { name: 'studio desk', at: 'world', x: C_STU.x, z: C_STU.z - 3.2, r: 1.4, h: 0.8, yaw: Math.PI },
-    { name: 'studio chair L', at: 'world', x: C_STU.x - 0.7, z: C_STU.z - 2.0, r: 0.3, h: 0.9, yaw: Math.PI, tuck: 'studio desk' },
-    { name: 'studio chair R', at: 'world', x: C_STU.x + 0.7, z: C_STU.z - 2.0, r: 0.3, h: 0.9, yaw: Math.PI, tuck: 'studio desk' },
-    { name: 'studio mast', at: 'world', x: C_STU.x - 5.6, z: C_STU.z + 4.6, r: 0.3, h: 5.2 },
-    { name: 'studio workbench', at: 'world', x: C_STU.x - 5.5, z: C_STU.z - 3.0, r: 0.75, h: 0.9, yaw: Math.PI / 2 },
-    { name: 'studio crate', at: 'world', x: C_STU.x + 5.8, z: C_STU.z + 4.6, r: 0.45, h: 0.8, yaw: 0.3 },
-    { name: 'studio crate 2', at: 'world', x: C_STU.x + 4.9, z: C_STU.z + 4.0, r: 0.4, h: 0.7, yaw: 1.2 },
-    { name: 'studio crate 3', at: 'world', x: C_STU.x + 5.6, z: C_STU.z + 3.4, r: 0.4, h: 0.7, yaw: 0.8 },
-    { name: 'studio barrel', at: 'world', x: C_STU.x - 5.7, z: C_STU.z - 4.8, r: 0.3, h: 0.95 },
-    { name: 'studio barrel 2', at: 'world', x: C_STU.x - 4.9, z: C_STU.z - 4.3, r: 0.3, h: 0.9 },
-    { name: 'studio lever', at: 'world', x: C_STU.x - 4.4, z: C_STU.z + 4.8, r: 0.35, h: 0.7 },
+    /* ── The Processional ── */
+    ...[21.6, 33.6, 40.0, 51.8, 58.0].flatMap((z, i): Solid[] => [
+        { name: `gallery column W${i}`, at: 'world', x: -4.7, z, w: 1.0, d: 1.0, round: true, h: 8.0, custom: true, mat: 'basalt' },
+        { name: `gallery column E${i}`, at: 'world', x: 4.7, z, w: 1.0, d: 1.0, round: true, h: 8.0, custom: true, mat: 'basalt' },
+    ]),
+    { name: 'daily word lectern', at: 'world', x: -2.8, z: 19.6, w: 0.64, d: 0.52, h: 0.95, yaw: 0.6, model: 'bedsideTable', fit: { w: 0.62, h: 0.8, d: 0.5 }, mat: 'wood' },
+    { name: 'offering chest', at: 'world', x: 2.8, z: 19.6, w: 0.92, d: 0.92, h: 0.82, yaw: -Math.PI / 2, model: 'pkChest', fit: { w: 0.9 }, mat: 'woodDark' },
+    ...[24.4, 32.2, 41.8, 49.8].flatMap((z, i): Solid[] => [
+        { name: `gallery planter W${i}`, at: 'world', x: -4.55, z, w: 0.9, d: 0.9, h: 0.6, custom: true, mat: 'basalt' },
+        { name: `gallery planter E${i}`, at: 'world', x: 4.55, z, w: 0.9, d: 0.9, h: 0.6, custom: true, mat: 'basalt' },
+    ]),
+    bench('gallery bench W0', 'world', -2.4, 36.6),
+    bench('gallery bench E0', 'world', 2.4, 36.6),
+    bench('gallery bench W1', 'world', -2.4, 45.0),
+    bench('gallery bench E1', 'world', 2.4, 45.0),
+
+    /* ── The Overlook — two benches facing the glass, plants, the balustrade ── */
+    bench('overlook bench W', 'world', -2.6, 59.8, Math.PI / 2),
+    bench('overlook bench E', 'world', 2.6, 59.8, Math.PI / 2),
+    plant('overlook plant W', 'world', -4.8, 55.4, 1.4),
+    plant('overlook plant E', 'world', 4.8, 55.4, 1.4),
+    { name: 'balustrade', at: 'world', x: 0, z: 61.95, w: 10.8, d: 0.25, h: 1.0, custom: true, mat: 'metalDark' },
+
+    /* ── The Cinema — five rows of benches on an aisle, a stage, a stall, the catalog table ── */
+    ...[10.0, 12.4, 14.8, 17.2, 19.6].flatMap((x, row) =>
+        [-5.6, -3.6, -1.6, 1.6, 3.6, 5.6].map((dz, i) => bench(`cinema bench ${row}${i}`, 'world', x, C_CIN.z + dz)),
+    ),
+    { name: 'cinema stage', at: 'world', x: 25.2, z: C_CIN.z, w: 2.0, d: 13.0, h: 0.45, custom: true, mat: 'basalt' },
+    { name: 'cinema stall', at: 'world', x: 7.6, z: 22.4, w: 1.6, d: 2.45, h: 0.9, yaw: Math.PI / 2, model: 'ftStall', fit: { d: 2.4 }, mat: 'woodDark' },
+    { name: 'cinema stool A', at: 'world', x: 8.0, z: 24.4, w: 0.5, d: 0.5, h: 0.42, model: 'ftStallStool', fit: { h: 0.42 }, mat: 'woodDark' },
+    { name: 'cinema stool B', at: 'world', x: 9.0, z: 24.4, w: 0.5, d: 0.5, h: 0.42, model: 'ftStallStool', fit: { h: 0.42 }, mat: 'woodDark' },
+    { name: 'cineworks table', at: 'world', x: 7.8, z: 34.6, w: 1.8, d: 1.3, h: 0.8, model: 'diningTable', fit: { w: 1.8, h: 0.8, d: 1.3 }, mat: 'wood' },
+    { name: 'cinema barrel N', at: 'world', x: 25.4, z: 21.3, w: 0.68, d: 0.68, h: 0.95, model: 'skBarrel', fit: { h: 0.95 }, mat: 'woodDark' },
+    { name: 'cinema barrel S', at: 'world', x: 6.8, z: 36.3, w: 0.68, d: 0.68, h: 0.95, model: 'skBarrel', fit: { h: 0.95 }, mat: 'woodDark' },
+
+    /* ── The Hall Circle — the fire, nine stones, six benches, a camp, the speaker's stone ── */
+    { name: 'council fire', at: 'world', x: FIRE.x, z: FIRE.z, w: 2.4, d: 2.4, round: true, h: 0.9, custom: true, mat: 'basalt' },
+    ...Array.from({ length: 9 }, (_, i): Solid => {
+        const a = 0.35 + i * ((Math.PI * 2) / 9);
+        const h = 2.4 + (i % 3) * 0.5;
+        return {
+            name: `hall stone ${i}`,
+            at: 'world',
+            ...ring(FIRE.x, FIRE.z, a, 6.4),
+            w: 1.2,
+            d: 0.8,
+            h,
+            yaw: tangentX(a),
+            model: i % 2 ? 'nkRockTallA' : 'nkStoneTallA',
+            fit: { w: 1.2, h, d: 0.8 },
+            mat: 'rockFace',
+        };
+    }),
+    ...[1, 3, 5, 7, 9, 11].map((k, i) => {
+        const a = (k * Math.PI) / 6;
+        const p = ring(FIRE.x, FIRE.z, a, 3.6);
+        return bench(`hall bench ${i}`, 'world', p.x, p.z, tangentZ(a));
+    }),
+    { name: 'hall chest N', at: 'world', ...ring(FIRE.x, FIRE.z, 2.0, 7.6), w: 0.88, d: 0.92, h: 0.82, yaw: yawToward(-Math.cos(2.0), -Math.sin(2.0)), model: 'skChest', fit: { w: 0.82 }, mat: 'woodDark' },
+    { name: 'hall chest S', at: 'world', ...ring(FIRE.x, FIRE.z, 4.3, 7.6), w: 0.88, d: 0.92, h: 0.82, yaw: yawToward(-Math.cos(4.3), -Math.sin(4.3)), model: 'skChest', fit: { w: 0.82 }, mat: 'woodDark' },
+    { name: 'hall logs N', at: 'world', x: -24.8, z: 22.6, w: 1.24, d: 1.4, h: 0.66, model: 'nkLogStackLarge', fit: { w: 1.2 }, mat: 'woodDark' },
+    { name: 'hall logs S', at: 'world', x: -24.8, z: 34.8, w: 1.24, d: 1.4, h: 0.66, model: 'nkLogStackLarge', fit: { w: 1.2 }, mat: 'woodDark' },
+    ...[2.6, 3.7].map((a, i): Solid => ({
+        name: `hall bedroll ${i}`,
+        at: 'world',
+        ...ring(FIRE.x, FIRE.z, a, 5.0),
+        w: 0.86,
+        d: 1.62,
+        h: 0.34,
+        yaw: radialZ(a),
+        model: 'skBedroll',
+        fit: { d: 1.6 },
+        mat: 'wool',
+    })),
+    { name: 'speaker stone', at: 'world', x: -24.6, z: FIRE.z, w: 1.8, d: 1.8, round: true, h: 0.42, custom: true, mat: 'basalt' },
+
+    /* ── The Mirror Well — the pool, its rim, the ring and obelisks, benches on the near lip ── */
+    { name: 'pool', at: 'world', x: POOL.x, z: POOL.z, w: POOL.r * 2, d: POOL.r * 2, round: true, h: 0.05, custom: true, mat: 'marble' },
+    ...Array.from({ length: 10 }, (_, i): Solid => {
+        const a = 0.31 + i * ((Math.PI * 2) / 10);
+        return {
+            name: `pool rock ${i}`,
+            at: 'world',
+            ...ring(POOL.x, POOL.z, a, POOL.r + 0.65),
+            w: 0.92,
+            d: 0.72,
+            h: 0.45,
+            yaw: tangentX(a),
+            model: 'nkRockLargeA',
+            fit: { w: 0.9, h: 0.45, d: 0.7 },
+            mat: 'rockFace',
+        };
+    }),
+    { name: 'well ring', at: 'world', x: POOL.x + 7.0, z: POOL.z, w: 2.45, d: 1.64, h: 3.2, yaw: -Math.PI / 2, model: 'nkStatueRing', fit: { h: 3.2 }, custom: false, mat: 'basalt' },
+    { name: 'well obelisk N', at: 'world', x: POOL.x + 6.4, z: POOL.z - 4.6, w: 1.0, d: 1.0, h: 2.8, model: 'nkStatueObelisk', fit: { h: 2.8 }, mat: 'basalt' },
+    { name: 'well obelisk S', at: 'world', x: POOL.x + 6.4, z: POOL.z + 4.6, w: 1.0, d: 1.0, h: 2.8, model: 'nkStatueObelisk', fit: { h: 2.8 }, mat: 'basalt' },
+    bench('well bench N', 'world', 9.6, C_MIR.z - 4.6),
+    bench('well bench S', 'world', 9.6, C_MIR.z + 4.6),
+    plant('well plant NW', 'world', 7.2, 38.7, 1.4),
+    plant('well plant SW', 'world', 7.2, 53.3, 1.4),
+    plant('well plant NE', 'world', 25.2, 38.7, 1.4),
+    plant('well plant SE', 'world', 25.2, 53.3, 1.4),
+
+    /* ── The Signal Studio — the desk, a green room, the mast, a workshop ── */
+    { name: 'studio desk', at: 'world', x: C_STU.x, z: C_STU.z - 4.6, w: 3.2, d: 1.0, h: 0.8, yaw: 0, custom: true, mat: 'metalDark' },
+    { name: 'studio chair L', at: 'world', x: C_STU.x - 0.7, z: C_STU.z - 3.4, w: 0.64, d: 0.62, h: 1.0, yaw: Math.PI, tuck: 'studio desk', model: 'deskChair', fit: { w: 0.62, h: 1.0, d: 0.6 }, mat: 'leather' },
+    { name: 'studio chair R', at: 'world', x: C_STU.x + 0.7, z: C_STU.z - 3.4, w: 0.64, d: 0.62, h: 1.0, yaw: Math.PI, tuck: 'studio desk', model: 'deskChair', fit: { w: 0.62, h: 1.0, d: 0.6 }, mat: 'leather' },
+    { name: 'studio sofa', at: 'world', x: C_STU.x, z: C_STU.z + 5.4, w: 2.25, d: 0.96, h: 1.0, yaw: Math.PI, model: 'sofa', fit: { w: 2.2 }, mat: 'fabric' },
+    { name: 'studio coffee table', at: 'world', x: C_STU.x, z: C_STU.z + 3.8, w: 1.3, d: 0.8, h: 0.45, model: 'coffeeTable', fit: { w: 1.3, h: 0.45, d: 0.8 }, mat: 'wood' },
+    { name: 'studio mast', at: 'world', x: -24.8, z: 52.4, w: 0.8, d: 0.8, round: true, h: 5.2, custom: true, mat: 'metalDark' },
+    { name: 'studio workbench', at: 'world', x: -24.6, z: 41.0, w: 1.5, d: 1.05, h: 0.9, yaw: Math.PI / 2, model: 'skWorkbench', fit: { w: 1.5, h: 0.9, d: 1.0 }, mat: 'woodDark' },
+    { name: 'studio crate A', at: 'world', x: -8.4, z: 52.6, w: 0.82, d: 0.82, h: 0.7, model: 'skBoxLarge', fit: { w: 0.8, h: 0.7, d: 0.8 }, mat: 'woodDark' },
+    { name: 'studio crate B', at: 'world', x: -9.5, z: 52.9, w: 0.82, d: 0.82, h: 0.7, model: 'skBoxLarge', fit: { w: 0.8, h: 0.7, d: 0.8 }, mat: 'woodDark' },
+    { name: 'studio crate C', at: 'world', x: -8.6, z: 51.4, w: 0.82, d: 0.82, h: 0.7, model: 'skBoxLarge', fit: { w: 0.8, h: 0.7, d: 0.8 }, mat: 'woodDark' },
+    { name: 'studio barrel A', at: 'world', x: -25.4, z: 50.6, w: 0.68, d: 0.68, h: 0.95, model: 'skBarrel', fit: { h: 0.95 }, mat: 'woodDark' },
+    { name: 'studio barrel B', at: 'world', x: -25.4, z: 49.6, w: 0.68, d: 0.68, h: 0.95, model: 'skBarrel', fit: { h: 0.95 }, mat: 'woodDark' },
+    { name: 'studio lever', at: 'world', x: -22.8, z: 53.4, w: 0.62, d: 0.48, h: 0.64, model: 'pkLever', fit: { w: 0.6 }, mat: 'metalDark' },
 ];
 
 export function solid(name: string): Solid {
@@ -343,6 +490,40 @@ export function frameOf(at: SolidAt): number | null {
 export function solidWorld(s: Solid): { x: number; z: number } {
     const f = frameOf(s.at);
     return f === null ? { x: s.x, z: s.z } : facetToWorld(f, s.x, s.z);
+}
+
+/** World yaw of a solid (three.js rotation.y) */
+export function solidYaw(s: Solid): number {
+    const f = frameOf(s.at);
+    return (f === null ? 0 : facetYaw(f)) + (s.yaw ?? 0);
+}
+
+type Placed = { s: Solid; x: number; z: number; c: number; sn: number; reach: number };
+
+/** Precomputed world placement — the walker asks every frame */
+const PLACED: Placed[] = SOLIDS.map((s) => {
+    const w = solidWorld(s);
+    const yaw = solidYaw(s);
+    return { s, x: w.x, z: w.z, c: Math.cos(yaw), sn: Math.sin(yaw), reach: s.round ? s.w / 2 : Math.hypot(s.w, s.d) / 2 };
+});
+
+/** Does a disc of radius r at (x, z) touch this solid's footprint? */
+function touches(p: Placed, x: number, z: number, r: number): boolean {
+    const dx = x - p.x;
+    const dz = z - p.z;
+    const reach = p.reach + r;
+    if (dx * dx + dz * dz > reach * reach) return false;
+    if (p.s.round) return true;
+    // world → local (inverse of three's Ry)
+    const lx = dx * p.c - dz * p.sn;
+    const lz = dx * p.sn + dz * p.c;
+    const hx = p.s.w / 2;
+    const hz = p.s.d / 2;
+    const qx = Math.max(-hx, Math.min(hx, lx));
+    const qz = Math.max(-hz, Math.min(hz, lz));
+    const ex = lx - qx;
+    const ez = lz - qz;
+    return ex * ex + ez * ez < r * r;
 }
 
 /* ── Where the floor is ─────────────────────────────────────── */
@@ -419,14 +600,14 @@ export function indoors(x: number, z: number, pad = 0): boolean {
 
 /**
  * "Outdoors" now means beyond the Sanctum — the Processional and the
- * chambers. The tour's "step out", the compass and the narrator all key
- * on this transition, as they did at the old front door.
+ * chambers. The tour's "step through", the compass and the narrator all
+ * key on this transition, as they did at the old front door.
  */
 export function isOutdoors(x: number, z: number): boolean {
     return !inSanctum(x, z);
 }
 
-/** The building as a solid (there is nothing outside it, but the shards and clouds ask) */
+/** The building as a solid (there is nothing outside it, but the backdrop asks) */
 export function inBuilding(x: number, z: number, pad = 0): boolean {
     if (insideOctagon(x, z, HALL.apothem + HALL.wallT + pad)) return true;
     for (const a of ALCOVES) {
@@ -440,13 +621,7 @@ export function inBuilding(x: number, z: number, pad = 0): boolean {
 export const clearOfHouse = (x: number, z: number) => !inBuilding(x, z, 1.6);
 
 function hitsSolid(x: number, z: number, r: number): boolean {
-    for (const s of SOLIDS) {
-        const w = solidWorld(s);
-        const dx = x - w.x;
-        const dz = z - w.z;
-        const rr = s.r + r;
-        if (dx * dx + dz * dz < rr * rr) return true;
-    }
+    for (const p of PLACED) if (touches(p, x, z, r)) return true;
     return false;
 }
 
@@ -490,13 +665,13 @@ export function poseClear(x: number, z: number): boolean {
     return walkable(x, z, PLAYER_R);
 }
 
-/** Rugs: the soft apses, the cinema's carpet, the gallery runner */
+/** Soft floor: the rug apses, the cinema's carpet, the gallery runner */
 export function onSoftFloor(x: number, z: number): boolean {
     const a = alcoveAt(x, z, 0.2);
-    if (a) return a.soft && worldToFacet(a.facet, x, z).z > 0.3;
+    if (a) return a.soft && worldToFacet(a.facet, x, z).z > 0.8;
     const r = roomIn(x, z);
     if (r?.id === 'cinema') return true;
-    if (r?.id === 'processional' && Math.abs(x) < 1.1) return true;
+    if (r?.id === 'processional' && Math.abs(x) < 1.4) return true;
     return false;
 }
 
@@ -505,7 +680,7 @@ export function onSoftFloor(x: number, z: number): boolean {
 const terminal = alcove('terminal');
 const seatL = solid('desk chair');
 const seatW = facetToWorld(terminal.facet, seatL.x, seatL.z);
-const standW = facetToWorld(terminal.facet, 0, 0.55);
+const standW = facetToWorld(terminal.facet, 0, 3.6);
 const tn = { x: Math.cos(facetAngle(terminal.facet)), z: Math.sin(facetAngle(terminal.facet)) };
 
 export const INTRO = {
@@ -524,7 +699,7 @@ const archW = facetToWorld(ENTRANCE_FACET, 0, HALL.wallT / 2);
 /** The arch — "home" for anyone lost beyond it */
 export const FRONT_DOOR = { x: archW.x, z: archW.z };
 
-const recenterW = facetToWorld(ENTRANCE_FACET, 0, -2.4);
+const recenterW = facetToWorld(ENTRANCE_FACET, 0, -3.0);
 const en = { x: Math.cos(facetAngle(ENTRANCE_FACET)), z: Math.sin(facetAngle(ENTRANCE_FACET)) };
 /** Just inside the arch, facing the Source. */
 export const RECENTER = { x: recenterW.x, z: recenterW.z, yaw: yawFacing(-en.x, -en.z) } as const;
@@ -543,21 +718,21 @@ function at(atId: SolidAt, x: number, z: number, y = 1.2): [number, number, numb
 }
 
 export const HOME_HOTSPOTS: HomeHotspot[] = [
-    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: at('terminal', 0, 1.1), radius: 1.6, action: { type: 'os' } },
-    { id: 'arcade', label: 'Arcade', hint: 'Two cabinets · play', level: 'main', position: at('arcade', 0, 1.3), radius: 1.7, action: { type: 'panel', panel: 'arcade' } },
-    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: at('library', 0, 1.3), radius: 1.7, action: { type: 'panel', panel: 'library' } },
-    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: at('codex', 0, 1.2), radius: 1.6, action: { type: 'panel', panel: 'codex' } },
-    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: at('ledger', 0, 1.4), radius: 1.6, action: { type: 'panel', panel: 'ledger' } },
-    { id: 'wall', label: 'The Mark', hint: 'Choose a face · leave a mark', level: 'main', position: at('mark', 0, 1.2), radius: 1.8, action: { type: 'panel', panel: 'wall' } },
-    { id: 'wayfinder', label: 'Paths', hint: 'The map of the lair', level: 'main', position: at('paths', 0, 1.2), radius: 1.7, action: { type: 'panel', panel: 'wayfinder' } },
+    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: at('terminal', 0, 3.6), radius: 1.8, action: { type: 'os' } },
+    { id: 'arcade', label: 'Arcade', hint: 'Four cabinets · play', level: 'main', position: at('arcade', 0, 3.4), radius: 1.7, action: { type: 'panel', panel: 'arcade' } },
+    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: at('library', 0, 4.0), radius: 1.7, action: { type: 'panel', panel: 'library' } },
+    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: at('codex', 0, 3.6), radius: 1.7, action: { type: 'panel', panel: 'codex' } },
+    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: at('ledger', 0, 4.3), radius: 1.5, action: { type: 'panel', panel: 'ledger' } },
+    { id: 'wall', label: 'The Mark', hint: 'Choose a face · leave a mark', level: 'main', position: at('mark', 0, 3.8), radius: 1.9, action: { type: 'panel', panel: 'wall' } },
+    { id: 'wayfinder', label: 'Paths', hint: 'The map of the lair', level: 'main', position: at('paths', 0, 3.8), radius: 1.7, action: { type: 'panel', panel: 'wayfinder' } },
     { id: 'fireplace', label: 'The Source', hint: 'Sit at the Source', level: 'main', position: [0, 1.3, 0], radius: DAIS.rampR + 0.2, action: { type: 'sit' } },
-    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [-1.7, 1.1, 15.4], radius: 1.3, action: { type: 'panel', panel: 'news' } },
-    { id: 'mailbox', label: 'Offering', hint: 'Keep the lair open', level: 'main', position: [1.7, 1.0, 15.4], radius: 1.3, action: { type: 'panel', panel: 'offering' } },
-    { id: 'cinema', label: 'The Cinema', hint: 'Choose a film · the screen is live', level: 'main', position: [10.2, 1.2, C_CIN.z], radius: 2.6, action: { type: 'panel', panel: 'cinema' } },
-    { id: 'cineworks', label: 'Cineworks table', hint: 'The catalog · posters', level: 'main', position: [6.9, 1.1, 15.9], radius: 1.7, action: { type: 'panel', panel: 'cineworks' } },
-    { id: 'hall', label: 'The Hall Circle', hint: 'The community fire', level: 'main', position: [FIRE.x, 1.25, FIRE.z], radius: 3.1, action: { type: 'panel', panel: 'hall' } },
-    { id: 'soul_mirror', label: 'The Mirror Well', hint: 'Look down · shape your vessel', level: 'main', position: [POOL.x - POOL.r - 1.1, 1.2, POOL.z], radius: 2.1, action: { type: 'panel', panel: 'soul' } },
-    { id: 'studio', label: 'The Signal Studio', hint: 'Broadcast from the lair', level: 'main', position: [C_STU.x, 1.2, C_STU.z - 1.1], radius: 2.4, action: { type: 'panel', panel: 'studio' } },
+    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [-2.0, 1.1, 20.4], radius: 1.4, action: { type: 'panel', panel: 'news' } },
+    { id: 'mailbox', label: 'Offering', hint: 'Keep the lair open', level: 'main', position: [2.0, 1.0, 20.4], radius: 1.4, action: { type: 'panel', panel: 'offering' } },
+    { id: 'cinema', label: 'The Cinema', hint: 'Choose a film · the screen is live', level: 'main', position: [11.2, 1.2, C_CIN.z], radius: 2.6, action: { type: 'panel', panel: 'cinema' } },
+    { id: 'cineworks', label: 'Cineworks table', hint: 'The catalog · posters', level: 'main', position: [8.0, 1.1, 33.2], radius: 1.6, action: { type: 'panel', panel: 'cineworks' } },
+    { id: 'hall', label: 'The Hall Circle', hint: 'The community fire', level: 'main', position: [FIRE.x, 1.25, FIRE.z], radius: 3.2, action: { type: 'panel', panel: 'hall' } },
+    { id: 'soul_mirror', label: 'The Mirror Well', hint: 'Look down · shape your vessel', level: 'main', position: [POOL.x - POOL.r - 1.6, 1.2, POOL.z], radius: 2.0, action: { type: 'panel', panel: 'soul' } },
+    { id: 'studio', label: 'The Signal Studio', hint: 'Broadcast from the lair', level: 'main', position: [C_STU.x, 1.2, C_STU.z - 1.6], radius: 2.2, action: { type: 'panel', panel: 'studio' } },
 ];
 
 export function hotspotWorldY(h: HomeHotspot): number {
@@ -589,7 +764,7 @@ export function roomAt(x: number, z: number): Place {
     if (inSanctum(x, z)) {
         const a = alcoveAt(x, z, -0.2);
         if (a) return { kind: 'room', id: a.id, name: a.name };
-        if (Math.hypot(x, z) < DAIS.rampR + 0.4) return { kind: 'room', id: 'source', name: 'The Source' };
+        if (Math.hypot(x, z) < DAIS.rampR + 0.6) return { kind: 'room', id: 'source', name: 'The Source' };
         if (inDoorway(x, z)) return { kind: 'room', id: 'arch', name: 'The Arch' };
         return { kind: 'room', id: 'sanctum', name: 'The Sanctum' };
     }
@@ -628,10 +803,11 @@ export function zoneAt(x: number, z: number): SoundZone {
         if (a?.id === 'library') return 'library';
         if (a?.id === 'arcade') return 'arcade';
         if (a?.id === 'terminal') return 'os';
-        if (Math.hypot(x, z) < DAIS.rampR + 0.8) return 'hearth';
+        if (Math.hypot(x, z) < DAIS.rampR + 1.2) return 'hearth';
         return 'main';
     }
-    const r = roomIn(x, z) ?? (doorIn(x, z) ? room(doorIn(x, z)!.id as RoomId) : null);
+    const d = doorIn(x, z);
+    const r = roomIn(x, z) ?? (d ? room(d.id as RoomId) : null);
     switch (r?.id) {
         case 'cinema':
             return 'living';
@@ -651,16 +827,16 @@ export function zoneAt(x: number, z: number): SoundZone {
 /** Where the looping ambiences sit */
 export const AUDIO_ANCHORS = {
     /** the council fire in the Hall Circle — crackle */
-    fire: { x: FIRE.x, z: FIRE.z, r: 5.2 },
+    fire: { x: FIRE.x, z: FIRE.z, r: 7.5 },
     /** the terminal desk — fans */
     pc: (() => {
         const w = solidWorld(solid('desk'));
-        return { x: w.x, z: w.z, r: 3.2 };
+        return { x: w.x, z: w.z, r: 3.6 };
     })(),
     /** the arcade cabinets — static */
     tv: (() => {
-        const w = facetToWorld(alcove('arcade').facet, 0, 2.0);
-        return { x: w.x, z: w.z, r: 3.4 };
+        const w = facetToWorld(alcove('arcade').facet, 0, 4.6);
+        return { x: w.x, z: w.z, r: 3.8 };
     })(),
 } as const;
 
@@ -684,6 +860,7 @@ export type MapOutline = {
     arch: [number, number][];
     rooms: Room[];
     doors: Door[];
+    bounds: { x0: number; z0: number; x1: number; z1: number };
 };
 
 /** Everything the wayfinder draws, in world metres */
@@ -710,5 +887,6 @@ export function mapOutline(): MapOutline {
         arch: quad(ENTRANCE_FACET, ARCH.width / 2, 0, HALL.wallT),
         rooms: ROOMS,
         doors: DOORS,
+        bounds: { x0: -28, z0: -24, x1: 28, z1: 64 },
     };
 }

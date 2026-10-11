@@ -2,17 +2,18 @@
  * The Mark — yearly tag wall layout and helpers.
  *
  * Cells live on the three plaster faces of the Mark apse in the Sanctum:
- * the back wall ('w', the widest, ten cells across) and the two side
- * walls ('s' on the left as you face in, 'n' on the right, six cells
- * each). One email, one calendar year (UTC). Positions here are the same
+ * the back wall ('w', twenty-two cells across) and the two side walls
+ * ('s' on the left as you face in, sixteen cells; 'n' on the right,
+ * eight) — the same counts the wall launched with, so every mark ever
+ * made has its place again. One email, one calendar year (UTC). Positions here are the same
  * numbers the 3D mural and the paint panel read, so a mark cannot land
  * in the wrong place.
  */
-import { ALCOVE, alcove, facetAngle, facetToWorld, worldToFacet } from '@/components/truthos/house/homeMap';
+import { ALCOVE, HALL, alcove, facetAngle, facetToWorld, worldToFacet } from '@/components/truthos/house/homeMap';
 
 export { WALL_YEAR, nextYearOpen, CAPTION_MAX, PNG_MAX_BYTES, normEmail, clipCaption } from './wallYear';
 
-export const WALL_CELL = 0.4;
+export const WALL_CELL = 0.32;
 export const WALL_ROWS = 3;
 
 export type WallFace = 'w' | 's' | 'n';
@@ -79,12 +80,15 @@ function cellsOn(face: WallFace, count: number, local: (col: number) => { x: num
     return out;
 }
 
-/** Back wall: ten cells, left → right as you face in. */
-const BACK = cellsOn('w', 10, (col) => ({ x: -2.0 + (col + 0.5) * WALL_CELL, z: D - 0.07 }), BACK_RY);
-/** Left wall: six cells, from the opening toward the back. */
-const LEFT = cellsOn('s', 6, (col) => ({ x: -W / 2 + 0.07, z: 0.3 + (col + 0.5) * WALL_CELL }), LEFT_RY);
-/** Right wall: six cells, from the opening toward the back. */
-const RIGHT = cellsOn('n', 6, (col) => ({ x: W / 2 - 0.07, z: 0.3 + (col + 0.5) * WALL_CELL }), RIGHT_RY);
+const BACK_N = 22;
+const SIDE_S = 16;
+const SIDE_N = 8;
+/** Back wall: twenty-two cells, left → right as you face in, centred. */
+const BACK = cellsOn('w', BACK_N, (col) => ({ x: -(BACK_N * WALL_CELL) / 2 + (col + 0.5) * WALL_CELL, z: D - 0.07 }), BACK_RY);
+/** Left wall: sixteen cells, from the hall wall toward the back. */
+const LEFT = cellsOn('s', SIDE_S, (col) => ({ x: -W / 2 + 0.07, z: HALL.wallT + 0.05 + (col + 0.5) * WALL_CELL }), LEFT_RY);
+/** Right wall: eight cells, from the hall wall toward the back. */
+const RIGHT = cellsOn('n', SIDE_N, (col) => ({ x: W / 2 - 0.07, z: HALL.wallT + 0.05 + (col + 0.5) * WALL_CELL }), RIGHT_RY);
 
 export const WALL_CELLS: WallCell[] = [...BACK, ...LEFT, ...RIGHT];
 

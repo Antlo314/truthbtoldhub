@@ -34,6 +34,9 @@ type HouseUiState = {
     wallFace: 'w' | 's' | 'n' | null;
     cinemaFilmId: string | null;
     cinemaPlaying: boolean;
+    /** Where the panel's player was when it closed — the wall screen picks up from here */
+    cinemaTime: number;
+    setCinemaTime: (t: number) => void;
     /** Camera behind the eyes or behind the body */
     view: 'first' | 'third';
     /** Chosen render quality; `auto` resolves per device */
@@ -98,6 +101,8 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     wallFace: null,
     cinemaFilmId: null,
     cinemaPlaying: false,
+    cinemaTime: 0,
+    setCinemaTime: (t) => set({ cinemaTime: Number.isFinite(t) ? t : 0 }),
     view: 'first',
     quality: 'auto',
     qualityDrop: 0,
@@ -134,9 +139,9 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
         set({ walkthroughStep: step });
     },
 
-    playCinemaFilm: (id) => set({ cinemaFilmId: id, cinemaPlaying: true }),
+    playCinemaFilm: (id) => set({ cinemaFilmId: id, cinemaPlaying: true, cinemaTime: 0 }),
     setCinemaPlaying: (playing) => set({ cinemaPlaying: playing }),
-    stopCinema: () => set({ cinemaPlaying: false, cinemaFilmId: null }),
+    stopCinema: () => set({ cinemaPlaying: false, cinemaFilmId: null, cinemaTime: 0 }),
 }));
 
 // `voice` is the id of the line Truth speaks when the step opens — see

@@ -169,8 +169,11 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                     One lair · every station
                 </p>
                 <div className="flex-1 min-h-0 flex items-center justify-center">
-                    <svg viewBox="-23 -17 46 58" className="max-h-full w-auto rounded-xl border border-white/10 bg-[#0b0d14]">
-                        <rect x="-23" y="-17" width="46" height="58" fill="#0e1018" />
+                    <svg
+                        viewBox={`${map.bounds.x0} ${map.bounds.z0} ${map.bounds.x1 - map.bounds.x0} ${map.bounds.z1 - map.bounds.z0}`}
+                        className="max-h-full w-auto rounded-xl border border-white/10 bg-[#0b0d14]"
+                    >
+                        <rect x={map.bounds.x0} y={map.bounds.z0} width={map.bounds.x1 - map.bounds.x0} height={map.bounds.z1 - map.bounds.z0} fill="#0e1018" />
                         {/* the chambers and the gallery */}
                         {map.rooms.map((r) => {
                             const chamber = DESTINATIONS.find((d) => d.id === r.id);
@@ -178,11 +181,11 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                             return (
                                 <g key={r.id}>
                                     <rect x={r.x0} y={r.z0} width={r.x1 - r.x0} height={r.z1 - r.z0} fill={chamber ? '#1a1a2c' : '#17172a'} stroke={seen ? '#34d399' : chamber ? '#fbbf24' : '#5a5878'} strokeWidth={0.5} />
-                                    <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 - (chamber ? 0.6 : 0)} textAnchor="middle" fontSize={chamber ? 1.7 : 1.3} fill="#fde68a" fontFamily="monospace" fontWeight="bold">
+                                    <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 - (chamber ? 0.6 : 0)} textAnchor="middle" fontSize={chamber ? 2.2 : 1.8} fill="#fde68a" fontFamily="monospace" fontWeight="bold">
                                         {r.name.replace(/^The /, '').toUpperCase()}
                                     </text>
                                     {chamber && (
-                                        <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 + 1.8} textAnchor="middle" fontSize={1.2} fill="#d6d3c4" fontFamily="monospace">
+                                        <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 + 2.6} textAnchor="middle" fontSize={1.5} fill="#d6d3c4" fontFamily="monospace">
                                             {r.blurb}
                                         </text>
                                     )}
@@ -200,24 +203,24 @@ function WayfinderNative({ onClose }: { onClose: () => void }) {
                             return (
                                 <g key={a.id}>
                                     <polygon points={pts(a.pts)} fill="#1c1a2e" stroke="#8a6f4d" strokeWidth={0.5} />
-                                    <text x={cx} y={cz + 0.4} textAnchor="middle" fontSize={1.0} fill="#c9c2e6" fontFamily="monospace">
+                                    <text x={cx} y={cz + 0.5} textAnchor="middle" fontSize={1.4} fill="#c9c2e6" fontFamily="monospace">
                                         {apseLabel[a.id]}
                                     </text>
                                 </g>
                             );
                         })}
                         <polygon points={pts(map.arch)} fill="#fbbf24" opacity={0.85} />
-                        <circle cx={0} cy={0} r={2.4} fill="#5b3fe6" opacity={0.8} />
-                        <text x={0} y={0.5} textAnchor="middle" fontSize={1.2} fill="#ffffff" fontFamily="monospace">
+                        <circle cx={0} cy={0} r={3.4} fill="#5b3fe6" opacity={0.8} />
+                        <text x={0} y={0.6} textAnchor="middle" fontSize={1.6} fill="#ffffff" fontFamily="monospace">
                             SOURCE
                         </text>
                         {/* you */}
                         <polygon
-                            points={`${pose.x},${pose.z - 1.4} ${pose.x - 0.9},${pose.z + 1.0} ${pose.x + 0.9},${pose.z + 1.0}`}
+                            points={`${pose.x},${pose.z - 2.0} ${pose.x - 1.3},${pose.z + 1.4} ${pose.x + 1.3},${pose.z + 1.4}`}
                             fill="#fbbf24"
                             transform={`rotate(${180 - (pose.yaw * 180) / Math.PI} ${pose.x} ${pose.z})`}
                         />
-                        <circle cx={pose.x} cy={pose.z} r="0.5" fill="#111" />
+                        <circle cx={pose.x} cy={pose.z} r="0.7" fill="#111" />
                     </svg>
                 </div>
                 <p className="text-[10px] text-white/45 text-center leading-relaxed shrink-0">

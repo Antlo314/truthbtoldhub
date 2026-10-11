@@ -22,6 +22,50 @@ export function setHousePhotoMode(mode: HousePhotoMode) {
 const materialCache = new Map<string, ReturnType<typeof buildHouseMaterials>>();
 
 /**
+ * Mean linear reflectance a painted map should carry when it is the only
+ * colour a surface gets. The procedural skins are painted dark (their
+ * bases sit near sRGB 50/255, about 3% reflectance) because on desktop
+ * the photo scans replace them and the tint does the work. Phones never
+ * load the scans, so without this every wall read black however much
+ * light the room had. Each phone material's tint is scaled so its map
+ * averages this — basalt lands near 11%, plaster near 34%, like the real
+ * things.
+ */
+const PHONE_MAP_MEAN = 0.42;
+const mapMeans = new WeakMap<object, number>();
+function linear(v: number) {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+/** Mean linear luminance of a painted map, measured once per canvas */
+function mapMean(map: THREE.Texture): number {
+    const img = map.image as (CanvasImageSource & object) | undefined;
+    if (!img || typeof document === 'undefined') return 0;
+    const hit = mapMeans.get(img);
+    if (hit !== undefined) return hit;
+    let y = 0;
+    try {
+        const n = 48;
+        const c = document.createElement('canvas');
+        c.width = n;
+        c.height = n;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, n, n);
+            const d = ctx.getImageData(0, 0, n, n).data;
+            let sum = 0;
+            for (let i = 0; i < d.length; i += 4) sum += 0.2126 * linear(d[i]) + 0.7152 * linear(d[i + 1]) + 0.0722 * linear(d[i + 2]);
+            y = sum / (n * n);
+        }
+    } catch {
+        y = 0;
+    }
+    mapMeans.set(img, y);
+    return y;
+}
+
+/**
  * One material set per tier, shared by every scene component.
  *
  * Five components each ran their own useMemo copy of this library, so every
@@ -79,7 +123,7 @@ function buildHouseMaterials(low: boolean, photos: HousePhotoMode) {
             roughStrength = 0.55,
         ) => {
             const roughnessMap = makeRoughnessMap(map, roughStrength);
-            return new THREE.MeshStandardMaterial({
+            const mat = new THREE.MeshStandardMaterial({
                 map,
                 roughnessMap,
                 color,
@@ -88,6 +132,12 @@ function buildHouseMaterials(low: boolean, photos: HousePhotoMode) {
                 envMapIntensity: low ? 0.45 : 0.85,
                 ...opts,
             });
+            // No photo scans will arrive: let the painted map carry real reflectance
+            if (photos === 'none') {
+                const y = mapMean(map);
+                if (y > 0.002) mat.color.multiplyScalar(Math.min(10, Math.max(1, PHONE_MAP_MEAN / y)));
+            }
+            return mat;
         };
 
         /**

@@ -28,6 +28,18 @@ export type WalkerState = {
 };
 
 let pose: WalkerPose = { x: 0, y: 0, z: 0, yaw: Math.PI };
+/** False until the controller has placed the walker at least once this page load */
+let live = false;
+
+/**
+ * Has the controller actually placed the walker? The default above is the
+ * centre of the Source facing south — saving it on an early unmount (React
+ * dev mounts twice; a visitor can back out while the house is loading)
+ * overwrote the real saved spot and skipped the desk intro.
+ */
+export function walkerPoseLive(): boolean {
+    return live;
+}
 let state: WalkerState = {
     speed: 0,
     grounded: true,
@@ -40,6 +52,7 @@ let state: WalkerState = {
 
 export function setWalkerPose(p: WalkerPose): void {
     pose = p;
+    live = true;
 }
 
 export function getWalkerPose(): WalkerPose {
