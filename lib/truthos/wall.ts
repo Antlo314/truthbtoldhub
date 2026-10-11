@@ -1,11 +1,14 @@
 /**
  * The Mark — yearly tag wall layout and helpers.
  *
- * Cells live on three plaster walls in the west room. One email, one
- * calendar year (UTC). Positions here are the same numbers the 3D mural
- * and the paint panel read, so a mark cannot land in the wrong place.
+ * Cells live on the three plaster faces of the Mark apse in the Sanctum:
+ * the back wall ('w', the widest, ten cells across) and the two side
+ * walls ('s' on the left as you face in, 'n' on the right, six cells
+ * each). One email, one calendar year (UTC). Positions here are the same
+ * numbers the 3D mural and the paint panel read, so a mark cannot land
+ * in the wrong place.
  */
-import { SHELL, u } from '@/components/truthos/house/homeMap';
+import { ALCOVE, alcove, facetAngle, facetToWorld, worldToFacet } from '@/components/truthos/house/homeMap';
 
 export { WALL_YEAR, nextYearOpen, CAPTION_MAX, PNG_MAX_BYTES, normEmail, clipCaption } from './wallYear';
 
@@ -23,7 +26,7 @@ export type WallCell = {
     x: number;
     y: number;
     z: number;
-    /** Plane yaw (radians) — faces into the room */
+    /** Plane yaw (radians) — faces into the apse */
     ry: number;
 };
 
@@ -39,33 +42,36 @@ export type WallMark = {
     hidden?: boolean;
 };
 
-const X0 = SHELL.minX;
-const MARK_SOUTH = u(-4.4);
-const MARK_NORTH = u(0.6);
+const MARK = alcove('mark');
+const F = MARK.facet;
+const A = facetAngle(F);
+const W = ALCOVE.width;
+const D = ALCOVE.depth;
 const Y0 = 0.95;
 
-function cellsOn(
-    face: WallFace,
-    origin: { x: number; z: number },
-    along: 'x' | 'z',
-    dir: 1 | -1,
-    count: number,
-    ry: number,
-): WallCell[] {
+/** A plane's yaw whose normal should point along (nx, nz). */
+const yawOf = (nx: number, nz: number) => Math.atan2(nx, nz);
+/** Back wall faces the hall: −outward normal */
+const BACK_RY = yawOf(-Math.cos(A), -Math.sin(A));
+/** Left wall (local −x) faces +local x = (sin A, −cos A) */
+const LEFT_RY = yawOf(Math.sin(A), -Math.cos(A));
+/** Right wall faces −local x */
+const RIGHT_RY = yawOf(-Math.sin(A), Math.cos(A));
+
+function cellsOn(face: WallFace, count: number, local: (col: number) => { x: number; z: number }, ry: number): WallCell[] {
     const out: WallCell[] = [];
     for (let col = 0; col < count; col++) {
+        const l = local(col);
+        const w = facetToWorld(F, l.x, l.z);
         for (let row = 0; row < WALL_ROWS; row++) {
-            const alongOff = (col + 0.5) * WALL_CELL * dir;
-            const x = along === 'x' ? origin.x + alongOff : origin.x;
-            const z = along === 'z' ? origin.z + alongOff : origin.z;
             out.push({
                 id: `${face}-${col}-${row}`,
                 face,
                 col,
                 row,
-                x,
+                x: w.x,
                 y: Y0 + (row + 0.5) * WALL_CELL,
-                z,
+                z: w.z,
                 ry,
             });
         }
@@ -73,16 +79,14 @@ function cellsOn(
     return out;
 }
 
-/** West wall: walk south → north. Faces +X (into the room). */
-const WEST = cellsOn('w', { x: X0 + 0.07, z: MARK_SOUTH + 0.35 }, 'z', 1, 22, Math.PI / 2);
+/** Back wall: ten cells, left → right as you face in. */
+const BACK = cellsOn('w', 10, (col) => ({ x: -2.0 + (col + 0.5) * WALL_CELL, z: D - 0.07 }), BACK_RY);
+/** Left wall: six cells, from the opening toward the back. */
+const LEFT = cellsOn('s', 6, (col) => ({ x: -W / 2 + 0.07, z: 0.3 + (col + 0.5) * WALL_CELL }), LEFT_RY);
+/** Right wall: six cells, from the opening toward the back. */
+const RIGHT = cellsOn('n', 6, (col) => ({ x: W / 2 - 0.07, z: 0.3 + (col + 0.5) * WALL_CELL }), RIGHT_RY);
 
-/** South wall: walk west → east. Faces +Z. */
-const SOUTH = cellsOn('s', { x: X0 + 0.35, z: MARK_SOUTH + 0.07 }, 'x', 1, 16, 0);
-
-/** North plaster west of the bath door. Faces −Z. */
-const NORTH = cellsOn('n', { x: X0 + 0.35, z: MARK_NORTH - 0.07 }, 'x', 1, 8, Math.PI);
-
-export const WALL_CELLS: WallCell[] = [...WEST, ...SOUTH, ...NORTH];
+export const WALL_CELLS: WallCell[] = [...BACK, ...LEFT, ...RIGHT];
 
 export function cellByKey(face: WallFace, col: number, row: number): WallCell | undefined {
     return WALL_CELLS.find((c) => c.face === face && c.col === col && c.row === row);
@@ -90,10 +94,7 @@ export function cellByKey(face: WallFace, col: number, row: number): WallCell | 
 
 /** Which plaster you are standing in front of. */
 export function nearestWallFace(x: number, z: number): WallFace {
-    const west = Math.abs(x - (X0 + 0.07));
-    const south = Math.abs(z - MARK_SOUTH);
-    const north = Math.abs(z - MARK_NORTH);
-    if (west <= south && west <= north) return 'w';
-    if (south <= north) return 's';
-    return 'n';
+    const l = worldToFacet(F, x, z);
+    if (l.z > D - 1.0) return 'w';
+    return l.x < 0 ? 's' : 'n';
 }

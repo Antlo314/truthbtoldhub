@@ -3,7 +3,9 @@
  */
 import { poseClear } from './homeMap';
 
-const KEY = 'tbth-house-pose-v1';
+// v2: the Sanctum replaced the house — an old pose may land inside a new
+// wall or, worse, somewhere plausible; everyone wakes at the terminal once.
+const KEY = 'tbth-house-pose-v2';
 
 export type SavedPose = { x: number; z: number; yaw: number; pitch: number };
 

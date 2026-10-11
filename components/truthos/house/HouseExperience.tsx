@@ -14,6 +14,7 @@ import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { joinHousePresence, SAY_MAX, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
 import type { Hotspot } from './houseMap';
+import { onSoftFloor, SPAWN, SPAWN_YAW } from './homeMap';
 import { wireFromAvatar } from './vesselLook';
 import { EMOTES } from './Vessel';
 import { setWalkerState } from './walkerPose';
@@ -364,10 +365,10 @@ export default function HouseExperience({
                 name: character.name?.trim() || (guest ? 'Guest' : 'Soul'),
                 aura: character.appearance?.aura || '#a78bfa',
                 ...wireFromAvatar(character.avatar),
-                x: 4.55,
+                x: SPAWN[0],
                 y: 0,
-                z: 6.35,
-                yaw: Math.PI,
+                z: SPAWN[2],
+                yaw: SPAWN_YAW,
             },
             (list) => {
                 if (dead) return;
@@ -415,8 +416,7 @@ export default function HouseExperience({
                 const now = performance.now();
                 if (now - lastPoseAt.current > 80) {
                     lastPoseAt.current = now;
-                    const onRug = Math.abs(p.x) < 4.5 && p.z > -8.5 && p.z < -2.2;
-                    hubAudio.updateHousePose(p.x, p.z, movingRef.current, onRug);
+                    hubAudio.updateHousePose(p.x, p.z, movingRef.current, onSoftFloor(p.x, p.z));
                 }
             }
         },

@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import Humanoid from './Humanoid';
 import Vessel, { type VesselMotion } from './Vessel';
 import { wearFromWire } from './vesselLook';
+import { groundAt } from './homeMap';
 import type { HousePeer } from '@/lib/truthos/housePresence';
 
 function PeerMesh({
@@ -51,7 +52,8 @@ function PeerMesh({
         const emoteAt = p.emoteAt ? performance.now() - (Date.now() - p.emoteAt) : 0;
         return {
             speed: speed.current,
-            grounded: (p.y || 0) < 0.08,
+            // y is world height; the dais is floor too
+            grounded: (p.y || 0) - groundAt(p.x, p.z) < 0.08,
             seated: p.sit === 1,
             emote: p.emote ?? null,
             emoteAt,

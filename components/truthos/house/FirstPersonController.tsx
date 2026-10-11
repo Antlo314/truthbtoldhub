@@ -23,6 +23,7 @@ import {
     isOutdoors,
     moveOn,
     nearestHomeHotspot,
+    onSoftFloor,
     RECENTER,
     SIT_HEIGHT,
     SPAWN_YAW,
@@ -51,13 +52,6 @@ import { setWalkerPose, setWalkerState } from './walkerPose';
 import { useHouseUi } from './houseUiStore';
 import { loadPose, savePose } from './housePose';
 import { padUnder } from './worldPads';
-
-/** Soft footsteps on the two rugs (rec room + living) */
-function onRug(x: number, z: number): boolean {
-    if (x > -12 && x < -7 && z > 11 && z < 16.2) return true;
-    if (x > 9 && x < 15 && z > 0 && z < 6) return true;
-    return false;
-}
 
 /** Per-instance keys — never shared across remounts in a sticky way */
 function createKeyState() {
@@ -622,7 +616,7 @@ export default function FirstPersonController({
                 const prev = lastBobSin.current;
                 // Heel-down on each zero-cross of walk cycle
                 if ((prev <= 0 && s > 0) || (prev >= 0 && s < 0)) {
-                    hubAudio.footPlant(onRug(pos.current.x, pos.current.z));
+                    hubAudio.footPlant(onSoftFloor(pos.current.x, pos.current.z));
                 }
                 lastBobSin.current = s;
             } else {
@@ -667,9 +661,10 @@ export default function FirstPersonController({
             activityCb.current?.('idle');
         }
 
-        // The body reads these every frame — speed over ground, feet on it
+        // The body reads these every frame — speed over ground, feet on it.
+        // bodyY is WORLD height (the dais lifts it), never below the floor.
         const groundY = groundAt(pos.current.x, pos.current.z, 'main');
-        const bodyY = Math.max(0, pos.current.y - (seatedNow ? SIT_HEIGHT : EYE_HEIGHT) - groundY);
+        const bodyY = Math.max(groundY, pos.current.y - (seatedNow ? SIT_HEIGHT : EYE_HEIGHT));
         setWalkerPose({ x: pos.current.x, y: bodyY, z: pos.current.z, yaw: yawS.current });
         setWalkerState({
             speed: Math.hypot(vel.current.x, vel.current.z),
@@ -683,7 +678,7 @@ export default function FirstPersonController({
             poseT.current = 0;
             onPose({
                 x: pos.current.x,
-                // Body-ground height (0 on the floor, rises in jumps) — eye Y
+                // Body height in world (floor, dais or mid-jump) — eye Y
                 // minus eye height, bob is camera-only.
                 y: bodyY,
                 z: pos.current.z,

@@ -145,7 +145,7 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
 export const WALKTHROUGH_STEPS = [
     {
         title: 'You’re here',
-        body: 'You wake at the rec-room desk. One floor. Gold rings open things. The front door is just a door — walk through it.',
+        body: 'You wake at the terminal, in the Sanctum. Seven apses around one Source. Gold rings open things. The door is just a door — walk through it.',
         tip: 'Continue, then the house will wait on you',
         wait: 'tap' as const,
         voice: 'welcome',
@@ -173,7 +173,7 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'The door',
-        body: 'The front opening is not a menu. Walk out. Four paths leave the clearing.',
+        body: 'The door is not a menu. Walk out. Four bridges leave the shelf.',
         tip: 'Step outside',
         wait: 'out' as const,
         // Not `world_leave` — that line says "you HAVE stepped out", and the

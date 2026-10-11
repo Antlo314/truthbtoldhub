@@ -1,397 +1,394 @@
 /**
- * The Safe House — one storey.
+ * The Sanctum — one octagonal hall on the Aether Shelf.
  *
- * The second floor was the stair ghosts, the overlapping ceilings, and
- * half the draw cost. Everything that lived upstairs now lives on this
- * plate. S is 2.2 so the ground floor is a tad larger than the old main.
+ * Seven apses around the hall, one station each; the Source at the
+ * centre under an open oculus; the threshold to the south with the
+ * Daily Word inside it and the Offering on the porch. Everything that
+ * used to be nine rooms of furniture is one plan: a facet angle, an
+ * apse frame, and a short table of solids in that frame.
+ *
+ * Collision is analytic. There are no wall boxes to drift from the
+ * meshes: `walkable()` says where the floor is (the octagon, the apse
+ * pockets, the doorway, the terrace, the bridges, the isles) and every
+ * prop is a circle. The renderer, the walker and the validator all read
+ * these same functions, so a prop cannot stand inside another and a
+ * station cannot be sealed off without `npm run validate` saying so.
  */
 import type { Hotspot } from './houseMap';
-import { DESTINATIONS, destCenter, JUNGLE_BOUNDS, JUNGLE_COLLIDERS } from './jungleMap';
-
-const FT = 0.3048;
-export const ft = (feet: number, inches = 0) => (feet + inches / 12) * FT;
-
-export const S = 2.2;
-export const u = (n: number) => n * S;
-const DOOR = 1.45;
-
-export const HOME_W = u(ft(44, 7));
-export const HOME_D = u(ft(50, 2));
-
-export const SHELL = {
-    minX: -HOME_W / 2,
-    maxX: HOME_W / 2,
-    minZ: -HOME_D / 2,
-    maxZ: HOME_D / 2,
-    t: 0.24,
-} as const;
-
-export const STOREY = ft(10);
-export const MAIN_Y = 0;
-/** Kept so leftover callers compile — there is no upper storey. */
-export const UPPER_Y = MAIN_Y;
-export const ROOF_Y = STOREY + 0.28;
+import { CLEARING_R, corridorDistance, CORRIDORS, DESTINATIONS, destCenter, inDestination, JUNGLE_BOUNDS } from './jungleMap';
 
 export const EYE_HEIGHT = 1.62;
 export const SIT_HEIGHT = 1.12;
 export const PLAYER_R = 0.34;
 
-export type Level = 'main' | 'upper';
+/** One storey; the type is kept so old call sites compile. */
+export type Level = 'main';
+export const MAIN_Y = 0;
 
-export type Room = {
-    id: string;
-    name: string;
-    level: Level;
-    minX: number;
-    maxX: number;
-    minZ: number;
-    maxZ: number;
-    solid?: boolean;
-    open?: boolean;
-};
+/* ── The hall ───────────────────────────────────────────────── */
 
-const X0 = SHELL.minX;
-const X1 = SHELL.maxX;
-const Z0 = SHELL.minZ;
-const Z1 = SHELL.maxZ;
-
-const W_E = u(-2.55);
-const E_W = u(1.7);
-
-export const ROOMS: Room[] = [
-    { id: 'rec', name: 'Rec Room', level: 'main', minX: X0, maxX: W_E, minZ: u(2.1), maxZ: Z1 },
-    { id: 'foyer', name: 'Foyer', level: 'main', minX: W_E, maxX: E_W, minZ: u(2.1), maxZ: Z1 },
-    { id: 'bath', name: 'Bath', level: 'main', minX: X0, maxX: W_E, minZ: u(0.5), maxZ: u(2.1) },
-    { id: 'hall_m', name: 'Hall', level: 'main', minX: W_E, maxX: E_W, minZ: u(-4.2), maxZ: u(2.1) },
-    { id: 'bed_w', name: 'The Mark', level: 'main', minX: X0, maxX: W_E, minZ: u(-4.2), maxZ: u(0.5) },
-    { id: 'dining', name: 'Dining', level: 'main', minX: W_E, maxX: E_W, minZ: Z0, maxZ: u(-4.2) },
-    { id: 'bed_n', name: 'Spare', level: 'main', minX: X0, maxX: W_E, minZ: Z0, maxZ: u(-4.2) },
-    { id: 'living', name: 'Living', level: 'main', minX: E_W, maxX: X1, minZ: u(-1.2), maxZ: Z1 },
-    { id: 'kitchen', name: 'Kitchen', level: 'main', minX: E_W, maxX: X1, minZ: Z0, maxZ: u(-1.2) },
-];
-
-export const roomsOn = (level: Level) => ROOMS.filter((r) => r.level === level);
-
-/** Degenerate stubs — no stair, no void, no shaft. */
-export const STAIR = {
-    minX: 0,
-    maxX: 0,
-    zBottom: 0,
-    zTop: 0,
-    yBottom: 0,
-    yTop: 0,
-    treads: 0,
+export const HALL = {
+    /** centre → inner face of each facet */
+    apothem: 11,
+    wallT: 0.6,
+    /** wall height to the eave */
+    eave: 6.2,
+    oculusR: 2.8,
+    oculusY: 9.4,
+    facets: 8,
 } as const;
-export const VOID = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } as const;
-export const SHAFT = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } as const;
 
-export function onUpperFootprint(_x: number, _z: number): boolean {
-    return false;
-}
+/** Half the length of one facet (inner face) */
+export const FACET_HALF = HALL.apothem * Math.tan(Math.PI / 8);
+/** Centre → a facet's end vertex (inner) */
+export const VERTEX_R = HALL.apothem / Math.cos(Math.PI / 8);
 
-export function groundAt(_x: number, _z: number, _level: Level): number {
-    return MAIN_Y;
-}
+export const ALCOVE = { width: 4.4, depth: 2.8, height: 3.6, apseH: 4.6 } as const;
+export const DOOR = { width: 2.6, height: 3.0 } as const;
+export const DAIS = { r: 2.4, h: 0.28, rampR: 3.1 } as const;
 
-export function levelAfter(_x: number, _z: number, _level: Level): Level {
-    return 'main';
-}
+export type AlcoveId = 'terminal' | 'arcade' | 'ledger' | 'library' | 'codex' | 'mark' | 'paths';
+export type Alcove = { id: AlcoveId; name: string; facet: number; soft: boolean };
 
-export type Collider = { x: number; z: number; hx: number; hz: number };
+/** The entrance faces +z (south on the map) */
+export const ENTRANCE_FACET = 2;
 
-const seg = (x1: number, z1: number, x2: number, z2: number, t = SHELL.t): Collider => {
-    const alongX = Math.abs(x2 - x1) >= Math.abs(z2 - z1);
-    const ext = t / 2;
-    return {
-        x: (x1 + x2) / 2,
-        z: (z1 + z2) / 2,
-        hx: alongX ? Math.abs(x2 - x1) / 2 + ext : t / 2,
-        hz: alongX ? t / 2 : Math.abs(z2 - z1) / 2 + ext,
-    };
-};
-
-export type Doorway = { x: number; z: number; w: number; axis: 'x' | 'z' };
-export const DOORWAYS: Doorway[] = [];
-
-function withDoor(
-    x1: number, z1: number, x2: number, z2: number,
-    gapC: number, gapW = DOOR, t = SHELL.t,
-): Collider[] {
-    const ext = t / 2;
-    const horizontal = Math.abs(x2 - x1) > Math.abs(z2 - z1);
-    if (horizontal) {
-        DOORWAYS.push({ x: gapC, z: (z1 + z2) / 2, w: gapW, axis: 'x' });
-        return [
-            seg(x1, z1, gapC - gapW / 2 - ext, z2, t),
-            seg(gapC + gapW / 2 + ext, z1, x2, z2, t),
-        ].filter((c) => c.hx > t / 2 + 0.001 && Math.abs(x2 - x1) > 0.02);
-    }
-    DOORWAYS.push({ x: (x1 + x2) / 2, z: gapC, w: gapW, axis: 'z' });
-    return [
-        seg(x1, z1, x2, gapC - gapW / 2 - ext, t),
-        seg(x1, gapC + gapW / 2 + ext, x2, z2, t),
-    ].filter((c) => c.hz > t / 2 + 0.001 && Math.abs(z2 - z1) > 0.02);
-}
-
-export const STAIR_WALLS: Collider[] = [];
-
-const SHELL_WALLS: Collider[] = [
-    seg(X0, Z0, X1, Z0),
-    seg(X0, Z0, X0, Z1),
-    seg(X1, Z0, X1, Z1),
+/** facet k faces angle k·45° (0 = +x, 2 = +z) */
+export const ALCOVES: Alcove[] = [
+    { id: 'terminal', name: 'The Terminal', facet: 6, soft: true },
+    { id: 'library', name: 'The Library', facet: 7, soft: true },
+    { id: 'codex', name: 'The Codex', facet: 5, soft: true },
+    { id: 'arcade', name: 'The Arcade', facet: 0, soft: false },
+    { id: 'ledger', name: 'The Ledger', facet: 4, soft: false },
+    { id: 'mark', name: 'The Mark', facet: 1, soft: false },
+    { id: 'paths', name: 'The Paths', facet: 3, soft: true },
 ];
 
-export const MAIN_COLLIDERS: Collider[] = [
-    ...SHELL_WALLS,
-    ...withDoor(X0, Z1, X1, Z1, u(-0.4), 1.8),
-    ...withDoor(W_E, u(2.1), W_E, Z1, u(6.4), DOOR),
-    ...withDoor(W_E, u(0.5), W_E, u(2.1), u(1.3), 1.25),
-    ...withDoor(W_E, u(-4.2), W_E, u(0.5), u(-1.9), 1.7),
-    ...withDoor(W_E, Z0, W_E, u(-4.2), u(-5.6), 1.3),
-    ...withDoor(E_W, u(-1.2), E_W, Z1, u(3.4), 1.5),
-    ...withDoor(E_W, Z0, E_W, u(-1.2), u(-3.4), 1.4),
-    ...withDoor(X0, u(2.1), W_E, u(2.1), u(-5.4), 1.25),
-    ...withDoor(X0, u(0.5), W_E, u(0.5), u(-5.4), 1.25),
-    ...withDoor(X0, u(-4.2), W_E, u(-4.2), u(-5.4), 1.25),
-    ...withDoor(W_E, u(-4.2), E_W, u(-4.2), u(-0.4), 1.45),
-    ...withDoor(E_W, u(-1.2), X1, u(-1.2), u(4.6), 1.4),
-    ...JUNGLE_COLLIDERS,
-];
+export const alcove = (id: AlcoveId): Alcove => ALCOVES.find((a) => a.id === id)!;
 
-export const MAIN_DOORWAYS_END = DOORWAYS.length;
-export const UPPER_COLLIDERS: Collider[] = [];
+export const facetAngle = (facet: number) => (facet * Math.PI) / 4;
+
+/** three.js group rotation.y that points local +z along the facet's outward normal */
+export const facetYaw = (facet: number) => Math.PI / 2 - facetAngle(facet);
 
 /**
- * Exclusive floor solids. HomeDecor draws ONE mesh per row, sized to
- * hx/hz/h — never a second volume inside this box. Surface kit (monitor,
- * paper) sits on top of its parent and stays inside that parent's XZ.
+ * Facet frame: origin at the midpoint of the inner face, local +z OUT
+ * through the wall, local +x along the wall (so that a group with
+ * `rotation.y = facetYaw(facet)` draws local coordinates in this frame).
  */
-export type Furnishing = Collider & {
-    level: Level;
+export function facetToWorld(facet: number, x: number, z: number): { x: number; z: number } {
+    const a = facetAngle(facet);
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    return {
+        x: c * HALL.apothem + x * s + z * c,
+        z: s * HALL.apothem - x * c + z * s,
+    };
+}
+
+export function worldToFacet(facet: number, wx: number, wz: number): { x: number; z: number } {
+    const a = facetAngle(facet);
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const dx = wx - c * HALL.apothem;
+    const dz = wz - s * HALL.apothem;
+    return { x: dx * s - dz * c, z: dx * c + dz * s };
+}
+
+/** Yaw of a camera whose forward points along (nx, nz) — used for spawn and recentre. */
+export function yawFacing(nx: number, nz: number): number {
+    return Math.atan2(-nx, -nz);
+}
+
+/* ── Solids — every prop that takes floor ───────────────────── */
+
+export type SolidAt = AlcoveId | 'door' | 'hall';
+
+export type Solid = {
     name: string;
-    /** Visual height in metres. */
+    /** which frame x/z are in: an apse, the entrance facet, or world */
+    at: SolidAt;
+    x: number;
+    z: number;
+    /** collision radius, metres */
+    r: number;
+    /** visual height, metres */
     h: number;
+    /** yaw in the local frame (props face local +z) */
     yaw?: number;
+    /** A chair pushed under a desk may share its circle — name the solid it tucks into */
+    tuck?: string;
 };
 
-/**
- * yaw is render-only. Kenney props face their local +z, so a yaw of θ
- * turns the front toward world (sin θ, cos θ): 0 = south (+z),
- * π = north, π/2 = east, −π/2 = west.
- */
-export const FURNITURE: Furnishing[] = [
-    // Rec — desk against the front wall, facing into the room (−Z chair)
-    { name: 'desk', level: 'main', x: -12.4, z: 15.7, hx: 0.95, hz: 0.4, h: 0.76, yaw: Math.PI },
-    // Chair faces the desk (south); sofa faces its coffee table (south)
-    { name: 'desk chair', level: 'main', x: -12.4, z: 14.88, hx: 0.26, hz: 0.26, h: 0.9, yaw: 0 },
-    { name: 'rec sofa', level: 'main', x: -12.4, z: 11.85, hx: 1.15, hz: 0.48, h: 0.8, yaw: 0 },
-    { name: 'rec coffee table', level: 'main', x: -12.4, z: 13.05, hx: 0.52, hz: 0.3, h: 0.42 },
-    { name: 'floor lamp', level: 'main', x: -14.45, z: 16.2, hx: 0.18, hz: 0.18, h: 1.5 },
-    { name: 'arcade cabinet', level: 'main', x: -7.55, z: 11.4, hx: 0.38, hz: 0.33, h: 1.8 },
-    { name: 'rec plant', level: 'main', x: -14.4, z: 5.4, hx: 0.26, hz: 0.26, h: 1.0 },
-    // Foyer
-    { name: 'daily word tray', level: 'main', x: 2.15, z: 14.8, hx: 0.4, hz: 0.26, h: 0.78 },
-    // Coat rack just inside the front door, west of the swing
-    { name: 'coat rack', level: 'main', x: -3.2, z: 16.36, hx: 0.3, hz: 0.3, h: 1.7 },
-    // The Mark / bath / spare
-    { name: 'mark bench', level: 'main', x: -14.2, z: -4.07, hx: 0.24, hz: 0.62, h: 0.56 },
-    { name: 'bath vanity', level: 'main', x: -14.0, z: 2.86, hx: 0.7, hz: 0.32, h: 0.58 },
-    // Bed runs north–south, headboard toward the north wall
-    { name: 'spare bed', level: 'main', x: -13.4, z: -15.2, hx: 0.78, hz: 1.02, h: 0.68, yaw: 0 },
-    // Nightstand at the head of the bed, east side; dresser on the north wall
-    { name: 'spare nightstand', level: 'main', x: -12.35, z: -16.0, hx: 0.25, hz: 0.21, h: 0.5 },
-    { name: 'spare dresser', level: 'main', x: -9.6, z: -16.42, hx: 0.6, hz: 0.25, h: 0.86 },
-    // Living
-    { name: 'living sofa', level: 'main', x: 8.2, z: 4.4, hx: 0.52, hz: 1.4, h: 0.78, yaw: Math.PI / 2 },
-    { name: 'living coffee table', level: 'main', x: 10.5, z: 4.4, hx: 0.6, hz: 0.36, h: 0.42 },
-    // Accent chair turned toward the coffee table (north-east)
-    { name: 'accent chair', level: 'main', x: 8.2, z: 6.6, hx: 0.4, hz: 0.4, h: 0.86, yaw: 2.33 },
-    { name: 'bookshelf wall', level: 'main', x: 14.48, z: 6.2, hx: 0.2, hz: 1.85, h: 2.15, yaw: -Math.PI / 2 },
-    // Media console on the east wall — the television stands on it
-    { name: 'media wall', level: 'main', x: 14.46, z: 1.6, hx: 0.26, hz: 0.9, h: 0.5, yaw: -Math.PI / 2 },
-    // Kitchen — counter run, fridge, island and stools are separate boxes
-    { name: 'island', level: 'main', x: 10.2, z: -12.6, hx: 1.35, hz: 0.55, h: 0.96 },
-    { name: 'island stool L', level: 'main', x: 9.4, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
-    { name: 'island stool C', level: 'main', x: 10.2, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
-    { name: 'island stool R', level: 'main', x: 11.0, z: -11.68, hx: 0.2, hz: 0.2, h: 0.72 },
-    // Counter run along the north wall, x 8.2 → 12.6, split into modules
-    // (1 cm seams so neighbours never share an edge). Sink is 1.0 tall so
-    // its worktop meets the others at 0.92 and the tap rises above.
-    { name: 'counter cabinet W', level: 'main', x: 8.65, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
-    { name: 'kitchen sink', level: 'main', x: 9.55, z: -16.2, hx: 0.445, hz: 0.36, h: 1.0 },
-    { name: 'counter drawers', level: 'main', x: 10.4, z: -16.2, hx: 0.395, hz: 0.36, h: 0.92 },
-    { name: 'kitchen stove', level: 'main', x: 11.25, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
-    { name: 'counter cabinet E', level: 'main', x: 12.15, z: -16.2, hx: 0.445, hz: 0.36, h: 0.92 },
-    { name: 'fridge', level: 'main', x: 7.55, z: -16.2, hx: 0.4, hz: 0.36, h: 1.85 },
-    { name: 'codex desk', level: 'main', x: 5.55, z: -5.2, hx: 0.5, hz: 0.26, h: 0.96 },
-    // Dining — table and four chairs, none inside the table
-    { name: 'dining table', level: 'main', x: -0.9, z: -13.05, hx: 0.78, hz: 0.48, h: 0.74 },
-    { name: 'dining chair N', level: 'main', x: -0.9, z: -12.19, hx: 0.22, hz: 0.22, h: 0.88, yaw: Math.PI },
-    { name: 'dining chair S', level: 'main', x: -0.9, z: -13.91, hx: 0.22, hz: 0.22, h: 0.88 },
-    { name: 'dining chair E', level: 'main', x: 0.26, z: -13.05, hx: 0.22, hz: 0.22, h: 0.88, yaw: -Math.PI / 2 },
-    { name: 'dining chair W', level: 'main', x: -2.06, z: -13.05, hx: 0.22, hz: 0.22, h: 0.88, yaw: Math.PI / 2 },
-    { name: 'sideboard (Ledger)', level: 'main', x: -0.9, z: -16.28, hx: 0.9, hz: 0.24, h: 0.88 },
+export const SOLIDS: Solid[] = [
+    // ── Terminal (north) — desk against the back wall, chair facing it
+    { name: 'desk', at: 'terminal', x: 0, z: 2.3, r: 0.95, h: 0.76, yaw: Math.PI },
+    { name: 'desk chair', at: 'terminal', x: 0, z: 1.42, r: 0.3, h: 0.9, yaw: 0, tuck: 'desk' },
+    { name: 'terminal lamp', at: 'terminal', x: 1.75, z: 2.25, r: 0.2, h: 1.6 },
+    { name: 'terminal plant', at: 'terminal', x: -1.75, z: 2.25, r: 0.26, h: 1.0 },
+    // ── Library — three bays on the back wall, a chair to read in
+    { name: 'library bay W', at: 'library', x: -1.25, z: 2.5, r: 0.55, h: 2.4, yaw: Math.PI },
+    { name: 'library bay C', at: 'library', x: 0, z: 2.5, r: 0.55, h: 2.4, yaw: Math.PI },
+    { name: 'library bay E', at: 'library', x: 1.25, z: 2.5, r: 0.55, h: 2.4, yaw: 2.9 },
+    { name: 'reading chair', at: 'library', x: 1.35, z: 0.85, r: 0.42, h: 0.9, yaw: Math.PI + 0.7 },
+    { name: 'library lamp', at: 'library', x: -1.7, z: 1.0, r: 0.2, h: 1.6 },
+    // ── Codex — scribe's desk
+    { name: 'codex desk', at: 'codex', x: 0, z: 2.35, r: 0.8, h: 0.78, yaw: Math.PI },
+    { name: 'codex chair', at: 'codex', x: 0, z: 1.5, r: 0.3, h: 0.9, yaw: 0, tuck: 'codex desk' },
+    { name: 'codex plant', at: 'codex', x: 1.7, z: 2.25, r: 0.26, h: 1.0 },
+    // ── Arcade — two cabinets, screens toward the hall
+    { name: 'arcade cabinet L', at: 'arcade', x: -0.78, z: 2.4, r: 0.46, h: 1.85 },
+    { name: 'arcade cabinet R', at: 'arcade', x: 0.78, z: 2.4, r: 0.46, h: 1.85 },
+    { name: 'arcade stool', at: 'arcade', x: 1.8, z: 1.55, r: 0.22, h: 0.72 },
+    // ── Ledger — the record on a sideboard
+    { name: 'ledger sideboard', at: 'ledger', x: 0, z: 2.5, r: 0.92, h: 0.9 },
+    // ── The Mark — a bench to sit and look
+    { name: 'mark bench', at: 'mark', x: -1.55, z: 0.7, r: 0.32, h: 0.5, yaw: Math.PI / 2 },
+    // ── Paths — the map, two artworks, a bench and a plant
+    { name: 'paths bench', at: 'paths', x: 1.55, z: 0.7, r: 0.32, h: 0.5, yaw: -Math.PI / 2 },
+    { name: 'paths plant', at: 'paths', x: -1.75, z: 2.25, r: 0.26, h: 1.0 },
+    // ── Threshold (entrance frame; inside is −z, the porch is +z)
+    { name: 'daily word lectern', at: 'door', x: -2.1, z: -1.3, r: 0.34, h: 0.95, yaw: 0.6 },
+    { name: 'coat rack', at: 'door', x: 2.3, z: -1.1, r: 0.3, h: 1.7 },
+    { name: 'door leaf W', at: 'door', x: -1.05, z: 0.9, r: 0.3, h: 2.35 },
+    { name: 'door leaf E', at: 'door', x: 1.05, z: 0.9, r: 0.3, h: 2.35 },
+    { name: 'offering chest', at: 'door', x: 2.1, z: 1.7, r: 0.46, h: 0.6, yaw: -Math.PI / 2 },
+    { name: 'porch lantern W', at: 'door', x: -3.1, z: 1.5, r: 0.2, h: 2.6 },
+    { name: 'porch lantern E', at: 'door', x: 3.3, z: 1.5, r: 0.2, h: 2.6 },
+    // ── The Source — four low seats on the marble around the dais
+    { name: 'source seat S', at: 'hall', x: 0, z: 3.7, r: 0.42, h: 0.46, yaw: Math.PI },
+    { name: 'source seat N', at: 'hall', x: 0, z: -3.7, r: 0.42, h: 0.46, yaw: 0 },
+    { name: 'source seat E', at: 'hall', x: 3.7, z: 0, r: 0.42, h: 0.46, yaw: -Math.PI / 2 },
+    { name: 'source seat W', at: 'hall', x: -3.7, z: 0, r: 0.42, h: 0.46, yaw: Math.PI / 2 },
+    // ── Eight columns at the hall's vertices, between the apses
+    ...Array.from({ length: 8 }, (_, k) => {
+        const a = facetAngle(k) + Math.PI / 8;
+        const r = VERTEX_R - 0.75;
+        return { name: `column ${k}`, at: 'hall' as const, x: Math.cos(a) * r, z: Math.sin(a) * r, r: 0.5, h: HALL.eave };
+    }),
 ];
 
-export function furn(name: string): Furnishing {
-    const f = FURNITURE.find((x) => x.name === name);
-    if (!f) throw new Error(`homeMap: no furniture named "${name}"`);
-    return f;
+export function solid(name: string): Solid {
+    const s = SOLIDS.find((x) => x.name === name);
+    if (!s) throw new Error(`homeMap: no solid named "${name}"`);
+    return s;
 }
 
-export const DESK = {
-    x: furn('desk').x,
-    z: furn('desk').z,
-    monitorY: 1.35,
-} as const;
-
-export type ArtSpec = {
-    art: string;
-    x: number;
-    y: number;
-    z: number;
-    ry: number;
-    w: number;
-    h: number;
-};
-
-export const ART: ArtSpec[] = [
-    // z was u(8.6) = 18.92 — 2.1m PAST the south shell wall at 16.82, so this
-    // panel hung in the jungle outside the house. u(4.1) puts it back on the
-    // rec/foyer wall, clear of that wall's doorway (z 13.36–14.81).
-    { art: 'artDomain', x: W_E + 0.16, y: 1.7, z: u(4.1), ry: Math.PI / 2, w: 1.2, h: 1.0 },
-    { art: 'artStillPoint', x: 0, y: 1.7, z: Z0 + 0.16, ry: 0, w: 1.7, h: 1.15 },
-];
-
-export const AISLES: (Collider & { level: Level; name: string })[] = [
-    { name: 'rec to hall', level: 'main', x: -11.88, z: 8.6, hx: 0.6, hz: 2.4 },
-    { name: 'foyer throat', level: 'main', x: u(-0.4), z: 14.2, hx: 0.65, hz: 1.6 },
-    { name: 'hall spine', level: 'main', x: (W_E + E_W) / 2, z: u(-1.0), hx: 0.55, hz: 2.6 },
-    { name: 'living pass', level: 'main', x: 5.4, z: 4.0, hx: 0.5, hz: 3.2 },
-    { name: 'kitchen north', level: 'main', x: 10.2, z: -7.0, hx: 2.2, hz: 2.8 },
-    { name: 'dining east', level: 'main', x: 1.8, z: -13.05, hx: 0.5, hz: 1.0 },
-];
-
-export function artFootprints(): (Collider & { name: string; level: Level })[] {
-    return ART.map((a) => {
-        const alongZ = Math.abs(Math.sin(a.ry)) > 0.5;
-        const half = (a.w + 0.12) / 2;
-        return {
-            name: a.art,
-            level: 'main' as Level,
-            x: a.x,
-            z: a.z,
-            hx: alongZ ? 0.05 : half,
-            hz: alongZ ? half : 0.05,
-        };
-    });
+export function frameOf(at: SolidAt): number | null {
+    if (at === 'hall') return null;
+    if (at === 'door') return ENTRANCE_FACET;
+    return alcove(at).facet;
 }
 
-export type DoorLeaf = {
-    name: string;
-    level: Level;
-    x: number;
-    z: number;
-    w: number;
-    t: number;
-    axis: 'x' | 'z';
-    dir: 1 | -1;
-    swing: number;
-};
-
-export const DOOR_LEAVES: DoorLeaf[] = [
-    { name: 'front door (west leaf)', level: 'main', x: u(-0.4) - 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: 1, swing: 1.22 },
-    { name: 'front door (east leaf)', level: 'main', x: u(-0.4) + 0.9, z: Z1, w: 0.86, t: 0.06, axis: 'x', dir: -1, swing: 1.22 },
-];
-
-export function leafCollider(d: DoorLeaf): Collider & { level: Level; name: string } {
-    const along = Math.cos(d.swing) * d.w;
-    const into = Math.sin(d.swing) * d.w;
-    const cx = d.axis === 'x' ? d.x + (along / 2) * d.dir : d.x - into / 2;
-    const cz = d.axis === 'x' ? d.z - into / 2 : d.z + (along / 2) * d.dir;
-    return {
-        name: d.name,
-        level: d.level,
-        x: cx,
-        z: cz,
-        hx: d.axis === 'x' ? Math.max(d.t, Math.abs(along)) / 2 : Math.max(d.t, into) / 2,
-        hz: d.axis === 'x' ? Math.max(d.t, into) / 2 : Math.max(d.t, Math.abs(along)) / 2,
-    };
+/** World centre of a solid */
+export function solidWorld(s: Solid): { x: number; z: number } {
+    const f = frameOf(s.at);
+    return f === null ? { x: s.x, z: s.z } : facetToWorld(f, s.x, s.z);
 }
 
-export function collidersFor(level: Level): Collider[] {
-    return [
-        ...MAIN_COLLIDERS,
-        ...FURNITURE.filter((f) => f.level === level || f.level === 'main'),
-        ...DOOR_LEAVES.map(leafCollider),
-    ];
+/* ── Where the floor is ─────────────────────────────────────── */
+
+function insideOctagon(x: number, z: number, apothem: number): boolean {
+    for (let k = 0; k < HALL.facets; k++) {
+        const a = facetAngle(k);
+        if (x * Math.cos(a) + z * Math.sin(a) > apothem) return false;
+    }
+    return true;
 }
 
-function hits(x: number, z: number, cs: Collider[], r: number): boolean {
-    for (const c of cs) {
-        if (x > c.x - c.hx - r && x < c.x + c.hx + r && z > c.z - c.hz - r && z < c.z + c.hz + r) {
-            return true;
-        }
+/** The apse whose pocket this point is in (pad shrinks the pocket) */
+export function alcoveAt(x: number, z: number, pad = 0): Alcove | null {
+    for (const a of ALCOVES) {
+        const l = worldToFacet(a.facet, x, z);
+        if (Math.abs(l.x) <= ALCOVE.width / 2 - pad && l.z >= -0.4 && l.z <= ALCOVE.depth - pad) return a;
+    }
+    return null;
+}
+
+/** Inside the entrance opening (and a step either side of it) */
+export function inDoorway(x: number, z: number, pad = 0): boolean {
+    const l = worldToFacet(ENTRANCE_FACET, x, z);
+    return Math.abs(l.x) <= DOOR.width / 2 - pad && l.z >= -1.2 && l.z <= HALL.wallT + 1.2;
+}
+
+/** Under the roof: the hall, its apses, the threshold */
+export function underRoof(x: number, z: number): boolean {
+    return insideOctagon(x, z, HALL.apothem + HALL.wallT) || alcoveAt(x, z, -HALL.wallT) !== null;
+}
+
+/** Inside the building — the floor you walk on, not the walls */
+export function indoors(x: number, z: number, pad = 0): boolean {
+    return insideOctagon(x, z, HALL.apothem - pad) || alcoveAt(x, z, pad) !== null;
+}
+
+export function isOutdoors(x: number, z: number): boolean {
+    if (indoors(x, z)) return false;
+    const l = worldToFacet(ENTRANCE_FACET, x, z);
+    if (Math.abs(l.x) <= DOOR.width / 2 && l.z <= HALL.wallT / 2 && l.z >= -1.2) return false;
+    return true;
+}
+
+/** The building as a solid seen from outside: octagon + apse bump-outs */
+export function inBuilding(x: number, z: number, pad = 0): boolean {
+    if (insideOctagon(x, z, HALL.apothem + HALL.wallT + pad)) return true;
+    for (const a of ALCOVES) {
+        const l = worldToFacet(a.facet, x, z);
+        if (Math.abs(l.x) <= ALCOVE.width / 2 + HALL.wallT + pad && l.z >= -0.1 && l.z <= ALCOVE.depth + HALL.wallT + pad) return true;
     }
     return false;
 }
 
+/** Dressing outside keeps this far from the walls */
+export const clearOfHouse = (x: number, z: number) => !inBuilding(x, z, 1.6);
+
+function hitsSolid(x: number, z: number, r: number): boolean {
+    for (const s of SOLIDS) {
+        const w = solidWorld(s);
+        const dx = x - w.x;
+        const dz = z - w.z;
+        const rr = s.r + r;
+        if (dx * dx + dz * dz < rr * rr) return true;
+    }
+    return false;
+}
+
+/**
+ * Can a body of radius r stand here?
+ * Indoors: the octagon and the apse pockets. The threshold. Outdoors:
+ * the terrace disc minus the building, the bridge decks, the isles.
+ * Never inside a prop.
+ */
+export function walkable(x: number, z: number, r = PLAYER_R): boolean {
+    if (x < JUNGLE_BOUNDS.minX || x > JUNGLE_BOUNDS.maxX || z < JUNGLE_BOUNDS.minZ || z > JUNGLE_BOUNDS.maxZ) return false;
+    let ground = false;
+    if (indoors(x, z, r)) ground = true;
+    else if (inDoorway(x, z, r)) ground = true;
+    else if (inBuilding(x, z, r)) ground = false;
+    else if (Math.hypot(x, z) <= CLEARING_R - r) ground = true;
+    else if (inDestination(x, z, -r)) ground = true;
+    else ground = CORRIDORS.some((c) => corridorDistance(x, z, c) <= c.halfWidth - r);
+    if (!ground) return false;
+    return !hitsSolid(x, z, r);
+}
+
+/** Is a point inside something solid (or off the world)? For the third-person boom. */
+export function blockedAt(x: number, z: number, r = 0.2): boolean {
+    return !walkable(x, z, r);
+}
+
+/** Try the move; slide along one axis if the full step is blocked. */
 export function moveOn(
-    level: Level,
+    _level: Level,
     fromX: number,
     fromZ: number,
     toX: number,
     toZ: number,
     r = PLAYER_R,
 ): { x: number; z: number } {
-    const cs = collidersFor(level);
-    let x = toX;
-    let z = toZ;
-    if (hits(x, z, cs, r)) {
-        if (!hits(toX, fromZ, cs, r)) { x = toX; z = fromZ; }
-        else if (!hits(fromX, toZ, cs, r)) { x = fromX; z = toZ; }
-        else { x = fromX; z = fromZ; }
-    }
-    x = Math.max(JUNGLE_BOUNDS.minX, Math.min(JUNGLE_BOUNDS.maxX, x));
-    z = Math.max(JUNGLE_BOUNDS.minZ, Math.min(JUNGLE_BOUNDS.maxZ, z));
-    return { x, z };
+    if (walkable(toX, toZ, r)) return { x: toX, z: toZ };
+    if (walkable(toX, fromZ, r)) return { x: toX, z: fromZ };
+    if (walkable(fromX, toZ, r)) return { x: fromX, z: toZ };
+    return { x: fromX, z: fromZ };
 }
 
+/** Floor height — the dais rises at the Source, with a ramp you can walk up. */
+export function groundAt(x: number, z: number, _level?: Level): number {
+    const d = Math.hypot(x, z);
+    if (d <= DAIS.r) return DAIS.h;
+    if (d < DAIS.rampR) return DAIS.h * (1 - (d - DAIS.r) / (DAIS.rampR - DAIS.r));
+    return MAIN_Y;
+}
+
+/** True if a saved pose is still walkable. */
+export function poseClear(x: number, z: number): boolean {
+    return walkable(x, z, PLAYER_R);
+}
+
+/** Rugs: the soft apses */
+export function onSoftFloor(x: number, z: number): boolean {
+    const a = alcoveAt(x, z, 0.2);
+    return !!a && a.soft && worldToFacet(a.facet, x, z).z > 0.3;
+}
+
+/* ── Doors ──────────────────────────────────────────────────── */
+
+export type DoorLeaf = {
+    name: string;
+    /** hinge, in the entrance frame */
+    x: number;
+    z: number;
+    w: number;
+    t: number;
+    /** +1 extends toward +x, −1 toward −x */
+    dir: 1 | -1;
+    /** open angle, radians */
+    swing: number;
+};
+
+export const DOOR_LEAVES: DoorLeaf[] = [
+    { name: 'west leaf', x: -DOOR.width / 2, z: HALL.wallT / 2, w: 1.24, t: 0.07, dir: 1, swing: 1.35 },
+    { name: 'east leaf', x: DOOR.width / 2, z: HALL.wallT / 2, w: 1.24, t: 0.07, dir: -1, swing: 1.35 },
+];
+
+/* ── Spawn, recentre, landmarks ─────────────────────────────── */
+
+const terminal = alcove('terminal');
+const seatL = solid('desk chair');
+const seatW = facetToWorld(terminal.facet, seatL.x, seatL.z);
+const standW = facetToWorld(terminal.facet, 0, 0.55);
+const tn = { x: Math.cos(facetAngle(terminal.facet)), z: Math.sin(facetAngle(terminal.facet)) };
+
 export const INTRO = {
-    seat: { x: furn('desk chair').x, z: furn('desk chair').z },
-    lookYaw: Math.PI,
-    stand: { x: furn('desk chair').x, z: furn('desk chair').z - 0.83 },
+    seat: { x: seatW.x, z: seatW.z },
+    /** facing the desk — along the apse's outward normal */
+    lookYaw: yawFacing(tn.x, tn.z),
+    stand: { x: standW.x, z: standW.z },
     holdS: 1.1,
     riseS: 1.6,
 } as const;
 
 export const SPAWN: [number, number, number] = [INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z];
 export const SPAWN_YAW = INTRO.lookYaw;
-export const FRONT_DOOR = { x: u(-0.4), z: Z1 };
-export const GARAGE_DOOR = { x: u(5.2), z: Z1 };
+
+const doorW = facetToWorld(ENTRANCE_FACET, 0, HALL.wallT / 2);
+export const FRONT_DOOR = { x: doorW.x, z: doorW.z };
+
+const recenterW = facetToWorld(ENTRANCE_FACET, 0, -2.4);
+const en = { x: Math.cos(facetAngle(ENTRANCE_FACET)), z: Math.sin(facetAngle(ENTRANCE_FACET)) };
+/** Just inside the door, facing the Source. */
+export const RECENTER = { x: recenterW.x, z: recenterW.z, yaw: yawFacing(-en.x, -en.z) } as const;
+
+/** "Face home" indoors turns you to the Source. */
+export const HALL_SPINE = { x: 0, z: 0 } as const;
+
+/* ── Stations ───────────────────────────────────────────────── */
 
 export type HomeHotspot = Hotspot & { level: Level };
 
 const DEST_PANEL: Record<string, { label: string; hint: string; panel: string }> = {
-    cinema: { label: 'The Cinema Grove', hint: 'Films under the canopy', panel: 'cinema' },
-    hall: { label: 'The Hall Stones', hint: 'The community circle', panel: 'hall' },
-    soul_mirror: { label: 'The Mirror Pool', hint: 'Shape your vessel', panel: 'soul' },
-    studio: { label: 'The Signal Studio', hint: 'Broadcast from the wild', panel: 'studio' },
+    cinema: { label: 'The Cinema Isle', hint: 'Films above the cloud sea', panel: 'cinema' },
+    hall: { label: 'The Hall Circle', hint: 'The community circle', panel: 'hall' },
+    soul_mirror: { label: 'The Mirror Well', hint: 'Shape your vessel', panel: 'soul' },
+    studio: { label: 'The Signal Spire', hint: 'Broadcast from the shelf', panel: 'studio' },
 };
 
+function at(atId: SolidAt, x: number, z: number, y = 1.2): [number, number, number] {
+    const f = frameOf(atId);
+    const w = f === null ? { x, z } : facetToWorld(f, x, z);
+    return [w.x, y, w.z];
+}
+
 export const HOME_HOTSPOTS: HomeHotspot[] = [
-    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: [DESK.x, 1.2, DESK.z - 0.55], radius: 1.6, action: { type: 'os' } },
-    { id: 'arcade', label: 'Arcade', hint: 'Rec room · play', level: 'main', position: [furn('arcade cabinet').x, 1.1, furn('arcade cabinet').z], radius: 1.5, action: { type: 'panel', panel: 'arcade' } },
-    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [furn('daily word tray').x, 1.1, furn('daily word tray').z], radius: 1.3, action: { type: 'panel', panel: 'news' } },
-    { id: 'mailbox', label: 'Offering', hint: 'Keep the house open', level: 'main', position: [u(1.2), 1.1, Z1 + 1.7], radius: 1.5, action: { type: 'panel', panel: 'offering' } },
-    { id: 'wall', label: 'West plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 0.85, 1.2, (u(-4.2) + u(0.5)) / 2], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
-    { id: 'wall', label: 'South plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [(X0 + W_E) / 2, 1.2, u(-4.2) + 0.85], radius: 1.15, action: { type: 'panel', panel: 'wall' } },
-    { id: 'wall', label: 'North plaster', hint: 'Choose a section · leave a mark', level: 'main', position: [X0 + 2.2, 1.2, u(0.5) - 0.85], radius: 1.05, action: { type: 'panel', panel: 'wall' } },
-    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: [furn('bookshelf wall').x, 1.3, furn('bookshelf wall').z], radius: 1.7, action: { type: 'panel', panel: 'library' } },
-    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: [furn('sideboard (Ledger)').x, 1.1, furn('sideboard (Ledger)').z], radius: 1.35, action: { type: 'panel', panel: 'ledger' } },
-    { id: 'fireplace', label: 'Fire', hint: 'Sit by the hearth', level: 'main', position: [furn('media wall').x, 1.2, furn('media wall').z], radius: 1.15, action: { type: 'sit' } },
-    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: [furn('codex desk').x, 1.1, furn('codex desk').z], radius: 1.5, action: { type: 'panel', panel: 'codex' } },
-    { id: 'wayfinder', label: 'Paths', hint: 'The map of this floor and the groves', level: 'main', position: [E_W - 0.25, 1.3, u(0.15)], radius: 1.15, action: { type: 'panel', panel: 'wayfinder' } },
+    { id: 'computer', label: 'Truth.OS', hint: 'Sit back down at the terminal', level: 'main', position: at('terminal', 0, 1.1), radius: 1.6, action: { type: 'os' } },
+    { id: 'arcade', label: 'Arcade', hint: 'Two cabinets · play', level: 'main', position: at('arcade', 0, 1.3), radius: 1.7, action: { type: 'panel', panel: 'arcade' } },
+    { id: 'library', label: 'Library', hint: 'Take one down', level: 'main', position: at('library', 0, 1.3), radius: 1.7, action: { type: 'panel', panel: 'library' } },
+    { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: at('codex', 0, 1.2), radius: 1.6, action: { type: 'panel', panel: 'codex' } },
+    { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: at('ledger', 0, 1.4), radius: 1.6, action: { type: 'panel', panel: 'ledger' } },
+    { id: 'wall', label: 'The Mark', hint: 'Choose a face · leave a mark', level: 'main', position: at('mark', 0, 1.2), radius: 1.8, action: { type: 'panel', panel: 'wall' } },
+    { id: 'wayfinder', label: 'Paths', hint: 'The map of the shelf and the isles', level: 'main', position: at('paths', 0, 1.2), radius: 1.7, action: { type: 'panel', panel: 'wayfinder' } },
+    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: at('door', -1.5, -1.4, 1.1), radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'mailbox', label: 'Offering', hint: 'Keep the Sanctum open', level: 'main', position: at('door', 1.6, 1.8, 1.0), radius: 1.5, action: { type: 'panel', panel: 'offering' } },
+    { id: 'fireplace', label: 'The Source', hint: 'Sit at the Source', level: 'main', position: [0, 1.3, 0], radius: DAIS.rampR + 0.2, action: { type: 'sit' } },
     ...DESTINATIONS.map((d): HomeHotspot => {
         const c = destCenter(d);
         const meta = DEST_PANEL[d.id];
@@ -423,7 +420,7 @@ export function hotspotWorldY(h: HomeHotspot): number {
     return MAIN_Y + h.position[1];
 }
 
-export function nearestHomeHotspot(x: number, z: number, _level: Level): HomeHotspot | null {
+export function nearestHomeHotspot(x: number, z: number, _level?: Level): HomeHotspot | null {
     let best: HomeHotspot | null = null;
     let bestD = Infinity;
     for (const h of HOME_HOTSPOTS) {
@@ -436,9 +433,7 @@ export function nearestHomeHotspot(x: number, z: number, _level: Level): HomeHot
     return best;
 }
 
-export function isOutdoors(x: number, z: number): boolean {
-    return x < X0 || x > X1 || z < Z0 || z > Z1;
-}
+/* ── Naming where you are ───────────────────────────────────── */
 
 export type Place =
     | { kind: 'room'; id: string; name: string }
@@ -448,20 +443,19 @@ export type Place =
 
 export function roomAt(x: number, z: number): Place {
     if (!isOutdoors(x, z)) {
-        for (const r of ROOMS) {
-            if (x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ) {
-                return { kind: 'room', id: r.id, name: r.name };
-            }
-        }
-        return { kind: 'room', id: 'house', name: 'House' };
+        const a = alcoveAt(x, z, -0.2);
+        if (a) return { kind: 'room', id: a.id, name: a.name };
+        if (Math.hypot(x, z) < DAIS.rampR + 0.4) return { kind: 'room', id: 'source', name: 'The Source' };
+        if (inDoorway(x, z)) return { kind: 'room', id: 'threshold', name: 'The Threshold' };
+        return { kind: 'room', id: 'hall', name: 'The Sanctum' };
     }
     for (const d of DESTINATIONS) {
         const c = destCenter(d);
         const dist = Math.hypot(x - c.x, z - c.z);
         if (dist < d.r) return { kind: 'grove', id: d.id, name: d.name, dist };
     }
-    if (Math.hypot(x, z) < 32) return { kind: 'clearing', name: 'Clearing' };
-    return { kind: 'path', name: 'Path' };
+    if (Math.hypot(x, z) < CLEARING_R + 0.5) return { kind: 'clearing', name: 'The Shelf' };
+    return { kind: 'path', name: 'A bridge' };
 }
 
 export function nearestGrove(x: number, z: number): { id: string; name: string; dist: number; dx: number; dz: number } | null {
@@ -476,23 +470,41 @@ export function nearestGrove(x: number, z: number): { id: string; name: string; 
     return best;
 }
 
-/**
- * Is a point inside something solid (or off the world)? Used by the
- * third-person boom so the camera never sits inside a wall.
- */
-export function blockedAt(x: number, z: number, r = 0.2): boolean {
-    if (x < JUNGLE_BOUNDS.minX || x > JUNGLE_BOUNDS.maxX || z < JUNGLE_BOUNDS.minZ || z > JUNGLE_BOUNDS.maxZ) return true;
-    return hits(x, z, collidersFor('main'), r);
+/* ── Sound zones ────────────────────────────────────────────── */
+
+export type SoundZone = 'main' | 'library' | 'arcade' | 'os' | 'hearth' | 'studio' | 'soul' | 'living';
+
+/** Which music bed belongs here */
+export function zoneAt(x: number, z: number): SoundZone {
+    if (!isOutdoors(x, z)) {
+        const a = alcoveAt(x, z, -0.2);
+        if (a?.id === 'library') return 'library';
+        if (a?.id === 'arcade') return 'arcade';
+        if (a?.id === 'terminal') return 'os';
+        if (Math.hypot(x, z) < DAIS.rampR + 0.8) return 'hearth';
+        return 'main';
+    }
+    const p = roomAt(x, z);
+    if (p.kind === 'grove') {
+        if (p.id === 'studio') return 'studio';
+        if (p.id === 'soul_mirror') return 'soul';
+        if (p.id === 'cinema') return 'living';
+    }
+    return 'main';
 }
 
-/** True if a saved pose is still walkable. */
-export function poseClear(x: number, z: number): boolean {
-    if (x < JUNGLE_BOUNDS.minX + 1 || x > JUNGLE_BOUNDS.maxX - 1) return false;
-    if (z < JUNGLE_BOUNDS.minZ + 1 || z > JUNGLE_BOUNDS.maxZ - 1) return false;
-    return !hits(x, z, collidersFor('main'), PLAYER_R);
-}
-
-/** Just inside the front door, facing the hall. */
-export const RECENTER = { x: FRONT_DOOR.x, z: Z1 - 1.35, yaw: 0 } as const;
-
-export const HALL_SPINE = { x: (W_E + E_W) / 2, z: u(-1.0) } as const;
+/** Where the looping ambiences sit */
+export const AUDIO_ANCHORS = {
+    /** the Source — crackle and hum */
+    fire: { x: 0, z: 0, r: 4.2 },
+    /** the terminal desk */
+    pc: (() => {
+        const w = solidWorld(solid('desk'));
+        return { x: w.x, z: w.z, r: 3.2 };
+    })(),
+    /** the arcade cabinets */
+    tv: (() => {
+        const w = facetToWorld(alcove('arcade').facet, 0, 2.0);
+        return { x: w.x, z: w.z, r: 3.4 };
+    })(),
+} as const;

@@ -31,10 +31,10 @@ export function nextLine(opts: {
             const id = miss[0];
             const room = STATION_ROOM[id];
             const name = STATION_LABELS[id] || id;
-            if (id === 'envelope') return 'Gold rings open things. The paper is in the foyer.';
-            return room ? `${name} is in the ${room}.` : `${name} is in the house.`;
+            if (id === 'envelope') return 'Gold rings open things. The paper waits by the door.';
+            return room ? `${name} is in the ${room}.` : `${name} is in the Sanctum.`;
         }
-        return 'The front door is just a door. Walk out.';
+        return 'The door is just a door. Walk out onto the shelf.';
     }
 
     const seen = loadVisited();

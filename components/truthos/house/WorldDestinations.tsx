@@ -22,8 +22,10 @@ import { MeshReflectorMaterial, Sparkles } from '@react-three/drei';
 import { useHouseMaterials } from './HouseMaterials';
 import HouseProp, { HOUSE_MODELS } from './HouseProp';
 import { seededRng } from './houseSkins';
-import { clearOfHouse, FLOWERS } from './groveScatter';
+import { clearOfHouse } from './homeMap';
 import { CORRIDORS, corridorDistance, DESTINATIONS, destCenter, inCorridor, type Corridor, type Destination } from './jungleMap';
+
+const FLOWERS = ['flowerPurple', 'flowerRed', 'flowerYellow'] as const;
 import { getWalkerPose } from './walkerPose';
 import type { QualityProfile } from './renderQuality';
 
@@ -655,10 +657,10 @@ function PathBlooms({ low }: { low: boolean }) {
     );
 }
 
-/** Dead south walk cap — "the house is behind you", not a station. */
+/** The walk's end — "the Sanctum is behind you", not a station. */
 function ScenicPost({ m, low }: { m: Mats; low: boolean }) {
     return (
-        <group position={[0, 0, 46]} rotation={[0, Math.PI, 0]}>
+        <group position={[0, 0, 45.4]} rotation={[0, Math.PI, 0]}>
             <HouseProp model="skSignpostSingle" fit={{ h: 2.1 }} shadows={!low}>
                 <group>
                     <mesh position={[0, 0.72, 0]}>

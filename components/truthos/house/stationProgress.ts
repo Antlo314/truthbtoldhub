@@ -19,20 +19,20 @@ export const HOUSE_CORE: HotspotId[] = [
 ];
 
 export const STATION_ROOM: Partial<Record<HotspotId, string>> = {
-    computer: 'Rec Room',
-    envelope: 'Foyer',
-    arcade: 'Rec Room',
-    wall: 'The Mark',
-    library: 'Living',
-    ledger: 'Dining',
-    fireplace: 'Living',
-    wayfinder: 'Hall',
-    mailbox: 'stoop',
-    hall: 'Hall Stones',
-    cinema: 'Cinema Grove',
-    studio: 'Signal Studio',
-    soul_mirror: 'Mirror Pool',
-    codex: 'Kitchen',
+    computer: 'Terminal apse',
+    envelope: 'threshold',
+    arcade: 'Arcade apse',
+    wall: 'Mark apse',
+    library: 'Library apse',
+    ledger: 'Ledger apse',
+    fireplace: 'centre of the hall',
+    wayfinder: 'Paths apse',
+    mailbox: 'porch',
+    hall: 'Hall Circle',
+    cinema: 'Cinema Isle',
+    studio: 'Signal Spire',
+    soul_mirror: 'Mirror Well',
+    codex: 'Codex apse',
 };
 
 export const HOUSE_EXTRA: HotspotId[] = [

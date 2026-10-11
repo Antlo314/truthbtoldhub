@@ -4,6 +4,7 @@
  */
 import { Howl } from 'howler';
 import { unlockAudio } from '@/lib/game/sfx';
+import { AUDIO_ANCHORS, zoneAt } from '@/components/truthos/house/homeMap';
 
 const MUSIC = '/audio/hub/music';
 const SFX = '/audio/hub/sfx';
@@ -195,15 +196,9 @@ function zoneMusic(zone: HouseZone): HubMusicId {
     }
 }
 
-/** Zone from world position (expanded house) */
+/** Zone from world position — the plan decides (homeMap.zoneAt) */
 export function zoneFromPose(x: number, z: number): HouseZone {
-    if (z > 3.5) return 'bedroom';
-    if (x < -6.5) return 'library';
-    if (x > 6.5 && z < -5.5) return 'studio';
-    if (x > 6.5) return 'living'; // east wing shares bright living bed if not studio
-    if (z < -1.5 && Math.abs(x) < 6) return 'living';
-    if (Math.hypot(x - 0, z - -11.4) < 5) return 'hearth';
-    return 'main';
+    return zoneAt(x, z);
 }
 
 class HubAudioController {
@@ -402,14 +397,13 @@ class HubAudioController {
             this.playMusic(zoneMusic(zone));
         }
 
-        // Ambient layers — tight radii so crackle only at the real fireplace
-        const fireDist = Math.hypot(x - 0, z - -11.4);
-        const nearFire = fireDist < 3.6;
-        // Living media wall (east) + cinema screen (east mid-room)
-        const nearTv =
-            Math.hypot(x - 4.55, z - -7.8) < 3.0 || Math.hypot(x - 12.5, z - 7.0) < 3.2;
-        const nearDesk = Math.hypot(x - 4.8, z - 7.6) < 3.0;
-        const fireVol = nearFire ? 0.04 + (1 - Math.min(1, fireDist / 3.6)) * 0.08 : 0;
+        // Ambient layers — tight radii: the Source hums and crackles, the
+        // terminal's fans, the arcade's static. Anchors come from the plan.
+        const fireDist = Math.hypot(x - AUDIO_ANCHORS.fire.x, z - AUDIO_ANCHORS.fire.z);
+        const nearFire = fireDist < AUDIO_ANCHORS.fire.r;
+        const nearTv = Math.hypot(x - AUDIO_ANCHORS.tv.x, z - AUDIO_ANCHORS.tv.z) < AUDIO_ANCHORS.tv.r;
+        const nearDesk = Math.hypot(x - AUDIO_ANCHORS.pc.x, z - AUDIO_ANCHORS.pc.z) < AUDIO_ANCHORS.pc.r;
+        const fireVol = nearFire ? 0.04 + (1 - Math.min(1, fireDist / AUDIO_ANCHORS.fire.r)) * 0.08 : 0;
         this.setAmbient('fire', nearFire ? 'fire_crackle_loop' : null, fireVol);
         this.setAmbient('tv', nearTv ? 'tv_static_soft' : null, nearTv ? 0.035 : 0);
         this.setAmbient('pc', nearDesk ? 'computer_hum_loop' : null, nearDesk ? 0.04 : 0);

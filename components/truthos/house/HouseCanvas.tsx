@@ -7,16 +7,13 @@ import * as THREE from 'three';
 import { PropDetailProvider } from './HouseProp';
 import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
-import { DaylightFill } from './HouseLights';
 import { NightStars, Rain } from './WeatherFx';
 import AetherSky from './AetherSky';
 import AetherShelf from './AetherShelf';
 import AetherHorizon from './AetherHorizon';
 import WorldDestinations from './WorldDestinations';
-import HomeGeometry from './HomeGeometry';
-import HomeDecor from './HomeDecor';
-import HomeInterior from './HomeInterior';
-import HouseAtmosphere from './HouseAtmosphere';
+import SanctumHall, { SourceLight } from './SanctumHall';
+import SanctumStations from './SanctumStations';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
 import LocalPlayerBody from './LocalPlayerBody';
@@ -142,8 +139,9 @@ export default function HouseCanvas({
                     alpha: false,
                     powerPreference: mobile ? 'low-power' : 'high-performance',
                     toneMapping: THREE.ACESFilmicToneMapping,
-                    // Phones were too dark; desktops gain sky light now, so a touch less
-                    toneMappingExposure: low ? 1.48 : 1.16,
+                    // The hall is lit by the Source and the oculus, not by nine room
+                    // lamps — neutral exposure keeps the plaster from blowing out
+                    toneMappingExposure: low ? 1.3 : 1.0,
                     stencil: false,
                     depth: true,
                 }}
@@ -175,7 +173,7 @@ export default function HouseCanvas({
 
                 <AetherSky low={low} />
                 {profile.env && (
-                    <SkyEnvironment resolution={profile.envResolution} every={profile.envEvery} intensity={0.55} />
+                    <SkyEnvironment resolution={profile.envResolution} every={profile.envEvery} intensity={0.35} />
                 )}
                 {!low && <NightStars />}
 
@@ -192,19 +190,15 @@ export default function HouseCanvas({
                 <PropDetailProvider primitiveOnly={!profile.props}>
                     <LampGroup floor={0.22}>
                         <WorldDestinations low={low} profile={profile} />
-                        <HomeGeometry low={low} />
-                        <HomeInterior low={low} />
-                        <HomeDecor low={low} />
+                        <SanctumHall low={low} profile={profile} />
+                        <SanctumStations low={low} />
                     </LampGroup>
+                    {/* The Source never dims — it is the hall's light, day and night */}
+                    <SourceLight low={low} />
                     <AetherShards profile={profile} />
                 </PropDetailProvider>
-                {/* Window bounce — rises with the sun, so noon is lit by
-                    the outside instead of by lamps LampGroup is dimming. Must
-                    stay OUTSIDE LampGroup or its curve gets overwritten. */}
-                <DaylightFill low={low} />
 
                 {profile.rain && <Rain />}
-                {profile.atmosphere && <HouseAtmosphere />}
 
                 <RemotePlayers peers={peers} selfId={selfId} mobile={low} rigged={profile.riggedVessels} saidBy={saidBy} />
                 <LocalPlayerBody avatar={avatar} aura={aura} rigged={profile.riggedVessels} shadows={profile.shadows} />

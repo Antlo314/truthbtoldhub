@@ -19,7 +19,7 @@ import type { BloomEffect } from 'postprocessing';
 import { getSky } from './DayNightCycle';
 import { useWorldTime } from './worldTime';
 import { seededRng } from './houseSkins';
-import { SHELL } from './homeMap';
+import { underRoof } from './homeMap';
 
 /* ── Stars ──────────────────────────────────────────────── */
 
@@ -153,11 +153,8 @@ export function Rain() {
             pos[i * 3 + 1] = y;
             pos[i * 3 + 2] = z;
 
-            // No rain through the roof — drops over the house render nowhere
-            const indoors =
-                x > SHELL.minX - 0.5 && x < SHELL.maxX + 0.5 &&
-                z > SHELL.minZ - 0.5 && z < SHELL.maxZ + 0.5;
-            const dy = indoors ? -100 : y;
+            // No rain through the roof — drops over the Sanctum render nowhere
+            const dy = underRoof(x, z) ? -100 : y;
             out[i * 6] = x;
             out[i * 6 + 1] = dy + DROP_LEN;
             out[i * 6 + 2] = z;

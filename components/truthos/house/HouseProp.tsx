@@ -159,6 +159,7 @@ export const HOUSE_MODELS: Record<string, ModelEntry> = {
     ftBannerGreen: kit('fantasy-town-kit', 'banner-green', { h: 1.5 }),
     ftStall: kit('fantasy-town-kit', 'stall', { w: 2.3 }),
     ftStallStool: kit('fantasy-town-kit', 'stall-stool', { h: 0.5 }),
+    ftStallBench: kit('fantasy-town-kit', 'stall-bench', { w: 1.3 }),
     ftPillarStone: kit('fantasy-town-kit', 'pillar-stone', { h: 2.3 }),
     ftFountainRound: kit('fantasy-town-kit', 'fountain-round', { w: 3.8 }),
     ftFountainCenter: kit('fantasy-town-kit', 'fountain-center', { w: 1.7 }),
