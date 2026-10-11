@@ -21,22 +21,18 @@ import HouseProp from './HouseProp';
 import {
     ALCOVE,
     ALCOVES,
+    ARCH,
     DAIS,
-    DOOR,
-    DOOR_LEAVES,
     ENTRANCE_FACET,
     FACET_HALF,
     facetAngle,
     facetToWorld,
     facetYaw,
-    FRONT_DOOR,
     HALL,
     VERTEX_R,
     solid,
 } from './homeMap';
 import { getSky } from './DayNightCycle';
-import { getWalkerPose } from './walkerPose';
-import { hubAudio } from '@/lib/truthos/hubAudio';
 import type { QualityProfile } from './renderQuality';
 
 type Mats = ReturnType<typeof useHouseMaterials>;
@@ -186,67 +182,6 @@ function Apse({ m, shadow, rug }: { m: Mats; shadow: boolean; rug: boolean }) {
     );
 }
 
-/** Open when you come near, close behind you — the colliders are the open leaves. */
-const DOOR_OPEN_AT = 3.6;
-const DOOR_CLOSE_AT = 5.6;
-
-function Doors({ m, shadow }: { m: Mats; shadow: boolean }) {
-    const H = DOOR.height - 0.08;
-    const leaves = useRef<(THREE.Group | null)[]>([]);
-    const open = useRef(false);
-    const amount = useRef(1);
-    const t = useRef(0);
-    useFrame((_, dt) => {
-        t.current += dt;
-        if (t.current > 0.2) {
-            t.current = 0;
-            const p = getWalkerPose();
-            const d = Math.hypot(p.x - FRONT_DOOR.x, p.z - FRONT_DOOR.z);
-            if (!open.current && d < DOOR_OPEN_AT) {
-                open.current = true;
-                hubAudio.playSfx('door_front_touch', { volume: 0.16, rate: 0.9 });
-            } else if (open.current && d > DOOR_CLOSE_AT) {
-                open.current = false;
-            }
-        }
-        const target = open.current ? 1 : 0;
-        amount.current += (target - amount.current) * Math.min(1, dt * (open.current ? 3.2 : 1.6));
-        DOOR_LEAVES.forEach((dl, i) => {
-            const g = leaves.current[i];
-            if (g) g.rotation.y = dl.dir * -dl.swing * amount.current;
-        });
-    });
-    return (
-        <group>
-            {DOOR_LEAVES.map((d, i) => (
-                <group
-                    key={d.name}
-                    ref={(n) => {
-                        leaves.current[i] = n;
-                    }}
-                    position={[d.x, 0, d.z]}
-                    rotation={[0, d.dir * -d.swing, 0]}
-                >
-                    <mesh position={[(d.w / 2) * d.dir, H / 2, 0]} castShadow={shadow} receiveShadow={shadow}>
-                        <boxGeometry args={[d.w, H, d.t]} />
-                        <primitive object={m.woodDark} attach="material" />
-                    </mesh>
-                    {[0.7, 1.9].map((py) => (
-                        <mesh key={py} position={[(d.w / 2) * d.dir, py, d.t / 2 + 0.006]}>
-                            <boxGeometry args={[d.w - 0.24, 0.9, 0.012]} />
-                            <primitive object={m.wood} attach="material" />
-                        </mesh>
-                    ))}
-                    <mesh position={[(d.w - 0.12) * d.dir, 1.1, d.t / 2 + 0.05]} castShadow={shadow}>
-                        <boxGeometry args={[0.05, 0.05, 0.12]} />
-                        <primitive object={m.gold} attach="material" />
-                    </mesh>
-                </group>
-            ))}
-        </group>
-    );
-}
-
 /** The roof: eight panels from the eave to the oculus, eight rafters, a gold ring, the shaft of light. */
 function Roof({ m, shadow, profile }: { m: Mats; shadow: boolean; profile?: QualityProfile }) {
     const H = HALL.eave;
@@ -389,7 +324,7 @@ export default function SanctumHall({ low = false, profile }: { low?: boolean; p
                 const yaw = facetYaw(k);
                 const isDoor = k === ENTRANCE_FACET;
                 const a = ALCOVES.find((al) => al.facet === k);
-                const openW = isDoor ? DOOR.width : ALCOVE.width;
+                const openW = isDoor ? ARCH.width : ALCOVE.width;
                 const sideW = FACET_HALF - openW / 2;
                 return (
                     <group key={k} position={[o.x, 0, o.z]} rotation={[0, yaw, 0]}>
@@ -404,43 +339,21 @@ export default function SanctumHall({ low = false, profile }: { low?: boolean; p
                         )}
                         {isDoor && (
                             <>
-                                {/* lintel over the door */}
-                                <Box pos={[0, (H + DOOR.height) / 2, T / 2]} size={[DOOR.width + 0.2, H - DOOR.height, T]} mat={m.rockFace} shadow={sh} />
-                                {/* gold frame */}
-                                <Box pos={[-(DOOR.width / 2 + 0.08), DOOR.height / 2, T / 2]} size={[0.16, DOOR.height, T + 0.08]} mat={m.gold} shadow={false} />
-                                <Box pos={[DOOR.width / 2 + 0.08, DOOR.height / 2, T / 2]} size={[0.16, DOOR.height, T + 0.08]} mat={m.gold} shadow={false} />
-                                <Box pos={[0, DOOR.height + 0.08, T / 2]} size={[DOOR.width + 0.32, 0.16, T + 0.08]} mat={m.gold} shadow={false} />
-                                <Doors m={m} shadow={sh} />
-                                {/* threshold and porch */}
-                                <Box pos={[0, 0.02, T / 2]} size={[DOOR.width + 0.4, 0.04, T + 0.3]} mat={m.basalt} shadow={false} />
-                                <Box pos={[0, 0.045, T + 1.3]} size={[8.2, 0.09, 2.6]} mat={m.cobble} shadow={sh} />
-                                {/* porch lanterns */}
-                                {(['porch lantern W', 'porch lantern E'] as const).map((n) => {
-                                    const s = solid(n);
-                                    return (
-                                        <group key={n} position={[s.x, 0, s.z]}>
-                                            <HouseProp model="ftLantern" fit={{ h: s.h }} shadows={sh}>
-                                                <group>
-                                                    <mesh position={[0, s.h / 2, 0]}>
-                                                        <cylinderGeometry args={[0.1, 0.14, s.h, 6]} />
-                                                        <primitive object={m.basalt} attach="material" />
-                                                    </mesh>
-                                                </group>
-                                            </HouseProp>
-                                            <mesh position={[0, s.h - 0.25, 0]}>
-                                                <sphereGeometry args={[0.12, 8, 6]} />
-                                                <primitive object={m.bulbWarm} attach="material" />
-                                            </mesh>
-                                            {!low && <pointLight position={[0, s.h - 0.2, 0]} color="#ffc98f" intensity={1.1} distance={8} decay={2} />}
-                                        </group>
-                                    );
-                                })}
-                                {/* a banner over the door, inside */}
-                                <group position={[0, DOOR.height + 0.4, -0.08]}>
-                                    <HouseProp model="ftBannerRed" fit={{ h: 1.4 }} shadows={false}>
-                                        {null}
-                                    </HouseProp>
-                                </group>
+                                {/* the arch into the Processional: lintel to the eave, gold reveal, threshold */}
+                                <Box pos={[0, (H + ARCH.height) / 2, T / 2]} size={[ARCH.width + 0.2, H - ARCH.height, T]} mat={m.rockFace} shadow={sh} />
+                                <Box pos={[-(ARCH.width / 2 + 0.08), ARCH.height / 2, T / 2]} size={[0.16, ARCH.height, T + 0.08]} mat={m.gold} shadow={false} />
+                                <Box pos={[ARCH.width / 2 + 0.08, ARCH.height / 2, T / 2]} size={[0.16, ARCH.height, T + 0.08]} mat={m.gold} shadow={false} />
+                                <Box pos={[0, ARCH.height + 0.08, T / 2]} size={[ARCH.width + 0.32, 0.16, T + 0.08]} mat={m.gold} shadow={false} />
+                                <Box pos={[0, 0.02, T / 2]} size={[ARCH.width + 0.4, 0.04, T + 0.3]} mat={m.basalt} shadow={false} />
+                                {/* banners either side of the arch, inside */}
+                                {[-1, 1].map((s) => (
+                                    <group key={s} position={[s * (ARCH.width / 2 + 0.9), 3.0, -0.08]}>
+                                        <HouseProp model={s < 0 ? 'ftBannerRed' : 'ftBannerGreen'} fit={{ h: 1.6 }} shadows={false}>
+                                            {null}
+                                        </HouseProp>
+                                    </group>
+                                ))}
+                                <pointLight position={[0, ARCH.height + 0.6, -0.8]} color="#ffd2a1" intensity={0.9} distance={7} decay={2} />
                             </>
                         )}
                     </group>

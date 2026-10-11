@@ -4,10 +4,9 @@
  * Walking HUD — room or grove, clock, pause. Everything else is Pause or Use.
  */
 import { useEffect, useState } from 'react';
-import { DESTINATIONS, destCenter } from './jungleMap';
 import { getWalkerPose } from './walkerPose';
 import { formatClock, useWorldTime } from './worldTime';
-import { isOutdoors, roomAt } from './homeMap';
+import { DESTINATIONS, destCenter, isOutdoors, roomAt } from './homeMap';
 import { useHouseUi } from './houseUiStore';
 import { useTruthNarrator } from './useTruthNarrator';
 import { TruthVoiceChip } from './TruthVoiceChip';

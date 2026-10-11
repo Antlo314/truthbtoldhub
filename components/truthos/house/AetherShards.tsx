@@ -98,11 +98,13 @@ export default function AetherShards({ profile }: { profile: QualityProfile }) {
         lastCheck.current = clock.elapsedTime;
         const p = getWalkerPose();
         const taken = useShards.getState().collected;
+        // A hand's reach: a shard hung high needs a jump or a spring
+        const handY = p.y + 1.0;
         for (const s of SHARDS) {
             if (taken[s.id]) continue;
             const dx = p.x - s.x;
             const dz = p.z - s.z;
-            if (dx * dx + dz * dz < PICK_R * PICK_R) {
+            if (dx * dx + dz * dz < PICK_R * PICK_R && Math.abs(handY - s.y) < 1.35) {
                 if (collect(s)) {
                     const n = Object.keys(useShards.getState().collected).length;
                     hubAudio.playSfx('arcade_coin', { volume: 0.34, rate: 1 + Math.min(0.5, n * 0.02) });

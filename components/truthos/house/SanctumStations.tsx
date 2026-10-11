@@ -331,37 +331,6 @@ export default function SanctumStations({ low = false }: { low?: boolean }) {
                 </HouseProp>
             </At>
 
-            {/* ── Threshold ── */}
-            {(() => {
-                const l = solid('daily word lectern');
-                return (
-                    <At s={l}>
-                        <HouseProp model="bedsideTable" fit={{ w: 0.62, h: l.h - 0.15, d: 0.5 }} shadows={sh}>
-                            <Block s={l} mat={m.wood} shadow={sh} w={0.6} d={0.5} />
-                        </HouseProp>
-                        {/* this morning's paper */}
-                        <mesh position={[0, l.h - 0.13, 0]} rotation={[0, 0.3, 0]}>
-                            <boxGeometry args={[0.24, 0.02, 0.17]} />
-                            <primitive object={m.book} attach="material" />
-                        </mesh>
-                    </At>
-                );
-            })()}
-            <At s={solid('coat rack')}>
-                <HouseProp model="coatRack" fit={{ h: solid('coat rack').h }} shadows={sh}>
-                    <Block s={solid('coat rack')} mat={m.woodDark} shadow={sh} w={0.4} d={0.4} />
-                </HouseProp>
-            </At>
-            <At s={solid('offering chest')}>
-                <HouseProp model="pkChest" fit={{ w: 0.9 }} shadows={sh}>
-                    <Block s={solid('offering chest')} mat={m.woodDark} shadow={sh} w={0.9} d={0.7} />
-                </HouseProp>
-                <mesh position={[0, solid('offering chest').h + 0.25, 0]}>
-                    <sphereGeometry args={[0.07, 8, 6]} />
-                    <meshBasicMaterial color="#e8c478" toneMapped={false} />
-                </mesh>
-            </At>
-
             {/* ── The Source — the orb and four stone seats ── */}
             <group position={[0, DAIS.h, 0]}>
                 <mesh position={[0, 0.95, 0]}>

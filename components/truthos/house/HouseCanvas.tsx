@@ -7,13 +7,13 @@ import * as THREE from 'three';
 import { PropDetailProvider } from './HouseProp';
 import DayNightCycle from './DayNightCycle';
 import LampGroup from './LampGroup';
-import { NightStars, Rain } from './WeatherFx';
+import { NightStars } from './WeatherFx';
 import AetherSky from './AetherSky';
-import AetherShelf from './AetherShelf';
+import AetherBackdrop from './AetherBackdrop';
 import AetherHorizon from './AetherHorizon';
-import WorldDestinations from './WorldDestinations';
 import SanctumHall, { SourceLight } from './SanctumHall';
 import SanctumStations from './SanctumStations';
+import LairWings from './LairWings';
 import FirstPersonController from './FirstPersonController';
 import RemotePlayers from './RemotePlayers';
 import LocalPlayerBody from './LocalPlayerBody';
@@ -181,24 +181,22 @@ export default function HouseCanvas({
                     so there is one place the time of day is expressed. */}
                 <DayNightCycle mobile={low} shadows={profile.shadows} shadowMap={profile.shadowMap} />
 
-                {/* One exterior: the Aether Shelf. */}
-                <AetherShelf low={low} profile={profile} />
+                {/* What the glass looks out on: the cloud sea and the far islets */}
+                <AetherBackdrop low={low} profile={profile} />
                 {!low && <AetherHorizon low />}
 
                 {/* Phones keep procedural solids (no GLB fetch). Desktop
                     loads the Kenney meshes — HouseProp never draws both. */}
                 <PropDetailProvider primitiveOnly={!profile.props}>
                     <LampGroup floor={0.22}>
-                        <WorldDestinations low={low} profile={profile} />
                         <SanctumHall low={low} profile={profile} />
                         <SanctumStations low={low} />
+                        <LairWings low={low} profile={profile} />
                     </LampGroup>
                     {/* The Source never dims — it is the hall's light, day and night */}
                     <SourceLight low={low} />
                     <AetherShards profile={profile} />
                 </PropDetailProvider>
-
-                {profile.rain && <Rain />}
 
                 <RemotePlayers peers={peers} selfId={selfId} mobile={low} rigged={profile.riggedVessels} saidBy={saidBy} />
                 <LocalPlayerBody avatar={avatar} aura={aura} rigged={profile.riggedVessels} shadows={profile.shadows} />

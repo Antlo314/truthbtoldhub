@@ -1,8 +1,7 @@
 /**
  * One next-line for the walking HUD. Not a quest log.
  */
-import { DESTINATIONS, destCenter } from './jungleMap';
-import { isOutdoors } from './homeMap';
+import { DESTINATIONS, destCenter, isOutdoors } from './homeMap';
 import { getWalkerPose } from './walkerPose';
 import { loadVisited, STATION_LABELS, STATION_ROOM, unvisitedCore } from './stationProgress';
 
@@ -31,10 +30,10 @@ export function nextLine(opts: {
             const id = miss[0];
             const room = STATION_ROOM[id];
             const name = STATION_LABELS[id] || id;
-            if (id === 'envelope') return 'Gold rings open things. The paper waits by the door.';
+            if (id === 'envelope') return 'Gold rings open things. The paper waits just through the arch.';
             return room ? `${name} is in the ${room}.` : `${name} is in the Sanctum.`;
         }
-        return 'The door is just a door. Walk out onto the shelf.';
+        return 'The south arch leads on. Four chambers wait beyond it.';
     }
 
     const seen = loadVisited();

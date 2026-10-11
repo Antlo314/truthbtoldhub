@@ -24,7 +24,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HOUSE = join(HERE, '..', 'components', 'truthos', 'house');
-const DEPS = ['homeMap.ts', 'jungleMap.ts', 'houseMap.ts', 'shardSites.ts', 'worldPads.ts', 'shardStore.ts', 'houseUiStore.ts'];
+const DEPS = ['homeMap.ts', 'houseMap.ts', 'shardSites.ts', 'worldPads.ts', 'shardStore.ts', 'houseUiStore.ts'];
 
 const tmp = mkdtempSync(join(tmpdir(), 'sanctumcheck-'));
 let plan, sites, pads;
@@ -47,8 +47,7 @@ try {
     rmSync(tmp, { recursive: true, force: true });
 }
 
-const { SOLIDS, solidWorld, walkable, indoors, inDoorway, inBuilding, HOME_HOTSPOTS, INTRO, PLAYER_R } = plan;
-const CLEARING_R = 26;
+const { SOLIDS, solidWorld, walkable, onFloor, HOME_HOTSPOTS, INTRO, PLAYER_R } = plan;
 const fail = [];
 const n = (v) => Number(v).toFixed(2);
 
@@ -69,16 +68,21 @@ for (let i = 0; i < placed.length; i++) {
 }
 console.log(`── ${placed.length} solids; closest pair: "${worst.a.name}" ↔ "${worst.b.name}" ${n(worst.d)}m apart (${n(worst.gap)}m clear)`);
 
-/* ── 2. solids on ground ── */
+/* ── 2. solids on ground — the centre and the inner half of the circle.
+       A prop pushed against a wall has a collision circle that overruns
+       the wall by design; a prop hanging half off the floor does not. ── */
 for (const s of placed) {
     const { x, z } = s.w;
-    const onFloor = indoors(x, z, 0) || inDoorway(x, z, 0) || (!inBuilding(x, z, 0) && Math.hypot(x, z) <= CLEARING_R - 0.5);
-    if (!onFloor) fail.push(`GROUND: "${s.name}" at (${n(x)}, ${n(z)}) is not on floor`);
+    let ok = onFloor(x, z, 0);
+    for (let a = 0; a < Math.PI * 2 && ok; a += Math.PI / 4) {
+        if (!onFloor(x + Math.cos(a) * s.r * 0.5, z + Math.sin(a) * s.r * 0.5, 0)) ok = false;
+    }
+    if (!ok) fail.push(`GROUND: "${s.name}" at (${n(x)}, ${n(z)}) r ${n(s.r)} is not on floor`);
 }
 
 /* ── 3. reach ── */
 const STEP = 0.25;
-const LIM = 72;
+const LIM = 52;
 const N = Math.round((LIM * 2) / STEP) + 1;
 const idx = (x, z) => Math.round((x + LIM) / STEP) * N + Math.round((z + LIM) / STEP);
 const seen = new Uint8Array(N * N);
@@ -119,14 +123,16 @@ for (const h of HOME_HOTSPOTS) {
 }
 for (const s of sites.SHARDS) {
     if (!reachableNear(s.x, s.z, 1.0)) fail.push(`REACH: shard "${s.id}" at (${n(s.x)}, ${n(s.z)}) cannot be picked up`);
+    // a shard hung high must have a spring under it
+    if (s.y > 2.2 && !pads.PADS.some((p) => Math.hypot(p.x - s.x, p.z - s.z) < 0.9)) fail.push(`REACH: shard "${s.id}" hangs at ${n(s.y)}m with no spring beneath it`);
 }
 for (const p of pads.PADS) {
     if (!reachableNear(p.x, p.z, 0.6)) fail.push(`REACH: spring "${p.id}" cannot be stepped on`);
 }
-// the isles themselves
+// the chambers themselves
 for (const id of ['cinema', 'hall', 'soul_mirror', 'studio']) {
     const h = HOME_HOTSPOTS.find((x) => x.id === id);
-    if (h && !reachableNear(h.position[0], h.position[2], 2.0)) fail.push(`REACH: isle "${id}" is cut off`);
+    if (h && !reachableNear(h.position[0], h.position[2], 2.0)) fail.push(`REACH: chamber "${id}" is cut off`);
 }
 
 /* ── 4. clear triggers ── */
@@ -147,4 +153,4 @@ if (fail.length) {
     fail.forEach((f) => console.log('  ✕ ' + f));
     process.exit(1);
 }
-console.log('\nThe Sanctum is clean: nothing overlaps, everything stands on floor, every station is reachable.');
+console.log('\nThe lair is clean: nothing overlaps, everything stands on floor, every station is reachable.');

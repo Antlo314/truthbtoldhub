@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useHouseUi } from './houseUiStore';
 import SoulPanel from '@/components/hut3d/hud/SoulPanel';
 import StudioPanel from './StudioPanel';
-import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter } from './jungleMap';
+import { DESTINATIONS, mapOutline } from './homeMap';
 import CinemaPanel from './CinemaPanel';
 import NewspaperPanel from './NewspaperPanel';
 import WallPanel from './WallPanel';
@@ -146,94 +146,84 @@ function FramePanel({
 }
 
 function WayfinderNative({ onClose }: { onClose: () => void }) {
-    // Drawn LIVE from jungleMap — the same tables that grow the walls and
-    // lay the colliders. Open a corridor in the worldplan and it appears
-    // here without anyone remembering to update a picture.
-    const toMap = (x: number, z: number) => ({ mx: x, my: -z }); // north up
+    // Drawn LIVE from homeMap — the same tables the walls are built from
+    // and the walker collides with. Move a chamber in the plan and it
+    // moves here without anyone remembering to update a picture.
+    // Map space is world space: x east, z south (down the page).
     const [, tick] = useState(0);
     useEffect(() => {
         const t = window.setInterval(() => tick((n) => n + 1), 250);
         return () => window.clearInterval(t);
     }, []);
     const pose = getWalkerPose();
-    const here = toMap(pose.x, pose.z);
     const visited = loadVisited();
+    const map = mapOutline();
+    const pts = (p: [number, number][]) => p.map(([x, z]) => `${x},${z}`).join(' ');
+    const apseLabel: Record<string, string> = {
+        terminal: 'TERMINAL', library: 'LIBRARY', codex: 'CODEX', arcade: 'ARCADE', ledger: 'LEDGER', mark: 'THE MARK', paths: 'PATHS',
+    };
     return (
         <Shell title="Wall map · The Paths" accent="text-emerald-300" onClose={onClose}>
             <div className="p-4 h-full flex flex-col gap-3 overflow-y-auto">
                 <p className="text-[10px] uppercase tracking-[0.3em] font-mono text-emerald-300/80 text-center shrink-0">
-                    The paths are open
+                    One lair · every station
                 </p>
                 <div className="flex-1 min-h-0 flex items-center justify-center">
-                    <svg viewBox="-100 -100 200 200" className="max-h-full w-auto aspect-square rounded-xl border border-white/10 bg-[#0b1410]">
-                        {/* The jungle */}
-                        <rect x="-100" y="-100" width="200" height="200" fill="#12241a" />
-                        {/* Corridors */}
-                        {CORRIDORS.map((c, i) => {
-                            const a = toMap(c.ax, c.az);
-                            const b = toMap(c.bx, c.bz);
+                    <svg viewBox="-23 -17 46 58" className="max-h-full w-auto rounded-xl border border-white/10 bg-[#0b0d14]">
+                        <rect x="-23" y="-17" width="46" height="58" fill="#0e1018" />
+                        {/* the chambers and the gallery */}
+                        {map.rooms.map((r) => {
+                            const chamber = DESTINATIONS.find((d) => d.id === r.id);
+                            const seen = chamber ? visited.has(chamber.id) : false;
                             return (
-                                <line
-                                    key={i}
-                                    x1={a.mx} y1={a.my} x2={b.mx} y2={b.my}
-                                    stroke="#8a6f4d" strokeWidth={c.halfWidth * 2}
-                                    strokeLinecap="round" opacity={0.9}
-                                />
+                                <g key={r.id}>
+                                    <rect x={r.x0} y={r.z0} width={r.x1 - r.x0} height={r.z1 - r.z0} fill={chamber ? '#1a1a2c' : '#17172a'} stroke={seen ? '#34d399' : chamber ? '#fbbf24' : '#5a5878'} strokeWidth={0.5} />
+                                    <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 - (chamber ? 0.6 : 0)} textAnchor="middle" fontSize={chamber ? 1.7 : 1.3} fill="#fde68a" fontFamily="monospace" fontWeight="bold">
+                                        {r.name.replace(/^The /, '').toUpperCase()}
+                                    </text>
+                                    {chamber && (
+                                        <text x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2 + 1.8} textAnchor="middle" fontSize={1.2} fill="#d6d3c4" fontFamily="monospace">
+                                            {r.blurb}
+                                        </text>
+                                    )}
+                                </g>
                             );
                         })}
-                        {/* Home clearing + the safe house */}
-                        <circle cx={0} cy={0} r={CLEARING_R} fill="#1d3a28" stroke="#3f7d46" strokeWidth="1.4" />
-                        <rect x={-5} y={-6} width={10} height={12} rx={1.5} fill="#c8ac88" stroke="#7a5c3c" strokeWidth="1" />
-                        <text x={0} y={CLEARING_R - 5} textAnchor="middle" fontSize="6.2" fill="#e8e4d8" fontFamily="monospace">
-                            THE SAFE HOUSE
-                        </text>
-                        {/* Destinations */}
-                        {DESTINATIONS.map((d) => {
-                            const c = destCenter(d);
-                            const m = toMap(c.x, c.z);
+                        {map.doors.map((d) => (
+                            <rect key={d.id} x={d.rect.x0} y={d.rect.z0} width={d.rect.x1 - d.rect.x0} height={d.rect.z1 - d.rect.z0} fill="#fbbf24" opacity={0.85} />
+                        ))}
+                        {/* the Sanctum and its apses */}
+                        <polygon points={pts(map.octagon)} fill="#1c1a2e" stroke="#8a6f4d" strokeWidth={0.6} />
+                        {map.apses.map((a) => {
+                            const cx = a.pts.reduce((s, p) => s + p[0], 0) / 4;
+                            const cz = a.pts.reduce((s, p) => s + p[1], 0) / 4;
                             return (
-                                <g key={d.id}>
-                                    <circle
-                                        cx={m.mx}
-                                        cy={m.my}
-                                        r={d.r}
-                                        fill="#1d3a28"
-                                        stroke={visited.has(d.id) ? '#34d399' : '#fbbf24'}
-                                        strokeWidth="1.2"
-                                    />
-                                    <circle cx={m.mx} cy={m.my} r={2.4} fill={visited.has(d.id) ? '#34d399' : '#fbbf24'} />
-                                    <text x={m.mx} y={m.my - d.r - 3} textAnchor="middle" fontSize="6.4" fill="#fde68a" fontFamily="monospace" fontWeight="bold">
-                                        {d.name.toUpperCase()}
-                                    </text>
-                                    <text x={m.mx} y={m.my + d.r + 8} textAnchor="middle" fontSize="4.8" fill="#d6d3c4" fontFamily="monospace">
-                                        {d.blurb}
+                                <g key={a.id}>
+                                    <polygon points={pts(a.pts)} fill="#1c1a2e" stroke="#8a6f4d" strokeWidth={0.5} />
+                                    <text x={cx} y={cz + 0.4} textAnchor="middle" fontSize={1.0} fill="#c9c2e6" fontFamily="monospace">
+                                        {apseLabel[a.id]}
                                     </text>
                                 </g>
                             );
                         })}
-                        <text x={0} y={-48} textAnchor="middle" fontSize="4.4" fill="#8f9a8a" fontFamily="monospace">
-                            scenic walk · turns back
+                        <polygon points={pts(map.arch)} fill="#fbbf24" opacity={0.85} />
+                        <circle cx={0} cy={0} r={2.4} fill="#5b3fe6" opacity={0.8} />
+                        <text x={0} y={0.5} textAnchor="middle" fontSize={1.2} fill="#ffffff" fontFamily="monospace">
+                            SOURCE
                         </text>
-                        <text x={0} y={52} textAnchor="middle" fontSize="4.8" fill="#8f9a8a" fontFamily="monospace">
-                            one floor · four paths
-                        </text>
+                        {/* you */}
                         <polygon
-                            points={`${here.mx},${here.my - 3.2} ${here.mx - 2.1},${here.my + 2.4} ${here.mx + 2.1},${here.my + 2.4}`}
+                            points={`${pose.x},${pose.z - 1.4} ${pose.x - 0.9},${pose.z + 1.0} ${pose.x + 0.9},${pose.z + 1.0}`}
                             fill="#fbbf24"
-                            transform={`rotate(${(-pose.yaw * 180) / Math.PI} ${here.mx} ${here.my})`}
+                            transform={`rotate(${180 - (pose.yaw * 180) / Math.PI} ${pose.x} ${pose.z})`}
                         />
-                        <circle cx={here.mx} cy={here.my} r="1.4" fill="#111" />
-                        {/* Compass */}
-                        <g transform="translate(84,-84)">
-                            <circle r="9" fill="#0b1410" stroke="#3f7d46" strokeWidth="0.8" />
-                            <path d="M0,-6 L2,2 L0,0.6 L-2,2 Z" fill="#fbbf24" />
-                            <text y={-11} textAnchor="middle" fontSize="5" fill="#fde68a" fontFamily="monospace">N</text>
-                        </g>
+                        <circle cx={pose.x} cy={pose.z} r="0.5" fill="#111" />
                     </svg>
                 </div>
                 <p className="text-[10px] text-white/45 text-center leading-relaxed shrink-0">
-                    Rec, hall, living, kitchen, The Mark — one floor. Four groves
-                    wait at the ends of the paths.
+                    Seven apses around the Source. Through the arch, the Processional: the
+                    Cinema and the Hall Circle, then the Mirror Well and the Signal Studio,
+                    and the Overlook at its end.
                 </p>
             </div>
         </Shell>

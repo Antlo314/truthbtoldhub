@@ -172,9 +172,9 @@ export const WALKTHROUGH_STEPS = [
         voice: 'station_truth',
     },
     {
-        title: 'The door',
-        body: 'The door is not a menu. Walk out. Four bridges leave the shelf.',
-        tip: 'Step outside',
+        title: 'The arch',
+        body: 'The south arch is not a menu. Walk through. The Processional leads to four chambers and a view at its end.',
+        tip: 'Step through the arch',
         wait: 'out' as const,
         // Not `world_leave` — that line says "you HAVE stepped out", and the
         // player is still indoors being told to. Firing it here also burned

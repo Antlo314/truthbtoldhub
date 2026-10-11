@@ -1,21 +1,22 @@
 /**
- * The Sanctum — one octagonal hall on the Aether Shelf.
+ * The Lair — one building, every station of the Hut.
  *
- * Seven apses around the hall, one station each; the Source at the
- * centre under an open oculus; the threshold to the south with the
- * Daily Word inside it and the Offering on the porch. Everything that
- * used to be nine rooms of furniture is one plan: a facet angle, an
- * apse frame, and a short table of solids in that frame.
+ * The Sanctum: an octagonal hall with seven apses (Terminal, Library,
+ * Codex, Arcade, Ledger, The Mark, Paths) around the Source. Through the
+ * south arch, the Processional: a long gallery with the Daily Word and
+ * the Offering at its head, four chambers off its sides — the Cinema and
+ * the Hall Circle, then the Mirror Well and the Signal Studio — and the
+ * Overlook at its end, a glass wall onto the cloud sea. There is no
+ * outside. The sky is seen through the oculus, the skylights and the
+ * glass.
  *
- * Collision is analytic. There are no wall boxes to drift from the
- * meshes: `walkable()` says where the floor is (the octagon, the apse
- * pockets, the doorway, the terrace, the bridges, the isles) and every
- * prop is a circle. The renderer, the walker and the validator all read
- * these same functions, so a prop cannot stand inside another and a
- * station cannot be sealed off without `npm run validate` saying so.
+ * Collision is analytic. `walkable()` says where the floor is (the
+ * octagon, the apse pockets, the arch, the rooms, the doorways) and every
+ * prop is a circle in SOLIDS. The renderer, the walker and the validator
+ * all read these same functions, so a prop cannot stand inside another
+ * and a station cannot be sealed off without `npm run validate` saying so.
  */
 import type { Hotspot } from './houseMap';
-import { CLEARING_R, corridorDistance, CORRIDORS, DESTINATIONS, destCenter, inDestination, JUNGLE_BOUNDS } from './jungleMap';
 
 export const EYE_HEIGHT = 1.62;
 export const SIT_HEIGHT = 1.12;
@@ -25,7 +26,10 @@ export const PLAYER_R = 0.34;
 export type Level = 'main';
 export const MAIN_Y = 0;
 
-/* ── The hall ───────────────────────────────────────────────── */
+/** The roam box — a backstop; the walkable region is the real fence */
+export const JUNGLE_BOUNDS = { minX: -40, maxX: 40, minZ: -30, maxZ: 50 } as const;
+
+/* ── The Sanctum ────────────────────────────────────────────── */
 
 export const HALL = {
     /** centre → inner face of each facet */
@@ -44,13 +48,16 @@ export const FACET_HALF = HALL.apothem * Math.tan(Math.PI / 8);
 export const VERTEX_R = HALL.apothem / Math.cos(Math.PI / 8);
 
 export const ALCOVE = { width: 4.4, depth: 2.8, height: 3.6, apseH: 4.6 } as const;
-export const DOOR = { width: 2.6, height: 3.0 } as const;
+/** The south arch into the Processional */
+export const ARCH = { width: 3.6, height: 4.0 } as const;
+/** Kept for callers that still say DOOR */
+export const DOOR = ARCH;
 export const DAIS = { r: 2.4, h: 0.28, rampR: 3.1 } as const;
 
 export type AlcoveId = 'terminal' | 'arcade' | 'ledger' | 'library' | 'codex' | 'mark' | 'paths';
 export type Alcove = { id: AlcoveId; name: string; facet: number; soft: boolean };
 
-/** The entrance faces +z (south on the map) */
+/** The arch faces +z (south on the map) */
 export const ENTRANCE_FACET = 2;
 
 /** facet k faces angle k·45° (0 = +x, 2 = +z) */
@@ -80,10 +87,7 @@ export function facetToWorld(facet: number, x: number, z: number): { x: number; 
     const a = facetAngle(facet);
     const c = Math.cos(a);
     const s = Math.sin(a);
-    return {
-        x: c * HALL.apothem + x * s + z * c,
-        z: s * HALL.apothem - x * c + z * s,
-    };
+    return { x: c * HALL.apothem + x * s + z * c, z: s * HALL.apothem - x * c + z * s };
 }
 
 export function worldToFacet(facet: number, wx: number, wz: number): { x: number; z: number } {
@@ -100,13 +104,84 @@ export function yawFacing(nx: number, nz: number): number {
     return Math.atan2(-nx, -nz);
 }
 
+/* ── The rooms beyond the arch ──────────────────────────────── */
+
+export type Rect = { x0: number; z0: number; x1: number; z1: number };
+export type RoomId = 'processional' | 'overlook' | 'cinema' | 'hall' | 'soul_mirror' | 'studio';
+
+export type Room = Rect & {
+    id: RoomId;
+    name: string;
+    blurb: string;
+    /** ceiling height */
+    h: number;
+};
+
+export const WALL_T = 0.6;
+
+/** Inner rectangles — the floor you stand on. Walls sit OUTSIDE these. */
+export const ROOMS: Room[] = [
+    { id: 'processional', name: 'The Processional', blurb: 'The long gallery', x0: -3.6, z0: 11.0, x1: 3.6, z1: 31.0, h: 5.6 },
+    { id: 'overlook', name: 'The Overlook', blurb: 'Glass onto the cloud sea', x0: -3.6, z0: 31.0, x1: 3.6, z1: 37.0, h: 5.6 },
+    { id: 'cinema', name: 'The Cinema', blurb: 'Films in the dark', x0: 4.2, z0: 13.6, x1: 19.6, z1: 25.6, h: 6.0 },
+    { id: 'hall', name: 'The Hall Circle', blurb: 'The community fire', x0: -19.6, z0: 13.6, x1: -4.2, z1: 25.6, h: 6.4 },
+    { id: 'soul_mirror', name: 'The Mirror Well', blurb: 'Shape your vessel', x0: 4.2, z0: 26.2, x1: 19.6, z1: 38.2, h: 6.5 },
+    { id: 'studio', name: 'The Signal Studio', blurb: 'Broadcast from the lair', x0: -19.6, z0: 26.2, x1: -4.2, z1: 38.2, h: 5.2 },
+];
+
+export const room = (id: RoomId): Room => ROOMS.find((r) => r.id === id)!;
+export const roomCenter = (r: Rect) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 });
+
+/**
+ * Floor rectangles. The Overlook is the end of the Processional, not a
+ * room with a wall between — one rectangle for the floor, two names.
+ */
+const FLOOR_RECTS: Rect[] = [
+    { x0: room('processional').x0, z0: room('processional').z0, x1: room('processional').x1, z1: room('overlook').z1 },
+    room('cinema'),
+    room('hall'),
+    room('soul_mirror'),
+    room('studio'),
+];
+
+export type Door = {
+    id: string;
+    /** the gap through the wall — walkable */
+    rect: Rect;
+    /** the wall this door pierces runs along z (x is constant) */
+    h: number;
+    /** which side of the corridor */
+    side: 'e' | 'w';
+};
+
+/** Doorways from the Processional into the chambers (3 m wide, 3.2 m tall) */
+export const DOORS: Door[] = [
+    { id: 'cinema', rect: { x0: 3.6, z0: 18.1, x1: 4.2, z1: 21.1 }, h: 3.2, side: 'e' },
+    { id: 'hall', rect: { x0: -4.2, z0: 18.1, x1: -3.6, z1: 21.1 }, h: 3.2, side: 'w' },
+    { id: 'soul_mirror', rect: { x0: 3.6, z0: 27.6, x1: 4.2, z1: 30.6 }, h: 3.2, side: 'e' },
+    { id: 'studio', rect: { x0: -4.2, z0: 27.6, x1: -3.6, z1: 30.6 }, h: 3.2, side: 'w' },
+];
+
+const inRect = (r: Rect, x: number, z: number, pad = 0) => x >= r.x0 + pad && x <= r.x1 - pad && z >= r.z0 + pad && z <= r.z1 - pad;
+
+/** The chambers, for the compass, the map and the next-line */
+export type Chamber = { id: 'cinema' | 'hall' | 'soul_mirror' | 'studio'; name: string; blurb: string; x: number; z: number; r: number };
+export const CHAMBERS: Chamber[] = (['cinema', 'hall', 'soul_mirror', 'studio'] as const).map((id) => {
+    const r = room(id);
+    const c = roomCenter(r);
+    return { id, name: r.name, blurb: r.blurb, x: c.x, z: c.z, r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - 0.5 };
+});
+/** Older names for the same table */
+export const DESTINATIONS = CHAMBERS;
+export const destCenter = (d: Chamber) => ({ x: d.x, z: d.z });
+
 /* ── Solids — every prop that takes floor ───────────────────── */
 
-export type SolidAt = AlcoveId | 'door' | 'hall';
+export type SolidAt = AlcoveId | 'world';
 
 export type Solid = {
     name: string;
-    /** which frame x/z are in: an apse, the entrance facet, or world */
+    /** which frame x/z are in: an apse, or the world */
     at: SolidAt;
     x: number;
     z: number;
@@ -119,6 +194,16 @@ export type Solid = {
     /** A chair pushed under a desk may share its circle — name the solid it tucks into */
     tuck?: string;
 };
+
+const ringAt = (cx: number, cz: number, a: number, r: number) => ({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r });
+
+const C_HALL = roomCenter(room('hall'));
+const C_CIN = roomCenter(room('cinema'));
+const C_MIR = roomCenter(room('soul_mirror'));
+const C_STU = roomCenter(room('studio'));
+/** The pool sits a little east of the Mirror Well's centre so the west lip is a stage */
+export const POOL = { x: C_MIR.x + 1.0, z: C_MIR.z, r: 3.8 } as const;
+export const FIRE = { x: C_HALL.x, z: C_HALL.z } as const;
 
 export const SOLIDS: Solid[] = [
     // ── Terminal (north) — desk against the back wall, chair facing it
@@ -141,31 +226,107 @@ export const SOLIDS: Solid[] = [
     { name: 'arcade cabinet R', at: 'arcade', x: 0.78, z: 2.4, r: 0.46, h: 1.85 },
     { name: 'arcade stool', at: 'arcade', x: 1.8, z: 1.55, r: 0.22, h: 0.72 },
     // ── Ledger — the record on a sideboard
-    { name: 'ledger sideboard', at: 'ledger', x: 0, z: 2.5, r: 0.92, h: 0.9 },
+    { name: 'ledger sideboard', at: 'ledger', x: 0, z: 2.4, r: 0.78, h: 0.9 },
     // ── The Mark — a bench to sit and look
     { name: 'mark bench', at: 'mark', x: -1.55, z: 0.7, r: 0.32, h: 0.5, yaw: Math.PI / 2 },
     // ── Paths — the map, two artworks, a bench and a plant
     { name: 'paths bench', at: 'paths', x: 1.55, z: 0.7, r: 0.32, h: 0.5, yaw: -Math.PI / 2 },
     { name: 'paths plant', at: 'paths', x: -1.75, z: 2.25, r: 0.26, h: 1.0 },
-    // ── Threshold (entrance frame; inside is −z, the porch is +z)
-    { name: 'daily word lectern', at: 'door', x: -2.1, z: -1.3, r: 0.34, h: 0.95, yaw: 0.6 },
-    { name: 'coat rack', at: 'door', x: 2.3, z: -1.1, r: 0.3, h: 1.7 },
-    { name: 'door leaf W', at: 'door', x: -1.05, z: 0.9, r: 0.3, h: 2.35 },
-    { name: 'door leaf E', at: 'door', x: 1.05, z: 0.9, r: 0.3, h: 2.35 },
-    { name: 'offering chest', at: 'door', x: 2.1, z: 1.7, r: 0.46, h: 0.6, yaw: -Math.PI / 2 },
-    { name: 'porch lantern W', at: 'door', x: -3.1, z: 1.5, r: 0.2, h: 2.6 },
-    { name: 'porch lantern E', at: 'door', x: 3.3, z: 1.5, r: 0.2, h: 2.6 },
     // ── The Source — four low seats on the marble around the dais
-    { name: 'source seat S', at: 'hall', x: 0, z: 3.7, r: 0.42, h: 0.46, yaw: Math.PI },
-    { name: 'source seat N', at: 'hall', x: 0, z: -3.7, r: 0.42, h: 0.46, yaw: 0 },
-    { name: 'source seat E', at: 'hall', x: 3.7, z: 0, r: 0.42, h: 0.46, yaw: -Math.PI / 2 },
-    { name: 'source seat W', at: 'hall', x: -3.7, z: 0, r: 0.42, h: 0.46, yaw: Math.PI / 2 },
+    { name: 'source seat S', at: 'world', x: 0, z: 3.7, r: 0.42, h: 0.46, yaw: Math.PI },
+    { name: 'source seat N', at: 'world', x: 0, z: -3.7, r: 0.42, h: 0.46, yaw: 0 },
+    { name: 'source seat E', at: 'world', x: 3.7, z: 0, r: 0.42, h: 0.46, yaw: -Math.PI / 2 },
+    { name: 'source seat W', at: 'world', x: -3.7, z: 0, r: 0.42, h: 0.46, yaw: Math.PI / 2 },
     // ── Eight columns at the hall's vertices, between the apses
     ...Array.from({ length: 8 }, (_, k) => {
         const a = facetAngle(k) + Math.PI / 8;
         const r = VERTEX_R - 0.75;
-        return { name: `column ${k}`, at: 'hall' as const, x: Math.cos(a) * r, z: Math.sin(a) * r, r: 0.5, h: HALL.eave };
+        return { name: `column ${k}`, at: 'world' as const, x: Math.cos(a) * r, z: Math.sin(a) * r, r: 0.5, h: HALL.eave };
     }),
+
+    // ── The Processional — columns clear of every doorway, the Word and the Offering at its head
+    ...[13.2, 16.4, 23.2, 26.0].flatMap((z, i) => [
+        { name: `gallery column W${i}`, at: 'world' as const, x: -3.0, z, r: 0.42, h: 5.6 },
+        { name: `gallery column E${i}`, at: 'world' as const, x: 3.0, z, r: 0.42, h: 5.6 },
+    ]),
+    { name: 'daily word lectern', at: 'world', x: -2.3, z: 15.0, r: 0.34, h: 0.95, yaw: 0.9 },
+    { name: 'offering chest', at: 'world', x: 2.3, z: 15.0, r: 0.46, h: 0.6, yaw: -Math.PI / 2 },
+    { name: 'gallery planter W', at: 'world', x: -2.9, z: 20.0, r: 0.45, h: 0.6 },
+    { name: 'gallery planter E', at: 'world', x: 2.9, z: 20.0, r: 0.45, h: 0.6 },
+    { name: 'gallery planter W2', at: 'world', x: -2.9, z: 29.0, r: 0.45, h: 0.6 },
+    { name: 'gallery planter E2', at: 'world', x: 2.9, z: 29.0, r: 0.45, h: 0.6 },
+
+    // ── The Overlook — two benches at the glass, a balustrade you cannot pass
+    { name: 'overlook bench W', at: 'world', x: -2.0, z: 34.6, r: 0.6, h: 0.5, yaw: 0 },
+    { name: 'overlook bench E', at: 'world', x: 2.0, z: 34.6, r: 0.6, h: 0.5, yaw: 0 },
+    ...[-3, -2, -1, 0, 1, 2, 3].map((x) => ({ name: `balustrade ${x}`, at: 'world' as const, x, z: 36.35, r: 0.32, h: 1.0 })),
+
+    // ── The Cinema — four rows of benches either side of the aisle, screen on the east wall
+    ...[8.6, 11.0, 13.4, 15.8].flatMap((x, row) =>
+        [-3.2, -1.6, 1.6, 3.2].map((dz, i) => ({
+            name: `cinema bench ${row}${i}`,
+            at: 'world' as const,
+            x,
+            z: C_CIN.z + dz,
+            r: 0.6,
+            h: 0.5,
+            yaw: -Math.PI / 2,
+        })),
+    ),
+    { name: 'cineworks table', at: 'world', x: 6.4, z: 15.2, r: 0.9, h: 0.8 },
+    { name: 'cinema stall', at: 'world', x: 6.4, z: 24.0, r: 1.15, h: 1.8, yaw: Math.PI },
+    { name: 'cinema stool A', at: 'world', x: 8.3, z: 24.4, r: 0.3, h: 0.5 },
+    { name: 'cinema stool B', at: 'world', x: 9.4, z: 24.9, r: 0.3, h: 0.5 },
+    { name: 'cinema barrel', at: 'world', x: 5.0, z: 25.0, r: 0.3, h: 0.95 },
+    { name: 'cinema barrel 2', at: 'world', x: 18.8, z: 14.4, r: 0.3, h: 0.95 },
+
+    // ── The Hall Circle — the fire, nine stones, six benches, a camp
+    { name: 'council fire', at: 'world', x: FIRE.x, z: FIRE.z, r: 1.15, h: 0.9 },
+    ...Array.from({ length: 9 }, (_, i) => {
+        const a = 0.35 + i * ((Math.PI * 2) / 9);
+        return { name: `hall stone ${i}`, at: 'world' as const, ...ringAt(FIRE.x, FIRE.z, a, 5.0), r: 0.55, h: 2.4 + (i % 3) * 0.5, yaw: -a };
+    }),
+    ...[0.7, 1.75, 2.6, 3.7, 4.55, 5.6].map((a, i) => ({
+        name: `hall bench ${i}`,
+        at: 'world' as const,
+        ...ringAt(FIRE.x, FIRE.z, a, 3.0),
+        r: 0.6,
+        h: 0.5,
+        yaw: -a - Math.PI / 2,
+    })),
+    { name: 'hall chest', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.2, 6.6), r: 0.45, h: 0.6, yaw: -2.2 - Math.PI },
+    { name: 'hall chest 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 4.1, 6.6), r: 0.45, h: 0.6, yaw: -4.1 - Math.PI },
+    { name: 'hall logs', at: 'world', ...ringAt(FIRE.x, FIRE.z, 1.3, 5.6), r: 0.5, h: 0.7, yaw: -1.3 },
+    { name: 'hall logs 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.7, 6.5), r: 0.5, h: 0.7, yaw: -2.7 },
+    { name: 'hall logs 3', at: 'world', ...ringAt(FIRE.x, FIRE.z, 5.0, 5.6), r: 0.5, h: 0.7, yaw: -5.0 },
+    { name: 'hall bedroll', at: 'world', ...ringAt(FIRE.x, FIRE.z, 2.0, 4.1), r: 0.45, h: 0.14, yaw: -2.0 + Math.PI / 2 },
+    { name: 'hall bedroll 2', at: 'world', ...ringAt(FIRE.x, FIRE.z, 4.3, 4.1), r: 0.45, h: 0.14, yaw: -4.3 + Math.PI / 2 },
+    { name: 'speaker stone', at: 'world', x: C_HALL.x - 6.6, z: C_HALL.z, r: 1.0, h: 0.42 },
+
+    // ── The Mirror Well — the pool itself, its rim, the ring and the obelisks behind it
+    { name: 'pool', at: 'world', x: POOL.x, z: POOL.z, r: POOL.r, h: 0.05 },
+    ...Array.from({ length: 8 }, (_, i) => {
+        const a = (i / 8) * Math.PI * 2 + 0.2;
+        return { name: `pool rock ${i}`, at: 'world' as const, ...ringAt(POOL.x, POOL.z, a, POOL.r + 0.5), r: 0.4, h: 0.45, yaw: a };
+    }),
+    { name: 'well ring', at: 'world', x: POOL.x + POOL.r + 1.4, z: POOL.z, r: 0.6, h: 2.8, yaw: -Math.PI / 2 },
+    { name: 'well obelisk N', at: 'world', x: POOL.x + POOL.r + 0.9, z: POOL.z - 3.6, r: 0.35, h: 2.4 },
+    { name: 'well obelisk S', at: 'world', x: POOL.x + POOL.r + 0.9, z: POOL.z + 3.6, r: 0.35, h: 2.4 },
+    { name: 'well bench N', at: 'world', x: C_MIR.x - 5.4, z: C_MIR.z - 3.4, r: 0.6, h: 0.5, yaw: Math.PI / 2 },
+    { name: 'well bench S', at: 'world', x: C_MIR.x - 5.4, z: C_MIR.z + 3.4, r: 0.6, h: 0.5, yaw: Math.PI / 2 },
+
+    // ── The Signal Studio — the desk, its chairs, the mast, the workshop
+    { name: 'studio desk', at: 'world', x: C_STU.x, z: C_STU.z - 3.2, r: 1.4, h: 0.8, yaw: Math.PI },
+    { name: 'studio chair L', at: 'world', x: C_STU.x - 0.7, z: C_STU.z - 2.0, r: 0.3, h: 0.9, yaw: Math.PI, tuck: 'studio desk' },
+    { name: 'studio chair R', at: 'world', x: C_STU.x + 0.7, z: C_STU.z - 2.0, r: 0.3, h: 0.9, yaw: Math.PI, tuck: 'studio desk' },
+    { name: 'studio mast', at: 'world', x: C_STU.x - 5.6, z: C_STU.z + 4.6, r: 0.3, h: 5.2 },
+    { name: 'studio workbench', at: 'world', x: C_STU.x - 5.5, z: C_STU.z - 3.0, r: 0.75, h: 0.9, yaw: Math.PI / 2 },
+    { name: 'studio crate', at: 'world', x: C_STU.x + 5.8, z: C_STU.z + 4.6, r: 0.45, h: 0.8, yaw: 0.3 },
+    { name: 'studio crate 2', at: 'world', x: C_STU.x + 4.9, z: C_STU.z + 4.0, r: 0.4, h: 0.7, yaw: 1.2 },
+    { name: 'studio crate 3', at: 'world', x: C_STU.x + 5.6, z: C_STU.z + 3.4, r: 0.4, h: 0.7, yaw: 0.8 },
+    { name: 'studio barrel', at: 'world', x: C_STU.x - 5.7, z: C_STU.z - 4.8, r: 0.3, h: 0.95 },
+    { name: 'studio barrel 2', at: 'world', x: C_STU.x - 4.9, z: C_STU.z - 4.3, r: 0.3, h: 0.9 },
+    { name: 'studio lever', at: 'world', x: C_STU.x - 4.4, z: C_STU.z + 4.8, r: 0.35, h: 0.7 },
 ];
 
 export function solid(name: string): Solid {
@@ -175,9 +336,7 @@ export function solid(name: string): Solid {
 }
 
 export function frameOf(at: SolidAt): number | null {
-    if (at === 'hall') return null;
-    if (at === 'door') return ENTRANCE_FACET;
-    return alcove(at).facet;
+    return at === 'world' ? null : alcove(at).facet;
 }
 
 /** World centre of a solid */
@@ -205,40 +364,79 @@ export function alcoveAt(x: number, z: number, pad = 0): Alcove | null {
     return null;
 }
 
-/** Inside the entrance opening (and a step either side of it) */
+/** Inside the arch (and a step either side of it) */
 export function inDoorway(x: number, z: number, pad = 0): boolean {
     const l = worldToFacet(ENTRANCE_FACET, x, z);
-    return Math.abs(l.x) <= DOOR.width / 2 - pad && l.z >= -1.2 && l.z <= HALL.wallT + 1.2;
+    return Math.abs(l.x) <= ARCH.width / 2 - pad && l.z >= -1.2 && l.z <= HALL.wallT + 1.2;
 }
 
-/** Under the roof: the hall, its apses, the threshold */
-export function underRoof(x: number, z: number): boolean {
-    return insideOctagon(x, z, HALL.apothem + HALL.wallT) || alcoveAt(x, z, -HALL.wallT) !== null;
-}
-
-/** Inside the building — the floor you walk on, not the walls */
-export function indoors(x: number, z: number, pad = 0): boolean {
-    return insideOctagon(x, z, HALL.apothem - pad) || alcoveAt(x, z, pad) !== null;
-}
-
-export function isOutdoors(x: number, z: number): boolean {
-    if (indoors(x, z)) return false;
+/** The Sanctum proper: the octagon, its apses, the arch to its midpoint */
+export function inSanctum(x: number, z: number): boolean {
+    if (insideOctagon(x, z, HALL.apothem) || alcoveAt(x, z) !== null) return true;
     const l = worldToFacet(ENTRANCE_FACET, x, z);
-    if (Math.abs(l.x) <= DOOR.width / 2 && l.z <= HALL.wallT / 2 && l.z >= -1.2) return false;
+    return Math.abs(l.x) <= ARCH.width / 2 && l.z >= -1.2 && l.z <= HALL.wallT / 2;
+}
+
+/** The room beyond the arch this point is in (the Overlook before the gallery it ends) */
+export function roomIn(x: number, z: number, pad = 0): Room | null {
+    const over = room('overlook');
+    if (inRect(over, x, z, pad)) return over;
+    for (const r of ROOMS) if (r.id !== 'overlook' && inRect(r, x, z, pad)) return r;
+    return null;
+}
+
+function onRoomFloor(x: number, z: number, pad = 0): boolean {
+    for (const r of FLOOR_RECTS) if (inRect(r, x, z, pad)) return true;
+    return false;
+}
+
+export function doorIn(x: number, z: number, pad = 0): Door | null {
+    for (const d of DOORS) {
+        const r = d.rect;
+        if (x >= r.x0 - pad && x <= r.x1 + pad && z >= r.z0 + pad && z <= r.z1 - pad) return d;
+    }
+    return null;
+}
+
+/** Everything is under a roof now; kept for callers. */
+export function underRoof(_x: number, _z: number): boolean {
     return true;
 }
 
-/** The building as a solid seen from outside: octagon + apse bump-outs */
+/** Is there floor here for a body of radius pad? */
+export function onFloor(x: number, z: number, pad = 0): boolean {
+    if (insideOctagon(x, z, HALL.apothem - pad)) return true;
+    if (alcoveAt(x, z, pad) !== null) return true;
+    if (inDoorway(x, z, pad)) return true;
+    if (onRoomFloor(x, z, pad)) return true;
+    if (doorIn(x, z, pad) !== null) return true;
+    return false;
+}
+
+export function indoors(x: number, z: number, pad = 0): boolean {
+    return onFloor(x, z, pad);
+}
+
+/**
+ * "Outdoors" now means beyond the Sanctum — the Processional and the
+ * chambers. The tour's "step out", the compass and the narrator all key
+ * on this transition, as they did at the old front door.
+ */
+export function isOutdoors(x: number, z: number): boolean {
+    return !inSanctum(x, z);
+}
+
+/** The building as a solid (there is nothing outside it, but the shards and clouds ask) */
 export function inBuilding(x: number, z: number, pad = 0): boolean {
     if (insideOctagon(x, z, HALL.apothem + HALL.wallT + pad)) return true;
     for (const a of ALCOVES) {
         const l = worldToFacet(a.facet, x, z);
         if (Math.abs(l.x) <= ALCOVE.width / 2 + HALL.wallT + pad && l.z >= -0.1 && l.z <= ALCOVE.depth + HALL.wallT + pad) return true;
     }
+    for (const r of ROOMS) if (inRect(r, x, z, -WALL_T - pad)) return true;
     return false;
 }
 
-/** Dressing outside keeps this far from the walls */
 export const clearOfHouse = (x: number, z: number) => !inBuilding(x, z, 1.6);
 
 function hitsSolid(x: number, z: number, r: number): boolean {
@@ -252,22 +450,10 @@ function hitsSolid(x: number, z: number, r: number): boolean {
     return false;
 }
 
-/**
- * Can a body of radius r stand here?
- * Indoors: the octagon and the apse pockets. The threshold. Outdoors:
- * the terrace disc minus the building, the bridge decks, the isles.
- * Never inside a prop.
- */
+/** Can a body of radius r stand here? Floor under it, nothing solid in it. */
 export function walkable(x: number, z: number, r = PLAYER_R): boolean {
     if (x < JUNGLE_BOUNDS.minX || x > JUNGLE_BOUNDS.maxX || z < JUNGLE_BOUNDS.minZ || z > JUNGLE_BOUNDS.maxZ) return false;
-    let ground = false;
-    if (indoors(x, z, r)) ground = true;
-    else if (inDoorway(x, z, r)) ground = true;
-    else if (inBuilding(x, z, r)) ground = false;
-    else if (Math.hypot(x, z) <= CLEARING_R - r) ground = true;
-    else if (inDestination(x, z, -r)) ground = true;
-    else ground = CORRIDORS.some((c) => corridorDistance(x, z, c) <= c.halfWidth - r);
-    if (!ground) return false;
+    if (!onFloor(x, z, r)) return false;
     return !hitsSolid(x, z, r);
 }
 
@@ -304,31 +490,15 @@ export function poseClear(x: number, z: number): boolean {
     return walkable(x, z, PLAYER_R);
 }
 
-/** Rugs: the soft apses */
+/** Rugs: the soft apses, the cinema's carpet, the gallery runner */
 export function onSoftFloor(x: number, z: number): boolean {
     const a = alcoveAt(x, z, 0.2);
-    return !!a && a.soft && worldToFacet(a.facet, x, z).z > 0.3;
+    if (a) return a.soft && worldToFacet(a.facet, x, z).z > 0.3;
+    const r = roomIn(x, z);
+    if (r?.id === 'cinema') return true;
+    if (r?.id === 'processional' && Math.abs(x) < 1.1) return true;
+    return false;
 }
-
-/* ── Doors ──────────────────────────────────────────────────── */
-
-export type DoorLeaf = {
-    name: string;
-    /** hinge, in the entrance frame */
-    x: number;
-    z: number;
-    w: number;
-    t: number;
-    /** +1 extends toward +x, −1 toward −x */
-    dir: 1 | -1;
-    /** open angle, radians */
-    swing: number;
-};
-
-export const DOOR_LEAVES: DoorLeaf[] = [
-    { name: 'west leaf', x: -DOOR.width / 2, z: HALL.wallT / 2, w: 1.24, t: 0.07, dir: 1, swing: 1.35 },
-    { name: 'east leaf', x: DOOR.width / 2, z: HALL.wallT / 2, w: 1.24, t: 0.07, dir: -1, swing: 1.35 },
-];
 
 /* ── Spawn, recentre, landmarks ─────────────────────────────── */
 
@@ -350,27 +520,21 @@ export const INTRO = {
 export const SPAWN: [number, number, number] = [INTRO.stand.x, EYE_HEIGHT, INTRO.stand.z];
 export const SPAWN_YAW = INTRO.lookYaw;
 
-const doorW = facetToWorld(ENTRANCE_FACET, 0, HALL.wallT / 2);
-export const FRONT_DOOR = { x: doorW.x, z: doorW.z };
+const archW = facetToWorld(ENTRANCE_FACET, 0, HALL.wallT / 2);
+/** The arch — "home" for anyone lost beyond it */
+export const FRONT_DOOR = { x: archW.x, z: archW.z };
 
 const recenterW = facetToWorld(ENTRANCE_FACET, 0, -2.4);
 const en = { x: Math.cos(facetAngle(ENTRANCE_FACET)), z: Math.sin(facetAngle(ENTRANCE_FACET)) };
-/** Just inside the door, facing the Source. */
+/** Just inside the arch, facing the Source. */
 export const RECENTER = { x: recenterW.x, z: recenterW.z, yaw: yawFacing(-en.x, -en.z) } as const;
 
-/** "Face home" indoors turns you to the Source. */
+/** "Face home" in the Sanctum turns you to the Source. */
 export const HALL_SPINE = { x: 0, z: 0 } as const;
 
 /* ── Stations ───────────────────────────────────────────────── */
 
 export type HomeHotspot = Hotspot & { level: Level };
-
-const DEST_PANEL: Record<string, { label: string; hint: string; panel: string }> = {
-    cinema: { label: 'The Cinema Isle', hint: 'Films above the cloud sea', panel: 'cinema' },
-    hall: { label: 'The Hall Circle', hint: 'The community circle', panel: 'hall' },
-    soul_mirror: { label: 'The Mirror Well', hint: 'Shape your vessel', panel: 'soul' },
-    studio: { label: 'The Signal Spire', hint: 'Broadcast from the shelf', panel: 'studio' },
-};
 
 function at(atId: SolidAt, x: number, z: number, y = 1.2): [number, number, number] {
     const f = frameOf(atId);
@@ -385,35 +549,15 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
     { id: 'codex', label: 'Codex', hint: 'Memory and whispers', level: 'main', position: at('codex', 0, 1.2), radius: 1.6, action: { type: 'panel', panel: 'codex' } },
     { id: 'ledger', label: 'The Ledger', hint: 'The record · the Word', level: 'main', position: at('ledger', 0, 1.4), radius: 1.6, action: { type: 'panel', panel: 'ledger' } },
     { id: 'wall', label: 'The Mark', hint: 'Choose a face · leave a mark', level: 'main', position: at('mark', 0, 1.2), radius: 1.8, action: { type: 'panel', panel: 'wall' } },
-    { id: 'wayfinder', label: 'Paths', hint: 'The map of the shelf and the isles', level: 'main', position: at('paths', 0, 1.2), radius: 1.7, action: { type: 'panel', panel: 'wayfinder' } },
-    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: at('door', -1.5, -1.4, 1.1), radius: 1.3, action: { type: 'panel', panel: 'news' } },
-    { id: 'mailbox', label: 'Offering', hint: 'Keep the Sanctum open', level: 'main', position: at('door', 1.6, 1.8, 1.0), radius: 1.5, action: { type: 'panel', panel: 'offering' } },
+    { id: 'wayfinder', label: 'Paths', hint: 'The map of the lair', level: 'main', position: at('paths', 0, 1.2), radius: 1.7, action: { type: 'panel', panel: 'wayfinder' } },
     { id: 'fireplace', label: 'The Source', hint: 'Sit at the Source', level: 'main', position: [0, 1.3, 0], radius: DAIS.rampR + 0.2, action: { type: 'sit' } },
-    ...DESTINATIONS.map((d): HomeHotspot => {
-        const c = destCenter(d);
-        const meta = DEST_PANEL[d.id];
-        return {
-            id: d.id as HomeHotspot['id'],
-            label: meta.label,
-            hint: meta.hint,
-            level: 'main',
-            position: [c.x, 1.25, c.z],
-            radius: 2.4,
-            action: { type: 'panel', panel: meta.panel } as Hotspot['action'],
-        };
-    }),
-    (() => {
-        const c = destCenter(DESTINATIONS.find((d) => d.id === 'cinema')!);
-        return {
-            id: 'cineworks' as const,
-            label: 'Cineworks table',
-            hint: 'The catalog · posters',
-            level: 'main' as const,
-            position: [c.x + 4.2, 1.15, c.z - 2.4] as [number, number, number],
-            radius: 1.8,
-            action: { type: 'panel' as const, panel: 'cineworks' as const },
-        };
-    })(),
+    { id: 'envelope', label: 'The Daily Word', hint: "This morning's paper", level: 'main', position: [-1.7, 1.1, 15.4], radius: 1.3, action: { type: 'panel', panel: 'news' } },
+    { id: 'mailbox', label: 'Offering', hint: 'Keep the lair open', level: 'main', position: [1.7, 1.0, 15.4], radius: 1.3, action: { type: 'panel', panel: 'offering' } },
+    { id: 'cinema', label: 'The Cinema', hint: 'Choose a film · the screen is live', level: 'main', position: [10.2, 1.2, C_CIN.z], radius: 2.6, action: { type: 'panel', panel: 'cinema' } },
+    { id: 'cineworks', label: 'Cineworks table', hint: 'The catalog · posters', level: 'main', position: [6.9, 1.1, 15.9], radius: 1.7, action: { type: 'panel', panel: 'cineworks' } },
+    { id: 'hall', label: 'The Hall Circle', hint: 'The community fire', level: 'main', position: [FIRE.x, 1.25, FIRE.z], radius: 3.1, action: { type: 'panel', panel: 'hall' } },
+    { id: 'soul_mirror', label: 'The Mirror Well', hint: 'Look down · shape your vessel', level: 'main', position: [POOL.x - POOL.r - 1.1, 1.2, POOL.z], radius: 2.1, action: { type: 'panel', panel: 'soul' } },
+    { id: 'studio', label: 'The Signal Studio', hint: 'Broadcast from the lair', level: 'main', position: [C_STU.x, 1.2, C_STU.z - 1.1], radius: 2.4, action: { type: 'panel', panel: 'studio' } },
 ];
 
 export function hotspotWorldY(h: HomeHotspot): number {
@@ -442,28 +586,31 @@ export type Place =
     | { kind: 'path'; name: string };
 
 export function roomAt(x: number, z: number): Place {
-    if (!isOutdoors(x, z)) {
+    if (inSanctum(x, z)) {
         const a = alcoveAt(x, z, -0.2);
         if (a) return { kind: 'room', id: a.id, name: a.name };
         if (Math.hypot(x, z) < DAIS.rampR + 0.4) return { kind: 'room', id: 'source', name: 'The Source' };
-        if (inDoorway(x, z)) return { kind: 'room', id: 'threshold', name: 'The Threshold' };
-        return { kind: 'room', id: 'hall', name: 'The Sanctum' };
+        if (inDoorway(x, z)) return { kind: 'room', id: 'arch', name: 'The Arch' };
+        return { kind: 'room', id: 'sanctum', name: 'The Sanctum' };
     }
-    for (const d of DESTINATIONS) {
-        const c = destCenter(d);
-        const dist = Math.hypot(x - c.x, z - c.z);
-        if (dist < d.r) return { kind: 'grove', id: d.id, name: d.name, dist };
+    const d = doorIn(x, z);
+    if (d) return { kind: 'room', id: `${d.id}_door`, name: `${room(d.id as RoomId).name} · door` };
+    const r = roomIn(x, z);
+    if (r) {
+        if (r.id === 'cinema' || r.id === 'hall' || r.id === 'soul_mirror' || r.id === 'studio') {
+            const c = roomCenter(r);
+            return { kind: 'grove', id: r.id, name: r.name, dist: Math.hypot(x - c.x, z - c.z) };
+        }
+        return { kind: 'room', id: r.id, name: r.name };
     }
-    if (Math.hypot(x, z) < CLEARING_R + 0.5) return { kind: 'clearing', name: 'The Shelf' };
-    return { kind: 'path', name: 'A bridge' };
+    return { kind: 'path', name: 'The Lair' };
 }
 
 export function nearestGrove(x: number, z: number): { id: string; name: string; dist: number; dx: number; dz: number } | null {
     let best: { id: string; name: string; dist: number; dx: number; dz: number } | null = null;
-    for (const d of DESTINATIONS) {
-        const c = destCenter(d);
-        const dx = c.x - x;
-        const dz = c.z - z;
+    for (const d of CHAMBERS) {
+        const dx = d.x - x;
+        const dz = d.z - z;
         const dist = Math.hypot(dx, dz);
         if (!best || dist < best.dist) best = { id: d.id, name: d.name, dist, dx, dz };
     }
@@ -472,11 +619,11 @@ export function nearestGrove(x: number, z: number): { id: string; name: string; 
 
 /* ── Sound zones ────────────────────────────────────────────── */
 
-export type SoundZone = 'main' | 'library' | 'arcade' | 'os' | 'hearth' | 'studio' | 'soul' | 'living';
+export type SoundZone = 'main' | 'bedroom' | 'library' | 'arcade' | 'os' | 'hearth' | 'studio' | 'soul' | 'living' | 'offering';
 
 /** Which music bed belongs here */
 export function zoneAt(x: number, z: number): SoundZone {
-    if (!isOutdoors(x, z)) {
+    if (inSanctum(x, z)) {
         const a = alcoveAt(x, z, -0.2);
         if (a?.id === 'library') return 'library';
         if (a?.id === 'arcade') return 'arcade';
@@ -484,27 +631,84 @@ export function zoneAt(x: number, z: number): SoundZone {
         if (Math.hypot(x, z) < DAIS.rampR + 0.8) return 'hearth';
         return 'main';
     }
-    const p = roomAt(x, z);
-    if (p.kind === 'grove') {
-        if (p.id === 'studio') return 'studio';
-        if (p.id === 'soul_mirror') return 'soul';
-        if (p.id === 'cinema') return 'living';
+    const r = roomIn(x, z) ?? (doorIn(x, z) ? room(doorIn(x, z)!.id as RoomId) : null);
+    switch (r?.id) {
+        case 'cinema':
+            return 'living';
+        case 'hall':
+            return 'hearth';
+        case 'soul_mirror':
+            return 'soul';
+        case 'studio':
+            return 'studio';
+        case 'overlook':
+            return 'bedroom';
+        default:
+            return 'main';
     }
-    return 'main';
 }
 
 /** Where the looping ambiences sit */
 export const AUDIO_ANCHORS = {
-    /** the Source — crackle and hum */
-    fire: { x: 0, z: 0, r: 4.2 },
-    /** the terminal desk */
+    /** the council fire in the Hall Circle — crackle */
+    fire: { x: FIRE.x, z: FIRE.z, r: 5.2 },
+    /** the terminal desk — fans */
     pc: (() => {
         const w = solidWorld(solid('desk'));
         return { x: w.x, z: w.z, r: 3.2 };
     })(),
-    /** the arcade cabinets */
+    /** the arcade cabinets — static */
     tv: (() => {
         const w = facetToWorld(alcove('arcade').facet, 0, 2.0);
         return { x: w.x, z: w.z, r: 3.4 };
     })(),
 } as const;
+
+/* ── Truth's arrival lines, by place ────────────────────────── */
+
+/** Voice line ids (public/voice/manifest.json) spoken once when you first enter a place */
+export const PLACE_LINE: Record<string, string> = {
+    processional: 'world_leave',
+    overlook: 'aether_shelf',
+    cinema: 'dest_cinema',
+    hall: 'dest_hall',
+    soul_mirror: 'dest_soul_mirror',
+    studio: 'dest_studio',
+};
+
+/* ── The map ────────────────────────────────────────────────── */
+
+export type MapOutline = {
+    octagon: [number, number][];
+    apses: { id: AlcoveId; name: string; pts: [number, number][] }[];
+    arch: [number, number][];
+    rooms: Room[];
+    doors: Door[];
+};
+
+/** Everything the wayfinder draws, in world metres */
+export function mapOutline(): MapOutline {
+    const octagon: [number, number][] = Array.from({ length: 8 }, (_, k) => {
+        const a = facetAngle(k) + Math.PI / 8;
+        return [Math.cos(a) * VERTEX_R, Math.sin(a) * VERTEX_R];
+    });
+    const quad = (facet: number, hw: number, z0: number, z1: number): [number, number][] =>
+        (
+            [
+                [-hw, z0],
+                [hw, z0],
+                [hw, z1],
+                [-hw, z1],
+            ] as [number, number][]
+        ).map(([x, z]) => {
+            const w = facetToWorld(facet, x, z);
+            return [w.x, w.z];
+        });
+    return {
+        octagon,
+        apses: ALCOVES.map((a) => ({ id: a.id, name: a.name, pts: quad(a.facet, ALCOVE.width / 2, 0, ALCOVE.depth) })),
+        arch: quad(ENTRANCE_FACET, ARCH.width / 2, 0, HALL.wallT),
+        rooms: ROOMS,
+        doors: DOORS,
+    };
+}
