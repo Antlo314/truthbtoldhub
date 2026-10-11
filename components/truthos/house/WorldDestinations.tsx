@@ -10,17 +10,24 @@
  * clearings and open the same panels they always did — the world got
  * bigger, the product stayed wired.
  *
- * Every site gets one practical light on desktop (four total), gold —
- * a lit destination at the end of a dark path is the whole reason to
- * walk it.
+ * Dressing is CC0 Kenney — a concession stall and banners at the cinema,
+ * a camp around the council fire, lilies and a stone ring at the well, a
+ * castle tower for the Signal Spire. Every piece keeps a fallback, every
+ * placement is checked against the house and the paths.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
+import { MeshReflectorMaterial, Sparkles } from '@react-three/drei';
 import { useHouseMaterials } from './HouseMaterials';
 import HouseProp, { HOUSE_MODELS } from './HouseProp';
 import { seededRng } from './houseSkins';
 import { clearOfHouse, FLOWERS } from './groveScatter';
 import { CORRIDORS, corridorDistance, DESTINATIONS, destCenter, inCorridor, type Corridor, type Destination } from './jungleMap';
+import { getWalkerPose } from './walkerPose';
+import type { QualityProfile } from './renderQuality';
+
+type Mats = ReturnType<typeof useHouseMaterials>;
 
 function useDest(id: Destination['id']) {
     return useMemo(() => {
@@ -93,7 +100,7 @@ function Dressing({ list, low }: { list: Dress[]; low: boolean }) {
     );
 }
 
-/** Shared: a dirt floor disc + a gold practical for a site. */
+/** Shared: a stone floor disc + a gold practical for a site. */
 function SiteBase({
     x,
     z,
@@ -105,16 +112,25 @@ function SiteBase({
     x: number;
     z: number;
     r: number;
-    m: ReturnType<typeof useHouseMaterials>;
+    m: Mats;
     low: boolean;
     lightY?: number;
 }) {
     return (
         <group>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.015, z]} receiveShadow={!low}>
-                <circleGeometry args={[Math.min(3.2, r * 0.22), low ? 16 : 24]} />
-                <primitive object={m.stone} attach="material" />
-            </mesh>
+            {/* A flagstone circle at the heart of the isle; the fallback disc is
+                LOCAL to the prop group, which already carries x/z. */}
+            <HouseProp
+                model="nkPathStoneCircle"
+                position={[x, 0.012, z]}
+                fit={{ w: Math.min(6.4, r * 0.44), h: 0.08, d: Math.min(6.4, r * 0.44) }}
+                shadows={false}
+            >
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]} receiveShadow={!low}>
+                    <circleGeometry args={[Math.min(3.2, r * 0.22), low ? 16 : 24]} />
+                    <primitive object={m.basalt} attach="material" />
+                </mesh>
+            </HouseProp>
             {!low && (
                 <pointLight position={[x, lightY, z]} intensity={2.2} color="#fbbf24" distance={r * 1.9} decay={2} />
             )}
@@ -123,14 +139,20 @@ function SiteBase({
 }
 
 /** A flame: emissive cone on a stick. Cheap, warm, alive at night. */
-function Torch({ x, z, m, h = 1.9 }: { x: number; z: number; m: ReturnType<typeof useHouseMaterials>; h?: number }) {
+function Torch({ x, z, m, h = 1.9 }: { x: number; z: number; m: Mats; h?: number }) {
+    const flame = useRef<THREE.Mesh>(null);
+    useFrame(({ clock }) => {
+        if (!flame.current) return;
+        const t = clock.elapsedTime * 9 + x * 3 + z;
+        flame.current.scale.set(1 + Math.sin(t) * 0.1, 1 + Math.sin(t * 1.3 + 1) * 0.18, 1 + Math.cos(t * 0.9) * 0.1);
+    });
     return (
         <group position={[x, 0, z]}>
             <mesh position={[0, h / 2, 0]}>
                 <cylinderGeometry args={[0.05, 0.07, h, 5]} />
                 <primitive object={m.woodDark} attach="material" />
             </mesh>
-            <mesh position={[0, h + 0.16, 0]}>
+            <mesh ref={flame} position={[0, h + 0.16, 0]}>
                 <coneGeometry args={[0.11, 0.34, 6]} />
                 <meshBasicMaterial color="#ffb347" toneMapped={false} />
             </mesh>
@@ -156,10 +178,23 @@ const CINEMA_RAIL: Dress[] = [
     { key: 'fenceCorner', x: 5, z: 8.2, yaw: -Math.PI / 2 },
 ];
 
+/** The concession stall off the walkway, two stools, something to eat on it. */
+const CINEMA_STALL: Dress[] = [
+    { key: 'ftStall', x: -7.4, z: 5.6, yaw: Math.PI / 2 },
+    { key: 'ftStallStool', x: -6.2, z: 4.6, fit: { h: 0.5 } },
+    { key: 'ftStallStool', x: -6.2, z: 6.6, fit: { h: 0.5 } },
+    { key: 'fkPie', x: -7.5, z: 5.2, y: 0.95, fit: { w: 0.3 } },
+    { key: 'fkBowl', x: -7.4, z: 6.1, y: 0.95, fit: { w: 0.28 } },
+    { key: 'skBarrel', x: -8.4, z: 7.2, fit: { h: 0.95 } },
+    { key: 'ftBannerRed', x: -3.4, z: 0.35, y: 2.2, fit: { h: 1.3 } },
+    { key: 'ftBannerRed', x: 3.4, z: 0.35, y: 2.2, fit: { h: 1.3 } },
+];
+
 /* ── The Cinema Grove — films under the canopy ─────────────── */
-function CinemaGrove({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
+function CinemaGrove({ m, low }: { m: Mats; low: boolean }) {
     const { c, yaw } = useDest('cinema');
     const rail = useDressing(CINEMA_RAIL, c, yaw);
+    const stall = useDressing(CINEMA_STALL, c, yaw);
     const rnd = useMemo(() => seededRng(70707), []);
     const benches = useMemo(
         () =>
@@ -202,6 +237,7 @@ function CinemaGrove({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low:
             <Torch x={-4.6} z={2.4} m={m} />
             <Torch x={4.6} z={2.4} m={m} />
             <Dressing list={rail} low={low} />
+            <Dressing list={stall} low={low} />
         </group>
     );
 }
@@ -222,10 +258,34 @@ const HALL_WOOD: Dress[] = [
     { key: 'logStack', x: Math.cos(4.4) * 3.4, z: Math.sin(4.4) * 3.4, yaw: -4.4 + 0.05, fit: WOOD },
 ];
 
+/** The camp: banners between the stones, bedrolls at the fire, a chest, a tripod over the flame. */
+const HALL_CAMP: Dress[] = [
+    { key: 'skCampfireStand', x: 0, z: 0, y: 0.44, fit: { w: 1.6 } },
+    { key: 'skBedroll', x: Math.cos(0.9) * 2.6, z: Math.sin(0.9) * 2.6, yaw: -0.9 + Math.PI / 2, fit: { w: 0.8 } },
+    { key: 'skBedroll', x: Math.cos(5.4) * 2.7, z: Math.sin(5.4) * 2.7, yaw: -5.4 + Math.PI / 2, fit: { w: 0.8 } },
+    { key: 'skChest', x: Math.cos(1.5) * 3.9, z: Math.sin(1.5) * 3.9, yaw: -1.5, fit: { w: 0.8 } },
+    { key: 'skBucket', x: Math.cos(2.6) * 2.4, z: Math.sin(2.6) * 2.4, fit: { h: 0.4 } },
+    ...[0.35, 1.75, 3.14, 4.54].map((a) => ({
+        key: 'ckFlagBannerLong',
+        x: Math.cos(a) * 7.6,
+        z: Math.sin(a) * 7.6,
+        yaw: -a + Math.PI / 2,
+        fit: { h: 3.6 },
+    })),
+    ...[0.9, 2.3, 3.7, 5.1].map((a) => ({
+        key: 'nkMushroomRedGroup',
+        x: Math.cos(a) * 5.4,
+        z: Math.sin(a) * 5.4,
+        yaw: a,
+        fit: { w: 0.5 },
+    })),
+];
+
 /* ── The Hall Stones — the community circle ────────────────── */
-function HallStones({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
+function HallStones({ m, low }: { m: Mats; low: boolean }) {
     const { c } = useDest('hall');
     const wood = useDressing(HALL_WOOD, c, 0);
+    const camp = useDressing(HALL_CAMP, c, 0);
     const rnd = useMemo(() => seededRng(31313), []);
     const stones = useMemo(
         () =>
@@ -242,30 +302,46 @@ function HallStones({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: 
             }),
         [rnd],
     );
+    const flame = useRef<THREE.Mesh>(null);
+    const glow = useRef<THREE.PointLight>(null);
+    useFrame(({ clock }) => {
+        const t = clock.elapsedTime;
+        if (flame.current) {
+            flame.current.scale.y = 1 + Math.sin(t * 9) * 0.16;
+            flame.current.rotation.y = t * 0.8;
+        }
+        if (glow.current) glow.current.intensity = 2.0 + Math.sin(t * 6.3) * 0.45;
+    });
 
     return (
         <group position={[c.x, 0, c.z]}>
             {stones.map((s, i) => (
-                <mesh key={i} position={[s.x, s.h / 2 - 0.15, s.z]} rotation={[s.lean, s.rot, s.lean]} castShadow={!low}>
-                    <boxGeometry args={[s.w, s.h, s.w * 0.6]} />
-                    <primitive object={m.stone} attach="material" />
-                </mesh>
+                <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.rot, 0]}>
+                    <HouseProp model={i % 2 ? 'nkRockTallA' : 'nkStoneTallA'} fit={{ h: s.h }} shadows={!low}>
+                        <mesh position={[0, s.h / 2 - 0.15, 0]} rotation={[s.lean, 0, s.lean]} castShadow={!low}>
+                            <boxGeometry args={[s.w, s.h, s.w * 0.6]} />
+                            <primitive object={m.rockFace} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
             ))}
             {/* Council fire at the centre: stone hearth, logs on top */}
             <mesh position={[0, 0.22, 0]}>
                 <cylinderGeometry args={[0.8, 1.0, 0.44, 8]} />
-                <primitive object={m.stone} attach="material" />
+                <primitive object={m.basalt} attach="material" />
             </mesh>
             {/* campfire logs set on the hearth top (0.44); phones keep the bare hearth */}
             <HouseProp model="campfire" position={[0, 0.44, 0]} shadows={!low}>
                 {null}
             </HouseProp>
             {/* flame rises out of the log pile (logs top out near 0.68) */}
-            <mesh position={[0, 0.78, 0]}>
+            <mesh ref={flame} position={[0, 0.78, 0]}>
                 <coneGeometry args={[0.34, 0.7, 6]} />
                 <meshBasicMaterial color="#ffb347" toneMapped={false} />
             </mesh>
+            {!low && <pointLight ref={glow} position={[0, 1.3, 0]} color="#ff9a4a" intensity={2.0} distance={11} decay={2} />}
             <Dressing list={wood} low={low} />
+            <Dressing list={camp} low={low} />
         </group>
     );
 }
@@ -282,19 +358,68 @@ const WELL_STONES: Dress[] = [
     { key: 'rock', x: Math.cos(5.105) * 4.7, z: Math.sin(5.105) * 4.7, yaw: 2.6, fit: { w: 0.62 } },
     // west-south-west, opposite the approach
     { key: 'stone', x: Math.cos(3.534) * 4.7, z: Math.sin(3.534) * 4.7, yaw: 0.4, fit: { w: 0.46 } },
+    // the standing ring behind the water, two obelisks flanking it
+    { key: 'nkStatueRing', x: Math.cos(3.9) * 7.2, z: Math.sin(3.9) * 7.2, yaw: -3.9 + Math.PI / 2, fit: { h: 2.8 } },
+    { key: 'nkStatueObelisk', x: Math.cos(3.2) * 7.4, z: Math.sin(3.2) * 7.4, fit: { h: 2.4 } },
+    { key: 'nkStatueObelisk', x: Math.cos(4.6) * 7.4, z: Math.sin(4.6) * 7.4, fit: { h: 2.4 } },
 ];
 
+/** Lilies float on the pool itself — y is the water line. */
+const LILIES: Dress[] = [
+    { key: 'nkLilyLarge', x: 1.6, z: -1.1, y: 0.05, yaw: 0.4, fit: { w: 0.7 } },
+    { key: 'nkLilyLarge', x: -2.1, z: 0.6, y: 0.05, yaw: 2.1, fit: { w: 0.6 } },
+    { key: 'nkLilyLarge', x: 0.4, z: 2.4, y: 0.05, yaw: 4.0, fit: { w: 0.55 } },
+    { key: 'nkLilyLarge', x: -1.2, z: -2.6, y: 0.05, yaw: 1.2, fit: { w: 0.5 } },
+];
+
+/** The water: a live reflector when you are near it and the tier allows, Lambert otherwise. */
+function PoolWater({ c, profile }: { c: { x: number; z: number }; profile?: QualityProfile }) {
+    const [near, setNear] = useState(false);
+    const t = useRef(0);
+    const canReflect = !!profile?.reflections;
+    useFrame((_, dt) => {
+        if (!canReflect) return;
+        t.current += dt;
+        if (t.current < 0.5) return;
+        t.current = 0;
+        const p = getWalkerPose();
+        const d = Math.hypot(p.x - c.x, p.z - c.z);
+        if (near && d > 46) setNear(false);
+        else if (!near && d < 40) setNear(true);
+    });
+    if (canReflect && near) {
+        return (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+                <circleGeometry args={[4.2, 36]} />
+                <MeshReflectorMaterial
+                    resolution={profile?.reflectionResolution ?? 512}
+                    mirror={0.62}
+                    blur={[320, 90]}
+                    mixBlur={0.9}
+                    mixStrength={1.5}
+                    depthScale={0.8}
+                    minDepthThreshold={0.85}
+                    maxDepthThreshold={1.15}
+                    color="#1c3b54"
+                    metalness={0.45}
+                    roughness={0.3}
+                />
+            </mesh>
+        );
+    }
+    return (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <circleGeometry args={[4.2, 24]} />
+            <meshStandardMaterial color="#1a3348" roughness={0.25} metalness={0.4} />
+        </mesh>
+    );
+}
+
 /* ── The Mirror Pool — shape your vessel ───────────────────── */
-function MirrorPool({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
+function MirrorPool({ m, low, profile }: { m: Mats; low: boolean; profile?: QualityProfile }) {
     const { c } = useDest('soul_mirror');
     const stones = useDressing(WELL_STONES, c, 0);
-    const water = useMemo(
-        () =>
-            new THREE.MeshLambertMaterial({
-                color: '#1a3348',
-            }),
-        [],
-    );
+    const lilies = useDressing(LILIES, c, 0);
     const rnd = useMemo(() => seededRng(52525), []);
     const rim = useMemo(
         () =>
@@ -309,30 +434,29 @@ function MirrorPool({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: 
             }),
         [rnd],
     );
-    const rockMat = useMemo(
-        () => new THREE.MeshLambertMaterial({ color: '#6b7280' }),
-        [],
-    );
 
     return (
         <group position={[c.x, 0, c.z]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-                <circleGeometry args={[4.2, low ? 16 : 24]} />
-                <primitive object={water} attach="material" />
-            </mesh>
+            <PoolWater c={c} profile={profile} />
             {rim.map((s, i) => (
-                <mesh key={i} position={[s.x, s.s * 0.42, s.z]} rotation={[0, s.rot, 0]}>
-                    <boxGeometry args={[s.s * 1.4, s.s * 0.85, s.s]} />
-                    <primitive object={rockMat} attach="material" />
-                </mesh>
+                <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.rot, 0]}>
+                    <HouseProp model="nkRockLargeA" fit={{ w: s.s * 1.6 }} shadows={!low}>
+                        <mesh position={[0, s.s * 0.42, 0]}>
+                            <boxGeometry args={[s.s * 1.4, s.s * 0.85, s.s]} />
+                            <primitive object={m.rockFace} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
             ))}
             {/* The pool keeps a little aether of its own */}
             {!low && (
                 <pointLight position={[0, 1.4, 0]} intensity={1.5} color="#a5b4fc" distance={9} decay={2} />
             )}
+            {profile?.sparkles && <Sparkles count={36} scale={[7, 1.6, 7]} position={[0, 0.9, 0]} size={2} speed={0.3} color="#b9c6ff" opacity={0.7} />}
             <Torch x={-3.4} z={-3.6} m={m} h={1.5} />
             <Torch x={3.6} z={-3.2} m={m} h={1.5} />
             <Dressing list={stones} low={low} />
+            <Dressing list={lilies} low={low} />
         </group>
     );
 }
@@ -351,10 +475,69 @@ const SPIRE_STONES: Dress[] = [
     { key: 'rock', x: 3.38, z: 3.14, yaw: 4.1, fit: { w: 0.44 } },
 ];
 
+/** The workshop: a bench under the roof, stores outside it. */
+const SPIRE_CAMP: Dress[] = [
+    { key: 'skWorkbench', x: -1.7, z: 1.3, yaw: Math.PI, fit: { w: 1.35 } },
+    { key: 'skBoxLarge', x: -3.7, z: -3.2, yaw: 0.3, fit: { w: 0.8 } },
+    { key: 'skBoxLarge', x: -4.3, z: -2.5, yaw: 1.2, fit: { w: 0.7 } },
+    { key: 'skBarrel', x: 3.8, z: -3.5, fit: { h: 0.95 } },
+    { key: 'skBarrel', x: 4.3, z: -2.8, fit: { h: 0.9 } },
+    { key: 'skResourceWood', x: -3.4, z: -4.0, yaw: 0.5, fit: { w: 0.9 } },
+    { key: 'pkLever', x: -2.2, z: -1.9, yaw: 0, fit: { w: 0.6 } },
+];
+
+/** A square keep for the Signal — base, two storeys, a parapet and a roof, 3 m square. */
+function SignalTower({ low }: { low: boolean }) {
+    // Heights from measured unit boxes: base 1.01, mid 1.01 (at 0.93 wide), top 0.3, roof 1.0.
+    // Every piece scales by the same k, so the stack meets flush.
+    const w = 3.0;
+    const k = w / 1.0;
+    const hBase = 1.01 * k;
+    const hMid = 1.01 * k;
+    const hTop = 0.3 * k;
+    return (
+        <group position={[-5.6, 0, 4.4]}>
+            <HouseProp model="ckTowerBase" fit={{ w }} shadows={!low}>
+                <mesh position={[0, 1.5, 0]} castShadow={!low}>
+                    <boxGeometry args={[w, 3, w]} />
+                    <meshStandardMaterial color="#5a5468" roughness={0.9} />
+                </mesh>
+            </HouseProp>
+            <HouseProp model="ckTowerMidWindows" position={[0, hBase, 0]} fit={{ w: w * 0.93 }} shadows={!low}>
+                {null}
+            </HouseProp>
+            <HouseProp model="ckTowerMid" position={[0, hBase + hMid, 0]} fit={{ w: w * 0.93 }} shadows={!low}>
+                {null}
+            </HouseProp>
+            <HouseProp model="ckTowerTop" position={[0, hBase + hMid * 2, 0]} fit={{ w }} shadows={!low}>
+                {null}
+            </HouseProp>
+            <HouseProp model="ckTowerRoof" position={[0, hBase + hMid * 2 + hTop, 0]} fit={{ w }} shadows={!low}>
+                {null}
+            </HouseProp>
+            {/* the signal itself, above the roof */}
+            <mesh position={[0, hBase + hMid * 2 + hTop + 3.6, 0]}>
+                <sphereGeometry args={[0.2, 10, 8]} />
+                <meshBasicMaterial color="#22d3ee" toneMapped={false} />
+            </mesh>
+            {!low && (
+                <pointLight position={[0, hBase + hMid * 2 + hTop + 3.6, 0]} color="#22d3ee" intensity={1.4} distance={12} decay={2} />
+            )}
+        </group>
+    );
+}
+
 /* ── The Signal Studio — broadcast from the wild ───────────── */
-function SignalStudio({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low: boolean }) {
+function SignalStudio({ m, low }: { m: Mats; low: boolean }) {
     const { c, yaw } = useDest('studio');
     const stones = useDressing(SPIRE_STONES, c, yaw);
+    const camp = useDressing(SPIRE_CAMP, c, yaw);
+    const beacon = useRef<THREE.Mesh>(null);
+    useFrame(({ clock }) => {
+        if (!beacon.current) return;
+        const mat = beacon.current.material as THREE.MeshBasicMaterial;
+        mat.opacity = 0.55 + Math.sin(clock.elapsedTime * 3.2) * 0.45;
+    });
 
     return (
         <group position={[c.x, 0, c.z]} rotation={[0, yaw, 0]}>
@@ -389,16 +572,22 @@ function SignalStudio({ m, low }: { m: ReturnType<typeof useHouseMaterials>; low
                 <planeGeometry args={[2.1, 0.95]} />
                 <primitive object={m.screen} attach="material" />
             </mesh>
+            {/* a mug on the desk — someone is on air */}
+            <HouseProp model="fkMug" position={[0.9, 0.84, -0.9]} fit={{ w: 0.1 }} shadows={false}>
+                {null}
+            </HouseProp>
             {/* Aerial — the signal part */}
             <mesh position={[3.1, 2.6, 2.6]}>
                 <cylinderGeometry args={[0.03, 0.05, 5.2, 5]} />
                 <primitive object={m.metalDark} attach="material" />
             </mesh>
-            <mesh position={[3.1, 5.3, 2.6]}>
+            <mesh ref={beacon} position={[3.1, 5.3, 2.6]}>
                 <sphereGeometry args={[0.14, 8, 6]} />
-                <meshBasicMaterial color="#fbbf24" toneMapped={false} />
+                <meshBasicMaterial color="#fbbf24" toneMapped={false} transparent opacity={1} />
             </mesh>
+            <SignalTower low={low} />
             <Dressing list={stones} low={low} />
+            <Dressing list={camp} low={low} />
         </group>
     );
 }
@@ -425,10 +614,10 @@ function pathBlooms(id: Destination['id'], seed: number, count = 5) {
     const c = destCenter(dest);
     // The ground here is not soil. In the mounted world (AetherShelf) a
     // corridor is a 1.55m light-bridge over a cloud sea, and the only
-    // solid beside it is the isle's basalt disc, radius d.r + 0.6. A
-    // flower validated against jungleMap's 2.4m dirt corridor can land
-    // off the bridge — measured: two of ten sat in mid-air over the void.
-    // So blooms must ALSO be on the disc, with 0.3m of margin from its lip.
+    // solid beside it is the isle's disc, radius d.r + 0.6. A flower
+    // validated against jungleMap's 2.4m dirt corridor can land off the
+    // bridge — measured: two of ten sat in mid-air over the void. So
+    // blooms must ALSO be on the disc, with 0.3m of margin from its lip.
     const discR = dest.r + 0.6 - 0.3;
     const len = Math.hypot(k.bx - k.ax, k.bz - k.az) || 1;
     const ux = (k.bx - k.ax) / len;
@@ -467,22 +656,29 @@ function PathBlooms({ low }: { low: boolean }) {
 }
 
 /** Dead south walk cap — "the house is behind you", not a station. */
-function ScenicPost({ m }: { m: ReturnType<typeof useHouseMaterials> }) {
+function ScenicPost({ m, low }: { m: Mats; low: boolean }) {
     return (
-        <group position={[0, 0, 46]}>
-            <mesh position={[0, 0.72, 0]}>
-                <boxGeometry args={[0.18, 1.44, 0.12]} />
-                <primitive object={m.woodDark} attach="material" />
-            </mesh>
-            <mesh position={[0, 1.15, 0.07]}>
-                <boxGeometry args={[0.42, 0.22, 0.03]} />
-                <meshLambertMaterial color="#c4b59a" />
-            </mesh>
+        <group position={[0, 0, 46]} rotation={[0, Math.PI, 0]}>
+            <HouseProp model="skSignpostSingle" fit={{ h: 2.1 }} shadows={!low}>
+                <group>
+                    <mesh position={[0, 0.72, 0]}>
+                        <boxGeometry args={[0.18, 1.44, 0.12]} />
+                        <primitive object={m.woodDark} attach="material" />
+                    </mesh>
+                    <mesh position={[0, 1.15, 0.07]}>
+                        <boxGeometry args={[0.42, 0.22, 0.03]} />
+                        <meshLambertMaterial color="#c4b59a" />
+                    </mesh>
+                </group>
+            </HouseProp>
+            <HouseProp model="pkFlag" position={[0.9, 0, 0.2]} fit={{ h: 1.6 }} shadows={!low}>
+                {null}
+            </HouseProp>
         </group>
     );
 }
 
-export default function WorldDestinations({ low = false }: { low?: boolean }) {
+export default function WorldDestinations({ low = false, profile }: { low?: boolean; profile?: QualityProfile }) {
     const m = useHouseMaterials(low);
 
     return (
@@ -493,10 +689,10 @@ export default function WorldDestinations({ low = false }: { low?: boolean }) {
             })}
             <CinemaGrove m={m} low={low} />
             <HallStones m={m} low={low} />
-            <MirrorPool m={m} low={low} />
+            <MirrorPool m={m} low={low} profile={profile} />
             <SignalStudio m={m} low={low} />
             <PathBlooms low={low} />
-            <ScenicPost m={m} />
+            <ScenicPost m={m} low={low} />
         </group>
     );
 }

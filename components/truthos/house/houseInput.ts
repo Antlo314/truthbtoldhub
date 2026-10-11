@@ -13,6 +13,8 @@ export const houseInput = {
     interactQueued: false,
     movingTouch: false,
     lookingTouch: false,
+    /** Touch sprint toggle — Shift has no thumb */
+    sprint: false,
     /** Last time any intentional move input was received */
     lastInputAt: 0,
 
@@ -72,5 +74,6 @@ export const houseInput = {
         this.clearLook();
         this.jumpQueued = false;
         this.interactQueued = false;
+        this.sprint = false;
     },
 };

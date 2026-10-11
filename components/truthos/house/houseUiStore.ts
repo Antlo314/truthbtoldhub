@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import type { QualitySetting } from './renderQuality';
 
 /** House panels only — Truth is never here; Truth is only in Truth.OS */
 export type HousePanelId =
@@ -33,6 +34,20 @@ type HouseUiState = {
     wallFace: 'w' | 's' | 'n' | null;
     cinemaFilmId: string | null;
     cinemaPlaying: boolean;
+    /** Camera behind the eyes or behind the body */
+    view: 'first' | 'third';
+    /** Chosen render quality; `auto` resolves per device */
+    quality: QualitySetting;
+    /** How many tiers the frame-rate monitor has walked quality down this session */
+    qualityDrop: number;
+    /** Emote the local body is performing, and when it began (performance.now()) */
+    emote: string | null;
+    emoteAt: number;
+    setView: (v: 'first' | 'third') => void;
+    toggleView: () => void;
+    setQuality: (q: QualitySetting) => void;
+    dropQuality: () => void;
+    playEmote: (id: string | null) => void;
     openPanel: (id: HousePanelId) => void;
     closePanel: () => void;
     setWalkthrough: (open: boolean, step?: number) => void;
@@ -83,6 +98,19 @@ export const useHouseUi = create<HouseUiState>((set, get) => ({
     wallFace: null,
     cinemaFilmId: null,
     cinemaPlaying: false,
+    view: 'first',
+    quality: 'auto',
+    qualityDrop: 0,
+    emote: null,
+    emoteAt: 0,
+
+    setView: (v) => set({ view: v }),
+    toggleView: () => set((s) => ({ view: s.view === 'first' ? 'third' : 'first' })),
+    // Choosing a tier by hand also forgets any automatic step-down
+    setQuality: (q) => set({ quality: q, qualityDrop: 0 }),
+    dropQuality: () => set((s) => ({ qualityDrop: Math.min(3, s.qualityDrop + 1) })),
+    playEmote: (id) =>
+        set({ emote: id, emoteAt: typeof performance !== 'undefined' ? performance.now() : 0 }),
 
     openPanel: (id) => set({ panel: id, paused: false }),
     closePanel: () => set({ panel: null }),
@@ -156,7 +184,7 @@ export const WALKTHROUGH_STEPS = [
     },
     {
         title: 'You’re home',
-        body: 'Live souls share this floor. Esc or Pause opens Map and Tour. Enter speaks to the room.',
+        body: 'Live souls share this floor. Esc or Pause opens Map and Tour. Enter speaks to the room. V shows your own body; 1–4 move your hands. Twenty-four shards hang on the shelf.',
         tip: 'Esc or Pause · Map and Tour',
         wait: 'tap' as const,
         voice: 'live_echo',

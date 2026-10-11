@@ -3,30 +3,43 @@
 /**
  * Shared house material library — full skins + roughness depth maps.
  */
-import { useMemo } from 'react';
 import * as THREE from 'three';
 import { makeHouseMap, makeRoughnessMap } from './houseSkins';
 
-const materialCache = new Map<boolean, ReturnType<typeof buildHouseMaterials>>();
+export type HousePhotoMode = 'none' | 'diffuse' | 'full';
+
+/**
+ * Which Poly Haven maps the library wires in when it builds. HouseCanvas
+ * sets this from the quality tier BEFORE any scene component asks for
+ * materials; the cache below is keyed on it so a tier change gets a fresh
+ * set rather than a stale one.
+ */
+let photoMode: HousePhotoMode = 'full';
+export function setHousePhotoMode(mode: HousePhotoMode) {
+    photoMode = mode;
+}
+
+const materialCache = new Map<string, ReturnType<typeof buildHouseMaterials>>();
 
 /**
  * One material set per tier, shared by every scene component.
  *
  * Five components each ran their own useMemo copy of this library, so every
  * texture in the house was decoded and uploaded to the GPU five times. The
- * cache keys on `low` so the desktop and phone tiers stay separate, and the
- * hook keeps its signature so no caller changes.
+ * cache keys on `low` + photo mode so the tiers stay separate, and the hook
+ * keeps its signature so no caller changes.
  */
 export function useHouseMaterials(low = false) {
-    let m = materialCache.get(low);
+    const key = `${low ? 'low' : 'hi'}|${photoMode}`;
+    let m = materialCache.get(key);
     if (!m) {
-        m = buildHouseMaterials(low);
-        materialCache.set(low, m);
+        m = buildHouseMaterials(low, photoMode);
+        materialCache.set(key, m);
     }
     return m;
 }
 
-function buildHouseMaterials(low: boolean) {
+function buildHouseMaterials(low: boolean, photos: HousePhotoMode) {
     {
         const woodMap = makeHouseMap('wood', { repeat: [2.5, 2.5], low });
         const woodDarkMap = makeHouseMap('woodDark', { repeat: [2.5, 2.5], low });
@@ -84,27 +97,24 @@ function buildHouseMaterials(low: boolean) {
          * The procedural canvas map paints frame one; the photo diffuse,
          * normal and roughness swap in as each file arrives, so realism is
          * an enhancement, never a loading screen. A missing file simply
-         * leaves the procedural look — the same graceful path `low` takes,
-         * which skips photos entirely (phones keep their small textures).
+         * leaves the procedural look — the same graceful path `none` takes.
          *
          * The saturated art-direction tints were designed to colour NEUTRAL
          * procedural maps; a photo already carries its own colour, so the
          * tint eases most of the way to white on arrival — most for floors,
          * least for the branded purple plaster.
+         *
+         * `diffuse` (balanced tier, phones that opted up) wires the colour
+         * map only — one third of the texture budget, most of the gain.
          */
         const texLoader = new THREE.TextureLoader();
         const photo = (
             mat: THREE.MeshStandardMaterial,
             key: string,
             repeat: [number, number],
-            o: { normalScale?: number; keepTint?: number; aniso?: number } = {},
+            o: { normalScale?: number; keepTint?: number; aniso?: number; skipMap?: boolean } = {},
         ) => {
-            // Phones used to get NO photo at all, so every surface stayed a
-            // procedural canvas — the whole material pass was invisible on the
-            // device most people arrive on. They get the DIFFUSE now (the map
-            // that carries the look) and skip normal + roughness (the two that
-            // carry the memory). One third of the texture budget, most of the
-            // gain.
+            if (photos === 'none') return mat;
             const wire = (slot: 'map' | 'normalMap' | 'roughnessMap', file: string, srgb = false) => {
                 texLoader.load(
                     file,
@@ -125,8 +135,8 @@ function buildHouseMaterials(low: boolean) {
                     },
                 );
             };
-            wire('map', `/textures/polyhaven/${key}_diff.jpg`, true);
-            if (!low) {
+            if (!o.skipMap) wire('map', `/textures/polyhaven/${key}_diff.jpg`, true);
+            if (photos === 'full') {
                 wire('normalMap', `/textures/polyhaven/${key}_nor.jpg`);
                 wire('roughnessMap', `/textures/polyhaven/${key}_rough.jpg`);
                 mat.normalScale.set(o.normalScale ?? 0.8, o.normalScale ?? 0.8);
@@ -152,28 +162,29 @@ function buildHouseMaterials(low: boolean) {
         bulbWarm.userData.lampEmissive = true;
 
         return {
-            wood: mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62),
-            woodDark: mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68),
-            woodFloor: mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72),
-            stone: mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78),
-            plaster: mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52),
-            rug: mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85),
-            fabric: mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72),
-            fabricLight: mk(fabricLightMap, '#bca8d4', { roughness: 0.9 }, 0.68),
-            leather: mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58),
+            wood: photo(mk(woodMap, '#c8ac88', { roughness: 0.68, metalness: 0.08 }, 0.62), 'oak', [2.5, 2.5], { keepTint: 0.3 }),
+            woodDark: photo(mk(woodDarkMap, '#9a7858', { roughness: 0.78, metalness: 0.06 }, 0.68), 'woodDark', [2.5, 2.5], { keepTint: 0.3 }),
+            woodFloor: photo(mk(woodFloorMap, '#a08058', { roughness: 0.62, metalness: 0.05 }, 0.72), 'woodFloor', [10, 10], { keepTint: 0.15, aniso: 16 }),
+            stone: photo(mk(stoneMap, '#b4bcc8', { roughness: 0.92, metalness: 0.08 }, 0.78), 'stone', [6, 3.5], { normalScale: 1.0, keepTint: 0.2 }),
+            plaster: photo(mk(plasterMap, '#bcb2c8', { roughness: 0.94 }, 0.52), 'plaster', [5, 3.5], { keepTint: 0.55, normalScale: 0.6 }),
+            rug: photo(mk(rugMap, '#e8c4a0', { roughness: 0.98, metalness: 0 }, 0.85), 'rug', [2.5, 2.5], { keepTint: 0.3 }),
+            fabric: photo(mk(fabricMap, '#9a88b8', { roughness: 0.92 }, 0.72), 'fabric', [3, 3], { keepTint: 0.4 }),
+            fabricLight: photo(mk(fabricLightMap, '#bca8d4', { roughness: 0.9 }, 0.68), 'linen', [3, 3], { keepTint: 0.4 }),
+            leather: photo(mk(leatherMap, '#c89c72', { roughness: 0.66, metalness: 0.1 }, 0.58), 'leather', [2.5, 2.5], { keepTint: 0.3 }),
             metal: mk(metalMap, '#ccd0d8', { roughness: 0.24, metalness: 0.82 }, 0.38),
             metalDark: mk(metalDarkMap, '#8a8a98', { roughness: 0.34, metalness: 0.74 }, 0.42),
-            gold: mk(goldMap, '#ffe08a', {
-                roughness: 0.2,
+            // Brushed plate under the gold tint — grain and wear instead of a flat yellow
+            gold: photo(mk(goldMap, '#ffe08a', {
+                roughness: 0.22,
                 metalness: 0.9,
                 emissive: '#f59e0b',
-                emissiveIntensity: 0.28,
-            }, 0.32),
+                emissiveIntensity: 0.22,
+            }, 0.32), 'goldMetal', [2, 2], { keepTint: 1, normalScale: 0.55 }),
             book: mk(bookMap, '#d0b0c0', { roughness: 0.8 }, 0.55),
             leaf: mk(leafMap, '#88c898', { roughness: 0.88 }, 0.6),
-            grass: mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82),
-            path: mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75),
-            dirt: mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88),
+            grass: photo(mk(grassMap, '#5a9a62', { roughness: 0.96, metalness: 0 }, 0.82), 'grass', [14, 14], { keepTint: 0.25 }),
+            path: photo(mk(pathMap, '#9a9490', { roughness: 0.9, metalness: 0.06 }, 0.75), 'path', [6, 10], { keepTint: 0.2 }),
+            dirt: photo(mk(dirtMap, '#6a5040', { roughness: 0.98, metalness: 0 }, 0.88), 'dirt', [4, 4], { keepTint: 0.2 }),
             screen: mk(screenMap, '#88e8f8', {
                 roughness: 0.16,
                 metalness: 0.28,
@@ -181,19 +192,28 @@ function buildHouseMaterials(low: boolean) {
                 emissiveIntensity: 0.55,
                 toneMapped: false,
             }, 0.22),
-            tile: mk(tileMap, '#cfd4d6', { roughness: 0.42, metalness: 0.1 }, 0.48),
-            tileKitchen: mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5),
-            carpet: mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9),
-            woodFloorDark: mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74),
-            marble: mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3),
-            concrete: mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72),
-            wallPlaster: mk(plasterMap, '#e9e7e2', { roughness: 0.94, metalness: 0.02 }, 0.5),
-            woodHerring: mk(woodFloorMap, '#b09068', { roughness: 0.55, metalness: 0.05 }, 0.7),
-            counter: mk(marbleMap, '#cfc9c2', { roughness: 0.35, metalness: 0.08 }, 0.4),
-            linen: mk(fabricLightMap, '#d8cfc4', { roughness: 0.95 }, 0.75),
-            wool: mk(fabricMap, '#b9af9f', { roughness: 0.97 }, 0.8),
-            bark: mk(woodDarkMap, '#6e5a48', { roughness: 0.95 }, 0.8),
-            forestFloor: mk(dirtMap, '#4e4436', { roughness: 0.98 }, 0.85),
+            tile: photo(mk(tileMap, '#cfd4d6', { roughness: 0.42, metalness: 0.1 }, 0.48), 'tile', [8, 8], { keepTint: 0.15 }),
+            tileKitchen: photo(mk(tileKitchenMap, '#cbc0b4', { roughness: 0.42, metalness: 0.1 }, 0.5), 'ceramic', [4, 3.5], { keepTint: 0.15 }),
+            carpet: photo(mk(carpetMap, '#b9a8c8', { roughness: 0.99, metalness: 0 }, 0.9), 'carpet', [5, 4.5], { keepTint: 0.35 }),
+            woodFloorDark: photo(mk(woodFloorDarkMap, '#7a5c3c', { roughness: 0.6, metalness: 0.05 }, 0.74), 'woodDark', [6, 6], { keepTint: 0.35, aniso: 16 }),
+            marble: photo(mk(marbleMap, '#d8d4d0', { roughness: 0.24, metalness: 0.16 }, 0.3), 'marble', [2.5, 3], { keepTint: 0.1, aniso: 16 }),
+            concrete: photo(mk(concreteMap, '#9890a0', { roughness: 0.95 }, 0.72), 'concrete', [5, 5], { keepTint: 0.2 }),
+            wallPlaster: photo(mk(plasterMap, '#e9e7e2', { roughness: 0.94, metalness: 0.02 }, 0.5), 'plaster', [5, 3.5], { keepTint: 0.2, normalScale: 0.6 }),
+            woodHerring: photo(mk(woodFloorMap, '#b09068', { roughness: 0.55, metalness: 0.05 }, 0.7), 'woodHerring', [6, 6], { keepTint: 0.15, aniso: 16 }),
+            counter: photo(mk(marbleMap, '#cfc9c2', { roughness: 0.35, metalness: 0.08 }, 0.4), 'counter', [2, 2], { keepTint: 0.15 }),
+            linen: photo(mk(fabricLightMap, '#d8cfc4', { roughness: 0.95 }, 0.75), 'linen', [3, 3], { keepTint: 0.3 }),
+            wool: photo(mk(fabricMap, '#b9af9f', { roughness: 0.97 }, 0.8), 'wool', [3, 3], { keepTint: 0.3 }),
+            bark: photo(mk(woodDarkMap, '#6e5a48', { roughness: 0.95 }, 0.8), 'bark', [2, 3], { keepTint: 0.3 }),
+            forestFloor: photo(mk(dirtMap, '#4e4436', { roughness: 0.98 }, 0.85), 'forestFloor', [4, 4], { keepTint: 0.25 }),
+            /**
+             * The Aether Shelf's stone. The brick 'stone' set read as a garden
+             * wall wrapped around a floating island; these are a cracked
+             * boulder face for the terrace, a cliff for the rim, cobbles for
+             * the walks and the isle floors.
+             */
+            basalt: photo(mk(stoneMap, '#8e8a9b', { roughness: 0.9, metalness: 0.06 }, 0.78), 'basalt', [5, 5], { normalScale: 1.1, keepTint: 0.35 }),
+            rockFace: photo(mk(stoneMap, '#7f7a8c', { roughness: 0.94, metalness: 0.04 }, 0.8), 'rockFace', [3, 3], { normalScale: 1.2, keepTint: 0.35 }),
+            cobble: photo(mk(pathMap, '#a19b9c', { roughness: 0.88, metalness: 0.05 }, 0.75), 'cobble', [6, 6], { normalScale: 1.0, keepTint: 0.2 }),
             artDomain: mk(artDomainMap, '#ffffff', {
                 roughness: 0.55,
                 metalness: 0.12,

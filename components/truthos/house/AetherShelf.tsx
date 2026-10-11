@@ -2,56 +2,199 @@
 
 /**
  * The Aether Shelf — exterior world around the hut.
- * Not woods. Stone terrace over a cloud sea, lantern ring, Source well,
- * light-bridges to sister islets. Instanced scatter. Mobile strips lights
- * and halves counts. Blender GLBs in /models/aether are authored separately;
- * this file never depends on them so a missing file cannot black-screen /world.
+ *
+ * Stone terrace over a cloud sea, a lantern ring, the Source well, light
+ * bridges to four sister isles. The bones are procedural (so a missing
+ * file can never black-screen /world); the dressing is CC0 — Kenney's
+ * Fantasy Town lamps and fountain, Castle banners, Nature Kit cliffs on
+ * the rim, Survival Kit signposts where the bridges leave. Volumetric
+ * clouds drift below the lip. Phones strip the lights, the clouds and the
+ * kit; everything they keep is the same shape.
  */
-import { useMemo, useRef } from 'react';
-import type { Group, Mesh, Object3D } from 'three';
+import { useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { Cloud, Clouds, Html, Sparkles } from '@react-three/drei';
 import { useHouseMaterials } from './HouseMaterials';
+import HouseProp from './HouseProp';
 import { seededRng } from './houseSkins';
 import { FRONT_DOOR, SHELL } from './homeMap';
 import { CLEARING_R, CORRIDORS, DESTINATIONS, destCenter, inCorridor } from './jungleMap';
+import { PADS } from './worldPads';
+import { getWalkerPose } from './walkerPose';
+import type { QualityProfile } from './renderQuality';
 
 function inHouse(x: number, z: number, pad = 2.6) {
     return x > SHELL.minX - pad && x < SHELL.maxX + pad && z > SHELL.minZ - pad && z < SHELL.maxZ + pad;
 }
 
-function CloudSea({ low }: { low: boolean }) {
-    const a = useRef<Mesh>(null);
-    const b = useRef<Mesh>(null);
+/* ── The cloud sea ─────────────────────────────────────────── */
+
+function CloudSea({ low, volumetric }: { low: boolean; volumetric: boolean }) {
+    const a = useRef<THREE.Mesh>(null);
+    const b = useRef<THREE.Mesh>(null);
     useFrame((_, dt) => {
         if (a.current) a.current.rotation.y += dt * 0.008;
         if (b.current) b.current.rotation.y -= dt * 0.005;
     });
+    const puffs = useMemo(() => {
+        const rnd = seededRng(0xc10d);
+        return Array.from({ length: 14 }, (_, i) => {
+            const ang = (i / 14) * Math.PI * 2 + rnd() * 0.3;
+            const r = 38 + rnd() * 34;
+            return {
+                pos: [Math.cos(ang) * r, -8.5 + rnd() * 4.5, Math.sin(ang) * r] as [number, number, number],
+                seed: i * 7 + 3,
+                vol: 9 + rnd() * 7,
+                speed: 0.05 + rnd() * 0.05,
+            };
+        });
+    }, []);
     return (
         <group>
-            <mesh ref={a} rotation={[-Math.PI / 2, 0, 0]} position={[0, -6.2, 0]}>
+            {/* The flat sea underneath keeps the floor of the world read on every tier */}
+            <mesh ref={a} rotation={[-Math.PI / 2, 0, 0]} position={[0, -6.4, 0]}>
                 <circleGeometry args={[220, low ? 24 : 48]} />
-                <meshStandardMaterial color="#b9aec8" roughness={1} transparent opacity={0.72} />
+                <meshStandardMaterial color="#b9aec8" roughness={1} transparent opacity={volumetric ? 0.5 : 0.72} />
             </mesh>
             <mesh ref={b} rotation={[-Math.PI / 2, 0, 0.2]} position={[0, -5.4, 0]}>
                 <circleGeometry args={[180, low ? 20 : 40]} />
-                <meshStandardMaterial color="#8d7eaa" roughness={1} transparent opacity={0.38} />
+                <meshStandardMaterial color="#8d7eaa" roughness={1} transparent opacity={volumetric ? 0.26 : 0.38} />
+            </mesh>
+            {volumetric && (
+                <Clouds material={THREE.MeshLambertMaterial} texture="/textures/cloud_puff.png" limit={260} range={200}>
+                    {puffs.map((p, i) => (
+                        <Cloud
+                            key={i}
+                            seed={p.seed}
+                            position={p.pos}
+                            segments={14}
+                            bounds={[16, 3.2, 16]}
+                            volume={p.vol}
+                            concentrate="inside"
+                            color="#d9d0e6"
+                            opacity={0.62}
+                            speed={p.speed}
+                            growth={3}
+                            fade={28}
+                        />
+                    ))}
+                </Clouds>
+            )}
+        </group>
+    );
+}
+
+/* ── Signposts where the bridges leave the terrace ─────────── */
+
+function SignLabel({ text, sub }: { text: string; sub: string }) {
+    return (
+        <div className="pointer-events-none select-none rounded-xl border border-amber-300/35 bg-black/70 px-3 py-1.5 text-center backdrop-blur-md whitespace-nowrap">
+            <p className="text-[11px] font-semibold tracking-wide text-amber-50">{text}</p>
+            <p className="text-[9px] uppercase tracking-[0.22em] text-amber-200/70">{sub}</p>
+        </div>
+    );
+}
+
+function Signpost({
+    x,
+    z,
+    yaw,
+    text,
+    sub,
+    low,
+}: {
+    x: number;
+    z: number;
+    yaw: number;
+    text: string;
+    sub: string;
+    low: boolean;
+}) {
+    const [near, setNear] = useState(false);
+    const t = useRef(0);
+    useFrame((_, dt) => {
+        t.current += dt;
+        if (t.current < 0.4) return;
+        t.current = 0;
+        const p = getWalkerPose();
+        const d = Math.hypot(p.x - x, p.z - z);
+        // Hysteresis so a label never flickers at the edge
+        if (near && d > 30) setNear(false);
+        else if (!near && d < 26) setNear(true);
+    });
+    return (
+        <group position={[x, 0, z]} rotation={[0, yaw, 0]}>
+            <HouseProp model="skSignpost" fit={{ h: 2.3 }} shadows={!low}>
+                <group>
+                    <mesh position={[0, 1.1, 0]}>
+                        <boxGeometry args={[0.12, 2.2, 0.12]} />
+                        <meshStandardMaterial color="#5a4632" roughness={0.9} />
+                    </mesh>
+                    <mesh position={[0.22, 1.85, 0]}>
+                        <boxGeometry args={[0.7, 0.22, 0.05]} />
+                        <meshStandardMaterial color="#c4b59a" roughness={0.85} />
+                    </mesh>
+                </group>
+            </HouseProp>
+            {near && !low && (
+                <Html position={[0, 2.55, 0]} center distanceFactor={11} style={{ pointerEvents: 'none' }}>
+                    <SignLabel text={text} sub={sub} />
+                </Html>
+            )}
+        </group>
+    );
+}
+
+/* ── Aether springs ─────────────────────────────────────────── */
+
+function Spring({ x, z, low }: { x: number; z: number; low: boolean }) {
+    const ring = useRef<THREE.Mesh>(null);
+    useFrame(({ clock }) => {
+        if (!ring.current) return;
+        const s = 1 + Math.sin(clock.elapsedTime * 2.6) * 0.08;
+        ring.current.scale.set(s, s, 1);
+    });
+    return (
+        <group position={[x, 0, z]}>
+            <HouseProp model="pkSpring" fit={{ w: 1.15 }} shadows={!low}>
+                <group>
+                    <mesh position={[0, 0.08, 0]}>
+                        <cylinderGeometry args={[0.5, 0.56, 0.16, 16]} />
+                        <meshStandardMaterial color="#3b3350" roughness={0.6} metalness={0.3} />
+                    </mesh>
+                    <mesh position={[0, 0.3, 0]}>
+                        <cylinderGeometry args={[0.42, 0.42, 0.28, 16]} />
+                        <meshStandardMaterial color="#7c5cff" emissive="#5b3fe6" emissiveIntensity={0.6} roughness={0.4} />
+                    </mesh>
+                </group>
+            </HouseProp>
+            <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+                <ringGeometry args={[0.62, 0.84, 28]} />
+                <meshBasicMaterial color="#8b7cff" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
             </mesh>
         </group>
     );
 }
 
-export default function AetherShelf({ low = false }: { low?: boolean }) {
+/* ── The shelf ──────────────────────────────────────────────── */
+
+export default function AetherShelf({ low = false, profile }: { low?: boolean; profile?: QualityProfile }) {
     const m = useHouseMaterials(low);
     const rnd = useMemo(() => seededRng(0xa37e12), []);
-    const basalt = m.stone;
+    const basalt = m.basalt;
+    const rock = m.rockFace;
+    const cobble = m.cobble;
     const gold = m.gold;
+    const lanternLights = !low && (profile?.tier === 'ultra' || profile?.tier === 'high');
+    const sparkles = !!profile?.sparkles;
 
     const lanterns = useMemo(() => {
         const n = low ? 8 : 14;
         return Array.from({ length: n }, (_, i) => {
             const a = (i / n) * Math.PI * 2 + 0.08;
             const r = 27.2 + (rnd() - 0.5) * 1.2;
-            return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+            return { x: Math.cos(a) * r, z: Math.sin(a) * r, yaw: -a + Math.PI / 2 };
         });
     }, [low, rnd]);
 
@@ -87,7 +230,8 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
 
     const rim = useMemo(() => {
         const n = low ? 16 : 26;
-        const out: { x: number; z: number; yaw: number; h: number; w: number }[] = [];
+        const kinds = ['nkCliffRock', 'nkRockTallA', 'nkStoneTallA', 'nkCliffLargeRock', 'nkRockTallD'];
+        const out: { x: number; z: number; yaw: number; h: number; w: number; kind: string }[] = [];
         for (let i = 0; i < n; i++) {
             const a = (i / n) * Math.PI * 2 + 0.04;
             const x = Math.cos(a) * (CLEARING_R + 0.6);
@@ -99,16 +243,40 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 yaw: a,
                 h: 2.2 + (i % 5) * 0.62,
                 w: 3.6 + (i % 3) * 0.4,
+                kind: kinds[i % kinds.length],
             });
         }
         return out;
     }, [low]);
 
-    const shardGroup = useRef<Group>(null);
+    const signposts = useMemo(
+        () =>
+            CORRIDORS.map((c, i) => {
+                const dx = c.bx - c.ax;
+                const dz = c.bz - c.az;
+                const len = Math.hypot(dx, dz) || 1;
+                const ux = dx / len;
+                const uz = dz / len;
+                // Beside the bridge head, on the terrace, turned to face the walker coming out
+                const x = c.ax - ux * 1.6 - uz * (c.halfWidth + 1.3);
+                const z = c.az - uz * 1.6 + ux * (c.halfWidth + 1.3);
+                const dest = c.deadEnd ? null : DESTINATIONS[i - 1];
+                return {
+                    x,
+                    z,
+                    yaw: Math.atan2(-x, -z) + Math.PI,
+                    text: dest ? dest.name : 'The north walk',
+                    sub: dest ? dest.blurb : 'a quiet way, for now',
+                };
+            }),
+        [],
+    );
+
+    const shardGroup = useRef<THREE.Group>(null);
     useFrame(() => {
         if (!shardGroup.current || low) return;
         const t = performance.now() * 0.0004;
-        shardGroup.current.children.forEach((ch: Object3D, i: number) => {
+        shardGroup.current.children.forEach((ch: THREE.Object3D, i: number) => {
             ch.rotation.y = t * (0.4 + (i % 5) * 0.08);
             ch.position.y = shards[i].y + Math.sin(t * 2 + i) * 0.25;
         });
@@ -116,50 +284,79 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
 
     return (
         <group>
-            <CloudSea low={low} />
+            <CloudSea low={low} volumetric={!!profile?.clouds} />
 
-            {/* Terrace is a RING outside the hut. A full disc plus a
-                sideways 34 m cone used to occupy the entire interior. */}
+            {/* Terrace is a RING outside the hut: a cobbled walk by the house,
+                cracked basalt out to the rim. */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow={!low}>
-                <ringGeometry args={[23.4, CLEARING_R + 1.5, low ? 24 : 40]} />
+                <ringGeometry args={[23.4, 26.4, low ? 24 : 48]} />
+                <primitive object={cobble} attach="material" />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow={!low}>
+                <ringGeometry args={[26.3, CLEARING_R + 1.5, low ? 24 : 48]} />
                 <primitive object={basalt} attach="material" />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-                <ringGeometry args={[24.0, 24.8, low ? 20 : 32]} />
-                <meshStandardMaterial color="#e8c478" metalness={0.7} roughness={0.28} />
+                <ringGeometry args={[24.0, 24.5, low ? 20 : 40]} />
+                <primitive object={gold} attach="material" />
+            </mesh>
+            {/* The shelf has a side — basalt falling away to the sea */}
+            <mesh position={[0, -3.2, 0]}>
+                <cylinderGeometry args={[CLEARING_R + 1.6, CLEARING_R - 2.5, 6.4, low ? 28 : 56, 1, true]} />
+                <primitive object={rock} attach="material" />
             </mesh>
 
+            {/* The Source well — a Fantasy Town fountain with a violet core */}
             <group position={[FRONT_DOOR.x, 0, SHELL.maxZ + 3.5]}>
-                <mesh position={[0, 0.16, 0]}>
-                    <cylinderGeometry args={[1.2, 1.35, 0.34, 10]} />
-                    <primitive object={basalt} attach="material" />
-                </mesh>
-                <mesh position={[0, 0.4, 0]}>
-                    <sphereGeometry args={[0.36, 10, 8]} />
+                <HouseProp model="ftFountainRound" fit={{ w: 3.8 }} shadows={!low}>
+                    <mesh position={[0, 0.16, 0]}>
+                        <cylinderGeometry args={[1.2, 1.35, 0.34, 10]} />
+                        <primitive object={basalt} attach="material" />
+                    </mesh>
+                </HouseProp>
+                <HouseProp model="ftFountainCenter" position={[0, 0.2, 0]} fit={{ w: 1.7 }} shadows={!low}>
+                    {null}
+                </HouseProp>
+                <mesh position={[0, 0.78, 0]}>
+                    <sphereGeometry args={[0.36, 14, 10]} />
                     <meshBasicMaterial color="#7c5cff" toneMapped={false} />
                 </mesh>
+                <mesh position={[0, 0.78, 0]} scale={1.6}>
+                    <sphereGeometry args={[0.36, 12, 8]} />
+                    <meshBasicMaterial color="#9d85ff" transparent opacity={0.18} depthWrite={false} toneMapped={false} />
+                </mesh>
+                {sparkles && <Sparkles count={40} scale={[3.4, 2.6, 3.4]} position={[0, 1.4, 0]} size={2.6} speed={0.5} color="#c9bbff" opacity={0.85} />}
                 {!low && (
-                    <pointLight position={[0, 1.6, 0]} color="#7c5cff" intensity={1.6} distance={14} decay={2} />
+                    <pointLight position={[0, 1.6, 0]} color="#7c5cff" intensity={1.8} distance={14} decay={2} />
                 )}
             </group>
 
+            {/* Lantern ring — Fantasy Town lamps on the old basalt posts */}
             {lanterns.map((p, i) => (
-                <group key={i} position={[p.x, 0, p.z]}>
-                    <mesh position={[0, 1.1, 0]}>
-                        <cylinderGeometry args={[0.12, 0.18, 2.2, 6]} />
-                        <primitive object={basalt} attach="material" />
+                <group key={i} position={[p.x, 0, p.z]} rotation={[0, p.yaw, 0]}>
+                    <HouseProp model="ftLantern" fit={{ h: 2.6 }} shadows={!low}>
+                        <group>
+                            <mesh position={[0, 1.1, 0]}>
+                                <cylinderGeometry args={[0.12, 0.18, 2.2, 6]} />
+                                <primitive object={basalt} attach="material" />
+                            </mesh>
+                            <mesh position={[0, 2.28, 0]}>
+                                <boxGeometry args={[0.42, 0.1, 0.42]} />
+                                <primitive object={gold} attach="material" />
+                            </mesh>
+                        </group>
+                    </HouseProp>
+                    <mesh position={[0, 2.3, 0]}>
+                        <sphereGeometry args={[0.13, 8, 6]} />
+                        <meshBasicMaterial color="#ffd27a" toneMapped={false} />
                     </mesh>
-                    <mesh position={[0, 2.28, 0]}>
-                        <boxGeometry args={[0.42, 0.1, 0.42]} />
-                        <primitive object={gold} attach="material" />
-                    </mesh>
-                    <mesh position={[0, 2.58, 0]}>
-                        <sphereGeometry args={[0.16, 8, 6]} />
-                        <meshBasicMaterial color="#e8c478" toneMapped={false} />
-                    </mesh>
+                    {lanternLights && i % 3 === 0 && (
+                        <pointLight position={[0, 2.3, 0]} color="#ffc98f" intensity={1.3} distance={9} decay={2} />
+                    )}
                 </group>
             ))}
 
+            {/* Drifting obsidian over the sea */}
             <group ref={shardGroup}>
                 {shards.map((s, i) => (
                     <mesh key={i} position={[s.x, s.y, s.z]} scale={s.s} rotation={[0.3, i, 0.2]}>
@@ -169,29 +366,42 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                 ))}
             </group>
 
+            {/* Aether motes over the whole terrace */}
+            {sparkles && <Sparkles count={90} scale={[62, 7, 62]} position={[0, 3.2, 0]} size={1.6} speed={0.18} color="#b9a8ff" opacity={0.45} />}
+
+            {/* Sentinels — a column and a banner each, the violet eye kept */}
             {sentinels.map((s, i) => (
                 <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.yaw, 0]}>
-                    <mesh position={[0, 1.3, 0]}>
-                        <boxGeometry args={[0.55, 2.5, 0.4]} />
-                        <primitive object={basalt} attach="material" />
-                    </mesh>
-                    <mesh position={[0, 2.72, 0.18]}>
-                        <sphereGeometry args={[0.08, 6, 6]} />
+                    <HouseProp model="nkStatueColumn" fit={{ h: 3.2 }} shadows={!low}>
+                        <mesh position={[0, 1.3, 0]}>
+                            <boxGeometry args={[0.55, 2.5, 0.4]} />
+                            <primitive object={basalt} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                    <mesh position={[0, 3.35, 0]}>
+                        <sphereGeometry args={[0.1, 8, 6]} />
                         <meshBasicMaterial color="#7c5cff" toneMapped={false} />
                     </mesh>
-                    <mesh position={[0.38, 1.5, 0]}>
-                        <boxGeometry args={[0.07, 1.5, 0.07]} />
-                        <primitive object={gold} attach="material" />
-                    </mesh>
+                    <group position={[0.9, 0, 0]}>
+                        <HouseProp model="ckFlagBannerLong" fit={{ h: 3.4 }} shadows={!low}>
+                            <mesh position={[0, 1.5, 0]}>
+                                <boxGeometry args={[0.07, 3.0, 0.07]} />
+                                <primitive object={gold} attach="material" />
+                            </mesh>
+                        </HouseProp>
+                    </group>
                 </group>
             ))}
 
+            {/* Light bridges, with a stone pillar pair at each head */}
             {CORRIDORS.map((c, i) => {
                 const dx = c.bx - c.ax;
                 const dz = c.bz - c.az;
                 const len = Math.hypot(dx, dz);
                 const yaw = Math.atan2(dx, dz);
                 const steps = Math.max(2, Math.floor(len / 2.7));
+                const nx = -dz / len;
+                const nz = dx / len;
                 return (
                     <group key={i}>
                         {Array.from({ length: steps }, (_, k) => {
@@ -217,18 +427,40 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                                 </group>
                             );
                         })}
+                        {[1, -1].map((side) => (
+                            <group key={side} position={[c.ax + nx * side * 1.25, 0, c.az + nz * side * 1.25]} rotation={[0, yaw, 0]}>
+                                <HouseProp model="ftPillarStone" fit={{ h: 2.2 }} shadows={!low}>
+                                    <mesh position={[0, 1.0, 0]}>
+                                        <boxGeometry args={[0.32, 2.0, 0.32]} />
+                                        <primitive object={basalt} attach="material" />
+                                    </mesh>
+                                </HouseProp>
+                                <mesh position={[0, 2.3, 0]}>
+                                    <sphereGeometry args={[0.09, 8, 6]} />
+                                    <meshBasicMaterial color="#e8c478" toneMapped={false} />
+                                </mesh>
+                            </group>
+                        ))}
                     </group>
                 );
             })}
 
+            {signposts.map((s, i) => (
+                <Signpost key={i} {...s} low={low} />
+            ))}
+
+            {PADS.map((p) => (
+                <Spring key={p.id} x={p.x} z={p.z} low={low} />
+            ))}
+
+            {/* The isles: a cobbled disc on a basalt root, a beacon that reads from the hut */}
             {DESTINATIONS.map((d) => {
                 const c = destCenter(d);
                 return (
                     <group key={d.id} position={[c.x, 0, c.z]}>
-                        {/* Landmark beacon — BotW-style readable POI from the hut */}
                         <mesh position={[0, 6.2, 0]}>
                             <cylinderGeometry args={[0.07, 0.11, 12.4, 6]} />
-                            <meshStandardMaterial color="#e8c478" metalness={0.7} roughness={0.28} />
+                            <primitive object={gold} attach="material" />
                         </mesh>
                         <mesh position={[0, 12.6, 0]}>
                             <sphereGeometry args={[0.38, 10, 8]} />
@@ -246,32 +478,31 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
                             />
                         </mesh>
                         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} receiveShadow={!low}>
-                            <circleGeometry args={[d.r + 0.6, low ? 16 : 28]} />
-                            <primitive object={basalt} attach="material" />
+                            <circleGeometry args={[d.r + 0.6, low ? 16 : 36]} />
+                            <primitive object={cobble} attach="material" />
                         </mesh>
                         <mesh position={[0, -3.4, 0]} rotation={[Math.PI, 0, 0]}>
                             <coneGeometry args={[d.r * 0.55, 6.4, 8]} />
-                            <primitive object={basalt} attach="material" />
+                            <primitive object={rock} attach="material" />
                         </mesh>
                         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
                             <ringGeometry args={[d.r * 0.42, d.r * 0.48, 16]} />
-                            <meshStandardMaterial color="#e8c478" metalness={0.65} roughness={0.3} />
+                            <primitive object={gold} attach="material" />
                         </mesh>
                     </group>
                 );
             })}
 
+            {/* The rim — Nature Kit cliffs over the old basalt blocks */}
             {rim.map((p, i) => (
-                <mesh
-                    key={`rim-${i}`}
-                    position={[p.x, p.h / 2, p.z]}
-                    rotation={[0, p.yaw, 0]}
-                    castShadow={!low}
-                    receiveShadow={!low}
-                >
-                    <boxGeometry args={[p.w, p.h, 1.15]} />
-                    <primitive object={basalt} attach="material" />
-                </mesh>
+                <group key={`rim-${i}`} position={[p.x, 0, p.z]} rotation={[0, p.yaw, 0]}>
+                    <HouseProp model={p.kind} fit={{ w: p.w }} shadows={!low}>
+                        <mesh position={[0, p.h / 2, 0]} castShadow={!low} receiveShadow={!low}>
+                            <boxGeometry args={[p.w, p.h, 1.15]} />
+                            <primitive object={rock} attach="material" />
+                        </mesh>
+                    </HouseProp>
+                </group>
             ))}
             {/* Haze curtain — the world edge blends into the sky */}
             <mesh position={[0, 5.5, 0]}>
@@ -287,7 +518,7 @@ export default function AetherShelf({ low = false }: { low?: boolean }) {
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
                 <ringGeometry args={[CLEARING_R - 0.15, CLEARING_R + 0.55, low ? 24 : 40]} />
-                <meshStandardMaterial color="#e8c478" metalness={0.65} roughness={0.32} />
+                <primitive object={gold} attach="material" />
             </mesh>
 
             <group position={[FRONT_DOOR.x, 3.4, SHELL.maxZ + 3.5]}>

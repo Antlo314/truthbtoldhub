@@ -72,12 +72,15 @@ export default function Humanoid({
     low = false,
     /** metres/second, for the walk cycle. Omit to derive from movement. */
     speed,
+    /** read in the frame loop — the cheapest way to drive a fallback body */
+    getSpeed,
     /** world position — when given, the body derives its own speed */
     trackPosition,
 }: {
     look: VesselLook;
     low?: boolean;
     speed?: number;
+    getSpeed?: () => number;
     trackPosition?: { x: number; z: number };
 }) {
     const sh = !low;
@@ -149,9 +152,9 @@ export default function Humanoid({
     useFrame((_, dtRaw) => {
         const dt = Math.min(dtRaw, 0.05);
 
-        // Speed: given, or measured from how far we actually travelled
-        let v = speed ?? 0;
-        if (speed === undefined && trackPosition) {
+        // Speed: given, read, or measured from how far we actually travelled
+        let v = speed ?? getSpeed?.() ?? 0;
+        if (speed === undefined && !getSpeed && trackPosition) {
             const p = last.current;
             if (p) {
                 v = Math.hypot(trackPosition.x - p.x, trackPosition.z - p.z) / Math.max(dt, 1e-4);

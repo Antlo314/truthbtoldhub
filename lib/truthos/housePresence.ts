@@ -19,7 +19,25 @@ export type HousePeer = {
     at: number;
     /** live = online now · ghost = remembered footprint */
     kind: 'live' | 'ghost';
+    /* ── wardrobe for the rigged vessel (see house/vesselLook.ts) — all
+       optional so an older client's presence still parses ── */
+    hair?: number;
+    top?: number;
+    bottom?: number;
+    boots?: number;
+    hs?: 'buzzed' | 'parted' | 'buns' | 'long' | 'none';
+    of?: 'peasant' | 'ranger';
+    hd?: 0 | 1;
+    bd?: 0 | 1;
+    /** emote id (house/Vessel.tsx EMOTES) and the wall-clock ms it began */
+    emote?: string | null;
+    emoteAt?: number;
+    /** 1 while sitting */
+    sit?: 0 | 1;
 };
+
+/** The wardrobe + action fields, copied through verbatim when present. */
+const PEER_EXTRAS = ['hair', 'top', 'bottom', 'boots', 'hs', 'of', 'hd', 'bd', 'emote', 'emoteAt', 'sit'] as const;
 
 export type HousePresenceApi = {
     channel: RealtimeChannel;
@@ -115,7 +133,7 @@ export async function joinHousePresence(
                 if (!at || now - at > STALE_MS) continue;
 
                 liveIds.add(key);
-                live.push({
+                const peer: HousePeer = {
                     id: key,
                     name: best.name || 'Soul',
                     aura: best.aura || '#a78bfa',
@@ -127,7 +145,12 @@ export async function joinHousePresence(
                     yaw: best.yaw ?? 0,
                     at,
                     kind: 'live',
-                });
+                };
+                const src = best as Record<string, unknown>;
+                for (const k of PEER_EXTRAS) {
+                    if (src[k] !== undefined) (peer as Record<string, unknown>)[k] = src[k];
+                }
+                live.push(peer);
             }
 
             // Remember live poses so they become ghosts when they leave

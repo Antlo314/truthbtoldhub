@@ -174,5 +174,37 @@
       "nor": "/textures/polyhaven/forestFloor_nor.jpg",
       "rough": "/textures/polyhaven/forestFloor_rough.jpg"
     }
+  },
+  "basalt": {
+    "slug": "rock_boulder_cracked",
+    "maps": {
+      "diff": "/textures/polyhaven/basalt_diff.jpg",
+      "nor": "/textures/polyhaven/basalt_nor.jpg",
+      "rough": "/textures/polyhaven/basalt_rough.jpg"
+    }
+  },
+  "goldMetal": {
+    "slug": "metal_plate",
+    "maps": {
+      "diff": "/textures/polyhaven/goldMetal_diff.jpg",
+      "nor": "/textures/polyhaven/goldMetal_nor.jpg",
+      "rough": "/textures/polyhaven/goldMetal_rough.jpg"
+    }
+  },
+  "rockFace": {
+    "slug": "rock_face_03",
+    "maps": {
+      "diff": "/textures/polyhaven/rockFace_diff.jpg",
+      "nor": "/textures/polyhaven/rockFace_nor.jpg",
+      "rough": "/textures/polyhaven/rockFace_rough.jpg"
+    }
+  },
+  "cobble": {
+    "slug": "cobblestone_large_01",
+    "maps": {
+      "diff": "/textures/polyhaven/cobble_diff.jpg",
+      "nor": "/textures/polyhaven/cobble_nor.jpg",
+      "rough": "/textures/polyhaven/cobble_rough.jpg"
+    }
   }
 }

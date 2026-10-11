@@ -115,6 +115,12 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                         {null}
                     </HouseProp>
                 </group>
+                {/* Coffee, still warm, at the mouse hand */}
+                <group position={[0.42, desk.h, 0.2]} rotation={[0, -0.6, 0]}>
+                    <HouseProp model="fkCupCoffee" fit={{ w: 0.09 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
                 {/* A stack of books at the desk's west end — reading kept close */}
                 <group position={[-0.68, desk.h, -0.06]} rotation={[0, 0.25, 0]}>
                     <HouseProp model="booksStack" fit={{ w: 0.28 }}>
@@ -336,6 +342,34 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
             {/* Kitchen */}
             <Solid f={island}>
                 <Box f={island} mat={m.counter} shadow={sh} />
+                {/* A fruit bowl and a loaf on the island — the kitchen is lived in */}
+                <group position={[-0.45, island.h, 0.02]}>
+                    <HouseProp model="fkBowl" fit={{ w: 0.32 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    <HouseProp model="fkApple" position={[-0.05, 0.07, 0.02]} fit={{ w: 0.085 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    <HouseProp model="fkPear" position={[0.06, 0.07, -0.03]} fit={{ h: 0.11 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    <HouseProp model="fkOrange" position={[0.02, 0.07, 0.07]} fit={{ w: 0.08 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
+                <group position={[0.55, island.h, -0.06]} rotation={[0, 0.35, 0]}>
+                    <HouseProp model="fkCuttingBoard" fit={{ w: 0.36 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    <HouseProp model="fkBaguette" position={[0, 0.03, 0]} rotation={[0, 0.2, 0]} fit={{ w: 0.44 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
+                <group position={[1.05, island.h, 0.1]}>
+                    <HouseProp model="fkGrapes" fit={{ w: 0.14 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
             </Solid>
             {[stoolL, stoolC, stoolR].map((s) => (
                 <Solid key={s.name} f={s}>
@@ -374,6 +408,17 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="kitchenStove" fit={{ w: stove.hx * 2, h: stove.h, d: stove.hz * 2 }}>
                     <Box f={stove} mat={m.woodDark} shadow={sh} />
                 </HouseProp>
+                {/* Stew on the back ring, a pan on the front */}
+                <group position={[-0.18, stove.h, -0.12]}>
+                    <HouseProp model="fkPotStew" fit={{ w: 0.28 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
+                <group position={[0.2, stove.h, 0.1]} rotation={[0, 2.4, 0]}>
+                    <HouseProp model="fkFryingPan" fit={{ w: 0.3 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
                 {/* Slim range hood over the stove, tucked under the upper cabinets (their bottom is 1.87) */}
                 <group position={[0, 1.52, -0.22]}>
                     <HouseProp model="rangeHood" fit={{ w: 0.9, h: 0.34, d: 0.56 }}>
@@ -388,6 +433,17 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="kitchenCabinet" fit={{ w: cabE.hx * 2, h: cabE.h, d: cabE.hz * 2 }}>
                     <Box f={cabE} mat={m.woodDark} shadow={sh} />
                 </HouseProp>
+                {/* Knife block against the wall, a wedge of cheese waiting */}
+                <group position={[-0.2, cabE.h, -0.14]}>
+                    <HouseProp model="fkKnifeBlock" fit={{ w: 0.22 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
+                <group position={[0.2, cabE.h, 0.08]} rotation={[0, -0.4, 0]}>
+                    <HouseProp model="fkCheese" fit={{ w: 0.2 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
             </Solid>
             <Solid f={fridge}>
                 <HouseProp model="fridge" fit={{ h: fridge.h, w: fridge.hx * 2, d: fridge.hz * 2 }}>
@@ -400,6 +456,11 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                     <planeGeometry args={[0.56, 0.34]} />
                     <primitive object={screenGlow} attach="material" />
                 </mesh>
+                <group position={[0.36, codex.h, 0.08]}>
+                    <HouseProp model="fkMug" fit={{ w: 0.1 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
             </Solid>
 
             {/* Dining */}
@@ -407,6 +468,28 @@ export default function HomeDecor({ low = false }: { low?: boolean }) {
                 <HouseProp model="diningTable" fit={{ w: table.hx * 2, d: table.hz * 2 }}>
                     <Box f={table} mat={m.wood} shadow={sh} />
                 </HouseProp>
+                {/* The table is laid: a pie in the middle, a plate at each chair, two glasses */}
+                <group position={[0, table.h, 0]}>
+                    <HouseProp model="fkPie" fit={{ w: 0.3 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    {[
+                        [0, -0.3],
+                        [0, 0.3],
+                        [0.52, 0],
+                        [-0.52, 0],
+                    ].map(([px, pz], i) => (
+                        <HouseProp key={i} model="fkPlateDinner" position={[px, 0, pz]} fit={{ w: 0.25 }} shadows={false}>
+                            {null}
+                        </HouseProp>
+                    ))}
+                    <HouseProp model="fkGlassWine" position={[0.26, 0, -0.3]} fit={{ h: 0.16 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                    <HouseProp model="fkGlassWine" position={[-0.26, 0, 0.3]} fit={{ h: 0.16 }} shadows={false}>
+                        {null}
+                    </HouseProp>
+                </group>
             </Solid>
             {[chN, chS, chE, chW].map((c) => (
                 <Solid key={c.name} f={c}>

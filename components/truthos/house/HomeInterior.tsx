@@ -16,11 +16,13 @@
  *
  * One storey. No stair, no second lid. A phone gets the clean shell.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useHouseMaterials } from './HouseMaterials';
 import {
     DOORWAYS,
+    FRONT_DOOR,
     MAIN_COLLIDERS,
     MAIN_Y,
     SHELL,
@@ -33,6 +35,8 @@ import {
 } from './homeMap';
 import { JUNGLE_COLLIDERS } from './jungleMap';
 import { RoomPracticals } from './HouseLights';
+import { getWalkerPose } from './walkerPose';
+import { hubAudio } from '@/lib/truthos/hubAudio';
 
 const X0 = SHELL.minX;
 const X1 = SHELL.maxX;
@@ -86,6 +90,10 @@ function Skirting({
    frame, nothing to walk through but air, which is why it looked wrong
    and why you passed through it. A pair of panelled leaves stand open
    into the foyer, hinged at their jambs, solid to the body. */
+/** Open when you come near, close behind you — the collider stays as the open leaf. */
+const DOOR_OPEN_AT = 3.4;
+const DOOR_CLOSE_AT = 5.2;
+
 function FrontDoors({
     m,
     shadow,
@@ -94,10 +102,41 @@ function FrontDoors({
     shadow: boolean;
 }) {
     const H = 2.35;
+    const leaves = useRef<(THREE.Group | null)[]>([]);
+    const open = useRef(false);
+    const amount = useRef(1);
+    const t = useRef(0);
+    useFrame((_, dt) => {
+        t.current += dt;
+        if (t.current > 0.2) {
+            t.current = 0;
+            const p = getWalkerPose();
+            const d = Math.hypot(p.x - FRONT_DOOR.x, p.z - FRONT_DOOR.z);
+            if (!open.current && d < DOOR_OPEN_AT) {
+                open.current = true;
+                hubAudio.playSfx('door_front_touch', { volume: 0.16, rate: 0.9 });
+            } else if (open.current && d > DOOR_CLOSE_AT) {
+                open.current = false;
+            }
+        }
+        const target = open.current ? 1 : 0;
+        amount.current += (target - amount.current) * Math.min(1, dt * (open.current ? 3.2 : 1.6));
+        DOOR_LEAVES.forEach((dl, i) => {
+            const g = leaves.current[i];
+            if (g) g.rotation.y = dl.dir * -dl.swing * amount.current;
+        });
+    });
     return (
         <group>
-            {DOOR_LEAVES.map((d) => (
-                <group key={d.name} position={[d.x, 0, d.z]} rotation={[0, d.dir * -d.swing, 0]}>
+            {DOOR_LEAVES.map((d, i) => (
+                <group
+                    key={d.name}
+                    ref={(n) => {
+                        leaves.current[i] = n;
+                    }}
+                    position={[d.x, 0, d.z]}
+                    rotation={[0, d.dir * -d.swing, 0]}
+                >
                     {/* leaf, hinged at the group origin so it swings true */}
                     <mesh position={[(d.w / 2) * d.dir, H / 2, 0]} castShadow={shadow} receiveShadow={shadow}>
                         <boxGeometry args={[d.w, H, d.t]} />

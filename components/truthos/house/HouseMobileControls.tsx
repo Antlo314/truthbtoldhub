@@ -9,7 +9,9 @@ import { houseInput } from './houseInput';
 import { shapeStick, MOBILE } from './houseFeel';
 import type { Hotspot } from './houseMap';
 import { unlockAudio } from '@/lib/game/sfx';
-import { loadSettings } from '@/lib/game/settings';
+import { loadSettings, saveSettings } from '@/lib/game/settings';
+import { useHouseUi } from './houseUiStore';
+import { setWalkerState } from './walkerPose';
 
 type StickState = {
     active: boolean;
@@ -36,6 +38,10 @@ export default function HouseMobileControls({
         knobY: 0,
     });
     const [looking, setLooking] = useState(false);
+    const [running, setRunning] = useState(false);
+    const view = useHouseUi((s) => s.view);
+    const toggleView = useHouseUi((s) => s.toggleView);
+    const playEmote = useHouseUi((s) => s.playEmote);
 
     const large = loadSettings().controlSize === 'large';
     const stickR = large ? MOBILE.stickR + 12 : MOBILE.stickR;
@@ -65,6 +71,7 @@ export default function HouseMobileControls({
             endMove();
             endLook();
             houseInput.clearAll();
+            setRunning(false);
         }
     }, [visible, endMove, endLook]);
 
@@ -251,6 +258,46 @@ export default function HouseMobileControls({
                 />
             )}
 
+            {/* Run · View · Dance — three small thumbs' worth, left of the Use column */}
+            <div
+                className="absolute flex flex-col items-center gap-2"
+                style={{ right: actionR + 28, bottom: `calc(1.4rem + env(safe-area-inset-bottom))` }}
+                data-house-action
+            >
+                <MiniBtn
+                    on={running}
+                    label="Run"
+                    glyph="»"
+                    onTap={() => {
+                        const next = !running;
+                        setRunning(next);
+                        houseInput.sprint = next;
+                    }}
+                />
+                <MiniBtn
+                    on={view === 'third'}
+                    label={view === 'third' ? '3rd' : '1st'}
+                    glyph="◉"
+                    onTap={() => {
+                        toggleView();
+                        try {
+                            saveSettings({ view: useHouseUi.getState().view });
+                        } catch {
+                            /* */
+                        }
+                    }}
+                />
+                <MiniBtn
+                    on={false}
+                    label="Dance"
+                    glyph="♪"
+                    onTap={() => {
+                        playEmote('dance');
+                        setWalkerState({ emote: 'dance', emoteAt: performance.now() });
+                    }}
+                />
+            </div>
+
             <div
                 className="absolute right-3 flex flex-col items-center gap-3"
                 style={{ bottom: safeBottom }}
@@ -312,5 +359,40 @@ export default function HouseMobileControls({
                 </button>
             </div>
         </div>
+    );
+}
+
+function MiniBtn({
+    on,
+    label,
+    glyph,
+    onTap,
+}: {
+    on: boolean;
+    label: string;
+    glyph: string;
+    onTap: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            data-house-action
+            onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                unlockAudio();
+                onTap();
+            }}
+            className={[
+                'w-11 h-11 rounded-full border backdrop-blur-md shadow-md active:scale-95 flex flex-col items-center justify-center',
+                on ? 'border-violet-300/70 bg-violet-500/35 text-white' : 'border-white/20 bg-black/45 text-white/80',
+            ].join(' ')}
+            style={{ touchAction: 'none' }}
+            aria-label={label}
+            aria-pressed={on}
+        >
+            <span className="text-sm leading-none">{glyph}</span>
+            <span className="text-[7px] uppercase tracking-widest opacity-60 mt-0.5">{label}</span>
+        </button>
     );
 }

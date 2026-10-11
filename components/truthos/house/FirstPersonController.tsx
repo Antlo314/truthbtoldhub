@@ -1,7 +1,13 @@
 'use client';
 
 /**
- * First-person locomotion — keyboard + mobile stick.
+ * Locomotion — keyboard + mobile stick, first or third person.
+ *
+ * The walker is one point on the floor plan; the camera is either at its
+ * eyes or on a boom behind it. Everything the body needs to animate
+ * (speed, air, seat, emote) is published through walkerPose so the vessel
+ * reads it in the frame loop and nothing re-renders.
+ *
  * Hard input reset on blur/lock so movement never runs away on its own.
  */
 import { useEffect, useRef } from 'react';
@@ -9,6 +15,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { type Hotspot } from './houseMap';
 import {
+    blockedAt,
     FRONT_DOOR,
     groundAt,
     HALL_SPINE,
@@ -40,9 +47,10 @@ import {
     LOOK_SMOOTH,
     damp,
 } from './houseFeel';
-import { setWalkerPose } from './walkerPose';
+import { setWalkerPose, setWalkerState } from './walkerPose';
 import { useHouseUi } from './houseUiStore';
 import { loadPose, savePose } from './housePose';
+import { padUnder } from './worldPads';
 
 /** Soft footsteps on the two rugs (rec room + living) */
 function onRug(x: number, z: number): boolean {
@@ -55,6 +63,14 @@ function onRug(x: number, z: number): boolean {
 function createKeyState() {
     return new Set<string>();
 }
+
+/** Third-person boom: how far behind the eyes the camera rides */
+const BOOM_LEN = 3.3;
+const BOOM_MIN = 0.85;
+const BOOM_SIDE = 0.42;
+/** Degrees the lens opens while sprinting — speed you can feel */
+const SPRINT_FOV_KICK = 9;
+const THIRD_FOV_ADD = 4;
 
 export default function FirstPersonController({
     locked,
@@ -83,6 +99,8 @@ export default function FirstPersonController({
     lookSensRef.current = lookSensMul;
     const lockedRef = useRef(locked);
     lockedRef.current = locked;
+    const seatedRef = useRef(seated);
+    seatedRef.current = seated;
 
     const keys = useRef(createKeyState());
     const yaw = useRef(SPAWN_YAW);
@@ -96,6 +114,9 @@ export default function FirstPersonController({
     const vel = useRef({ x: 0, z: 0 });
     const vy = useRef(0);
     const grounded = useRef(true);
+    const airT = useRef(0);
+    const landDip = useRef(0);
+    const padCooldown = useRef(0);
     const poseT = useRef(0);
     const saveClock = useRef(0);
     const bobT = useRef(0);
@@ -106,6 +127,11 @@ export default function FirstPersonController({
     activityCb.current = onMoveActivity;
     const lastKeyAt = useRef(0);
     const lastBobSin = useRef(0);
+    const boom = useRef(BOOM_LEN);
+    const fovKick = useRef(0);
+    const baseFov = useRef((camera as THREE.PerspectiveCamera).fov);
+    const tmpDir = useRef(new THREE.Vector3());
+    const tmpRight = useRef(new THREE.Vector3());
 
     useEffect(() => {
         const saved = loadPose();
@@ -134,6 +160,7 @@ export default function FirstPersonController({
         grounded.current = true;
         yawS.current = yaw.current;
         pitchS.current = pitch.current;
+        baseFov.current = (camera as THREE.PerspectiveCamera).fov;
         camera.position.copy(pos.current);
         // Lock Y-up FPS orientation (no roll) — residual lookAt/quaternion roll = ceiling walk
         camera.up.set(0, 1, 0);
@@ -314,6 +341,53 @@ export default function FirstPersonController({
         };
     }, [gl, mobile]);
 
+    /**
+     * Place the camera for the current view. First person: at the eyes.
+     * Third person: on a boom behind and slightly over the right shoulder,
+     * shortened whenever it would sit inside a wall, so the body is always
+     * between you and the room and never clipped through plaster.
+     */
+    function placeCamera(eyeX: number, eyeY: number, eyeZ: number, d: number) {
+        const third = useHouseUi.getState().view === 'third' && intro.current.phase === 'done';
+        const cam = camera as THREE.PerspectiveCamera;
+        const wantFov = baseFov.current + (third ? THIRD_FOV_ADD : 0) + fovKick.current;
+        if (Math.abs(cam.fov - wantFov) > 0.05) {
+            cam.fov = damp(cam.fov, wantFov, 8, d);
+            cam.updateProjectionMatrix();
+        }
+        if (!third) {
+            boom.current = damp(boom.current, BOOM_LEN, 6, d);
+            camera.position.set(eyeX, eyeY, eyeZ);
+            return;
+        }
+        // Forward from the smoothed look, exactly as the camera sees it
+        const dir = tmpDir.current.set(
+            -Math.sin(yawS.current) * Math.cos(pitchS.current),
+            Math.sin(pitchS.current),
+            -Math.cos(yawS.current) * Math.cos(pitchS.current),
+        );
+        const right = tmpRight.current.set(Math.cos(yawS.current), 0, -Math.sin(yawS.current));
+        const tx = eyeX + right.x * BOOM_SIDE;
+        const ty = eyeY + 0.1;
+        const tz = eyeZ + right.z * BOOM_SIDE;
+        // Shrink the boom until the lens is out of the walls
+        let len = BOOM_LEN;
+        while (len > BOOM_MIN) {
+            const cx = tx - dir.x * len;
+            const cz = tz - dir.z * len;
+            if (!blockedAt(cx, cz, 0.28)) break;
+            len -= 0.18;
+        }
+        // Lengthening eases out; shortening is instant so we never clip
+        boom.current = len < boom.current ? len : damp(boom.current, len, 5, d);
+        const floor = groundAt(tx, tz, level.current) + 0.25;
+        camera.position.set(
+            tx - dir.x * boom.current,
+            Math.max(floor, ty - dir.y * boom.current),
+            tz - dir.z * boom.current,
+        );
+    }
+
     useFrame((_, dtRaw) => {
         const d = Math.min(Math.max(dtRaw, 0), 0.05) || 0.016;
         const lockedNow = lockedRef.current;
@@ -360,6 +434,8 @@ export default function FirstPersonController({
             camera.rotation.set(pitchS.current, yawS.current, 0);
             onHotspot(null);
             houseInput.consumeJump();
+            setWalkerPose({ x: pos.current.x, y: 0, z: pos.current.z, yaw: SPAWN_YAW });
+            setWalkerState({ speed: 0, grounded: true, sprinting: false, seated: st.phase === 'hold' });
             return;
         }
         const lookSens = (mobile ? LOOK_SENS_MOBILE : LOOK_SENS_DESKTOP) * lookSensRef.current;
@@ -404,7 +480,12 @@ export default function FirstPersonController({
         // set() applies pitch/yaw/roll together so z never drifts to π (world invert)
         camera.rotation.set(pitchS.current, yawS.current, 0);
 
-        if (!lockedNow && !seated) {
+        const seatedNow = seatedRef.current;
+        let sprinting = false;
+        let hasInput = false;
+        let bob = 0;
+
+        if (!lockedNow && !seatedNow) {
             const yawUse = yawS.current;
             const fx = -Math.sin(yawUse);
             const fz = -Math.cos(yawUse);
@@ -413,7 +494,6 @@ export default function FirstPersonController({
 
             let wishX = 0;
             let wishZ = 0;
-            let hasInput = false;
 
             if (k.has('KeyW') || k.has('ArrowUp')) {
                 wishX += fx;
@@ -452,7 +532,8 @@ export default function FirstPersonController({
             }
 
             let speed = WALK_SPEED;
-            if (k.has('ShiftLeft') || k.has('ShiftRight')) speed *= SPRINT_MULT;
+            sprinting = hasInput && (k.has('ShiftLeft') || k.has('ShiftRight') || houseInput.sprint);
+            if (sprinting) speed *= SPRINT_MULT;
 
             const wLen = Math.hypot(wishX, wishZ);
             let tx = 0;
@@ -498,20 +579,38 @@ export default function FirstPersonController({
                 pos.current.z = next.z;
             }
 
-            if (!seated && houseInput.consumeJump() && grounded.current) {
+            if (houseInput.consumeJump() && grounded.current) {
                 vy.current = JUMP_V;
                 grounded.current = false;
                 emit('jump');
             }
+            // Aether springs — step on one and the shelf throws you
+            padCooldown.current = Math.max(0, padCooldown.current - d);
+            if (grounded.current && padCooldown.current <= 0) {
+                const pad = padUnder(pos.current.x, pos.current.z);
+                if (pad) {
+                    vy.current = pad.launch;
+                    grounded.current = false;
+                    padCooldown.current = 0.7;
+                    emit('jump');
+                    hubAudio.playSfx('arcade_jump', { volume: 0.32, rate: 0.9 });
+                }
+            }
             level.current = 'main';
-            const eyeFloor =
-                groundAt(pos.current.x, pos.current.z, 'main') + (seated ? SIT_HEIGHT : EYE_HEIGHT);
+            const eyeFloor = groundAt(pos.current.x, pos.current.z, 'main') + EYE_HEIGHT;
             vy.current -= GRAVITY * d;
             pos.current.y += vy.current * d;
+            if (!grounded.current) airT.current += d;
             if (pos.current.y <= eyeFloor) {
                 pos.current.y = eyeFloor;
+                if (!grounded.current) {
+                    // Knees take the landing: a dip the size of the fall
+                    landDip.current = Math.min(0.16, Math.max(0, -vy.current) * 0.014 + airT.current * 0.04);
+                    if (airT.current > 0.5) hubAudio.jumpLand();
+                }
                 vy.current = 0;
                 grounded.current = true;
+                airT.current = 0;
             }
 
             const spd = Math.hypot(vel.current.x, vel.current.z);
@@ -534,18 +633,20 @@ export default function FirstPersonController({
                     emit('idle');
                 }
             }
-            const bob =
-                Math.sin(bobT.current) * BOB_AMP * (stepping ? Math.min(1, spd / WALK_SPEED) : 0);
-            camera.position.set(pos.current.x, pos.current.y + bob, pos.current.z);
+            bob = Math.sin(bobT.current) * BOB_AMP * (stepping ? Math.min(1, spd / WALK_SPEED) : 0);
         } else {
             houseInput.consumeJump();
             vel.current = { x: 0, z: 0 };
             lastBobSin.current = 0;
-            if (seated) {
+            if (seatedNow) {
                 pos.current.y = groundAt(pos.current.x, pos.current.z, 'main') + SIT_HEIGHT;
             }
-            camera.position.set(pos.current.x, pos.current.y, pos.current.z);
         }
+
+        // Landing dip eases out; sprint opens the lens
+        landDip.current *= Math.exp(-9 * d);
+        fovKick.current = damp(fovKick.current, sprinting ? SPRINT_FOV_KICK : 0, 6, d);
+        placeCamera(pos.current.x, pos.current.y + bob - landDip.current, pos.current.z, d);
 
         const hs = nearestHomeHotspot(pos.current.x, pos.current.z, level.current);
         onHotspot(hs);
@@ -566,19 +667,28 @@ export default function FirstPersonController({
             activityCb.current?.('idle');
         }
 
+        // The body reads these every frame — speed over ground, feet on it
+        const groundY = groundAt(pos.current.x, pos.current.z, 'main');
+        const bodyY = Math.max(0, pos.current.y - (seatedNow ? SIT_HEIGHT : EYE_HEIGHT) - groundY);
+        setWalkerPose({ x: pos.current.x, y: bodyY, z: pos.current.z, yaw: yawS.current });
+        setWalkerState({
+            speed: Math.hypot(vel.current.x, vel.current.z),
+            grounded: grounded.current,
+            sprinting,
+            seated: seatedNow,
+        });
+
         poseT.current += d;
         if (poseT.current > 0.12) {
             poseT.current = 0;
-            const p = {
+            onPose({
                 x: pos.current.x,
-                // Body-ground height (0 on main, ~UPPER_Y upstairs, rises in
-                // jumps) — eye Y minus eye height, bob is camera-only.
-                y: Math.max(0, pos.current.y - EYE_HEIGHT),
+                // Body-ground height (0 on the floor, rises in jumps) — eye Y
+                // minus eye height, bob is camera-only.
+                y: bodyY,
                 z: pos.current.z,
                 yaw: yawS.current,
-            };
-            setWalkerPose(p);
-            onPose(p);
+            });
         }
         saveClock.current += d;
         if (saveClock.current > 2) {

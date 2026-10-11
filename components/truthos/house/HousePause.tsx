@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useHouseUi } from './houseUiStore';
 import { loadSettings, saveSettings } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
+import { QUALITY_LABELS, type QualitySetting } from './renderQuality';
+import { EMOTES } from './Vessel';
+
+const QUALITY_CHOICES: QualitySetting[] = ['auto', 'ultra', 'high', 'balanced', 'low'];
 
 export default function HousePause({
     mobile,
@@ -22,6 +26,11 @@ export default function HousePause({
     const lookInvert = useHouseUi((s) => s.lookInvert);
     const lookSens = useHouseUi((s) => s.lookSens);
     const setLookFeel = useHouseUi((s) => s.setLookFeel);
+    const view = useHouseUi((s) => s.view);
+    const setView = useHouseUi((s) => s.setView);
+    const quality = useHouseUi((s) => s.quality);
+    const setQuality = useHouseUi((s) => s.setQuality);
+    const qualityDrop = useHouseUi((s) => s.qualityDrop);
     const [lostLine, setLostLine] = useState<string | null>(null);
 
     useEffect(() => {
@@ -46,7 +55,7 @@ export default function HousePause({
                     setPaused(false);
                 }}
             />
-            <div className="relative w-full max-w-sm rounded-2xl border border-white/15 bg-[#0c0a14]/95 shadow-2xl overflow-hidden">
+            <div className="relative w-full max-w-sm max-h-[92dvh] overflow-y-auto rounded-2xl border border-white/15 bg-[#0c0a14]/95 shadow-2xl">
                 <div className="px-5 pt-4 pb-2">
                     <p className="text-[10px] uppercase tracking-[0.32em] text-emerald-400/80 font-mono">Pause</p>
                     <h2 className="text-white font-semibold text-lg mt-0.5">The house holds.</h2>
@@ -76,6 +85,58 @@ export default function HousePause({
                             onTour();
                         }}
                     />
+
+                    {/* ── Camera ── */}
+                    <div className="px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
+                        <div className="flex items-center justify-between gap-3">
+                            <span>View</span>
+                            {!mobile && <span className="font-mono text-[10px] uppercase tracking-widest text-white/35">V</span>}
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-1.5">
+                            {(['first', 'third'] as const).map((v) => (
+                                <Chip
+                                    key={v}
+                                    on={view === v}
+                                    onClick={() => {
+                                        sacredUi.click();
+                                        setView(v);
+                                        saveSettings({ view: v });
+                                    }}
+                                >
+                                    {v === 'first' ? 'Behind the eyes' : 'Behind the body'}
+                                </Chip>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── Quality ── */}
+                    <div className="px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
+                        <div className="flex items-center justify-between gap-3">
+                            <span>Quality</span>
+                            {qualityDrop > 0 && (
+                                <span className="text-[10px] text-amber-200/70">stepped down to keep the frame rate</span>
+                            )}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            {QUALITY_CHOICES.map((q) => (
+                                <Chip
+                                    key={q}
+                                    on={quality === q}
+                                    onClick={() => {
+                                        sacredUi.click();
+                                        setQuality(q);
+                                        saveSettings({ quality: q });
+                                    }}
+                                >
+                                    {QUALITY_LABELS[q]}
+                                </Chip>
+                            ))}
+                        </div>
+                        <p className="mt-1.5 text-[11px] text-white/40">
+                            Ultra and High: sharper edges, ambient shadow, live reflections and clouds. Low is the phone look.
+                        </p>
+                    </div>
+
                     <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
                         <span>Look invert</span>
                         <input
@@ -100,6 +161,20 @@ export default function HousePause({
                             className="w-full accent-emerald-400"
                         />
                     </label>
+
+                    {!mobile && (
+                        <div className="px-3 py-2.5 rounded-xl border border-white/10 text-[12px] text-white/60">
+                            <p className="text-white/80 text-sm mb-1">Hands</p>
+                            <p>
+                                {Object.values(EMOTES)
+                                    .filter((e) => e.key)
+                                    .map((e) => `${e.key} ${e.label}`)
+                                    .join(' · ')}
+                            </p>
+                            <p className="mt-1 text-white/40">Shift runs · Space jumps · Enter speaks · the springs on the terrace throw you.</p>
+                        </div>
+                    )}
+
                     <PauseBtn
                         label="I’m lost"
                         onClick={() => {
@@ -133,6 +208,22 @@ export default function HousePause({
     );
 }
 
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] uppercase tracking-wider border transition-colors min-h-[36px] ${
+                on
+                    ? 'bg-emerald-400/15 border-emerald-400/50 text-emerald-200'
+                    : 'bg-white/[0.03] border-white/12 text-white/60 hover:text-white hover:border-white/28'
+            }`}
+        >
+            {children}
+        </button>
+    );
+}
+
 function PauseBtn({
     label,
     hint,
@@ -154,11 +245,14 @@ function PauseBtn({
     );
 }
 
-/** Seed look feel from settings once the chamber mounts. */
+/** Seed look feel, camera and quality from settings once the chamber mounts. */
 export function hydrateLookFeel() {
     const s = loadSettings();
-    useHouseUi.getState().setLookFeel({
+    const st = useHouseUi.getState();
+    st.setLookFeel({
         invert: !!s.lookInvert,
         sens: Number.isFinite(s.lookSens) ? Math.min(1.6, Math.max(0.6, s.lookSens)) : 1,
     });
+    st.setView(s.view === 'third' ? 'third' : 'first');
+    st.setQuality(QUALITY_CHOICES.includes(s.quality) ? s.quality : 'auto');
 }

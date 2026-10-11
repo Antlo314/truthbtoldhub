@@ -17,6 +17,10 @@ export interface GameSettings {
     lookInvert: boolean;
     /** Multiplier on house look speed. 1 = default. */
     lookSens: number;
+    /** World render quality — see components/truthos/house/renderQuality.ts */
+    quality: 'auto' | 'ultra' | 'high' | 'balanced' | 'low';
+    /** Camera: behind the eyes, or behind the body */
+    view: 'first' | 'third';
 }
 
 const KEY = 'tbth-game-settings';
@@ -33,6 +37,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
     controlSize: 'normal',
     lookInvert: false,
     lookSens: 1,
+    quality: 'auto',
+    view: 'first',
 };
 
 export function loadSettings(): GameSettings {

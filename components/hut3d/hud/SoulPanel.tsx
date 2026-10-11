@@ -8,6 +8,8 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, OrbitControls } from '@react-three/drei';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { VesselModel } from '@/components/hut3d/VesselModel';
+import Vessel, { type VesselMotion } from '@/components/truthos/house/Vessel';
+import { wearFromAvatar } from '@/components/truthos/house/vesselLook';
 import {
     SKIN_TONES,
     HAIR_COLORS,
@@ -143,11 +145,20 @@ function VesselOrbit({ spinning }: { spinning: boolean }) {
     );
 }
 
+/** The mirror stands still and breathes — the same rigged body the house shows everyone. */
+const MIRROR_IDLE: VesselMotion = { speed: 0, grounded: true, seated: false, emote: null, emoteAt: 0, talking: false };
+const mirrorMotion = () => MIRROR_IDLE;
+
 function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
     const [dragging, setDragging] = useState(false);
     const mobile =
         typeof window !== 'undefined' &&
         (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 768);
+    const wear = useMemo(
+        () => wearFromAvatar(avatar, '#a78bfa'),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [avatar.build, avatar.skin, avatar.hairStyle, avatar.hairColor, avatar.top, avatar.bottom, avatar.boots, avatar.outfit, avatar.extra, avatar.face],
+    );
 
     return (
         <div
@@ -178,7 +189,15 @@ function VesselPreview({ avatar }: { avatar: AvatarConfig }) {
                 <directionalLight position={[-2.4, 1.8, -1.2]} intensity={0.45} color="#a78bfa" />
                 <pointLight position={[0, 1.6, 1.4]} intensity={0.5} color="#f5e6c8" distance={6} />
                 <Suspense fallback={null}>
-                    <VesselModel avatar={avatar} scale={1} position={[0, 0, 0]} />
+                    {/* Rigged Quaternius body with the procedural vessel underneath while it loads */}
+                    <group rotation={[0, Math.PI, 0]}>
+                        <Vessel
+                            wear={wear}
+                            motion={mirrorMotion}
+                            shadows={false}
+                            fallback={<VesselModel avatar={avatar} scale={1} position={[0, 0, 0]} />}
+                        />
+                    </group>
                     {!mobile && (
                         <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={3.5} blur={2.2} far={3} />
                     )}

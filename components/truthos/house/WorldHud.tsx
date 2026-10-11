@@ -11,6 +11,8 @@ import { isOutdoors, roomAt } from './homeMap';
 import { useHouseUi } from './houseUiStore';
 import { useTruthNarrator } from './useTruthNarrator';
 import { TruthVoiceChip } from './TruthVoiceChip';
+import { useShards } from './shardStore';
+import { SHARD_TOTAL } from './shardSites';
 
 const COMPASS_FOV = 1.15;
 
@@ -25,6 +27,9 @@ export default function WorldHud({
 }) {
     const hour = useWorldTime((s) => s.hour);
     const setPaused = useHouseUi((s) => s.setPaused);
+    const view = useHouseUi((s) => s.view);
+    const shardCount = useShards((s) => Object.keys(s.collected).length);
+    const lastShard = useShards((s) => s.last);
     const [, tick] = useState(0);
     useEffect(() => {
         const t = setInterval(() => tick((n) => n + 1), 400);
@@ -74,6 +79,23 @@ export default function WorldHud({
                 <div className="pointer-events-auto absolute right-3 flex items-center gap-1.5"
                     style={{ top: `calc(${compact ? '3.4rem' : '3.6rem'} + env(safe-area-inset-top, 0px))` }}
                 >
+                    {/* Shards found — the one number the shelf keeps for you */}
+                    <span
+                        className={`rounded-full border backdrop-blur-md px-2.5 py-1 text-[12px] tabular-nums font-semibold ${
+                            shardCount >= SHARD_TOTAL
+                                ? 'border-violet-300/60 bg-violet-500/25 text-violet-100'
+                                : 'border-white/12 bg-black/55 text-white/80'
+                        }`}
+                        title="Aether shards"
+                    >
+                        <span className="text-violet-300">✦ </span>
+                        {shardCount}/{SHARD_TOTAL}
+                    </span>
+                    {!compact && view === 'third' && (
+                        <span className="rounded-full border border-white/12 bg-black/55 backdrop-blur-md px-2.5 py-1 text-[10px] uppercase tracking-widest text-white/60">
+                            3rd · V
+                        </span>
+                    )}
                     <span className="rounded-full border border-white/12 bg-black/55 backdrop-blur-md px-2.5 py-1 text-[12px] text-white/80 tabular-nums font-semibold">
                         {formatClock(hour)}
                     </span>
@@ -87,6 +109,18 @@ export default function WorldHud({
                     </button>
                 </div>
             </div>
+
+            {/* A shard just found — four seconds, then the count carries it */}
+            {lastShard && Date.now() - lastShard.at < 4000 && (
+                <div className="absolute inset-x-0 flex justify-center px-4" style={{ top: `calc(${compact ? '6.2rem' : '6.6rem'} + env(safe-area-inset-top, 0px))` }}>
+                    <p className="rounded-2xl border border-violet-300/35 bg-black/70 px-4 py-2 text-center text-[12px] text-violet-100 backdrop-blur-md shadow-xl">
+                        <span className="text-violet-300">✦</span> A shard of the Source · {lastShard.place}
+                        <span className="block text-[10px] uppercase tracking-[0.22em] text-white/45 mt-0.5">
+                            {shardCount >= SHARD_TOTAL ? 'the shelf is whole again' : `${shardCount} of ${SHARD_TOTAL}`}
+                        </span>
+                    </p>
+                </div>
+            )}
 
             {/* Truth's voice — visible while he speaks, one tap to silence.
                 Bottom-LEFT. The right column is the phone's Use/Jump stack

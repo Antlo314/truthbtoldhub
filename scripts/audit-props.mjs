@@ -31,13 +31,13 @@ const manifest = propSrc.slice(
     propSrc.indexOf('function Model('),
 );
 
-/** `key: kenney('file', {...})` or `key: { url: '/models/...' }` */
+/** `key: kenney('file', {...})`, `key: kit('slug', 'file', {...})` or `key: { url: '/models/...' }` */
 const keys = new Map();
-for (const m of manifest.matchAll(/^\s{4}(\w+)\s*:\s*(kenney\(\s*'([^']+)'|\{)/gm)) {
-    keys.set(m[1], { kenney: m[3] || null, url: null });
+for (const m of manifest.matchAll(/^\s{4}(\w+)\s*:\s*(kenney\(\s*'([^']+)'|kit\(\s*'([^']+)'\s*,\s*'([^']+)'|\{)/gm)) {
+    keys.set(m[1], { kenney: m[3] || null, kit: m[4] ? `${m[4]}/${m[5]}` : null, url: null });
 }
 for (const m of manifest.matchAll(/^\s{4}(\w+)\s*:\s*\{[\s\S]*?url:\s*(null|'([^']+)')/gm)) {
-    const e = keys.get(m[1]) || { kenney: null, url: null };
+    const e = keys.get(m[1]) || { kenney: null, kit: null, url: null };
     e.url = m[3] || null;
     keys.set(m[1], e);
 }
@@ -45,7 +45,9 @@ for (const m of manifest.matchAll(/^\s{4}(\w+)\s*:\s*\{[\s\S]*?url:\s*(null|'([^
 const urlFor = (k) => {
     const e = keys.get(k);
     if (!e) return null;
-    return e.kenney ? `/models/kenney/${e.kenney}.glb` : e.url;
+    if (e.kenney) return `/models/kenney/${e.kenney}.glb`;
+    if (e.kit) return `/models/kenney/${e.kit}.glb`;
+    return e.url;
 };
 
 // ── every model="..." used anywhere in the scene ────────────

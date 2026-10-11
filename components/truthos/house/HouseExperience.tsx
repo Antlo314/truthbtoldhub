@@ -14,6 +14,10 @@ import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { joinHousePresence, SAY_MAX, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
 import type { Hotspot } from './houseMap';
+import { wireFromAvatar } from './vesselLook';
+import { EMOTES } from './Vessel';
+import { setWalkerState } from './walkerPose';
+import { saveSettings } from '@/lib/game/settings';
 // isOnLivingRug inlined in onPose for rug footsteps
 import TruthGuideWidget from './TruthGuideWidget';
 import TruthOSShell from '../TruthOSShell';
@@ -140,11 +144,25 @@ export default function HouseExperience({
     const setSoonMessage = useHouseUi((s) => s.setSoonMessage);
     const soonMessage = useHouseUi((s) => s.soonMessage);
     const toggleSeated = useHouseUi((s) => s.toggleSeated);
+    const seated = useHouseUi((s) => s.seated);
     const [usedAt, setUsedAt] = useState(0);
     const panel = useHouseUi((s) => s.panel);
     const setWalkthrough = useHouseUi((s) => s.setWalkthrough);
     const paused = useHouseUi((s) => s.paused);
     const setPaused = useHouseUi((s) => s.setPaused);
+    const toggleView = useHouseUi((s) => s.toggleView);
+    const playEmote = useHouseUi((s) => s.playEmote);
+    const emote = useHouseUi((s) => s.emote);
+    const emoteAt = useHouseUi((s) => s.emoteAt);
+
+    /** The body performs it now; the presence packet carries it to the room. */
+    const doEmote = useCallback(
+        (id: string) => {
+            playEmote(id);
+            setWalkerState({ emote: id, emoteAt: performance.now() });
+        },
+        [playEmote],
+    );
 
     /** After guest signs in from the computer, open OS once session lands */
     const pendingOsLogin = useRef(false);
@@ -345,8 +363,7 @@ export default function HouseExperience({
             {
                 name: character.name?.trim() || (guest ? 'Guest' : 'Soul'),
                 aura: character.appearance?.aura || '#a78bfa',
-                skin: character.avatar?.skin ?? 6,
-                build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
+                ...wireFromAvatar(character.avatar),
                 x: 4.55,
                 y: 0,
                 z: 6.35,
@@ -387,9 +404,12 @@ export default function HouseExperience({
             presence.current?.track({
                 name: character.name?.trim() || (guest ? 'Guest' : 'Soul'),
                 aura: character.appearance?.aura || '#a78bfa',
-                skin: character.avatar?.skin ?? 6,
-                build: character.avatar?.build === 'fem' ? 'fem' : 'masc',
+                ...wireFromAvatar(character.avatar),
                 ...p,
+                // Emote time crosses the wire as wall-clock so peers can age it
+                emote,
+                emoteAt: emote ? Date.now() - (performance.now() - emoteAt) : 0,
+                sit: seated ? 1 : 0,
             });
             if (!uiLocked) {
                 const now = performance.now();
@@ -400,8 +420,13 @@ export default function HouseExperience({
                 }
             }
         },
-        [character, guest, uiLocked],
+        [character, guest, uiLocked, emote, emoteAt, seated],
     );
+
+    // The body talks with its hands while you type or your words still hang
+    useEffect(() => {
+        setWalkerState({ talking: composing || !!selfSaid });
+    }, [composing, selfSaid]);
 
     const activateHotspot = useCallback(
         (h: Hotspot) => {
@@ -409,6 +434,8 @@ export default function HouseExperience({
             hubAudio.useHotspot(h.id);
             markVisited(h.id);
             setUsedAt(Date.now());
+            // The hand reaches for the thing — visible to anyone watching you
+            if (h.action.type !== 'sit') doEmote('interact');
             if (h.action.type === 'os') {
                 markVisited('computer');
                 // Terminal is the primary surface — no re-entry from chamber
@@ -446,7 +473,7 @@ export default function HouseExperience({
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal, toggleSeated],
+        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal, toggleSeated, doEmote],
     );
 
     const tryInteract = useCallback(() => {
@@ -478,6 +505,24 @@ export default function HouseExperience({
             }
             if (composing) return;
             if (e.code === 'KeyE' && hotspot && !uiLocked) activateHotspot(hotspot);
+            // V: behind the eyes ↔ behind the body
+            if (e.code === 'KeyV' && !uiLocked) {
+                toggleView();
+                const next = useHouseUi.getState().view;
+                try {
+                    saveSettings({ view: next });
+                } catch {
+                    /* */
+                }
+                return;
+            }
+            // 1–4: emotes, for anyone in the room to see
+            if (!uiLocked && /^Digit[1-4]$/.test(e.code)) {
+                const key = e.code.slice(5);
+                const id = Object.keys(EMOTES).find((k) => EMOTES[k].key === key);
+                if (id) doEmote(id);
+                return;
+            }
             if (e.code === 'KeyM' && !osOpen && !authOpen && !composing) {
                 e.preventDefault();
                 if (panel === 'wayfinder') closePanel();
@@ -500,7 +545,7 @@ export default function HouseExperience({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, uiLocked, osOpen, panel, paused, composing, activateHotspot, closeToRoom, closePanel, openPanel, setPaused, authOpen]);
+    }, [hotspot, uiLocked, osOpen, panel, paused, composing, activateHotspot, closeToRoom, closePanel, openPanel, setPaused, authOpen, toggleView, doEmote]);
 
     const onAuthSuccess = () => {
         try {
@@ -594,6 +639,7 @@ export default function HouseExperience({
                             peers={peers}
                             selfId={presenceKey}
                             avatar={character.avatar}
+                            aura={character.appearance?.aura || '#a78bfa'}
                             onHotspot={setHotspot}
                             onPose={onPose}
                             onInteractRequest={tryInteract}

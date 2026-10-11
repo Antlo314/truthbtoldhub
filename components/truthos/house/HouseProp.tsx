@@ -47,19 +47,42 @@ const kenney = (
 });
 
 /**
+ * The later kits live one folder down, pulled by scripts/fetch-kenney.mjs
+ * (which also writes each kit's own License.txt beside the models).
+ */
+const kit = (
+    slug: string,
+    file: string,
+    fit: { w?: number; h?: number; d?: number },
+): ModelEntry => ({
+    url: `${KEN}/${slug}/${file}.glb`,
+    licence: 'CC0',
+    source: `Kenney ${slug} (kenney.nl) — CC0`,
+    fit,
+});
+
+/**
  * Prop manifest. `url: null` means "procedural only for now" — the fallback
  * mesh renders and nothing breaks. Fill a url in to upgrade that prop.
  */
 export const HOUSE_MODELS: Record<string, ModelEntry> = {
-    vesselMan: {
-        url: '/models/vessels/vessel_man.glb',
-        licence: 'original',
-        source: 'Blender blockout authored for this project',
+    // The rigged bodies are loaded by house/Vessel.tsx, not through
+    // <HouseProp>; they are listed so the audit sees them and the
+    // licence is next to the path.
+    vesselMasc: {
+        url: '/models/vessels/vessel_masc.glb',
+        licence: 'CC0',
+        source: 'Quaternius Universal Base Characters / Modular Outfits (CC0), rebuilt by scripts/build-vessels.mjs',
     },
-    vesselWoman: {
-        url: '/models/vessels/vessel_woman.glb',
-        licence: 'original',
-        source: 'Blender blockout authored for this project',
+    vesselFem: {
+        url: '/models/vessels/vessel_fem.glb',
+        licence: 'CC0',
+        source: 'Quaternius Universal Base Characters / Modular Outfits (CC0), rebuilt by scripts/build-vessels.mjs',
+    },
+    vesselAnims: {
+        url: '/models/vessels/vessel_anims.glb',
+        licence: 'CC0',
+        source: 'Quaternius Universal Animation Library (CC0), rebuilt by scripts/build-vessels.mjs',
     },
 
     // ── Living ──
@@ -129,6 +152,93 @@ export const HOUSE_MODELS: Record<string, ModelEntry> = {
     fencePanel: kenney('fence_simple', { w: 2.0 }),
     fenceCorner: kenney('fence_corner', { w: 2.0 }),
     fenceGate: kenney('fence_gate', { w: 2.6 }),
+
+    // ── Fantasy Town Kit — the shelf's lamps, the Source well, market dressing ──
+    ftLantern: kit('fantasy-town-kit', 'lantern', { h: 2.5 }),
+    ftBannerRed: kit('fantasy-town-kit', 'banner-red', { h: 1.5 }),
+    ftBannerGreen: kit('fantasy-town-kit', 'banner-green', { h: 1.5 }),
+    ftStall: kit('fantasy-town-kit', 'stall', { w: 2.3 }),
+    ftStallStool: kit('fantasy-town-kit', 'stall-stool', { h: 0.5 }),
+    ftPillarStone: kit('fantasy-town-kit', 'pillar-stone', { h: 2.3 }),
+    ftFountainRound: kit('fantasy-town-kit', 'fountain-round', { w: 3.8 }),
+    ftFountainCenter: kit('fantasy-town-kit', 'fountain-center', { w: 1.7 }),
+    ftWallArch: kit('fantasy-town-kit', 'wall-arch', { h: 3.3 }),
+    ftCart: kit('fantasy-town-kit', 'cart', { w: 1.5 }),
+    ftWheel: kit('fantasy-town-kit', 'wheel', { w: 0.8 }),
+    ftPlanks: kit('fantasy-town-kit', 'planks', { w: 2.0 }),
+    ftHedge: kit('fantasy-town-kit', 'hedge', { w: 1.3 }),
+    ftRockLarge: kit('fantasy-town-kit', 'rock-large', { w: 1.5 }),
+
+    // ── Castle Kit — banners, the Signal tower, bridge heads ──
+    ckFlagBannerLong: kit('castle-kit', 'flag-banner-long', { h: 3.4 }),
+    ckFlag: kit('castle-kit', 'flag', { h: 1.9 }),
+    ckTowerBase: kit('castle-kit', 'tower-square-base', { w: 3.0 }),
+    ckTowerMid: kit('castle-kit', 'tower-square-mid', { w: 2.8 }),
+    ckTowerMidWindows: kit('castle-kit', 'tower-square-mid-windows', { w: 2.8 }),
+    ckTowerTop: kit('castle-kit', 'tower-square-top', { w: 3.0 }),
+    ckTowerRoof: kit('castle-kit', 'tower-square-top-roof', { w: 3.0 }),
+    ckWallPillar: kit('castle-kit', 'wall-pillar', { h: 2.6 }),
+    ckRocksLarge: kit('castle-kit', 'rocks-large', { w: 2.4 }),
+    ckRocksSmall: kit('castle-kit', 'rocks-small', { w: 1.7 }),
+
+    // ── Survival Kit — camp life at the isles, signposts on the paths ──
+    skSignpost: kit('survival-kit', 'signpost', { h: 2.2 }),
+    skSignpostSingle: kit('survival-kit', 'signpost-single', { h: 2.1 }),
+    skCampfireStand: kit('survival-kit', 'campfire-stand', { w: 1.5 }),
+    skCampfirePit: kit('survival-kit', 'campfire-pit', { w: 1.2 }),
+    skBedroll: kit('survival-kit', 'bedroll', { w: 0.8 }),
+    skChest: kit('survival-kit', 'chest', { w: 0.82 }),
+    skBarrel: kit('survival-kit', 'barrel', { h: 0.95 }),
+    skBoxLarge: kit('survival-kit', 'box-large', { w: 0.8 }),
+    skBucket: kit('survival-kit', 'bucket', { h: 0.4 }),
+    skWorkbench: kit('survival-kit', 'workbench', { w: 1.35 }),
+    skTent: kit('survival-kit', 'tent', { w: 2.7 }),
+    skResourceWood: kit('survival-kit', 'resource-wood', { w: 0.9 }),
+
+    // ── Platformer Kit — shards, springs, a flag ──
+    pkJewel: kit('platformer-kit', 'jewel', { h: 0.5 }),
+    pkStar: kit('platformer-kit', 'star', { h: 0.5 }),
+    pkSpring: kit('platformer-kit', 'spring', { w: 1.1 }),
+    pkCoinGold: kit('platformer-kit', 'coin-gold', { h: 0.4 }),
+    pkFlag: kit('platformer-kit', 'flag', { h: 1.6 }),
+    pkLever: kit('platformer-kit', 'lever', { w: 0.7 }),
+    pkChest: kit('platformer-kit', 'chest', { w: 0.9 }),
+
+    // ── Food Kit — the kitchen is lived in ──
+    fkApple: kit('food-kit', 'apple', { w: 0.085 }),
+    fkPear: kit('food-kit', 'pear', { h: 0.11 }),
+    fkOrange: kit('food-kit', 'orange', { w: 0.08 }),
+    fkBowl: kit('food-kit', 'bowl', { w: 0.3 }),
+    fkBread: kit('food-kit', 'bread', { w: 0.3 }),
+    fkBaguette: kit('food-kit', 'loaf-baguette', { w: 0.46 }),
+    fkCuttingBoard: kit('food-kit', 'cutting-board', { w: 0.36 }),
+    fkKnifeBlock: kit('food-kit', 'knife-block', { w: 0.22 }),
+    fkPotStew: kit('food-kit', 'pot-stew', { w: 0.3 }),
+    fkCupCoffee: kit('food-kit', 'cup-coffee', { w: 0.09 }),
+    fkPlateDinner: kit('food-kit', 'plate-dinner', { w: 0.27 }),
+    fkPie: kit('food-kit', 'pie', { w: 0.3 }),
+    fkGlassWine: kit('food-kit', 'glass-wine', { h: 0.17 }),
+    fkCheese: kit('food-kit', 'cheese', { w: 0.2 }),
+    fkFryingPan: kit('food-kit', 'frying-pan', { w: 0.3 }),
+    fkMug: kit('food-kit', 'mug', { w: 0.1 }),
+    fkPumpkin: kit('food-kit', 'pumpkin', { w: 0.3 }),
+    fkGrapes: kit('food-kit', 'grapes', { w: 0.14 }),
+
+    // ── Nature Kit, second wave — the shelf's rim and the isles' stone ──
+    nkStatueColumn: kit('nature-kit', 'statue_column', { h: 3.2 }),
+    nkStatueObelisk: kit('nature-kit', 'statue_obelisk', { h: 2.6 }),
+    nkStatueRing: kit('nature-kit', 'statue_ring', { h: 2.6 }),
+    nkCliffRock: kit('nature-kit', 'cliff_rock', { w: 4.0 }),
+    nkCliffLargeRock: kit('nature-kit', 'cliff_large_rock', { w: 4.0 }),
+    nkRockTallA: kit('nature-kit', 'rock_tallA', { h: 2.6 }),
+    nkRockTallD: kit('nature-kit', 'rock_tallD', { h: 1.9 }),
+    nkRockLargeA: kit('nature-kit', 'rock_largeA', { w: 2.0 }),
+    nkStoneTallA: kit('nature-kit', 'stone_tallA', { h: 2.4 }),
+    nkLilyLarge: kit('nature-kit', 'lily_large', { w: 0.6 }),
+    nkTreePineRoundA: kit('nature-kit', 'tree_pineRoundA', { h: 4.2 }),
+    nkMushroomRedGroup: kit('nature-kit', 'mushroom_redGroup', { w: 0.5 }),
+    nkLogStackLarge: kit('nature-kit', 'log_stackLarge', { w: 1.2 }),
+    nkPathStoneCircle: kit('nature-kit', 'path_stoneCircle', { w: 1.6 }),
 };
 
 /* The town is gone — the safe house stands alone in the jungle now. */

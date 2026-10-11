@@ -476,6 +476,15 @@ export function nearestGrove(x: number, z: number): { id: string; name: string; 
     return best;
 }
 
+/**
+ * Is a point inside something solid (or off the world)? Used by the
+ * third-person boom so the camera never sits inside a wall.
+ */
+export function blockedAt(x: number, z: number, r = 0.2): boolean {
+    if (x < JUNGLE_BOUNDS.minX || x > JUNGLE_BOUNDS.maxX || z < JUNGLE_BOUNDS.minZ || z > JUNGLE_BOUNDS.maxZ) return true;
+    return hits(x, z, collidersFor('main'), r);
+}
+
 /** True if a saved pose is still walkable. */
 export function poseClear(x: number, z: number): boolean {
     if (x < JUNGLE_BOUNDS.minX + 1 || x > JUNGLE_BOUNDS.maxX - 1) return false;

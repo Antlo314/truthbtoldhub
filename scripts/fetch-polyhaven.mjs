@@ -55,7 +55,12 @@ const WANTED = [
     // The forest band beyond the clearing edge
     { key: 'forestFloor', slugs: ['forest_floor', 'forest_ground_04'] },
     { key: 'basalt', slugs: ['rock_boulder_cracked', 'rough_block_wall'] },
-    { key: 'goldMetal', slugs: ['metal_plate', 'gold'] },
+    { key: 'goldMetal', slugs: ['metal_plate', 'brushed_concrete'] },
+    // The Aether Shelf: cliff faces for the rim boulders, cobbles for the
+    // walks and isle floors — the brick 'stone' set read as a garden wall
+    // when it was wrapped around a floating basalt island.
+    { key: 'rockFace', slugs: ['rock_face_03', 'rock_wall_08'] },
+    { key: 'cobble', slugs: ['cobblestone_large_01', 'cobblestone_floor_04'] },
 ];
 
 const MAPS = [

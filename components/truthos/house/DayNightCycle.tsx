@@ -10,6 +10,10 @@
  * daylight through `lampLevel`, which is why lamps read as "on" at night and
  * fade out by mid-morning rather than glowing through noon.
  *
+ * The sun's shadow frustum follows the walker. A fixed ±34 m box around the
+ * origin covered the house and nothing else; now shadows are crisp wherever
+ * you stand, on the isles included, for the same texel budget.
+ *
  * Colours are mutated in place on existing objects rather than pushed through
  * React state — at 60fps a setState per frame would re-render the whole tree.
  */
@@ -17,6 +21,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { resolveSky, useWorldTime, type SkyState } from './worldTime';
+import { getWalkerPose } from './walkerPose';
 
 /** Cheap shared accessor so other scene code can read the current sky */
 let currentSky: SkyState = resolveSky(9.5, 'clear');
@@ -24,17 +29,23 @@ export function getSky(): SkyState {
     return currentSky;
 }
 
+const SUN_DIST = 60;
+const SHADOW_HALF = 26;
+
 export default function DayNightCycle({
     mobile = false,
     shadows = true,
+    shadowMap = 2048,
 }: {
     mobile?: boolean;
     shadows?: boolean;
+    shadowMap?: number;
 }) {
     const sun = useRef<THREE.DirectionalLight>(null);
     const ambient = useRef<THREE.AmbientLight>(null);
     const hemi = useRef<THREE.HemisphereLight>(null);
     const { scene } = useThree();
+    const target = useMemo(() => new THREE.Object3D(), []);
 
     const advance = useWorldTime((s) => s.advance);
     const rollWeather = useWorldTime((s) => s.rollWeather);
@@ -47,6 +58,7 @@ export default function DayNightCycle({
             hemiSky: new THREE.Color(),
             hemiGround: new THREE.Color(),
             fog: new THREE.Color(),
+            dir: new THREE.Vector3(),
         }),
         [],
     );
@@ -66,7 +78,12 @@ export default function DayNightCycle({
         currentSky = sky;
 
         if (sun.current) {
-            sun.current.position.set(sky.sunDir[0], sky.sunDir[1], sky.sunDir[2]);
+            // Frustum rides with the walker; the light keeps its sky vector
+            const p = getWalkerPose();
+            target.position.set(p.x, 0, p.z);
+            target.updateMatrixWorld();
+            tmp.dir.set(sky.sunDir[0], sky.sunDir[1], sky.sunDir[2]).normalize().multiplyScalar(SUN_DIST);
+            sun.current.position.set(p.x + tmp.dir.x, Math.max(2, tmp.dir.y), p.z + tmp.dir.z);
             sun.current.intensity = sky.sunIntensity;
             sun.current.color.copy(tmp.sun.setRGB(...rgb01(sky.sunColor)));
         }
@@ -94,16 +111,19 @@ export default function DayNightCycle({
         <>
             <directionalLight
                 ref={sun}
+                target={target}
                 castShadow={shadows}
-                shadow-mapSize={[mobile ? 1024 : 2048, mobile ? 1024 : 2048]}
-                shadow-camera-left={-34}
-                shadow-camera-right={34}
-                shadow-camera-top={34}
-                shadow-camera-bottom={-34}
-                shadow-camera-near={0.5}
-                shadow-camera-far={90}
-                shadow-bias={-0.0006}
+                shadow-mapSize={[shadowMap, shadowMap]}
+                shadow-camera-left={-SHADOW_HALF}
+                shadow-camera-right={SHADOW_HALF}
+                shadow-camera-top={SHADOW_HALF}
+                shadow-camera-bottom={-SHADOW_HALF}
+                shadow-camera-near={1}
+                shadow-camera-far={SUN_DIST * 2 + 20}
+                shadow-bias={-0.0004}
+                shadow-normalBias={0.025}
             />
+            <primitive object={target} />
             <ambientLight ref={ambient} />
             <hemisphereLight ref={hemi} />
         </>
