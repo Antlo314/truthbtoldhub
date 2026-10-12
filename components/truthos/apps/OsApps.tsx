@@ -22,7 +22,6 @@ import {
     User,
     Volume2,
 } from 'lucide-react';
-import AvatarCanvas from '@/components/game/AvatarCanvas';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import TruthGuideApp from './TruthGuideApp';
@@ -221,7 +220,7 @@ function AccountPane({ onLogout }: { onLogout: () => void }) {
         <div className="px-6 py-6">
             <div className="mb-6 flex items-center gap-4">
                 <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-white/15 to-white/[0.03] ring-1 ring-white/15">
-                    <AvatarCanvas config={character.avatar} scale={3} />
+                    <span className="bg-gradient-to-br from-amber-100 via-amber-300 to-amber-600 bg-clip-text text-[30px] font-bold text-transparent">{(name.trim()[0] || '✦').toUpperCase()}</span>
                 </div>
                 <div className="min-w-0">
                     <p className="truncate text-[20px] font-semibold text-white">{name}</p>

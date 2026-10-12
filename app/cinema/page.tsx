@@ -11,7 +11,7 @@ export const metadata: Metadata = {
         type: 'video.other',
         images: [
             {
-                url: 'https://truthbtoldhub.com/viralcartel/400_manga_logo.jpg',
+                url: 'https://truthbtoldhub.com/images/destroyer-globe.png',
                 width: 1200,
                 height: 630,
                 alt: 'The 400 Series — On Pause',

@@ -634,25 +634,14 @@ export default function HouseExperience({
                 </div>
             )}
 
-            {authOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
-                    <div className="w-full max-w-md space-y-3" data-allow-select>
-                        <AuthModal
-                            isOpen
-                            isGated={false}
-                            onClose={() => setAuthOpen(false)}
-                            onSuccess={onAuthSuccess}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setAuthOpen(false)}
-                            className="w-full py-2 text-xs text-zinc-400 hover:text-white uppercase tracking-widest"
-                        >
-                            Keep playing as guest
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* The modal is its own overlay (portalled to <body>); wrapping it in a
+                second full-screen layer hid the guest button under its backdrop */}
+            <AuthModal
+                isOpen={authOpen}
+                onClose={() => setAuthOpen(false)}
+                onSuccess={onAuthSuccess}
+                dismissLabel="Keep playing as guest"
+            />
 
             {/* Persistent world readout: identity, clock, weather, skills */}
             <WorldHud

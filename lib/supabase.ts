@@ -38,9 +38,26 @@ if (typeof window !== 'undefined') {
         if (data.session) setGate(data.session.access_token);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    // Demo Mode was removed from the sign-in modal (it faked a session with no
+    // account behind it). Clear anything it left behind on this device, unless
+    // this is a deliberate demo build.
+    if (process.env.NEXT_PUBLIC_TBTH_DEMO !== 'true') {
+        try {
+            if (localStorage.getItem('tbth-demo')) localStorage.removeItem('tbth-demo');
+        } catch {
+            /* private mode */
+        }
+        if (document.cookie.includes('sb-access-token=demo-token')) clearGate();
+    }
+
+    supabase.auth.onAuthStateChange((event, session) => {
         if (session) setGate(session.access_token);
         else if (localStorage.getItem('tbth-demo') !== 'true') clearGate();
+        // A password-reset link lands here signed in for recovery: send the
+        // soul to the page that sets the new password (it reads #recovery=true).
+        if (event === 'PASSWORD_RECOVERY' && !location.hash.includes('recovery=true')) {
+            location.replace('/self#recovery=true');
+        }
     });
 
     // --- DEMO MODE OVERRIDES ---

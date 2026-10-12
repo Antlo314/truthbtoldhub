@@ -1,6 +1,5 @@
 'use client';
 
-import TruthSprite from '@/components/game/TruthSprite';
 import VeilPanel from '@/components/sanctum/VeilPanel';
 import Typewriter from '@/components/sanctum/Typewriter';
 import { cn } from '@/lib/design/cn';
@@ -58,7 +57,8 @@ export default function DialogueBox({
                             background: `radial-gradient(circle, ${accent}40 0%, transparent 68%)`,
                         }}
                     />
-                    <TruthSprite scale={spriteScale} style={{ position: 'relative', margin: '0 auto', display: 'block' }} />
+                    {/* The sanctum mark speaks for Truth — no portrait of a person */}
+                    <span className="relative flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-100 via-amber-300 to-amber-600 bg-clip-text font-black text-transparent" style={{ fontSize: spriteScale * 14 }}>✦</span>
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">

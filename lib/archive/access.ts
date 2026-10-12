@@ -9,8 +9,8 @@
 import { isAdminEmail } from '@/lib/adminEmails';
 import type { ArchiveChannel, ArchiveReaction } from '@/lib/store/useArchiveStore';
 
-export const DEFAULT_AVATAR =
-    'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/default_avatar.png';
+/** The sanctum mark — a default that is not a picture of a person */
+export const DEFAULT_AVATAR = '/brand/default-avatar.svg';
 
 // An Architect is identified by a verified, JWT-signed admin email.
 export function isArchitect(email?: string | null): boolean {

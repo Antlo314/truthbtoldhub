@@ -485,6 +485,10 @@ export const OS_WALLPAPERS: OsWallpaper[] = [...SANCTUM, ...ABSTRACT, ...QUIET, 
 
 export const WALLPAPER_FAMILIES: WallpaperFamily[] = ['Sanctum', 'Abstract', 'Quiet', 'Living'];
 
+/** Images removed on 2026-10-12 because they depict people */
+const REMOVED_IMAGES =
+    /combat-(eden|emerald|fair|giza|kolbrin)|dest-eden|source-return|cineworks\/poster[12]\.png|the-cleanser-perk|crown_of_sorrows|400_manga_logo|vessel_(man|woman)|\/assets\/truth\.png|os-icons\.jpg|img\.youtube\.com/;
+
 /** True when a wallpaper has no gate, or the player has met it */
 export function isUnlocked(w: OsWallpaper, snap: GameSnapshot): boolean {
     return !w.unlock || w.unlock.test(snap);
@@ -501,6 +505,9 @@ export function resolveWallpaper(
 ): { css: string; name: string; accent: OsAccentId; kind: 'image' | 'gradient' } {
     if (id.startsWith('custom:')) {
         const url = id.slice('custom:'.length);
+        // Images of people were removed from the site; a wallpaper saved from
+        // one of them would now be blank — show the default instead.
+        if (REMOVED_IMAGES.test(url)) return resolveWallpaper('aurora', hour);
         return {
             css: `url(${url}) center/cover no-repeat`,
             name: 'Custom',

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
         type: 'video.other',
         images: [
             {
-                url: 'https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png', // Fallback until OG is made, uses the Joel 3 poster
+                url: 'https://truthbtoldhub.com/images/aether_bg.png',
                 width: 1920,
                 height: 1080,
                 alt: 'Cineworks Archive Premiere - Joel 3',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: 'Cineworks Archive | TruthBTold Hub',
         description: 'Watch the uncut, unedited prophetic breakdowns. Currently Featuring: Who are the Sabeans? (Joel 3).',
-        images: ['https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_gallery.png'],
+        images: ['https://truthbtoldhub.com/images/aether_bg.png'],
     },
 };
 

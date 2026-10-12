@@ -1,6 +1,10 @@
 /**
  * House Cinema reel — local MP4s under public/assets/cutscenes (+ brand loops).
  * The wall screen + Cinema panel share this catalog.
+ *
+ * Scenery only: the combat trials, the Eden road (winged figures) and the
+ * Source return (a silhouette) were taken out with every other image of
+ * people on the site (2026-10-12).
  */
 
 export type HouseFilm = {
@@ -48,20 +52,6 @@ export const HOUSE_FILMS: HouseFilm[] = [
         poster: `${CUT}/cutscene-world-crossroads.jpg`,
     },
     {
-        id: 'source-return',
-        title: 'Source Return',
-        blurb: 'Return to the root',
-        src: `${CUT}/source-return.mp4`,
-        poster: `${CUT}/cutscene-source-return.jpg`,
-    },
-    {
-        id: 'dest-eden',
-        title: 'Destination · Eden',
-        blurb: 'Garden road',
-        src: `${CUT}/dest-eden.mp4`,
-        poster: `${CUT}/dest-eden.jpg`,
-    },
-    {
         id: 'dest-giza',
         title: 'Destination · Giza',
         blurb: 'Stone and sky',
@@ -88,41 +78,6 @@ export const HOUSE_FILMS: HouseFilm[] = [
         blurb: 'The fair ground',
         src: `${CUT}/dest-fair.mp4`,
         poster: `${CUT}/dest-fair.jpg`,
-    },
-    {
-        id: 'combat-eden',
-        title: 'Combat · Eden',
-        blurb: 'Trial in the garden',
-        src: `${CUT}/combat-eden.mp4`,
-        poster: `${CUT}/combat-eden.jpg`,
-    },
-    {
-        id: 'combat-giza',
-        title: 'Combat · Giza',
-        blurb: 'Trial at the stones',
-        src: `${CUT}/combat-giza.mp4`,
-        poster: `${CUT}/combat-giza.jpg`,
-    },
-    {
-        id: 'combat-emerald',
-        title: 'Combat · Emerald',
-        blurb: 'Trial of the tablet',
-        src: `${CUT}/combat-emerald.mp4`,
-        poster: `${CUT}/combat-emerald.jpg`,
-    },
-    {
-        id: 'combat-kolbrin',
-        title: 'Combat · Kolbrin',
-        blurb: 'Trial of the page',
-        src: `${CUT}/combat-kolbrin.mp4`,
-        poster: `${CUT}/combat-kolbrin.jpg`,
-    },
-    {
-        id: 'combat-fair',
-        title: 'Combat · Fair',
-        blurb: 'Trial at the fair',
-        src: `${CUT}/combat-fair.mp4`,
-        poster: `${CUT}/combat-fair.jpg`,
     },
     {
         id: 'loop-hut',

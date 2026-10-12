@@ -599,7 +599,6 @@ export default function TruthOSShell({
 
             <AuthModal
                 isOpen={authPrompt}
-                isGated
                 onClose={() => os().setAuthPrompt(false)}
                 onSuccess={() => {
                     os().setAuthPrompt(false);

@@ -427,7 +427,7 @@ export default function Archive() {
                     ref={bgRef}
                     autoPlay loop muted playsInline
                     className="absolute inset-0 w-full h-full object-cover opacity-[0.1] mix-blend-screen pointer-events-none"
-                    poster="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.png"
+                    poster="/images/aether_bg.png"
                 >
                     <source src="https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_codex.mp4" type="video/mp4" />
                 </video>

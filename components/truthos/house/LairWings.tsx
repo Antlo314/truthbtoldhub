@@ -200,12 +200,12 @@ function Shell({ r, floor, wall, ceiling, m, sh, outer, hole = 0 }: { r: Room; f
 /* ── The Processional + the Overlook ───────────────────────── */
 
 const GALLERY_ART: { url: string; z: number; side: -1 | 1 }[] = [
-    { url: '/assets/cutscenes/dest-eden.jpg', z: 19.2, side: -1 },
+    { url: '/assets/cutscenes/cutscene-world-crossroads.jpg', z: 19.2, side: -1 },
     { url: '/assets/cutscenes/dest-giza.jpg', z: 19.2, side: 1 },
     { url: '/assets/cutscenes/dest-kolbrin.jpg', z: 36.8, side: -1 },
     { url: '/assets/cutscenes/dest-emerald.jpg', z: 36.8, side: 1 },
     { url: '/assets/cutscenes/dest-fair.jpg', z: 56.0, side: -1 },
-    { url: '/assets/cutscenes/cutscene-source-return.jpg', z: 56.0, side: 1 },
+    { url: '/brand/keyart-return-source.jpg', z: 56.0, side: 1 },
 ];
 
 function Processional({ m, sh, low, profile }: { m: Mats; sh: boolean; low: boolean; profile?: QualityProfile }) {
@@ -378,14 +378,14 @@ function Processional({ m, sh, low, profile }: { m: Mats; sh: boolean; low: bool
 /* ── The Cinema ─────────────────────────────────────────────── */
 
 const CINEMA_POSTERS = [
-    '/cineworks/poster1.png',
-    '/cineworks/poster2.png',
     '/cineworks/poster3.png',
-    '/assets/cutscenes/combat-eden.jpg',
-    '/assets/cutscenes/combat-giza.jpg',
-    '/assets/cutscenes/combat-kolbrin.jpg',
-    '/assets/cutscenes/combat-emerald.jpg',
-    '/assets/cutscenes/combat-fair.jpg',
+    '/images/destroyer-globe.png',
+    '/images/aether_bg.png',
+    '/assets/cutscenes/dest-giza.jpg',
+    '/assets/cutscenes/dest-kolbrin.jpg',
+    '/assets/cutscenes/dest-emerald.jpg',
+    '/assets/cutscenes/dest-fair.jpg',
+    '/brand/bg-portal.jpg',
 ];
 
 function Cinema({ m, sh, low }: { m: Mats; sh: boolean; low: boolean }) {
@@ -830,7 +830,7 @@ function SignalStudio({ m, sh, low, profile }: { m: Mats; sh: boolean; low: bool
                 </mesh>
             </SolidGroup>
             {/* broadcast stills on the south wall, flags on the west */}
-            {['/assets/cutscenes/combat-emerald.jpg', '/assets/cutscenes/combat-fair.jpg', '/brand/keyart-return-source.jpg'].map((url, i) => (
+            {['/assets/cutscenes/dest-emerald.jpg', '/images/destroyer-globe.png', '/brand/keyart-return-source.jpg'].map((url, i) => (
                 <Poster key={url} url={url} x={c.x - 5.4 + i * 5.4} y={2.6} z={r.z1 - 0.36} yaw={Math.PI} w={2.0} h={1.25} m={m} />
             ))}
             {[r.z0 + 1.4, r.z1 - 1.4].map((z) => (

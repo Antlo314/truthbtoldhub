@@ -109,7 +109,7 @@ export default function MissionConfirmed() {
 
     const downloadPerk = () => {
         const link = document.createElement('a');
-        link.href = '/images/the-cleanser-perk.png';
+        link.href = '/images/destroyer-globe.png';
         link.download = 'TruthBTold-FoundingSupporter-Perk.png';
         document.body.appendChild(link);
         link.click();
@@ -291,7 +291,7 @@ export default function MissionConfirmed() {
                                 {/* PERK IMAGE RENDER */}
                                 <div className="relative group/perk overflow-hidden rounded-2xl border border-white/5 shadow-2xl">
                                     <img 
-                                        src="/images/the-cleanser-perk.png" 
+                                        src="/images/destroyer-globe.png" 
                                         alt="The Cleanser Perk"
                                         className="w-full aspect-[16/10] object-cover transition-transform duration-[20s] linear animate-slow-zoom"
                                     />

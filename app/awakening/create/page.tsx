@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store/useGameStore';
 import AvatarCanvas from '@/components/game/AvatarCanvas';
 import CinematicVideo from '@/components/game/CinematicVideo';
-import { AURA_OPTIONS } from '@/components/game/KenneySprite';
+import { AURA_OPTIONS } from '@/lib/game/auras';
 import {
     SKIN_TONES, HAIR_COLORS, CLOTH_COLORS, BOOT_COLORS, EYE_COLORS, EYE_NAMES,
     HAIR_STYLES, MASC_OUTFITS, FEM_OUTFITS, FACE_STYLES, EXTRA_OPTIONS,

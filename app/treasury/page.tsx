@@ -471,7 +471,7 @@ export default function Treasury() {
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-orange-500/30 font-sans flex flex-col items-center overflow-x-hidden">
             {/* Background - The Treasury uses the custom pool void asset with Parallax */}
-            <div ref={bgRef} className="fixed inset-0 z-0 bg-[url('https://fveosuladewjtqoqhdbl.supabase.co/storage/v1/object/public/cineworks/the_pool.png')] bg-cover bg-center brightness-50 contrast-125 scale-110 pointer-events-none"></div>
+            <div ref={bgRef} className="fixed inset-0 z-0 bg-[url('/brand/keyart-return-source.jpg')] bg-cover bg-center brightness-50 contrast-125 scale-110 pointer-events-none"></div>
 
             {/* Global Navigation Header - Aetheric */}
             <header className="sticky top-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex justify-between items-center w-full">

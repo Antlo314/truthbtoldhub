@@ -54,41 +54,20 @@ export const CUTSCENES: Record<string, CutsceneDef> = {
         video: `${BASE}/world-crossroads.mp4`,
         line: 'Truth waits in the first cavern. Your journey begins.',
     },
-    source: {
-        id: 'source',
-        frames: [],
-        video: `${BASE}/source-return.mp4`,
-        line: 'The five relics burn as one.',
-    },
 
-    dest_eden: still('dest-eden', 'Eden — Before the Fall', 'Walk the garden back to the hour before the lie — before man listened to the serpent.'),
     dest_fair: still('dest-fair', 'St. Louis, 1904', 'Twelve hundred palaces of white, raised in a season — and torn down the next.'),
     dest_giza: still('dest-giza', 'Giza — The Engine of Stone', 'It has not stopped humming in five thousand years.'),
     dest_kolbrin: still('dest-kolbrin', 'The Kolbrin Vault', 'The monks hid these books from fire and from kings.'),
     dest_emerald: still('dest-emerald', 'The Emerald Halls', 'Thrice-great — in life, in death, and in what lies beyond both.'),
-
-    combat_eden: still('combat-eden', 'The Cherub of the Flaming Sword', 'The way back is guarded. To pass, you must endure them.', 4000),
-    combat_fair: still('combat-fair', 'The Caretaker of the Fair', 'The white halls are not empty. The Erased drift the corridors.', 4000),
-    combat_giza: still('combat-giza', 'The Sentinel of Stone', 'Shades of those who died seeking its secret still guard the stone.', 4000),
-    combat_kolbrin: still('combat-kolbrin', 'The Ink Shade', 'The Destroyer\'s name still sleeps in the runes.', 4000),
-    combat_emerald: still('combat-emerald', 'Hermes Trismegistus', 'The keeper of the emerald threshold awaits.', 4000),
 };
 
 const DEST_CUTSCENE: Record<string, keyof typeof CUTSCENES> = {
-    dest_eden: 'dest_eden',
     dest_fair: 'dest_fair',
     dest_giza: 'dest_giza',
     dest_kolbrin: 'dest_kolbrin',
     dest_emerald: 'dest_emerald',
 };
 
-const COMBAT_CUTSCENE: Record<string, keyof typeof CUTSCENES> = {
-    dest_eden: 'combat_eden',
-    dest_fair: 'combat_fair',
-    dest_giza: 'combat_giza',
-    dest_kolbrin: 'combat_kolbrin',
-    dest_emerald: 'combat_emerald',
-};
 
 export function cutscene(id: keyof typeof CUTSCENES): CutsceneDef {
     return CUTSCENES[id];
@@ -99,7 +78,3 @@ export function cutsceneForDest(poiId: string): CutsceneDef | null {
     return key ? CUTSCENES[key] : null;
 }
 
-export function cutsceneForCombat(poiId: string): CutsceneDef | null {
-    const key = COMBAT_CUTSCENE[poiId];
-    return key ? CUTSCENES[key] : null;
-}

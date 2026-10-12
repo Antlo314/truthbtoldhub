@@ -91,7 +91,7 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
                     >
                         <div className="absolute inset-0">
                             <img
-                                src="/images/cineworks/poster1.png"
+                                src="/images/cineworks/poster3.png"
                                 alt=""
                                 className="h-full w-full object-cover opacity-25"
                             />
@@ -109,7 +109,7 @@ export default function SupportVisionModal({ isOpen, onClose, onSupport, playSfx
 
                         <div className="relative z-10 flex flex-col items-center justify-center overflow-y-auto p-6 text-center md:p-8">
                             <div className="mb-5 h-16 w-16 overflow-hidden rounded-2xl border border-aether-gold/30 shadow-[0_0_40px_rgba(212,175,55,0.2)] md:h-20 md:w-20 md:rounded-3xl">
-                                <img src="/viralcartel/400_manga_logo.jpg" alt="Truth B Told" className="h-full w-full object-cover" />
+                                <img src="/images/destroyer-globe.png" alt="Truth B Told" className="h-full w-full object-cover" />
                             </div>
 
                             <div className="mb-6 space-y-3">

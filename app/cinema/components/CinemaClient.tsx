@@ -67,7 +67,7 @@ export default function CinemaClient() {
             <main className="relative z-10 p-4 md:p-12 pb-32 max-w-7xl mx-auto space-y-16">
                 <section className="relative aspect-video rounded-[2.5rem] md:rounded-[4rem] overflow-hidden border border-orange-500/20 shadow-[0_0_100px_rgba(0,0,0,0.5)] group">
                     <img 
-                        src="/viralcartel/400_manga_logo.jpg" 
+                        src="/images/destroyer-globe.png" 
                         className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale"
                         alt="400 Series"
                     />
@@ -119,8 +119,8 @@ export default function CinemaClient() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                            { title: "The Prelude", id: "XnWdy_B7PgA", desc: "Before the fire. The foundation of the prophecy.", poster: '/images/cineworks/poster2.png' },
-                            { title: "Genesis 15:13", id: "jXezgcPBqGE", desc: "The root of the 400-year cycle protocol.", poster: '/images/cineworks/poster1.png' },
+                            { title: "The Prelude", id: "XnWdy_B7PgA", desc: "Before the fire. The foundation of the prophecy.", poster: '/assets/cutscenes/dest-kolbrin.jpg' },
+                            { title: "Genesis 15:13", id: "jXezgcPBqGE", desc: "The root of the 400-year cycle protocol.", poster: '/assets/cutscenes/dest-giza.jpg' },
                             { title: "Prophetic Frequency", id: "msKxh1gInMU", desc: "Audio synthesis of the coming invasion.", poster: '/images/cineworks/poster3.png' }
                         ].map((v, i) => (
                             <motion.div 
@@ -131,8 +131,8 @@ export default function CinemaClient() {
                                 onClick={() => { playClick(); window.open(`https://youtu.be/${v.id}`, '_blank'); }}
                             >
                                 <div className="aspect-video rounded-2xl overflow-hidden mb-6 relative">
-                                    <img src={v.poster} alt={v.title} className="absolute inset-0 w-full h-full object-cover opacity-50" />
-                                    <img src={`https://img.youtube.com/vi/${v.id}/maxresdefault.jpg`} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 relative z-10" alt="" />
+                                    {/* Our own art, not the video thumbnail — no images of people */}
+                                    <img src={v.poster} alt={v.title} className="absolute inset-0 w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
                                         <Play className="w-10 h-10 text-white" />
                                     </div>
@@ -169,7 +169,7 @@ export default function CinemaClient() {
 
                             <div className="flex flex-col items-center text-center space-y-8">
                                 <div className="w-24 h-24 rounded-3xl overflow-hidden border border-orange-500/30">
-                                    <img src="/viralcartel/400_manga_logo.jpg" alt="400 Series" className="w-full h-full object-cover" />
+                                    <img src="/images/destroyer-globe.png" alt="400 Series" className="w-full h-full object-cover" />
                                 </div>
 
                                 <div className="space-y-4">

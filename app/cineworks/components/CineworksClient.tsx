@@ -131,7 +131,7 @@ export default function Cineworks() {
                 id: 'fVqAox73uCE', 
                 title: 'Prelude to the Destroyer', 
                 duration: 'CODEX', format: '4K', is_new: true, 
-                image: 'https://img.youtube.com/vi/fVqAox73uCE/maxresdefault.jpg', 
+                image: '/images/destroyer-globe.png', 
                 status: 'AVAILABLE',
                 description: "The Stone We Built On explores ancient warnings, the cracked foundation of America, and the signs of collapse." 
             },
@@ -139,7 +139,7 @@ export default function Cineworks() {
                 id: '_5LzmdhiBRQ', 
                 title: 'Episode 3: The Judgment', 
                 duration: 'CODEX', format: '4K', is_new: false, 
-                image: 'https://img.youtube.com/vi/_5LzmdhiBRQ/maxresdefault.jpg', 
+                image: '/assets/cutscenes/dest-kolbrin.jpg', 
                 status: 'AVAILABLE',
                 description: "Enoch walks into the presence of the Watchers. Semjaza and the fallen stand in mourning as their sentence is revealed." 
             },
@@ -147,7 +147,7 @@ export default function Cineworks() {
                 id: 'OBkUITCVQao', 
                 title: 'Episode 2: The Messenger', 
                 duration: 'CODEX', format: '4K', is_new: false, 
-                image: 'https://img.youtube.com/vi/OBkUITCVQao/maxresdefault.jpg', 
+                image: '/images/cineworks/poster3.png', 
                 status: 'AVAILABLE',
                 description: "Two hundred fallen beings leave heaven behind and walk into a world that is about to change forever." 
             },
@@ -155,7 +155,7 @@ export default function Cineworks() {
                 id: 'g0VedgHt0cE', 
                 title: 'Episode 1: The Watchers', 
                 duration: 'CODEX', format: '4K', is_new: false, 
-                image: 'https://img.youtube.com/vi/g0VedgHt0cE/maxresdefault.jpg', 
+                image: '/assets/cutscenes/dest-fair.jpg', 
                 status: 'AVAILABLE',
                 description: "Before the flood. Before the giants. Before the world burned... a shadow approached the city." 
             }
@@ -221,7 +221,7 @@ export default function Cineworks() {
 
                                 {!isPlayingFeature ? (
                                     <img
-                                        src="https://img.youtube.com/vi/msKxh1gInMU/maxresdefault.jpg"
+                                        src="/images/aether_bg.png"
                                         className="absolute inset-0 w-full h-full object-cover z-0 opacity-80"
                                         alt="Premiere Preview"
                                     />
