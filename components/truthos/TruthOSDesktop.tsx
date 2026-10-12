@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Primary home surface: Truth.OS desktop first.
- * Leave terminal pans out into the optional 3D Chamber.
+ * Primary home surface: Truth.OS first. The world is one door away — the
+ * gold House tile in the dock, the "Enter the House" widget, or the ✦
+ * menu — and the world's top-left button brings you back to the desk.
  */
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -24,8 +25,8 @@ const HouseExperience = dynamic(
 );
 
 export default function TruthOSDesktop() {
-    /** Start in the 3D world. Truth.OS is a CTA for anyone who will not walk. */
-    const [chamber, setChamber] = useState(true);
+    /** Truth.OS opens first; the world is a choice, never the landing. */
+    const [chamber, setChamber] = useState(false);
     /**
      * Loaded inside a frame (the OS Browser navigated to "/"): never boot a
      * second OS and a second 3D world inside the first.
