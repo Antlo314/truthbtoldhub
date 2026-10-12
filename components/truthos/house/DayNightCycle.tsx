@@ -43,10 +43,16 @@ export default function DayNightCycle({
     mobile = false,
     shadows = true,
     shadowMap = 2048,
+    fogScale = [FOG_NEAR_SCALE, FOG_FAR_SCALE],
+    shadowHalf = SHADOW_HALF,
 }: {
     mobile?: boolean;
     shadows?: boolean;
     shadowMap?: number;
+    /** Multipliers on the sky's fog near/far — the plain wants to see for a kilometre */
+    fogScale?: [number, number];
+    /** Half-size of the shadow frustum around the walker */
+    shadowHalf?: number;
 }) {
     const sun = useRef<THREE.DirectionalLight>(null);
     const ambient = useRef<THREE.AmbientLight>(null);
@@ -108,8 +114,8 @@ export default function DayNightCycle({
         const fog = scene.fog as THREE.Fog | null;
         if (fog) {
             fog.color.copy(tmp.fog);
-            fog.near = sky.fogNear * FOG_NEAR_SCALE;
-            fog.far = sky.fogFar * FOG_FAR_SCALE;
+            fog.near = sky.fogNear * fogScale[0];
+            fog.far = sky.fogFar * fogScale[1];
         }
         if (scene.background instanceof THREE.Color) scene.background.copy(tmp.fog);
     });
@@ -121,10 +127,10 @@ export default function DayNightCycle({
                 target={target}
                 castShadow={shadows}
                 shadow-mapSize={[shadowMap, shadowMap]}
-                shadow-camera-left={-SHADOW_HALF}
-                shadow-camera-right={SHADOW_HALF}
-                shadow-camera-top={SHADOW_HALF}
-                shadow-camera-bottom={-SHADOW_HALF}
+                shadow-camera-left={-shadowHalf}
+                shadow-camera-right={shadowHalf}
+                shadow-camera-top={shadowHalf}
+                shadow-camera-bottom={-shadowHalf}
                 shadow-camera-near={1}
                 shadow-camera-far={SUN_DIST * 2 + 20}
                 shadow-bias={-0.0004}

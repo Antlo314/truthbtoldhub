@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { hubAudio } from '@/lib/truthos/hubAudio';
+import { levelFor } from '@/lib/world/quests';
 import { loadSettings, applyMusicSetting } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { joinHousePresence, SAY_MAX, type HousePeer, type HousePresenceApi } from '@/lib/truthos/housePresence';
@@ -131,9 +132,12 @@ export default function HouseExperience({
      * down at the terminal did nothing but show a toast.
      */
     onReturnToTerminal,
+    /** The Overlook door: out onto the Aether Plain */
+    onExitToWorld,
 }: {
     disableOsBoot?: boolean;
     onReturnToTerminal?: () => void;
+    onExitToWorld?: () => void;
 } = {}) {
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
@@ -419,6 +423,7 @@ export default function HouseExperience({
                 emote,
                 emoteAt: emote ? Date.now() - (performance.now() - emoteAt) : 0,
                 sit: seated ? 1 : 0,
+                lv: levelFor(character.world?.xp ?? 0),
             });
             if (!uiLocked) {
                 const now = performance.now();
@@ -459,12 +464,20 @@ export default function HouseExperience({
                 toggleSeated();
                 return;
             }
+            if (h.action.type === 'exit') {
+                if (onExitToWorld) onExitToWorld();
+                else {
+                    setSoonMessage('The plain opens from Truth.OS — the gold door in the dock.');
+                    window.setTimeout(() => setSoonMessage(null), 4200);
+                }
+                return;
+            }
             if (h.action.type === 'soon') {
                 setSoonMessage(h.action.message);
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [openPanel, setSoonMessage, goToTerminal, toggleSeated, doEmote],
+        [openPanel, setSoonMessage, goToTerminal, toggleSeated, doEmote, onExitToWorld],
     );
 
     const tryInteract = useCallback(() => {

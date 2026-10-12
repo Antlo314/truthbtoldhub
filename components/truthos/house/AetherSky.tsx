@@ -22,6 +22,7 @@ export default function AetherSky({ low = false }: { low?: boolean }) {
             hor: new THREE.Color(),
             glow: new THREE.Color(),
             dir: new THREE.Vector3(),
+            centre: new THREE.Vector3(),
         }),
         [],
     );
@@ -40,16 +41,18 @@ export default function AetherSky({ low = false }: { low?: boolean }) {
         skyUniforms.uSunDir.value.set(sky.sunDir[0], sky.sunDir[1], sky.sunDir[2]).normalize();
 
         scratch.dir.set(sky.sunDir[0], sky.sunDir[1], sky.sunDir[2]).normalize().multiplyScalar(78);
+        // lookAt is world-space; aim at the dome's centre, wherever it rides
+        const c = sun.current?.parent ? sun.current.parent.getWorldPosition(scratch.centre) : scratch.centre.set(0, 0, 0);
         if (sun.current) {
             sun.current.position.copy(scratch.dir);
-            sun.current.lookAt(0, 1.4, 0);
+            sun.current.lookAt(c.x, c.y + 1.4, c.z);
             const s = sun.current.material as THREE.MeshBasicMaterial;
             s.opacity = Math.max(0, Math.min(1, sky.daylight * 1.15));
             sun.current.visible = s.opacity > 0.04;
         }
         if (moon.current) {
             moon.current.position.set(-36, 48, -40);
-            moon.current.lookAt(0, 1.6, 0);
+            moon.current.lookAt(c.x, c.y + 1.6, c.z);
             const s = moon.current.material as THREE.MeshBasicMaterial;
             s.opacity = sky.moonOpacity;
             moon.current.visible = sky.moonOpacity > 0.03;

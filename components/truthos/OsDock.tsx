@@ -159,7 +159,7 @@ export default function OsDock({
                 className="absolute inset-x-3 z-50 flex items-center justify-around rounded-[28px] border border-white/15 bg-white/[0.12] px-3 py-2.5 backdrop-blur-2xl"
                 style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
             >
-                {pinned.slice(0, 4).map((app) => (
+                {pinned.slice(0, onHouse ? 3 : 4).map((app) => (
                     <button
                         key={app}
                         type="button"
@@ -170,6 +170,12 @@ export default function OsDock({
                         <OsIconTile app={app} size={54} />
                     </button>
                 ))}
+                {/* the world's door rides the phone dock too — always one tap away */}
+                {onHouse && (
+                    <button type="button" aria-label="Enter the World" onClick={onHouse} className="transition-transform active:scale-90 touch-manipulation">
+                        <HouseTile size={54} />
+                    </button>
+                )}
             </div>
         );
     }
@@ -210,7 +216,7 @@ export default function OsDock({
                         return (
                             <div key="@house" className="flex items-end gap-2">
                                 <span className="mb-2 h-9 w-px self-end bg-white/20" />
-                                <Magnified mouseX={mouseX} label="Enter the House" onClick={onHouse!}>
+                                <Magnified mouseX={mouseX} label="Enter the World" onClick={onHouse!}>
                                     <HouseTile size="fill" />
                                 </Magnified>
                             </div>

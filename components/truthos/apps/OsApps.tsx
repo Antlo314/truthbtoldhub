@@ -454,7 +454,7 @@ function AboutPane() {
                 <Row label="All shortcuts" right={<kbd className="rounded bg-white/10 px-1.5 text-[11px]">Ctrl /</kbd>} />
             </Group>
             <p className="px-1 text-[12px] leading-relaxed text-white/40">
-                Truth B Told Hub. The desktop is the Hut; every room of the house is one click from the dock.
+                Truth B Told Hub. Every app is one click from the dock — and the gold door at its end opens the world: the Aether Plain and the Lair.
             </p>
         </div>
     );

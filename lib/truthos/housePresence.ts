@@ -34,10 +34,12 @@ export type HousePeer = {
     emoteAt?: number;
     /** 1 while sitting */
     sit?: 0 | 1;
+    /** level on the Aether Plain — the badge on the nameplate */
+    lv?: number;
 };
 
 /** The wardrobe + action fields, copied through verbatim when present. */
-const PEER_EXTRAS = ['hair', 'top', 'bottom', 'boots', 'hs', 'of', 'hd', 'bd', 'emote', 'emoteAt', 'sit'] as const;
+const PEER_EXTRAS = ['hair', 'top', 'bottom', 'boots', 'hs', 'of', 'hd', 'bd', 'emote', 'emoteAt', 'sit', 'lv'] as const;
 
 export type HousePresenceApi = {
     channel: RealtimeChannel;
@@ -107,9 +109,11 @@ export async function joinHousePresence(
     onSync: (peers: HousePeer[]) => void,
     /** Someone spoke. Fires for others' words only — never your own echo. */
     onSaid?: (said: HouseSaid) => void,
+    /** Which room: the house by default; the plain uses its own */
+    channelName: string = CHANNEL,
 ): Promise<HousePresenceApi | null> {
     try {
-        const channel = supabase.channel(CHANNEL, {
+        const channel = supabase.channel(channelName, {
             config: { presence: { key: selfId } },
         });
 

@@ -25,6 +25,7 @@ function PeerMesh({
     low,
     rigged,
     said,
+    ground = groundAt,
 }: {
     peer: HousePeer;
     showLabel: boolean;
@@ -32,6 +33,8 @@ function PeerMesh({
     rigged: boolean;
     /** The last thing this soul said, while it is still fresh */
     said?: string | null;
+    /** Floor height here — the house's floor plan, or the plain's terrain */
+    ground?: (x: number, z: number) => number;
 }) {
     const wear = useMemo(
         () => wearFromWire(peer, peer.aura || '#a78bfa'),
@@ -53,7 +56,7 @@ function PeerMesh({
         return {
             speed: speed.current,
             // y is world height; the dais is floor too
-            grounded: (p.y || 0) - groundAt(p.x, p.z) < 0.08,
+            grounded: (p.y || 0) - ground(p.x, p.z) < 0.08,
             seated: p.sit === 1,
             emote: p.emote ?? null,
             emoteAt,
@@ -127,6 +130,7 @@ function PeerMesh({
                     <div className="px-2 py-0.5 rounded-full text-[9px] whitespace-nowrap font-medium border bg-black/75 border-emerald-400/40 text-white/95">
                         <span className="text-emerald-400">LIVE · </span>
                         {peer.name}
+                        {peer.lv && peer.lv > 1 ? <span className="ml-1 rounded-full bg-amber-400/20 px-1.5 text-amber-200">Lv {peer.lv}</span> : null}
                     </div>
                 </Html>
             ) : null}
@@ -140,6 +144,7 @@ export default function RemotePlayers({
     mobile = false,
     rigged = true,
     saidBy,
+    ground,
 }: {
     peers: HousePeer[];
     /** Local presence key — exclude from world (only other live viewers) */
@@ -149,6 +154,7 @@ export default function RemotePlayers({
     rigged?: boolean;
     /** peer id -> the words they just said, cleared by the caller on expiry */
     saidBy?: Record<string, string>;
+    ground?: (x: number, z: number) => number;
 }) {
     const list = useMemo(() => {
         const now = Date.now();
@@ -173,6 +179,7 @@ export default function RemotePlayers({
                     low={mobile}
                     rigged={rigged}
                     said={saidBy?.[p.id] ?? null}
+                    ground={ground}
                 />
             ))}
         </group>

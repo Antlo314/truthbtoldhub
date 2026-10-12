@@ -152,7 +152,7 @@ export default function OsCommandPalette({
             section: 'Actions',
             run: () => openApp('truth', { payload: { content: GUIDE_PROMPT } }),
         });
-        if (onHouse) act('house', 'Enter the House', <DoorOpen size={15} />, onHouse, '3d world chamber walk');
+        if (onHouse) act('house', 'Enter the World', <DoorOpen size={15} />, onHouse, '3d world open plain quests lair house walk play');
         act('mission', 'Mission Control', <SquareStack size={15} />, () => sys.toggleOverlay('mission'), 'windows overview');
         act('nightlight', `Turn night light ${sys.nightLight ? 'off' : 'on'}`, <Moon size={15} />, () => sys.setNightLight(!sys.nightLight), 'display warm');
         act('dnd', `Turn Do Not Disturb ${sys.doNotDisturb ? 'off' : 'on'}`, <BellOff size={15} />, () => sys.setDoNotDisturb(!sys.doNotDisturb), 'focus quiet');

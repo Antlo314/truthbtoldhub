@@ -179,7 +179,7 @@ export default function OsTopBar({
                                     { label: 'Mission Control', hint: 'Ctrl ↑', onClick: () => onSystem('mission') },
                                     { label: 'Keyboard shortcuts', hint: 'Ctrl /', onClick: () => onSystem('shortcuts') },
                                     'divider',
-                                    { label: 'Enter the House', disabled: !canHouse, onClick: () => onSystem('house') },
+                                    { label: 'Enter the World', disabled: !canHouse, onClick: () => onSystem('house') },
                                     { label: 'Lock Screen', hint: 'Ctrl L', onClick: () => onSystem('lock') },
                                     { label: 'Restart…', onClick: () => onSystem('restart') },
                                 ]}

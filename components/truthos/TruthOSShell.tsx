@@ -5,7 +5,7 @@
  *
  * One way to do each thing:
  *   top bar      — system menu, the focused app, Spotlight, Control Center, Today
- *   dock         — App Library, pinned + running apps, the door to the house
+ *   dock         — App Library, pinned + running apps, the door to the world
  *   App Library  — every program and page, grouped (Ctrl+E)
  *   Spotlight    — search, sums, ask Truth (Ctrl+K)
  *   widgets      — the live home surface on the wallpaper

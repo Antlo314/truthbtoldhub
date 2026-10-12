@@ -16,6 +16,7 @@ import { useSoulStore } from '@/lib/store/useSoulStore';
 import { useLiveSouls } from '@/lib/truthos/liveSouls';
 import { WALL_YEAR } from '@/lib/truthos/wallYear';
 import { hutCompletion } from '@/components/truthos/house/stationProgress';
+import { levelFor, titleFor } from '@/lib/world/quests';
 import { fetchBulletins } from '@/lib/game/hut';
 import { supabase } from '@/lib/supabase';
 import { HouseTile, OsIconTile } from './OsIcon';
@@ -66,6 +67,9 @@ export default function OsWidgets({
     const [word, setWord] = useState<{ title: string; body?: string; section: 'dispatches' | 'word' } | null>(null);
     const [wallLine, setWallLine] = useState<string | null>(null);
     const house = hutCompletion();
+    const wxp = character.world?.xp ?? 0;
+    const wlv = levelFor(wxp);
+    const worldLine = wxp > 0 ? `Level ${wlv} · ${titleFor(wlv)} · ${house.seen} of ${house.total} Lair rooms` : 'The Aether Plain · quests, creatures, live souls';
 
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 15000);
@@ -197,9 +201,9 @@ export default function OsWidgets({
                         >
                             <HouseTile size={36} />
                             <span className="min-w-0 flex-1">
-                                <span className="block text-[13.5px] font-medium text-white">Enter the House</span>
+                                <span className="block text-[13.5px] font-medium text-white">Enter the World</span>
                                 <span className="block text-[11.5px] text-white/50">
-                                    {house.seen === house.total ? 'Every room seen' : `${house.seen} of ${house.total} rooms seen`}
+                                    {worldLine}
                                 </span>
                             </span>
                         </button>

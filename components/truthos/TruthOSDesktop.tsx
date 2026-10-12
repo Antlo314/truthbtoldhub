@@ -2,8 +2,9 @@
 
 /**
  * Primary home surface: Truth.OS first. The world is one door away — the
- * gold House tile in the dock, the "Enter the House" widget, or the ✦
- * menu — and the world's top-left button brings you back to the desk.
+ * gold tile in the dock, the "Enter the World" widget, Spotlight or the ✦
+ * menu — and opens on the Aether Plain, with the Lair one gate further.
+ * The world's top-left button brings you back to the desk.
  */
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -16,13 +17,10 @@ import { sacredUi } from '@/lib/game/sacredUiSfx';
 
 import HouseLoadBar from './house/HouseLoadBar';
 
-const HouseExperience = dynamic(
-    () => import('@/components/truthos/house/HouseExperience'),
-    {
-        ssr: false,
-        loading: () => <HouseLoadBar label="Entering the house" />,
-    },
-);
+const WorldDoors = dynamic(() => import('@/components/world/WorldDoors'), {
+    ssr: false,
+    loading: () => <HouseLoadBar label="Walking out onto the plain" />,
+});
 
 export default function TruthOSDesktop() {
     /** Truth.OS opens first; the world is a choice, never the landing. */
@@ -113,19 +111,8 @@ export default function TruthOSDesktop() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <button
-                            type="button"
-                            onClick={exitChamber}
-                            className="absolute z-[80] px-3.5 py-2 rounded-xl bg-black/80 border border-amber-300/40 text-[11px] uppercase tracking-[0.18em] text-amber-100 hover:bg-black/90 backdrop-blur-md min-h-[42px] shadow-[0_0_24px_rgba(232,196,120,0.18)]"
-                            style={{
-                                top: 'calc(0.6rem + env(safe-area-inset-top, 0px))',
-                                left: '0.75rem',
-                            }}
-                        >
-                            Open Truth.OS
-                        </button>
-                        {/* The desk hotspot and this button are the same door. */}
-                        <HouseExperience disableOsBoot onReturnToTerminal={exitChamber} />
+                        {/* Each world surface carries its own "Open Truth.OS" in its HUD */}
+                        <WorldDoors onReturnToTerminal={exitChamber} />
                     </motion.div>
                 )}
             </AnimatePresence>

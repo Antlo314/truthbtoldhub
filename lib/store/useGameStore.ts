@@ -15,6 +15,7 @@ import {
     MAX_FIGHT_BONUS_HP,
 } from '@/lib/game/consumables';
 import { maxVitality, BASE_VITALITY } from '@/lib/game/vitality';
+import { EMPTY_WORLD, type QuestProgress, type WorldProgress } from '@/lib/world/quests';
 
 // ============================================================
 //  THE JOURNEY — game state
@@ -86,6 +87,8 @@ export interface GameCharacter {
         y: number;
         at: string;
     };
+    /** The Aether Plain: experience, quest progress, places found */
+    world?: WorldProgress;
 }
 
 const DEFAULT_CHARACTER: GameCharacter = {
@@ -115,6 +118,7 @@ const DEFAULT_CHARACTER: GameCharacter = {
     fightBonusHp: 0,
     fightBonusDamage: 0,
     consumables: {},
+    world: EMPTY_WORLD,
 };
 
 function freshCharacter(): GameCharacter {
@@ -133,6 +137,28 @@ function freshCharacter(): GameCharacter {
         wardrobe: [...DEFAULT_CHARACTER.wardrobe],
         equipped: { ...DEFAULT_CHARACTER.equipped },
         materials: { ...DEFAULT_CHARACTER.materials },
+        world: { xp: 0, quests: {}, found: [] },
+    };
+}
+
+/** Two copies of plain progress, merged so nothing earned is ever lost */
+function mergeWorld(a?: WorldProgress, b?: WorldProgress): WorldProgress {
+    const x = a ?? EMPTY_WORLD;
+    const y = b ?? EMPTY_WORLD;
+    const quests: Record<string, QuestProgress> = { ...x.quests };
+    for (const [id, q] of Object.entries(y.quests || {})) {
+        const cur = quests[id];
+        if (!cur) quests[id] = q;
+        else {
+            const n: Record<string, number> = { ...(cur.n || {}) };
+            for (const [k, v] of Object.entries(q.n || {})) n[k] = Math.max(n[k] ?? 0, v);
+            quests[id] = { step: Math.max(cur.step, q.step), done: cur.done || q.done, n };
+        }
+    }
+    return {
+        xp: Math.max(x.xp || 0, y.xp || 0),
+        quests,
+        found: Array.from(new Set([...(x.found || []), ...(y.found || [])])),
     };
 }
 
@@ -177,6 +203,13 @@ interface GameState {
     restVitality: () => void;
     craftConsumable: (id: string) => boolean;
     useConsumable: (id: string) => boolean;
+
+    /** The plain: add experience (returns the new total) */
+    worldGainXp: (n: number) => number;
+    /** The plain: set a quest's progress */
+    worldSetQuest: (id: string, p: QuestProgress) => void;
+    /** The plain: remember a place found (returns true the first time) */
+    worldFound: (id: string) => boolean;
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
@@ -265,6 +298,7 @@ function mergeCloudCharacter(
         // one-time / one-way flags stay set once earned on either side
         founderClaimed: !!local.founderClaimed || !!cloud.founderClaimed,
         sourceReturned: !!local.sourceReturned || !!cloud.sourceReturned,
+        world: mergeWorld(local.world, cloud.world),
     };
 }
 
@@ -392,6 +426,31 @@ export const useGameStore = create<GameState>()(
 
             grantSkillPoints: (n) =>
                 set((s) => (n ? { character: { ...s.character, skillPoints: s.character.skillPoints + n } } : {})),
+
+            worldGainXp: (n) => {
+                const w = get().character.world ?? EMPTY_WORLD;
+                const xp = Math.max(0, (w.xp || 0) + Math.max(0, Math.round(n)));
+                set((s) => ({ character: { ...s.character, world: { ...(s.character.world ?? EMPTY_WORLD), xp } } }));
+                void get().saveToCloud();
+                return xp;
+            },
+            worldSetQuest: (id, p) => {
+                set((s) => {
+                    const w = s.character.world ?? EMPTY_WORLD;
+                    return { character: { ...s.character, world: { ...w, quests: { ...w.quests, [id]: p } } } };
+                });
+                void get().saveToCloud();
+            },
+            worldFound: (id) => {
+                const w = get().character.world ?? EMPTY_WORLD;
+                if ((w.found || []).includes(id)) return false;
+                set((s) => {
+                    const cw = s.character.world ?? EMPTY_WORLD;
+                    return { character: { ...s.character, world: { ...cw, found: [...(cw.found || []), id] } } };
+                });
+                void get().saveToCloud();
+                return true;
+            },
 
             returnToSource: () =>
                 set((s) => (s.character.sourceReturned ? {} : { character: { ...s.character, sourceReturned: true } })),

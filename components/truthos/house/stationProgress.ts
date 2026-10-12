@@ -66,6 +66,7 @@ export const STATION_LABELS: Record<HotspotId, string> = {
     fireplace: 'Fire',
     wall: 'The Mark',
     cineworks: 'Cineworks',
+    overlook_door: 'The Plain',
 };
 
 export function loadVisited(): Set<string> {

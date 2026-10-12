@@ -23,7 +23,8 @@ export type HotspotId =
     | 'fireplace'
     | 'mailbox'
     | 'wall'
-    | 'cineworks';
+    | 'cineworks'
+    | 'overlook_door';
 
 export type Hotspot = {
     id: HotspotId;
@@ -35,5 +36,7 @@ export type Hotspot = {
         | { type: 'os' }
         | { type: 'panel'; panel: HousePanelId }
         | { type: 'sit' }
-        | { type: 'soon'; message: string };
+        | { type: 'soon'; message: string }
+        /** Leave the house for the Aether Plain */
+        | { type: 'exit' };
 };

@@ -733,6 +733,8 @@ export const HOME_HOTSPOTS: HomeHotspot[] = [
     { id: 'hall', label: 'The Hall Circle', hint: 'The community fire', level: 'main', position: [FIRE.x, 1.25, FIRE.z], radius: 3.2, action: { type: 'panel', panel: 'hall' } },
     { id: 'soul_mirror', label: 'The Mirror Well', hint: 'Look down · shape your vessel', level: 'main', position: [POOL.x - POOL.r - 1.6, 1.2, POOL.z], radius: 2.0, action: { type: 'panel', panel: 'soul' } },
     { id: 'studio', label: 'The Signal Studio', hint: 'Broadcast from the lair', level: 'main', position: [C_STU.x, 1.2, C_STU.z - 1.6], radius: 2.2, action: { type: 'panel', panel: 'studio' } },
+    // The Overlook's glass opens onto the Aether Plain — the one way out
+    { id: 'overlook_door', label: 'The Plain', hint: 'Step out onto the Aether Plain', level: 'main', position: [0, 1.2, 60.6], radius: 2.8, action: { type: 'exit' } },
 ];
 
 export function hotspotWorldY(h: HomeHotspot): number {

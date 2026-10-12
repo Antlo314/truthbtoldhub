@@ -6,6 +6,7 @@ import { loadSettings, saveSettings } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { QUALITY_LABELS, type QualitySetting } from './renderQuality';
 import { EMOTES } from './Vessel';
+import { setAllSound, soundOn } from '@/components/sanctum/SoundToggle';
 
 const QUALITY_CHOICES: QualitySetting[] = ['auto', 'ultra', 'high', 'balanced', 'low'];
 
@@ -32,9 +33,11 @@ export default function HousePause({
     const setQuality = useHouseUi((s) => s.setQuality);
     const qualityDrop = useHouseUi((s) => s.qualityDrop);
     const [lostLine, setLostLine] = useState<string | null>(null);
+    const [sound, setSound] = useState(true);
 
     useEffect(() => {
         if (!paused) setLostLine(null);
+        else setSound(soundOn());
     }, [paused]);
 
     if (!paused) return null;
@@ -137,6 +140,18 @@ export default function HousePause({
                         </p>
                     </div>
 
+                    <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
+                        <span>Sound</span>
+                        <input
+                            type="checkbox"
+                            checked={sound}
+                            onChange={(e) => {
+                                setAllSound(e.target.checked);
+                                setSound(e.target.checked);
+                            }}
+                            className="h-4 w-4 accent-emerald-400"
+                        />
+                    </label>
                     <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
                         <span>Look invert</span>
                         <input

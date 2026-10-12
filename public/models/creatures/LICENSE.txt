@@ -1,0 +1,9 @@
+Creatures of the Aether Plain
+
+Deer, Fox, Wolf, Bull, Frog, Ghost, Glub, Green_Blob, Mushnub, Pink_Slime
+by Quaternius (quaternius.com) — Ultimate Animated Animal Pack and
+Ultimate Monsters Pack. Licence: CC0 1.0 Universal (public domain).
+No attribution required; credited here anyway.
+
+Fetched from a public CC0 mirror of the packs (github.com/Dallolz/moorfall-assets,
+commit 1e83864f55ff8646e929ac9b73faa75df29161de, enemies/).
