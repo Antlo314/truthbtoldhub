@@ -37,6 +37,21 @@ async function applyEverywhere(muted: boolean) {
     }
 }
 
+/**
+ * Sound on or off, everywhere — the one switch every surface calls (this
+ * button, the OS Control Center, Settings). Persists, silences both audio
+ * controllers, and tells every listener so their switches agree.
+ */
+export function setAllSound(on: boolean) {
+    saveSettings({ music: on });
+    void applyEverywhere(!on);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('tbth-sound', { detail: on }));
+}
+
+export function soundOn(): boolean {
+    return loadSettings().music !== false;
+}
+
 export default function SoundToggle() {
     const [on, setOn] = useState(true);
     const [ready, setReady] = useState(false);
@@ -63,13 +78,14 @@ export default function SoundToggle() {
         };
     }, [ready, on]);
 
+    useEffect(() => {
+        const sync = (e: Event) => setOn(!!(e as CustomEvent<boolean>).detail);
+        window.addEventListener('tbth-sound', sync);
+        return () => window.removeEventListener('tbth-sound', sync);
+    }, []);
+
     const toggle = useCallback(() => {
-        setOn((prev) => {
-            const next = !prev;
-            saveSettings({ music: next });
-            void applyEverywhere(!next);
-            return next;
-        });
+        setAllSound(!soundOn());
     }, []);
 
     // M mutes, the way it does in every game
@@ -92,6 +108,7 @@ export default function SoundToggle() {
             title={`${on ? 'Mute' : 'Unmute'} all sound  ·  M`}
             aria-label={on ? 'Mute all sound' : 'Unmute all sound'}
             aria-pressed={!on}
+            data-sound-toggle
             className={`fixed z-[9999] flex items-center justify-center rounded-full border backdrop-blur-md transition-all active:scale-95 ${
                 on
                     ? 'border-white/15 bg-black/40 text-white/45 hover:text-white hover:border-white/35 hover:bg-black/70'

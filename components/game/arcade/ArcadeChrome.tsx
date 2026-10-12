@@ -47,15 +47,15 @@ export function ArcadeGameShell({
                 <button
                     type="button"
                     onClick={onExit}
-                    className="h-10 px-3 rounded-lg border border-white/12 bg-white/[0.04] text-zinc-200 hover:text-white flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider"
+                    className="h-9 pl-2.5 pr-3.5 rounded-full bg-white/[0.08] text-white/85 hover:bg-white/[0.14] hover:text-white flex items-center gap-1.5 text-[13px] font-medium"
                     aria-label="Exit"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exit</span>
+                    <span className="hidden sm:inline">Back</span>
                 </button>
                 <div className="text-center min-w-0">
-                    <p className="text-[9px] uppercase tracking-[0.35em] text-white/35 font-mono">Arcade</p>
-                    <p className="font-ritual text-xl tracking-[0.2em] leading-none truncate" style={{ color: accent }}>
+                    <p className="text-[11px] text-white/40">Arcade</p>
+                    <p className="text-[18px] font-black tracking-[0.14em] leading-none truncate" style={{ color: accent }}>
                         {title}
                     </p>
                     {subtitle && <p className="text-[10px] text-white/40 mt-0.5 truncate">{subtitle}</p>}
@@ -113,8 +113,8 @@ export function StatPill({
 }) {
     return (
         <div className="flex-1 min-w-0 text-center px-1">
-            <p className="text-[8px] font-mono uppercase tracking-[0.22em] text-white/40 leading-none">{label}</p>
-            <p className="font-ritual text-lg leading-tight tabular-nums" style={{ color: accent || '#fff' }}>
+            <p className="text-[10.5px] text-white/50 leading-none">{label}</p>
+            <p className="font-bold tabular-nums text-lg leading-tight tabular-nums" style={{ color: accent || '#fff' }}>
                 {value}
             </p>
         </div>

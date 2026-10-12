@@ -528,3 +528,28 @@ h1, h2, h3, .font-ritual {
         transform: scale(1.05);
     }
 }
+
+/* ─── Inside a Truth.OS window ──────────────────────────────
+   The window is the chrome. A page's own sticky/fixed header (back to
+   the sanctuary, title, soul power, sign out) would repeat it, and its
+   back button would load the whole OS inside the window. */
+html[data-embed='1'] body header.sticky,
+html[data-embed='1'] body header.fixed {
+    display: none !important;
+}
+
+/* Truth.OS carries sound in Control Center; the floating button would sit on its clock */
+html[data-os='1'] [data-sound-toggle] {
+    display: none !important;
+}
+
+/* Truth.OS speaks one UI typeface. The site's serif heading rule (h1–h3) is
+   for the sanctum's ritual pages; inside the OS shell headings use the UI
+   font unless a feature asks for the serif explicitly with .font-ritual. */
+[data-os-shell] :is(h1, h2, h3):not(.font-ritual) {
+    font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+    letter-spacing: -0.01em;
+}
+[data-os-shell] {
+    font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+}

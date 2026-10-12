@@ -215,7 +215,7 @@ export default function TruthGuideApp({ initialPrompt }: { initialPrompt?: strin
         <div className="h-full min-h-[280px] flex flex-col bg-[#0a080c] text-[#f0d4a8]">
             <header className="shrink-0 px-3 py-2.5 border-b border-amber-900/35 bg-gradient-to-r from-amber-950/50 to-black/70 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-amber-400/90 font-semibold">
+                    <p className="text-[11.5px] text-amber-400/90 font-semibold">
                         Truth · Guide
                     </p>
                     <p className="text-[10px] text-amber-700/80 mt-0.5 truncate">
@@ -242,7 +242,7 @@ export default function TruthGuideApp({ initialPrompt }: { initialPrompt?: strin
                         type="button"
                         disabled={busy}
                         onClick={() => send('', 'scripture')}
-                        className="px-2.5 py-1.5 rounded-lg border border-amber-500/35 text-[10px] uppercase tracking-wider text-amber-200 hover:bg-amber-500/10 disabled:opacity-40 min-h-[40px]"
+                        className="px-2.5 py-1.5 rounded-lg border border-amber-500/35 text-[11.5px] text-amber-200 hover:bg-amber-500/10 disabled:opacity-40 min-h-[40px]"
                     >
                         Daily Word
                     </button>
@@ -261,9 +261,9 @@ export default function TruthGuideApp({ initialPrompt }: { initialPrompt?: strin
                                   : 'text-[#f0d4a8]'
                         }`}
                     >
-                        {m.role === 'user' && <span className="text-cyan-500/70 text-[10px] uppercase tracking-wider block mb-0.5">You</span>}
+                        {m.role === 'user' && <span className="text-cyan-500/70 text-[11.5px] block mb-0.5">You</span>}
                         {m.role === 'truth' && (
-                            <span className="text-amber-500/70 text-[10px] uppercase tracking-wider mb-0.5 flex items-center gap-2">
+                            <span className="text-amber-500/70 text-[11.5px] mb-0.5 flex items-center gap-2">
                                 Truth
                                 {m.voice && (
                                     <button

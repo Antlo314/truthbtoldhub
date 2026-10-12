@@ -70,8 +70,8 @@ export function MediaPlayerApp() {
     return (
         <div className="h-full flex flex-col sm:flex-row bg-black text-zinc-200 min-h-[300px]">
             {/* Playlist */}
-            <div className="sm:w-56 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 overflow-y-auto max-h-[38%] sm:max-h-none bg-zinc-950/80">
-                <p className="px-3 pt-3 pb-1.5 text-[9px] uppercase tracking-[0.3em] text-violet-300/80 font-mono">
+            <div className="sm:w-56 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 overflow-y-auto max-h-[38%] sm:max-h-none bg-[#101219]/80">
+                <p className="px-3 pt-3 pb-1.5 text-[11px] text-violet-300/80">
                     Reels · {HOUSE_FILMS.length}
                 </p>
                 <ul className="p-2 space-y-1">
@@ -114,7 +114,7 @@ export function MediaPlayerApp() {
                         <source src={film.src} type="video/mp4" />
                     </video>
                 </div>
-                <div className="shrink-0 px-3 py-2.5 border-t border-white/10 bg-zinc-950/90 flex items-center gap-2">
+                <div className="shrink-0 px-3 py-2.5 border-t border-white/10 bg-[#101219]/90 flex items-center gap-2">
                     <button
                         type="button"
                         onClick={() => step(-1)}
@@ -188,7 +188,7 @@ export function PhotosApp() {
     const current = view !== null ? photos[view] : null;
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[280px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[280px]">
             {current ? (
                 <div className="h-full flex flex-col">
                     <div className="flex-1 min-h-0 relative bg-black flex items-center justify-center">
@@ -213,7 +213,7 @@ export function PhotosApp() {
                             <ChevronRight size={18} />
                         </button>
                     </div>
-                    <div className="shrink-0 px-3 py-2.5 border-t border-white/10 flex items-center gap-2 bg-zinc-950">
+                    <div className="shrink-0 px-3 py-2.5 border-t border-white/10 flex items-center gap-2 bg-[#101219]">
                         <p className="text-[13px] text-white font-semibold truncate flex-1">
                             {current.title}
                         </p>
@@ -248,7 +248,7 @@ export function PhotosApp() {
                 <div className="h-full overflow-y-auto p-3">
                     <div className="flex items-center gap-2 mb-3 px-0.5">
                         <ImageIcon size={15} className="text-pink-300" />
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-pink-300/80 font-mono">
+                        <p className="text-[11.5px] text-pink-300/80">
                             Gallery · {photos.length} images
                         </p>
                     </div>

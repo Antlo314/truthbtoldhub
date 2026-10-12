@@ -30,7 +30,14 @@ async function authHeader(): Promise<HeadersInit> {
     return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
-export default function WallPanel({ onClose }: { onClose: () => void }) {
+const FACE_LABEL: Record<WallFace, string> = { w: 'Back wall', s: 'Left wall', n: 'Right wall' };
+
+/**
+ * `embedded` renders the same tool inside a Truth.OS window: no overlay,
+ * no close button (the window has one). In the house, the panel opens on
+ * the face you are standing at; either way every face is one tap away.
+ */
+export default function WallPanel({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
     const year = WALL_YEAR();
     const email = useTruthOs((s) => s.sessionEmail);
     const isAdmin = isAdminEmail(email);
@@ -38,7 +45,7 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
     const profile = useSoulStore((s) => s.profile);
     const [marks, setMarks] = useState<WallMark[]>([]);
     const [mine, setMine] = useState(false);
-    const [face] = useState<WallFace>(() => nearestWallFace(getWalkerPose().x, getWalkerPose().z));
+    const [face, setFace] = useState<WallFace>(() => (embedded ? 'w' : nearestWallFace(getWalkerPose().x, getWalkerPose().z)));
     const [pick, setPick] = useState<{ face: WallFace; col: number; row: number } | null>(null);
     const wallCells = WALL_CELLS.filter((c) => c.face === face);
     const [color, setColor] = useState(PALETTE[0]);
@@ -150,22 +157,36 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
         }
     }, [pick, email, caption, profile?.display_name, setAuthPrompt]);
 
-    return (
-        <div className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <button type="button" className="absolute inset-0 bg-black/80" aria-label="Close" onClick={onClose} />
-            <div className="relative w-full sm:max-w-3xl h-[min(94dvh,820px)] bg-[#0c0b09] border border-amber-400/20 sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+    // A plain function, not a component: a component defined in render
+    // would remount the canvas (and wipe the painting) on every state change.
+    const wrap = (children: React.ReactNode) =>
+        embedded ? (
+            <div className="h-full min-h-0 bg-[#0e0d0b] flex flex-col">{children}</div>
+        ) : (
+            <div className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                <button type="button" className="absolute inset-0 bg-black/80" aria-label="Close" onClick={onClose} />
+                <div className="relative w-full sm:max-w-3xl h-[min(94dvh,820px)] bg-[#0e0d0b] border border-amber-400/20 sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+                    {children}
+                </div>
+            </div>
+        );
+
+    return wrap(
+            <>
                 <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.3em] font-mono text-amber-300/80">The Mark · {year}</p>
-                        <h2 className="text-white font-semibold text-lg leading-tight">One mark a year. It stays.</h2>
+                        <p className="text-[12px] text-amber-200/70">The Mark · {year}</p>
+                        <h2 className="text-white font-semibold text-[17px] leading-tight">One mark a year. It stays.</h2>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-3 py-1.5 rounded-lg border border-white/15 text-[10px] uppercase tracking-widest text-white/60 hover:text-white"
-                    >
-                        Close
-                    </button>
+                    {!embedded && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="h-9 px-3.5 rounded-lg bg-white/[0.08] text-[13px] text-white/80 hover:bg-white/[0.14] hover:text-white"
+                        >
+                            Close
+                        </button>
+                    )}
                 </header>
 
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
@@ -300,9 +321,23 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                                     Sign in
                                 </button>
                             )}
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-amber-200/60 font-mono">
-                                {face === 'w' ? 'Back wall' : face === 's' ? 'Left wall' : 'Right wall'}
-                            </p>
+                            <div className="inline-flex rounded-lg bg-white/[0.07] p-0.5">
+                                {(['s', 'w', 'n'] as WallFace[]).map((f) => (
+                                    <button
+                                        key={f}
+                                        type="button"
+                                        onClick={() => {
+                                            sacredUi.click();
+                                            setFace(f);
+                                        }}
+                                        className={`min-h-[30px] rounded-md px-3 text-[12px] font-medium ${
+                                            face === f ? 'bg-white/[0.16] text-white' : 'text-white/55 hover:text-white/85'
+                                        }`}
+                                    >
+                                        {FACE_LABEL[f]}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="grid grid-cols-[repeat(auto-fill,minmax(22px,1fr))] gap-0.5">
                                 {wallCells.map((c) => {
                                     const fill = marks.find((m) => m.face === c.face && m.col === c.col && m.row === c.row);
@@ -361,7 +396,6 @@ export default function WallPanel({ onClose }: { onClose: () => void }) {
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </>,
     );
 }

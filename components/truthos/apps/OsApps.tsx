@@ -1,686 +1,591 @@
 'use client';
 
 /**
- * Truth.OS apps — full Hut surface as desktop modules.
+ * Truth.OS apps — one file that maps each app id to its window body.
+ *
+ * Every native screen here uses the shared kit (ui/kit.tsx). Apps that are
+ * whole features elsewhere in the hub (the Hall, the Library, the Arcade,
+ * the Soul mirror, the Mark) are mounted as-is rather than re-drawn.
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import {
+    Bell,
+    Image as ImageIcon,
+    Info,
+    LogIn,
+    LogOut,
+    Monitor,
+    Newspaper,
+    Pin,
+    Plus,
+    User,
+    Volume2,
+} from 'lucide-react';
 import AvatarCanvas from '@/components/game/AvatarCanvas';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import TruthGuideApp from './TruthGuideApp';
-import type { OsAppId, OsAppPayload } from '../truthOsStore';
-import { APP_META } from '../truthOsStore';
+import { useTruthOs, type OsAppId, type OsAppPayload, APP_META } from '../truthOsStore';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
-import { loadSettings, applyMusicSetting, saveSettings } from '@/lib/game/settings';
-import { supabase } from '@/lib/supabase';
+import { setAllSound, soundOn } from '@/components/sanctum/SoundToggle';
 import { fetchBulletins, type Bulletin } from '@/lib/game/hut';
+import { hubAudio } from '@/lib/truthos/hubAudio';
+import { isMuted as voiceMuted, setMuted as setVoiceMuted } from '@/lib/truthVoice';
 import AdminConsole from './AdminConsole';
 import { isAdminEmail } from '@/lib/adminEmails';
 import DonationSection from '@/components/DonationSection';
-import {
-    CalculatorApp,
-    FileExplorerApp,
-    NotepadApp,
-    PaintApp,
-} from './SystemApps';
+import { CalculatorApp, FileExplorerApp, NotepadApp, PaintApp } from './SystemApps';
 import { MediaPlayerApp, PhotosApp } from './MediaApps';
 import { ClockApp, TaskManagerApp, TerminalApp } from './UtilityApps';
 import { BrowserApp } from './BrowserApp';
 import { MusicApp } from './MusicApp';
 import { TasksApp } from './TasksApp';
-import WallApp from './WallApp';
-import StudioPanel from '@/components/truthos/house/StudioPanel';
-import ArchiveClient from '@/components/archive/ArchiveClient';
-import LibraryClient from '@/components/library/LibraryClient';
-import { useOsSystem, OS_WALLPAPERS, WALLPAPER_FAMILIES, isUnlocked, resolveWallpaper, ACCENT_HEX } from '../osSystemStore';
+import {
+    useOsSystem,
+    OS_WALLPAPERS,
+    WALLPAPER_FAMILIES,
+    isUnlocked,
+    resolveWallpaper,
+    ACCENT_HEX,
+} from '../osSystemStore';
 import type { OsAccentId } from '../OsIcon';
+import {
+    AppSurface,
+    Btn,
+    Empty,
+    Group,
+    IconChip,
+    Loading,
+    PageHeader,
+    Row,
+    Segmented,
+    SidebarLayout,
+    Stat,
+    Toggle,
+    cx,
+} from '../ui/kit';
 import { Lock } from 'lucide-react';
 
 const ArcadeLobby = dynamic(() => import('@/components/game/arcade/ArcadeLobby'), {
     ssr: false,
-    loading: () => <OsLoading label="Arcade" />,
+    loading: () => <Loading label="Opening the arcade…" />,
 });
-
 const SoulPanel = dynamic(() => import('@/components/hut3d/hud/SoulPanel'), {
     ssr: false,
-    loading: () => <OsLoading label="Soul forge" />,
+    loading: () => <Loading label="Opening the mirror…" />,
 });
-
 const HutLedger = dynamic(() => import('@/components/game/HutLedger'), {
     ssr: false,
-    loading: () => <OsLoading label="Ledger" />,
+    loading: () => <Loading label="Counting the souls…" />,
+});
+const NewspaperPanel = dynamic(() => import('@/components/truthos/house/NewspaperPanel'), {
+    ssr: false,
+    loading: () => <Loading label="Fetching the paper…" />,
+});
+const WallPanel = dynamic(() => import('@/components/truthos/house/WallPanel'), {
+    ssr: false,
+    loading: () => <Loading label="Opening the wall…" />,
+});
+const ArchiveClient = dynamic(() => import('@/components/archive/ArchiveClient'), {
+    ssr: false,
+    loading: () => <Loading label="Opening the Hall…" />,
+});
+const LibraryClient = dynamic(() => import('@/components/library/LibraryClient'), {
+    ssr: false,
+    loading: () => <Loading label="Opening the Library…" />,
 });
 
-function OsLoading({ label }: { label: string }) {
-    return (
-        <div className="h-full min-h-[200px] flex items-center justify-center font-mono text-[11px] text-emerald-500/50 tracking-[0.25em]">
-            loading {label}…
-        </div>
-    );
-}
+/* ─── Ledger: dispatches · the Daily Word · the souls ─────── */
 
-function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-    return (
-        <div className={`h-full overflow-y-auto p-4 text-sm text-zinc-200 ${className}`}>
-            {children}
-        </div>
-    );
-}
+type LedgerTab = 'dispatches' | 'word' | 'souls';
 
-function AppHeader({ title, sub, accent }: { title: string; sub: string; accent: string }) {
-    return (
-        <div className="mb-4 pb-3 border-b border-white/8">
-            <p className={`text-[10px] uppercase tracking-[0.32em] font-mono ${accent}`}>{title}</p>
-            <h3 className="text-white font-semibold text-lg mt-1 leading-tight">{sub}</h3>
-        </div>
-    );
-}
-
-function StatChip({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-            <p className="text-[9px] uppercase tracking-widest text-white/35">{label}</p>
-            <p className="text-sm text-white/90 mt-0.5 font-medium">{value}</p>
-        </div>
-    );
-}
-
-function RouteFrame({ href, title }: { href: string; title: string }) {
-    return (
-        <div className="h-full min-h-[280px] flex flex-col bg-black">
-            <div className="shrink-0 px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2 bg-black/60">
-                <p className="text-[10px] font-mono text-white/40 truncate">{title}</p>
-                <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => sacredUi.click()}
-                    className="text-[10px] uppercase tracking-widest text-emerald-400/80 hover:text-emerald-300"
-                >
-                    Open full →
-                </a>
-            </div>
-            <iframe
-                title={title}
-                src={href.includes('?') ? `${href}&embed=1` : `${href}?embed=1`}
-                className="flex-1 w-full border-0 bg-black min-h-[240px]"
-            />
-        </div>
-    );
-}
-
-function LinkGrid({
-    links,
-}: {
-    links: { href: string; label: string; tag: string }[];
-}) {
-    return (
-        <ul className="space-y-2">
-            {links.map((l) => (
-                <li key={l.href}>
-                    <a
-                        href={l.href}
-                        onClick={() => sacredUi.click()}
-                        className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.06] hover:border-emerald-400/25 transition-colors"
-                    >
-                        <span className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center text-emerald-300 text-sm shrink-0">
-                            ▣
-                        </span>
-                        <span className="min-w-0 flex-1">
-                            <span className="block text-sm text-white/90">{l.label}</span>
-                            <span className="block text-[10px] text-white/30 font-mono mt-0.5">
-                                {l.tag} · {l.href}
-                            </span>
-                        </span>
-                    </a>
-                </li>
-            ))}
-        </ul>
-    );
-}
-
-export function AccountApp() {
-    const character = useGameStore((s) => s.character);
-    const profile = useSoulStore((s) => s.profile);
-    const fetchIdentity = useSoulStore((s) => s.fetchIdentity);
-    const [email, setEmail] = useState<string | null>(null);
-
-    useEffect(() => {
-        void fetchIdentity?.();
-        supabase.auth.getUser().then(({ data }) => {
-            setEmail(data.user?.email ?? null);
-        });
-    }, [fetchIdentity]);
-
-    return (
-        <Panel className="flex flex-col gap-4 bg-zinc-950">
-            <AppHeader title="Account.exe" sub="Signed-in identity" accent="text-cyan-400/80" />
-            <div className="flex items-center gap-4">
-                <div className="rounded-xl border border-cyan-400/20 bg-black/40 p-2">
-                    <AvatarCanvas config={character.avatar} scale={4} />
-                </div>
-                <div className="min-w-0">
-                    <p className="font-semibold text-lg text-white truncate">
-                        {character.name?.trim() || profile?.display_name || 'Soul'}
-                    </p>
-                    {email && (
-                        <p className="text-[11px] text-zinc-500 mt-1 truncate" title={email}>
-                            {email}
-                            {isAdminEmail(email) && (
-                                <span className="ml-2 text-rose-400 uppercase tracking-wider text-[9px]">
-                                    Admin
-                                </span>
-                            )}
-                        </p>
-                    )}
-                </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-                <StatChip label="Soul Power" value={String(profile?.soul_power ?? '—')} />
-                <StatChip
-                    label="Support"
-                    value={profile?.is_supporter ? 'Supporter' : profile?.tier || 'Guest'}
-                />
-            </div>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                Shape your vessel in the <span className="text-zinc-300">Soul</span> app. Play Arcade, tend the Ledger,
-                and use Leave terminal only if you want the 3D house.
-            </p>
-        </Panel>
-    );
-}
-
-export function FilesApp() {
-    return <FileExplorerApp />;
-}
-
-export function WebLinksApp() {
-    return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Web" sub="Sanctum shortcuts" accent="text-sky-400/80" />
-            <LinkGrid
-                links={[
-                    { href: '/library', label: 'Library', tag: 'scrolls' },
-                    { href: '/cinema', label: 'Cinema', tag: 'films' },
-                    { href: '/archive', label: 'The Hall', tag: 'community' },
-                    { href: '/support', label: 'Support', tag: 'offering' },
-                    { href: '/codex', label: 'Codex', tag: 'study' },
-                    { href: '/cineworks', label: 'Cineworks', tag: 'catalog' },
-                    { href: '/self', label: 'Soul page', tag: 'profile' },
-                    { href: '/treasury', label: 'Treasury', tag: 'pool' },
-                ]}
-            />
-        </Panel>
-    );
-}
-
-export function UpdatesApp() {
-    const [rows, setRows] = useState<Bulletin[]>([]);
-    const [loading, setLoading] = useState(true);
+function Dispatches() {
+    const [rows, setRows] = useState<Bulletin[] | null>(null);
+    const [open, setOpen] = useState<string | null>(null);
+    const email = useTruthOs((s) => s.sessionEmail);
+    const openApp = useTruthOs((s) => s.openApp);
 
     useEffect(() => {
         let alive = true;
-        (async () => {
-            setLoading(true);
-            try {
-                const list = await fetchBulletins(12);
-                if (alive) setRows(list);
-            } catch {
-                if (alive) setRows([]);
-            } finally {
-                if (alive) setLoading(false);
-            }
-        })();
+        fetchBulletins(24)
+            .then((r) => alive && setRows(r))
+            .catch(() => alive && setRows([]));
         return () => {
             alive = false;
         };
     }, []);
 
+    if (!rows) return <Loading label="Fetching dispatches…" />;
     return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Updates.exe" sub="House dispatches" accent="text-amber-400/80" />
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                Architect posts and daily signal. The Ledger holds the fuller Word.
-            </p>
-            {loading && <p className="text-xs text-zinc-600 font-mono">fetching…</p>}
-            {!loading && rows.length === 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
-                    No dispatches yet. When Architects post, they appear here.
+        <div className="mx-auto max-w-2xl px-5 py-5">
+            <PageHeader
+                title="Dispatches"
+                subtitle="Posts from the Architects, newest first."
+                actions={
+                    isAdminEmail(email) ? (
+                        <Btn size="sm" variant="primary" onClick={() => openApp('admin')}>
+                            <Plus size={14} /> New
+                        </Btn>
+                    ) : undefined
+                }
+            />
+            {rows.length === 0 ? (
+                <Empty icon={<Newspaper size={34} />} title="No dispatches yet" body="When an Architect posts, it lands here first." />
+            ) : (
+                <div className="space-y-2.5">
+                    {rows.map((r) => {
+                        const expanded = open === r.id;
+                        return (
+                            <button
+                                key={r.id}
+                                type="button"
+                                onClick={() => {
+                                    sacredUi.click();
+                                    setOpen(expanded ? null : r.id);
+                                }}
+                                className="block w-full rounded-xl border border-white/[0.07] bg-white/[0.035] px-4 py-3.5 text-left transition-colors hover:bg-white/[0.06]"
+                            >
+                                <div className="flex items-center gap-2">
+                                    {r.pinned && <Pin size={13} className="shrink-0 text-amber-300" />}
+                                    <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">{r.title || 'Dispatch'}</p>
+                                    {r.published_at && (
+                                        <span className="shrink-0 text-[11.5px] tabular-nums text-white/40">
+                                            {new Date(r.published_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className={cx('mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-white/65', !expanded && 'line-clamp-3')}>
+                                    {r.body || '—'}
+                                </p>
+                            </button>
+                        );
+                    })}
                 </div>
             )}
-            <ul className="space-y-2">
-                {rows.map((r) => (
-                    <li key={r.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                        <div className="flex items-center gap-2">
-                            <p className="text-sm text-white/90 font-medium">{r.title || 'Dispatch'}</p>
-                            {r.pinned && (
-                                <span className="text-[9px] uppercase tracking-widest text-aether-gold/80">
-                                    Pinned
-                                </span>
-                            )}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1 line-clamp-3 leading-relaxed">
-                            {r.body || '—'}
-                        </p>
-                        {r.published_at && (
-                            <p className="text-[10px] text-zinc-600 mt-1.5 font-mono">
-                                {new Date(r.published_at).toLocaleDateString()}
-                            </p>
-                        )}
-                    </li>
-                ))}
-            </ul>
-        </Panel>
+        </div>
     );
 }
 
-export function LedgerApp() {
+export function LedgerApp({ section }: { section?: string }) {
+    const [tab, setTab] = useState<LedgerTab>(
+        section === 'word' || section === 'souls' ? section : 'dispatches',
+    );
     const character = useGameStore((s) => s.character);
     const profile = useSoulStore((s) => s.profile);
-    const name = character.name?.trim() || profile?.display_name || 'Soul';
+    const name = character.name?.trim() || profile?.display_name || undefined;
     return (
-        <Panel className="bg-zinc-950 space-y-3">
-            <AppHeader title="Ledger.exe" sub="Daily Word · records" accent="text-amber-300/80" />
-            <HutLedger characterName={name} />
-            <div className="border-t border-white/10 pt-3">
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-mono">Dispatches</p>
-                <UpdatesApp />
+        <div className="flex h-full min-h-0 flex-col bg-[#101219]">
+            <div className="flex shrink-0 justify-center border-b border-white/[0.06] px-3 py-2">
+                <Segmented
+                    value={tab}
+                    onChange={setTab}
+                    options={[
+                        { id: 'dispatches', label: 'Dispatches' },
+                        { id: 'word', label: 'Daily Word' },
+                        { id: 'souls', label: 'The Souls' },
+                    ]}
+                />
             </div>
-        </Panel>
-    );
-}
-
-export function SoulApp({ onExit }: { onExit?: () => void }) {
-    return (
-        <div className="h-full min-h-[320px] bg-zinc-950 overflow-auto">
-            <SoulPanel onClose={() => { sacredUi.click(); onExit?.(); }} />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {tab === 'dispatches' && <Dispatches />}
+                {tab === 'word' && <NewspaperPanel />}
+                {tab === 'souls' && (
+                    <div className="mx-auto max-w-2xl px-5 py-5">
+                        <HutLedger characterName={name} />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
 
-export function ArcadeApp({ onExit }: { onExit?: () => void }) {
+/* ─── Settings ────────────────────────────────────────────── */
+
+type Pane = 'account' | 'appearance' | 'sound' | 'display' | 'notifications' | 'about';
+
+function AccountPane({ onLogout }: { onLogout: () => void }) {
     const character = useGameStore((s) => s.character);
+    const profile = useSoulStore((s) => s.profile);
+    const fetchIdentity = useSoulStore((s) => s.fetchIdentity);
+    const email = useTruthOs((s) => s.sessionEmail);
+    const setAuthPrompt = useTruthOs((s) => s.setAuthPrompt);
+    const openApp = useTruthOs((s) => s.openApp);
+
+    useEffect(() => {
+        void fetchIdentity?.();
+    }, [fetchIdentity]);
+
+    const name = character.name?.trim() || profile?.display_name || (email ? 'Soul' : 'Guest');
     return (
-        <div className="h-full min-h-[320px] bg-zinc-950 overflow-auto">
-            {/* The lobby's own back button used to call a no-op, so the only
-                way out of the arcade window was the title-bar button that the
-                lobby itself was painting over. */}
-            <ArcadeLobby character={character} onClose={() => { sacredUi.click(); onExit?.(); }} />
+        <div className="px-6 py-6">
+            <div className="mb-6 flex items-center gap-4">
+                <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-white/15 to-white/[0.03] ring-1 ring-white/15">
+                    <AvatarCanvas config={character.avatar} scale={3} />
+                </div>
+                <div className="min-w-0">
+                    <p className="truncate text-[20px] font-semibold text-white">{name}</p>
+                    <p className="truncate text-[12.5px] text-white/50">{email ?? 'Not signed in'}</p>
+                    {email && isAdminEmail(email) && (
+                        <span className="mt-1 inline-block rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[11px] font-medium text-rose-200">Architect</span>
+                    )}
+                </div>
+            </div>
+            {email ? (
+                <>
+                    <div className="mb-5 grid grid-cols-2 gap-2.5">
+                        <Stat label="Soul power" value={profile?.soul_power ?? '—'} />
+                        <Stat label="Standing" value={profile?.is_supporter ? 'Supporter' : profile?.tier || 'Seeker'} />
+                    </div>
+                    <Group>
+                        <Row label="Shape your vessel" detail="Body, face, hair, garments" onClick={() => openApp('soul')} />
+                        <Row label="Your public page" detail="Profile, history, soul power" onClick={() => openApp('browser', { payload: { content: '/self', name: 'Your Page' } })} />
+                    </Group>
+                    <Group>
+                        <Row label="Sign out" danger icon={<LogOut size={16} className="text-rose-300" />} onClick={onLogout} chevron={false} />
+                    </Group>
+                </>
+            ) : (
+                <Group footer="Signing in keeps your soul power, your mark and your arcade scores.">
+                    <Row label="Sign in" icon={<LogIn size={16} className="text-white/70" />} onClick={() => setAuthPrompt(true)} />
+                </Group>
+            )}
         </div>
     );
+}
+
+function AppearancePane() {
+    const wallpaper = useOsSystem((s) => s.wallpaper);
+    const accent = useOsSystem((s) => s.accent);
+    const setWallpaper = useOsSystem((s) => s.setWallpaper);
+    const setAccent = useOsSystem((s) => s.setAccent);
+    const snapshot = useOsSystem((s) => s.snapshot);
+    const unlocked = OS_WALLPAPERS.filter((w) => isUnlocked(w, snapshot)).length;
+    return (
+        <div className="px-6 py-6">
+            <PageHeader title="Appearance" subtitle={`${unlocked} of ${OS_WALLPAPERS.length} wallpapers open. The rest are earned.`} />
+            <p className="mb-2 px-1 text-[12px] font-medium text-white/45">Accent</p>
+            <div className="mb-6 flex flex-wrap gap-2.5">
+                {(Object.keys(ACCENT_HEX) as OsAccentId[]).map((a) => (
+                    <button
+                        key={a}
+                        type="button"
+                        title={a}
+                        onClick={() => {
+                            setAccent(a);
+                            sacredUi.click();
+                        }}
+                        className={cx(
+                            'h-8 w-8 rounded-full ring-offset-2 ring-offset-[#101219] transition-transform active:scale-90',
+                            accent === a ? 'ring-2 ring-white' : 'hover:scale-110',
+                        )}
+                        style={{ background: ACCENT_HEX[a] }}
+                    />
+                ))}
+            </div>
+            {WALLPAPER_FAMILIES.map((fam) => {
+                const inFam = OS_WALLPAPERS.filter((w) => w.family === fam);
+                if (!inFam.length) return null;
+                return (
+                    <div key={fam} className="mb-5">
+                        <p className="mb-2 px-1 text-[12px] font-medium text-white/45">{fam}</p>
+                        <div className="grid grid-cols-2 gap-2.5 @[640px]:grid-cols-3">
+                            {inFam.map((wp) => {
+                                const open = isUnlocked(wp, snapshot);
+                                return (
+                                    <button
+                                        key={wp.id}
+                                        type="button"
+                                        disabled={!open}
+                                        title={open ? wp.name : `Locked — ${wp.unlock?.label ?? ''}`}
+                                        onClick={() => {
+                                            setWallpaper(wp.id);
+                                            setAccent(wp.accent);
+                                            sacredUi.click();
+                                        }}
+                                        className={cx(
+                                            'group relative aspect-[16/10] overflow-hidden rounded-xl ring-offset-2 ring-offset-[#101219] transition-shadow',
+                                            wallpaper === wp.id ? 'ring-2 ring-[var(--os-accent,#34d399)]' : 'ring-1 ring-white/10 hover:ring-white/30',
+                                            !open && 'cursor-not-allowed',
+                                        )}
+                                    >
+                                        <span
+                                            className={cx('absolute inset-0', !open && 'opacity-30 blur-[3px] saturate-50')}
+                                            style={{ background: resolveWallpaper(wp.id).css }}
+                                        />
+                                        {!open ? (
+                                            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center">
+                                                <Lock size={14} className="text-white/80" />
+                                                <span className="text-[11px] leading-tight text-white/80">{wp.unlock?.label}</span>
+                                            </span>
+                                        ) : (
+                                            <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/80 to-transparent px-2 pb-1.5 pt-4 text-left text-[11.5px] text-white">
+                                                {wp.name}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function SoundPane() {
+    const volume = useOsSystem((s) => s.volume);
+    const setVolume = useOsSystem((s) => s.setVolume);
+    const [music, setMusic] = useState(() => soundOn());
+    const [voiceOff, setVoiceOff] = useState(() => voiceMuted());
+    return (
+        <div className="px-6 py-6">
+            <PageHeader title="Sound" />
+            <Group title="Output">
+                <div className="px-3.5 py-3">
+                    <div className="mb-2 flex items-center justify-between text-[13px]">
+                        <span>Volume</span>
+                        <span className="tabular-nums text-white/45">{Math.round(volume * 100)}%</span>
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={Math.round(volume * 100)}
+                        onChange={(e) => {
+                            const v = Number(e.target.value) / 100;
+                            setVolume(v);
+                            hubAudio.setMaster(v);
+                        }}
+                        className="w-full"
+                        style={{ accentColor: 'var(--os-accent, #34d399)' }}
+                    />
+                </div>
+            </Group>
+            <Group footer="Truth speaks the recorded lines when you arrive somewhere new.">
+                <Row
+                    label="Sound"
+                    detail="Music and effects, everywhere in the hub"
+                    right={
+                        <Toggle
+                            checked={music}
+                            onChange={(v) => {
+                                setMusic(v);
+                                setAllSound(v);
+                            }}
+                        />
+                    }
+                />
+                <Row
+                    label="Truth’s voice"
+                    right={
+                        <Toggle
+                            checked={!voiceOff}
+                            onChange={(v) => {
+                                setVoiceOff(!v);
+                                setVoiceMuted(!v);
+                            }}
+                        />
+                    }
+                />
+            </Group>
+        </div>
+    );
+}
+
+function DisplayPane() {
+    const brightness = useOsSystem((s) => s.brightness);
+    const setBrightness = useOsSystem((s) => s.setBrightness);
+    const nightLight = useOsSystem((s) => s.nightLight);
+    const setNightLight = useOsSystem((s) => s.setNightLight);
+    return (
+        <div className="px-6 py-6">
+            <PageHeader title="Display" />
+            <Group>
+                <div className="px-3.5 py-3">
+                    <div className="mb-2 flex items-center justify-between text-[13px]">
+                        <span>Brightness</span>
+                        <span className="tabular-nums text-white/45">{Math.round(brightness * 100)}%</span>
+                    </div>
+                    <input
+                        type="range"
+                        min={55}
+                        max={100}
+                        value={Math.round(brightness * 100)}
+                        onChange={(e) => setBrightness(Number(e.target.value) / 100)}
+                        className="w-full"
+                        style={{ accentColor: 'var(--os-accent, #34d399)' }}
+                    />
+                </div>
+                <Row label="Night light" detail="Warmer screen after dark" right={<Toggle checked={nightLight} onChange={setNightLight} />} />
+            </Group>
+        </div>
+    );
+}
+
+function NotificationsPane() {
+    const dnd = useOsSystem((s) => s.doNotDisturb);
+    const setDnd = useOsSystem((s) => s.setDoNotDisturb);
+    const wallNeighbor = useOsSystem((s) => s.wallNeighbor);
+    const setWallNeighbor = useOsSystem((s) => s.setWallNeighbor);
+    return (
+        <div className="px-6 py-6">
+            <PageHeader title="Notifications" />
+            <Group footer="Do Not Disturb keeps notifications in the Today panel without popping them up.">
+                <Row label="Do Not Disturb" right={<Toggle checked={dnd} onChange={setDnd} />} />
+                <Row label="Marks on the wall" detail="When a neighbour leaves their mark" right={<Toggle checked={wallNeighbor} onChange={setWallNeighbor} />} />
+            </Group>
+        </div>
+    );
+}
+
+function AboutPane() {
+    return (
+        <div className="px-6 py-6">
+            <div className="mb-6 flex flex-col items-center py-4 text-center">
+                <span className="bg-gradient-to-br from-amber-100 via-amber-300 to-amber-600 bg-clip-text text-6xl font-black text-transparent">✦</span>
+                <p className="mt-3 text-[22px] font-semibold text-white">Truth.OS</p>
+                <p className="text-[13px] text-white/50">Version 4 · 2026</p>
+            </div>
+            <Group>
+                <Row label="Programs" right={<span>{Object.keys(APP_META).length}</span>} />
+                <Row label="Search everything" right={<kbd className="rounded bg-white/10 px-1.5 text-[11px]">Ctrl K</kbd>} />
+                <Row label="App Library" right={<kbd className="rounded bg-white/10 px-1.5 text-[11px]">Ctrl E</kbd>} />
+                <Row label="All shortcuts" right={<kbd className="rounded bg-white/10 px-1.5 text-[11px]">Ctrl /</kbd>} />
+            </Group>
+            <p className="px-1 text-[12px] leading-relaxed text-white/40">
+                Truth B Told Hub. The desktop is the Hut; every room of the house is one click from the dock.
+            </p>
+        </div>
+    );
+}
+
+export function SettingsApp({ onLogout, section }: { onLogout: () => void; section?: string }) {
+    const panes: Pane[] = ['account', 'appearance', 'sound', 'display', 'notifications', 'about'];
+    const [pane, setPane] = useState<Pane>(panes.includes(section as Pane) ? (section as Pane) : 'account');
+    const profile = useSoulStore((s) => s.profile);
+    const email = useTruthOs((s) => s.sessionEmail);
+    return (
+        <SidebarLayout<Pane>
+            active={pane}
+            onSelect={setPane}
+            header={
+                <p className="truncate px-1 text-[12px] text-white/45">
+                    {email ? profile?.display_name || email : 'Guest'}
+                </p>
+            }
+            items={[
+                { id: 'account', label: 'Account', icon: <IconChip color="#6366f1"><User size={13} /></IconChip> },
+                { id: 'appearance', label: 'Appearance', icon: <IconChip color="#0ea5e9"><ImageIcon size={13} /></IconChip> },
+                { id: 'sound', label: 'Sound', icon: <IconChip color="#ec4899"><Volume2 size={13} /></IconChip> },
+                { id: 'display', label: 'Display', icon: <IconChip color="#3b82f6"><Monitor size={13} /></IconChip> },
+                { id: 'notifications', label: 'Notifications', icon: <IconChip color="#ef4444"><Bell size={13} /></IconChip> },
+                { id: 'about', label: 'About', icon: <IconChip color="#71717a"><Info size={13} /></IconChip> },
+            ]}
+        >
+            {pane === 'account' && <AccountPane onLogout={onLogout} />}
+            {pane === 'appearance' && <AppearancePane />}
+            {pane === 'sound' && <SoundPane />}
+            {pane === 'display' && <DisplayPane />}
+            {pane === 'notifications' && <NotificationsPane />}
+            {pane === 'about' && <AboutPane />}
+        </SidebarLayout>
+    );
+}
+
+/* ─── Thin hosts for whole features ───────────────────────── */
+
+function Host({ children, className = 'bg-[#0b0d13]' }: { children: React.ReactNode; className?: string }) {
+    // `relative` + `overflow-hidden`: several features position their own
+    // chrome absolutely and must be contained by the window, not the page.
+    return <div className={cx('relative h-full min-h-0 overflow-hidden', className)}>{children}</div>;
 }
 
 export function OfferingApp() {
     return (
-        <Panel className="bg-zinc-950">
-            <AppHeader title="Offering.exe" sub="Sustain the work" accent="text-rose-300/80" />
-            <DonationSection />
-        </Panel>
-    );
-}
-
-export function LibraryApp() {
-    return (
-        <div className="h-full min-h-[280px] bg-zinc-950 overflow-hidden">
-            <LibraryClient />
-        </div>
-    );
-}
-
-export function ArchiveApp() {
-    return (
-        <div className="h-full min-h-[280px] bg-zinc-950 overflow-hidden">
-            <ArchiveClient />
-        </div>
-    );
-}
-
-export function ChamberApp({ onEnterChamber }: { onEnterChamber: () => void }) {
-    return (
-        <Panel className="bg-zinc-950 space-y-4">
-            <AppHeader title="Leave Terminal" sub="Pan out into the 3D house" accent="text-emerald-300/80" />
-            <p className="text-sm text-zinc-300 leading-relaxed">
-                Step out of Truth.OS into the first-person house. Use WASD / look on desktop, or touch controls on
-                phone. Return anytime with the desktop button in the chamber.
-            </p>
-            <button
-                type="button"
-                onClick={() => {
-                    sacredUi.access();
-                    onEnterChamber();
-                }}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-semibold text-sm hover:brightness-110 transition min-h-[48px]"
-            >
-                Leave terminal → enter 3D world
-            </button>
-        </Panel>
-    );
-}
-
-export function SettingsApp({
-    onLogout,
-    onEnterChamber,
-}: {
-    onLogout: () => void;
-    onExit?: () => void;
-    onEnterChamber?: () => void;
-}) {
-    const [music, setMusic] = useState(() => loadSettings().music);
-    const [tab, setTab] = useState<'personal' | 'system' | 'about'>('personal');
-    const wallpaper = useOsSystem((s) => s.wallpaper);
-    const accent = useOsSystem((s) => s.accent);
-    const nightLight = useOsSystem((s) => s.nightLight);
-    const wallNeighbor = useOsSystem((s) => s.wallNeighbor);
-    const setWallpaper = useOsSystem((s) => s.setWallpaper);
-    const setAccent = useOsSystem((s) => s.setAccent);
-    const setNightLight = useOsSystem((s) => s.setNightLight);
-    const setWallNeighbor = useOsSystem((s) => s.setWallNeighbor);
-    const snapshot = useOsSystem((s) => s.snapshot);
-    const unlockedCount = OS_WALLPAPERS.filter((w) => isUnlocked(w, snapshot)).length;
-
-    const toggleMusic = () => {
-        const next = !music;
-        setMusic(next);
-        saveSettings({ music: next });
-        applyMusicSetting(next);
-        sacredUi.click();
-    };
-
-    const Row = ({
-        label,
-        value,
-        onClick,
-        danger,
-    }: {
-        label: string;
-        value?: string;
-        onClick: () => void;
-        danger?: boolean;
-    }) => (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`w-full py-3 rounded-xl border text-left px-4 text-sm flex justify-between items-center min-h-[46px] touch-manipulation ${
-                danger
-                    ? 'border-red-500/30 text-red-300/90 hover:bg-red-500/10'
-                    : 'border-white/10 text-zinc-200 hover:bg-white/5'
-            }`}
-        >
-            <span>{label}</span>
-            {value && (
-                <span className="text-xs uppercase tracking-widest text-emerald-400">{value}</span>
-            )}
-        </button>
-    );
-
-    return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[300px]">
-            <div className="shrink-0 flex border-b border-white/10">
-                {(
-                    [
-                        ['personal', 'Personalize'],
-                        ['system', 'System'],
-                        ['about', 'About'],
-                    ] as const
-                ).map(([id, label]) => (
-                    <button
-                        key={id}
-                        type="button"
-                        onClick={() => {
-                            setTab(id);
-                            sacredUi.click();
-                        }}
-                        className={`flex-1 py-2.5 text-[11px] font-semibold uppercase tracking-wider transition-colors min-h-[42px] touch-manipulation ${
-                            tab === id
-                                ? 'text-emerald-300 border-b-2 border-emerald-400 bg-emerald-500/5'
-                                : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                        {label}
-                    </button>
-                ))}
+        <AppSurface>
+            <div className="mx-auto max-w-lg px-6 py-6">
+                <DonationSection variant="hut" />
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-                {tab === 'personal' && (
-                    <>
-                        <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 font-mono mb-2">
-                                Wallpaper · {unlockedCount} of {OS_WALLPAPERS.length}
-                            </p>
-                            {WALLPAPER_FAMILIES.map((fam) => {
-                                const inFam = OS_WALLPAPERS.filter((w) => w.family === fam);
-                                if (!inFam.length) return null;
-                                return (
-                                    <div key={fam} className="mb-3">
-                                        <p className="text-[9px] uppercase tracking-[0.22em] text-zinc-600 font-mono mb-1.5">
-                                            {fam}
-                                        </p>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {inFam.map((wp) => {
-                                                const open = isUnlocked(wp, snapshot);
-                                                const preview = resolveWallpaper(wp.id).css;
-                                                return (
-                                                    <button
-                                                        key={wp.id}
-                                                        type="button"
-                                                        disabled={!open}
-                                                        title={open ? wp.name : `Locked — ${wp.unlock?.label ?? ''}`}
-                                                        onClick={() => {
-                                                            setWallpaper(wp.id);
-                                                            // Keep the desktop coherent with the art
-                                                            setAccent(wp.accent);
-                                                            sacredUi.click();
-                                                        }}
-                                                        className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all touch-manipulation ${
-                                                            wallpaper === wp.id
-                                                                ? 'border-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.35)]'
-                                                                : open
-                                                                  ? 'border-white/10 hover:border-white/30'
-                                                                  : 'border-white/5 cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        <span
-                                                            className={`absolute inset-0 ${open ? '' : 'blur-[2px] opacity-35 saturate-50'}`}
-                                                            style={{ background: preview }}
-                                                        />
-                                                        {!open && (
-                                                            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center">
-                                                                <Lock size={14} className="text-white/80" />
-                                                                <span className="text-[9px] text-white/80 leading-tight">
-                                                                    {wp.unlock?.label}
-                                                                </span>
-                                                            </span>
-                                                        )}
-                                                        {open && (
-                                                            <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-[9px] text-white/95 bg-gradient-to-t from-black/85 to-transparent text-left truncate">
-                                                                {wp.name}
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <p className="text-[10px] text-zinc-600 mt-2">
-                                Tip: the Photos app can set any gallery image as wallpaper.
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-zinc-500 font-mono mb-2">
-                                Accent color
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                {(Object.keys(ACCENT_HEX) as OsAccentId[]).map((a) => (
-                                    <button
-                                        key={a}
-                                        type="button"
-                                        title={a}
-                                        onClick={() => {
-                                            setAccent(a);
-                                            sacredUi.click();
-                                        }}
-                                        className={`w-9 h-9 min-w-[36px] rounded-full border-2 transition-transform active:scale-90 touch-manipulation ${
-                                            accent === a
-                                                ? 'border-white scale-110 shadow-lg'
-                                                : 'border-white/20 hover:scale-105'
-                                        }`}
-                                        style={{ background: ACCENT_HEX[a] }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </>
-                )}
-                {tab === 'system' && (
-                    <div className="space-y-2.5">
-                        <Row label="Music" value={music ? 'On' : 'Off'} onClick={toggleMusic} />
-                        <Row
-                            label="Night light"
-                            value={nightLight ? 'On' : 'Off'}
-                            onClick={() => {
-                                setNightLight(!nightLight);
-                                sacredUi.click();
-                            }}
-                        />
-                        <Row
-                            label="Wall neighbor marks"
-                            value={wallNeighbor ? 'On' : 'Off'}
-                            onClick={() => {
-                                setWallNeighbor(!wallNeighbor);
-                                sacredUi.click();
-                            }}
-                        />
-                        {onEnterChamber && (
-                            <Row label="Leave terminal → 3D world" onClick={onEnterChamber} />
-                        )}
-                        <Row label="Sign out of Truth.OS" danger onClick={onLogout} />
-                        <p className="text-[10px] text-zinc-600 pt-2 leading-relaxed">
-                            Protected apps require Google or email sign-in. Wallpaper, accent, and
-                            brightness persist on this device.
-                        </p>
-                    </div>
-                )}
-                {tab === 'about' && (
-                    <div className="space-y-3">
-                        <div className="rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 to-cyan-500/5 p-4">
-                            <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-mono">
-                                Truth.OS
-                            </p>
-                            <p className="text-2xl text-white font-semibold mt-1">
-                                3.5 · 2026 edition
-                            </p>
-                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                                Command palette · 4 workspaces · MRU window switcher · session
-                                restore · snap layouts · task view · notification centre · quick
-                                settings · widgets · lock screen.
-                            </p>
-                            <p className="text-[11px] text-emerald-300/80 mt-2 font-mono">
-                                Ctrl+K search · Ctrl+/ shortcuts
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <StatChip label="Kernel" value="soulsh 1.3" />
-                            <StatChip label="Compositor" value="Aura" />
-                            <StatChip
-                                label="Programs"
-                                value={`${Object.keys(APP_META).length} installed`}
-                            />
-                            <StatChip label="Workspaces" value="4" />
-                        </div>
-                        <p className="text-[10px] text-zinc-600 leading-relaxed">
-                            Truth B Told Hub — the desktop is the Hut. Everything here also lives in
-                            the 3D chamber.
-                        </p>
-                    </div>
-                )}
-            </div>
-        </div>
+        </AppSurface>
     );
 }
 
 export type OsAppContext = {
     onLogout: () => void;
-    onExit?: () => void;
-    onEnterChamber: () => void;
-    /** Document / route handed over by Files, Photos or the command palette */
+    onExit: () => void;
     payload?: OsAppPayload;
 };
 
 export function renderOsApp(app: OsAppId, ctx: OsAppContext) {
     switch (app) {
         case 'truth':
-            // The palette can open the guide WITH a question ("Guide me
-            // through Truth.OS"); without this it opened the window and
-            // silently dropped the ask.
+            // Spotlight can open the guide WITH a question
             return <TruthGuideApp initialPrompt={ctx.payload?.content} />;
-        case 'updates':
-            return <UpdatesApp />;
         case 'ledger':
-            return <LedgerApp />;
-        case 'soul':
-            return <SoulApp onExit={ctx.onExit} />;
-        case 'arcade':
-            return <ArcadeApp onExit={ctx.onExit} />;
+            return <LedgerApp section={ctx.payload?.section} />;
+        case 'library':
+            return (
+                <Host>
+                    <LibraryClient embedded />
+                </Host>
+            );
+        case 'archive':
+            return (
+                <Host>
+                    <ArchiveClient />
+                </Host>
+            );
+        case 'wall':
+            return (
+                <Host>
+                    <WallPanel embedded onClose={ctx.onExit} />
+                </Host>
+            );
         case 'offering':
             return <OfferingApp />;
-        case 'library':
-            return <LibraryApp />;
-        case 'archive':
-            return <ArchiveApp />;
-        case 'account':
-            return <AccountApp />;
-        case 'settings':
+        case 'arcade':
             return (
-                <SettingsApp
-                    onLogout={ctx.onLogout}
-                    onExit={ctx.onExit}
-                    onEnterChamber={ctx.onEnterChamber}
-                />
+                <Host className="bg-[#07080d]">
+                    <ArcadeLobby character={useGameStore.getState().character} onClose={() => { sacredUi.click(); ctx.onExit(); }} />
+                </Host>
             );
-        case 'admin':
-            return <AdminConsole />;
-        case 'files':
-            return <FilesApp />;
-        case 'calculator':
-            return <CalculatorApp />;
-        case 'paint':
-            return <PaintApp />;
-        case 'notepad':
-            return <NotepadApp nodeId={ctx.payload?.nodeId} name={ctx.payload?.name} />;
-        case 'terminal':
-            return <TerminalApp />;
+        case 'soul':
+            return (
+                <Host>
+                    <SoulPanel onClose={() => { sacredUi.click(); ctx.onExit(); }} />
+                </Host>
+            );
         case 'media':
             return <MediaPlayerApp />;
+        case 'paint':
+            return <PaintApp />;
         case 'photos':
             return <PhotosApp />;
-        case 'clock':
-            return <ClockApp />;
-        case 'taskmgr':
-            return <TaskManagerApp />;
-        case 'browser':
-            return <BrowserApp initialPath={ctx.payload?.content} />;
         case 'music':
             return <MusicApp />;
+        case 'browser':
+            return <BrowserApp initialPath={ctx.payload?.content} />;
+        case 'files':
+            return <FileExplorerApp />;
+        case 'notepad':
+            return <NotepadApp nodeId={ctx.payload?.nodeId} name={ctx.payload?.name} />;
         case 'tasks':
             return <TasksApp />;
-        case 'chamber':
-            return <ChamberApp onEnterChamber={ctx.onEnterChamber} />;
-        case 'wall':
-            return <WallApp onEnterChamber={ctx.onEnterChamber} />;
-        case 'studio':
-            return (
-                <div className="h-full min-h-[280px] bg-zinc-950">
-                    <StudioPanel onClose={() => ctx.onExit?.()} />
-                </div>
-            );
+        case 'calculator':
+            return <CalculatorApp />;
+        case 'clock':
+            return <ClockApp />;
+        case 'terminal':
+            return <TerminalApp />;
+        case 'settings':
+            return <SettingsApp onLogout={ctx.onLogout} section={ctx.payload?.section} />;
+        case 'taskmgr':
+            return <TaskManagerApp />;
+        case 'admin':
+            return <AdminConsole />;
         default:
-            return (
-                <Panel>
-                    <p className="text-zinc-500 text-sm">{APP_META[app as OsAppId]?.title ?? app} unavailable.</p>
-                </Panel>
-            );
+            return <Empty title="This program is not installed." />;
     }
 }

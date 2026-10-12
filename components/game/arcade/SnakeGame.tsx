@@ -6,6 +6,7 @@ import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/ga
 import { useArcadeInputProfile } from './useArcadeInputProfile';
 import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
 import { ArcadeGameShell, StatPill } from './ArcadeChrome';
+import { drawGlow, loadArcadeSprites, tinted } from '@/lib/game/arcadeSprites';
 
 // ============================================================
 //  SERPENT — a mobile-first Snake for the Sanctum Arcade.
@@ -439,6 +440,20 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
         reset();
 
         // ---- drawing ----
+        // Kenney skins (render-only): glossy tiles tinted per use, glow sprites
+        // drawn additively. Each falls back to the flat shape until it decodes.
+        loadArcadeSprites();
+        const skinDpr = Math.min(3, window.devicePixelRatio || 1);
+        const spriteAt = (ctx: CanvasRenderingContext2D, name: 'block' | 'orb' | 'gem' | 'star' | 'diamond', color: string, cx: number, cy: number, cell: number, scale = 1, alpha = 1) => {
+            const t = tinted(name, color, cell * scale * skinDpr);
+            if (!t) return false;
+            const sz = cell * scale;
+            const prev = ctx.globalAlpha;
+            ctx.globalAlpha = prev * alpha;
+            ctx.drawImage(t, cx * cell + (cell - sz) / 2, cy * cell + (cell - sz) / 2, sz, sz);
+            ctx.globalAlpha = prev;
+            return true;
+        };
         const roundedCell = (ctx: CanvasRenderingContext2D, cx: number, cy: number, cell: number, color: string, inset = 1) => {
             ctx.fillStyle = color;
             ctx.fillRect(cx * cell + inset, cy * cell + inset, cell - inset * 2, cell - inset * 2);
@@ -463,6 +478,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
             // arena walls — dim slate rounded cells beneath everything
             for (let i = 0; i < st.walls.length; i++) {
                 const wv = st.walls[i];
+                if (spriteAt(ctx, 'block', '#475569', wv.x, wv.y, cell, 0.94, 0.9)) continue;
                 roundedCell(ctx, wv.x, wv.y, cell, 'rgba(100,116,139,0.55)', 1.5);
                 ctx.strokeStyle = 'rgba(148,163,184,0.35)'; ctx.lineWidth = 1;
                 ctx.strokeRect(wv.x * cell + 1.5, wv.y * cell + 1.5, cell - 3, cell - 3);
@@ -473,6 +489,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 for (const pr of st.portals) {
                     for (const m of pr) {
                         const pxp = m.x * cell + cell / 2, pyp = m.y * cell + cell / 2;
+                        drawGlow(ctx, 'ring', accent, pxp, pyp, cell * 1.3, 0.8, spin);
                         ctx.save();
                         ctx.shadowColor = accent; ctx.shadowBlur = reduce ? 0 : Math.min(cell * 0.5, 10);
                         ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1.5, cell * 0.09);
@@ -492,8 +509,15 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 ctx.beginPath(); ctx.arc(cxp, cyp, cell * 0.32, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
             };
-            orbAt(st.food, accent, cell * 0.5);
-            if (st.bonus) orbAt(st.bonus, '#fcd34d', reduce ? cell * 0.7 : cell * (0.55 + 0.25 * (0.5 + 0.5 * Math.sin(performance.now() * 0.006))));
+            const pulse = reduce ? 1 : 1 + 0.06 * Math.sin(performance.now() * 0.006);
+            drawGlow(ctx, 'glow', accent, st.food.x * cell + cell / 2, st.food.y * cell + cell / 2, cell * 1.6, 0.55);
+            if (!spriteAt(ctx, 'gem', accent, st.food.x, st.food.y, cell, 0.86 * pulse)) orbAt(st.food, accent, cell * 0.5);
+            if (st.bonus) {
+                drawGlow(ctx, 'nova', '#fcd34d', st.bonus.x * cell + cell / 2, st.bonus.y * cell + cell / 2, cell * 2, 0.6, reduce ? 0 : performance.now() * 0.001);
+                if (!spriteAt(ctx, 'star', '#fcd34d', st.bonus.x, st.bonus.y, cell, 0.9 * pulse)) {
+                    orbAt(st.bonus, '#fcd34d', reduce ? cell * 0.7 : cell * (0.55 + 0.25 * (0.5 + 0.5 * Math.sin(performance.now() * 0.006))));
+                }
+            }
             // orb glint — small rotating specular arc on the food rim
             if (!reduce) {
                 const cxp = st.food.x * cell + cell / 2, cyp = st.food.y * cell + cell / 2;
@@ -510,6 +534,11 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 const col = k === 'magnet' ? '#60a5fa' : k === 'shrink' ? '#34d399' : k === 'frenzy' ? '#f97316' : '#fbbf24';
                 const cxp = st.pickup.x * cell + cell / 2, cyp = st.pickup.y * cell + cell / 2;
                 const r = cell * 0.30;
+                const spin = reduce ? 0 : performance.now() * 0.002;
+                drawGlow(ctx, k === 'magnet' ? 'ring' : k === 'frenzy' ? 'burst' : k === 'shrink' ? 'glint' : 'rune', col, cxp, cyp, cell * 1.5, 0.95, spin);
+                if (k === 'shrink' && spriteAt(ctx, 'diamond', col, st.pickup.x, st.pickup.y, cell, 0.6)) {
+                    /* the glint is around it */
+                }
                 ctx.save();
                 ctx.shadowColor = col; ctx.shadowBlur = reduce ? 0 : Math.min(cell * 0.6, 12);
                 ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, cell * 0.10);
@@ -528,6 +557,7 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                     const p = st.pops[i];
                     const t = reduce ? 0 : Math.min(1, p.age / 250);
                     const pxp = p.x * cell + cell / 2, pyp = p.y * cell + cell / 2;
+                    if (drawGlow(ctx, 'sparkle', accent, pxp, pyp, cell * (0.9 + 1.6 * t), (1 - t) * 0.95, t * 1.5)) continue;
                     ctx.globalAlpha = (1 - t) * 0.7;
                     ctx.strokeStyle = accent; ctx.lineWidth = Math.max(1, cell * 0.08);
                     ctx.beginPath(); ctx.arc(pxp, pyp, cell * (0.2 + 0.45 * t), 0, Math.PI * 2); ctx.stroke();
@@ -544,6 +574,8 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                 const seg = st.snake[i];
                 const t = 1 - i / Math.max(1, n);  // 1 at head
                 const shade = i === 0 ? '#eafff4' : accent;
+                // Glossy beads, the tail fading; the flat squares are the fallback
+                if (spriteAt(ctx, 'orb', shade, seg.x, seg.y, cell, i === 0 ? 1.04 : 0.94, phasing ? 1 : 0.5 + 0.5 * t)) continue;
                 roundedCell(ctx, seg.x, seg.y, cell, shade, i === 0 ? 1 : 1.5);
                 if (!phasing && i !== 0) { ctx.globalAlpha = 0.25 + 0.35 * (1 - t); ctx.fillStyle = '#000'; ctx.fillRect(seg.x * cell + 1.5, seg.y * cell + 1.5, cell - 3, cell - 3); ctx.globalAlpha = 1; }
             }
@@ -742,13 +774,13 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                         <canvas ref={canvasRef} className="max-w-full max-h-full" style={{ touchAction: 'none', imageRendering: 'pixelated' }} />
                         {flash && status === 'playing' && (
                             <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
-                                <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: '#fbbf24', textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
+                                <span className="font-bold tabular-nums text-2xl font-black tracking-[0.18em] text-center" style={{ color: '#fbbf24', textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
                             </div>
                         )}
                         {status === 'paused' && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/75 backdrop-blur-sm">
                                 <div className="text-center px-6">
-                                    <p className="font-ritual text-3xl text-white mb-2">Paused</p>
+                                    <p className="font-bold tabular-nums text-3xl text-white mb-2">Paused</p>
                                     <p className="text-xs text-white/40 mb-5 font-mono uppercase tracking-widest">Press P or Resume</p>
                                     <button type="button" onClick={() => a.togglePause?.()} className="px-10 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: accent }}>Resume</button>
                                 </div>
@@ -758,12 +790,12 @@ export default function SnakeGame({ accent, onExit, onGameOver, onReset, submitS
                             <div className="absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
                                 <div className="w-full max-w-xs text-center rounded-2xl border border-white/10 bg-[#0a0c12] p-5 shadow-2xl">
                                     <p className="text-[10px] tracking-[0.4em] uppercase text-white/45 mb-1">Run ended</p>
-                                    <h2 className="font-ritual text-3xl text-white mb-1">Game Over</h2>
+                                    <h2 className="font-bold tabular-nums text-3xl text-white mb-1">Game Over</h2>
                                     {isNewBest && <p className="text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: accent }}>✦ New personal best</p>}
                                     <div className="grid grid-cols-3 gap-2 my-4">
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score}</p></div>
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Orbs</p><p className="font-ritual text-xl text-white">{orbs}</p></div>
-                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Speed</p><p className="font-ritual text-xl text-white">{speed}</p></div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Score</p><p className="font-bold tabular-nums text-xl" style={{ color: accent }}>{score}</p></div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Orbs</p><p className="font-bold tabular-nums text-xl text-white">{orbs}</p></div>
+                                        <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Speed</p><p className="font-bold tabular-nums text-xl text-white">{speed}</p></div>
                                     </div>
                                     <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.55)' }}>
                                         {submitState === 'saving' && 'Recording…'}

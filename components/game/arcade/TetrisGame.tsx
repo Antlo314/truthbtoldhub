@@ -5,6 +5,7 @@ import { ArrowLeft, Pause, Play, RotateCcw, RotateCw, ChevronDown, ChevronsDown,
 import { asfx, unlockArcadeAudio, isArcadeMuted, setArcadeMuted } from '@/lib/game/arcadeSfx';
 import { useArcadeInputProfile } from './useArcadeInputProfile';
 import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
+import { drawGlow, loadArcadeSprites, tinted } from '@/lib/game/arcadeSprites';
 
 // ============================================================
 //  TETRA — a full, mobile-first Tetris for the Sanctum Arcade.
@@ -119,6 +120,8 @@ interface Props {
 // small static preview of a piece (hold / next)
 function MiniPiece({ id, size = 52 }: { id: PieceId | null; size?: number }) {
     const ref = useRef<HTMLCanvasElement>(null);
+    // The tile skin decodes after first paint; redraw once it has
+    const [skinTick, setSkinTick] = useState(0);
     useEffect(() => {
         const cv = ref.current;
         if (!cv) return;
@@ -139,15 +142,21 @@ function MiniPiece({ id, size = 52 }: { id: PieceId | null; size?: number }) {
         const cell = Math.floor(size / 4);
         const ox = (size - pw * cell) / 2 - minC * cell;
         const oy = (size - ph * cell) / 2 - minR * cell;
+        const tile = tinted('block', color, cell * dpr);
+        if (!tile && skinTick < 20) setTimeout(() => setSkinTick((n) => n + 1), 250);
         for (let r = 0; r < cells.length; r++) for (let c = 0; c < cells[r].length; c++) {
             if (!cells[r][c]) continue;
             const x = ox + c * cell, y = oy + r * cell;
+            if (tile) {
+                ctx.drawImage(tile, x, y, cell, cell);
+                continue;
+            }
             ctx.fillStyle = color;
             ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
             ctx.fillStyle = 'rgba(255,255,255,0.22)';
             ctx.fillRect(x + 1, y + 1, cell - 2, Math.max(1, cell * 0.2));
         }
-    }, [id, size]);
+    }, [id, size, skinTick]);
     return <canvas ref={ref} width={size} height={size} style={{ width: size, height: size, imageRendering: 'pixelated' }} />;
 }
 
@@ -226,6 +235,7 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
     // ---- the game: logic + loop + input, set up once ----
     useEffect(() => {
+        loadArcadeSprites();
         const spawnX = (m: number[][]) => Math.floor((COLS - m[0].length) / 2);
         const showFlash = (text: string) => { if (!text) return; flashKey.current++; setFlash({ text, key: flashKey.current }); };
 
@@ -512,13 +522,19 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
         reset();
 
         // ---- drawing ----
+        // Kenney's glossy tile, tinted to the piece; the flat fill below is the
+        // fallback until it decodes. Render-only — the board stores colours.
+        const skinDpr = Math.min(3, window.devicePixelRatio || 1);
         const drawCell = (ctx: CanvasRenderingContext2D, cx: number, cy: number, cell: number, color: string, ghost = false) => {
             const x = cx * cell, y = cy * cell;
+            const tile = tinted('block', color, cell * skinDpr);
             if (ghost) {
-                ctx.globalAlpha = 0.16; ctx.fillStyle = color; ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
+                if (tile) { ctx.globalAlpha = 0.22; ctx.drawImage(tile, x + 1, y + 1, cell - 2, cell - 2); }
+                else { ctx.globalAlpha = 0.16; ctx.fillStyle = color; ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2); }
                 ctx.globalAlpha = 0.55; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x + 1.5, y + 1.5, cell - 3, cell - 3);
                 ctx.globalAlpha = 1; return;
             }
+            if (tile) { ctx.drawImage(tile, x + 0.5, y + 0.5, cell - 1, cell - 1); return; }
             const edge = Math.max(1, cell * 0.18);
             ctx.fillStyle = color; ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
             ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + 1, y + 1, cell - 2, edge);
@@ -580,6 +596,8 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
             // cosmetic particles (none spawn under reduced-motion)
             for (const p of st.particles) {
                 const al = Math.max(0, 1 - p.life / p.max);
+                // Kenney sparkle, additive; a square until it decodes
+                if (drawGlow(ctx, 'sparkle', p.color, p.x * cell, p.y * cell, cell * (0.7 + 0.6 * al), al, p.life * 3)) continue;
                 ctx.globalAlpha = al; ctx.fillStyle = p.color;
                 const s = Math.max(2, cell * 0.16);
                 ctx.fillRect(p.x * cell - s / 2, p.y * cell - s / 2, s, s);
@@ -769,13 +787,13 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
         <div className="absolute inset-0 z-[60] flex flex-col select-none" onPointerDown={() => unlockArcadeAudio()} style={{ background: `radial-gradient(100% 70% at 50% -5%, ${accent}22, transparent 55%), #06070c`, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <style>{`@keyframes arcadePop{0%{transform:scale(0.6);opacity:0}20%{transform:scale(1.12);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}@keyframes arcadeReady{0%,100%{opacity:.7}50%{opacity:1}}@media (prefers-reduced-motion: reduce){[data-ready-glow]{animation:none!important}}`}</style>
             <div className="flex items-center justify-between px-3 py-2 shrink-0 border-b border-white/10 bg-black/50 backdrop-blur-md">
-                <button onClick={onExit} className="h-10 px-3 rounded-lg border border-white/12 bg-white/[0.04] text-zinc-200 hover:text-white flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider" aria-label="Leave Tetra">
+                <button onClick={onExit} className="h-9 pl-2.5 pr-3.5 rounded-full bg-white/[0.08] text-white/85 hover:bg-white/[0.14] hover:text-white flex items-center gap-1.5 text-[13px] font-medium" aria-label="Leave Tetra">
                     <ArrowLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exit</span>
+                    <span className="hidden sm:inline">Back</span>
                 </button>
                 <div className="text-center">
-                    <p className="text-[9px] uppercase tracking-[0.35em] text-white/35 font-mono">Arcade</p>
-                    <p className="font-ritual text-xl tracking-[0.2em] leading-none" style={{ color: accent }}>TETRA</p>
+                    <p className="text-[11px] text-white/40">Arcade</p>
+                    <p className="text-[18px] font-black tracking-[0.14em] leading-none" style={{ color: accent }}>TETRA</p>
                     <p className="text-[10px] text-white/40 mt-0.5">Stack · clear · charge</p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -790,9 +808,9 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
             {/* inline stat strip (replaces the old hold/stats/next row + standalone Aether meter) */}
             <div className="flex items-center justify-center gap-3 px-3 pt-1 shrink-0 font-mono">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Score <b className="font-ritual text-sm align-middle" style={{ color: accent }}>{score}</b></span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Lines <b className="font-ritual text-sm align-middle text-white">{lines}</b></span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">Lvl <b className="font-ritual text-sm align-middle text-white">{level}</b></span>
+                <span className="text-[12px] text-white/50">Score <b className="font-bold tabular-nums text-sm align-middle" style={{ color: accent }}>{score}</b></span>
+                <span className="text-[12px] text-white/50">Lines <b className="font-bold tabular-nums text-sm align-middle text-white">{lines}</b></span>
+                <span className="text-[12px] text-white/50">Lvl <b className="font-bold tabular-nums text-sm align-middle text-white">{level}</b></span>
             </div>
 
             {/* board + controls — centered card on wide screens, full bleed on phones */}
@@ -822,14 +840,14 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
 
                 {flash && status === 'playing' && (
                     <div key={flash.key} className="absolute inset-x-0 top-[16%] flex justify-center pointer-events-none px-4" style={{ animation: 'arcadePop 0.85s ease-out forwards' }}>
-                        <span className="font-ritual text-2xl font-black tracking-[0.18em] text-center" style={{ color: accent, textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
+                        <span className="font-bold tabular-nums text-2xl font-black tracking-[0.18em] text-center" style={{ color: accent, textShadow: '0 2px 14px rgba(0,0,0,0.7)' }}>{flash.text}</span>
                     </div>
                 )}
 
                 {status === 'paused' && (
                     <div data-noboard className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">
                         <div className="text-center">
-                            <p className="font-ritual text-2xl gold-shimmer mb-4">Paused</p>
+                            <p className="font-bold tabular-nums text-2xl text-white mb-4">Paused</p>
                             <button onClick={() => a.togglePause?.()} className="px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: accent }}>Resume</button>
                         </div>
                     </div>
@@ -839,12 +857,12 @@ export default function TetrisGame({ accent, onExit, onGameOver, onReset, submit
                     <div data-noboard className="absolute inset-0 flex items-center justify-center bg-black/82 backdrop-blur-sm rounded-xl p-4">
                         <div className="w-full max-w-xs text-center">
                             <p className="text-[10px] tracking-[0.4em] uppercase text-white/50 mb-1">The stones rest</p>
-                            <h2 className="font-ritual text-3xl gold-shimmer mb-1">Game Over</h2>
+                            <h2 className="font-bold tabular-nums text-3xl text-white mb-1">Game Over</h2>
                             {isNewBest && <p className="text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: accent }}>✦ New personal best</p>}
                             <div className="grid grid-cols-3 gap-2 my-4">
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Lines</p><p className="font-ritual text-xl text-white">{lines}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Level</p><p className="font-ritual text-xl text-white">{level}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Score</p><p className="font-bold tabular-nums text-xl" style={{ color: accent }}>{score}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Lines</p><p className="font-bold tabular-nums text-xl text-white">{lines}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Level</p><p className="font-bold tabular-nums text-xl text-white">{level}</p></div>
                             </div>
                             <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.6)' }}>
                                 {submitState === 'saving' && 'Recording your score…'}

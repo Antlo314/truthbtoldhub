@@ -1,54 +1,105 @@
 'use client';
 
 /**
- * Truth.OS window frame — draggable, resizable, edge-snapping chrome.
- * Aero-style: drag to screen edges for half/quarter snap, hover the
- * maximize button for Windows-11-style snap layouts, 8-way resize.
+ * Truth.OS 4 window frame.
+ *
+ * Desktop: traffic lights, a centred title, drag anywhere on the bar,
+ * drag to an edge to snap (halves, quarters, top = fill), hover the green
+ * light for the tiling picker, resize from any edge or corner.
+ *
+ * Phone: every app is full screen under a slim header — Home on the left
+ * (the window stays alive, like an app in the background), the title, and
+ * Close on the right.
  */
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import type { BentoSlot, OsAppId } from './truthOsStore';
-import { ACCENT_STYLES, OsIconTile, getAppAccent } from './OsIcon';
+import { motion, useReducedMotion, type MotionStyle } from 'framer-motion';
+import { ChevronLeft, X } from 'lucide-react';
+import type { OsAppId } from './truthOsStore';
 
 export type SnapZone = 'left' | 'right' | 'tl' | 'tr' | 'bl' | 'br';
-
 type Rect = { x: number; y: number; w: number; h: number };
 
 function zoneRect(zone: SnapZone, ws: { w: number; h: number }): Rect {
-    const half = { w: Math.floor(ws.w / 2), h: ws.h };
-    const quart = { w: Math.floor(ws.w / 2), h: Math.floor(ws.h / 2) };
+    const g = 6;
+    const hw = Math.floor((ws.w - g * 3) / 2);
+    const hh = Math.floor((ws.h - g * 3) / 2);
     switch (zone) {
         case 'left':
-            return { x: 0, y: 0, ...half };
+            return { x: g, y: g, w: hw, h: ws.h - g * 2 };
         case 'right':
-            return { x: ws.w - half.w, y: 0, ...half };
+            return { x: g * 2 + hw, y: g, w: hw, h: ws.h - g * 2 };
         case 'tl':
-            return { x: 0, y: 0, ...quart };
+            return { x: g, y: g, w: hw, h: hh };
         case 'tr':
-            return { x: ws.w - quart.w, y: 0, ...quart };
+            return { x: g * 2 + hw, y: g, w: hw, h: hh };
         case 'bl':
-            return { x: 0, y: ws.h - quart.h, ...quart };
+            return { x: g, y: g * 2 + hh, w: hw, h: hh };
         case 'br':
-            return { x: ws.w - quart.w, y: ws.h - quart.h, ...quart };
+            return { x: g * 2 + hw, y: g * 2 + hh, w: hw, h: hh };
     }
 }
 
 type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
-
-const RESIZE_HANDLES: { dir: ResizeDir; cls: string; cursor: string }[] = [
-    { dir: 'n', cls: 'top-0 left-2 right-2 h-1.5', cursor: 'ns-resize' },
-    { dir: 's', cls: 'bottom-0 left-2 right-2 h-1.5', cursor: 'ns-resize' },
-    { dir: 'e', cls: 'right-0 top-2 bottom-2 w-1.5', cursor: 'ew-resize' },
-    { dir: 'w', cls: 'left-0 top-2 bottom-2 w-1.5', cursor: 'ew-resize' },
-    { dir: 'ne', cls: 'top-0 right-0 w-3 h-3', cursor: 'nesw-resize' },
-    { dir: 'nw', cls: 'top-0 left-0 w-3 h-3', cursor: 'nwse-resize' },
-    { dir: 'se', cls: 'bottom-0 right-0 w-3 h-3', cursor: 'nwse-resize' },
-    { dir: 'sw', cls: 'bottom-0 left-0 w-3 h-3', cursor: 'nesw-resize' },
+const HANDLES: { dir: ResizeDir; cls: string; cursor: string }[] = [
+    { dir: 'n', cls: '-top-1 left-3 right-3 h-2', cursor: 'ns-resize' },
+    { dir: 's', cls: '-bottom-1 left-3 right-3 h-2', cursor: 'ns-resize' },
+    { dir: 'e', cls: '-right-1 top-3 bottom-3 w-2', cursor: 'ew-resize' },
+    { dir: 'w', cls: '-left-1 top-3 bottom-3 w-2', cursor: 'ew-resize' },
+    { dir: 'ne', cls: '-top-1 -right-1 w-4 h-4', cursor: 'nesw-resize' },
+    { dir: 'nw', cls: '-top-1 -left-1 w-4 h-4', cursor: 'nwse-resize' },
+    { dir: 'se', cls: '-bottom-1 -right-1 w-4 h-4', cursor: 'nwse-resize' },
+    { dir: 'sw', cls: '-bottom-1 -left-1 w-4 h-4', cursor: 'nesw-resize' },
 ];
+
+const LAYOUTS: [SnapZone | 'max', string, string][] = [
+    ['left', 'Left half', 'left-[3px] top-[3px] bottom-[3px] right-1/2 mr-[1.5px]'],
+    ['right', 'Right half', 'right-[3px] top-[3px] bottom-[3px] left-1/2 ml-[1.5px]'],
+    ['max', 'Fill', 'inset-[3px]'],
+    ['tl', 'Top left', 'left-[3px] top-[3px] right-1/2 bottom-1/2 mr-[1.5px] mb-[1.5px]'],
+    ['tr', 'Top right', 'right-[3px] top-[3px] left-1/2 bottom-1/2 ml-[1.5px] mb-[1.5px]'],
+    ['bl', 'Bottom left', 'left-[3px] bottom-[3px] right-1/2 top-1/2 mr-[1.5px] mt-[1.5px]'],
+    ['br', 'Bottom right', 'right-[3px] bottom-[3px] left-1/2 top-1/2 ml-[1.5px] mt-[1.5px]'],
+];
+
+function Light({
+    color,
+    edge,
+    glyph,
+    focused,
+    title,
+    onClick,
+}: {
+    color: string;
+    edge: string;
+    glyph: string;
+    focused: boolean;
+    title: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            title={title}
+            aria-label={title}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
+            className="flex h-3 w-3 items-center justify-center rounded-full transition-colors"
+            style={{
+                background: focused ? color : 'rgba(255,255,255,0.18)',
+                boxShadow: focused ? `inset 0 0 0 0.5px ${edge}` : 'inset 0 0 0 0.5px rgba(255,255,255,0.08)',
+            }}
+        >
+            <span className="select-none text-[9px] font-bold leading-none text-black/55 opacity-0 group-hover/lights:opacity-100">
+                {glyph}
+            </span>
+        </button>
+    );
+}
 
 export default function OsWindowFrame({
     title,
-    app,
     x,
     y,
     w,
@@ -56,7 +107,6 @@ export default function OsWindowFrame({
     z,
     maximized,
     focused,
-    bento,
     phone = false,
     children,
     onFocus,
@@ -64,7 +114,6 @@ export default function OsWindowFrame({
     onMinimize,
     onMaximize,
     onMove,
-    onSnap,
     onRect,
 }: {
     title: string;
@@ -76,7 +125,6 @@ export default function OsWindowFrame({
     z: number;
     maximized: boolean;
     focused: boolean;
-    bento: boolean;
     phone?: boolean;
     children: ReactNode;
     onFocus: () => void;
@@ -84,118 +132,100 @@ export default function OsWindowFrame({
     onMinimize: () => void;
     onMaximize: () => void;
     onMove: (x: number, y: number) => void;
-    onSnap: (s: BentoSlot) => void;
     onRect: (rect: Partial<Rect>) => void;
 }) {
-    const drag = useRef<{ ox: number; oy: number; sx: number; sy: number } | null>(null);
-    const resize = useRef<{
-        dir: ResizeDir;
-        ox: number;
-        oy: number;
-        start: Rect;
-    } | null>(null);
     const frameRef = useRef<HTMLDivElement>(null);
-    const [edgeZone, setEdgeZoneState] = useState<SnapZone | 'max' | null>(null);
-    const edgeZoneRef = useRef<SnapZone | 'max' | null>(null);
-    const setEdgeZone = (z: SnapZone | 'max' | null) => {
-        edgeZoneRef.current = z;
-        setEdgeZoneState(z);
+    const [edge, setEdgeState] = useState<SnapZone | 'max' | null>(null);
+    const edgeRef = useRef<SnapZone | 'max' | null>(null);
+    const setEdge = (z: SnapZone | 'max' | null) => {
+        edgeRef.current = z;
+        setEdgeState(z);
     };
-    const [layoutsOpen, setLayoutsOpen] = useState(false);
+    const [layouts, setLayouts] = useState(false);
     const layoutsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const reduceMotion = useReducedMotion();
     const [dragging, setDragging] = useState(false);
-    const narrow = phone || (typeof window !== 'undefined' && window.innerWidth < 768);
-    const accentId = getAppAccent(app);
-    const accentStyle = ACCENT_STYLES[accentId];
-    const borderCls = focused ? 'border-white/20' : 'border-white/10';
-    const fillScreen = (maximized || narrow) && !(bento && !maximized && !narrow);
-    const floating = !fillScreen && !(bento && !maximized && !narrow);
+    const reduce = useReducedMotion();
+    const fill = phone || maximized;
 
-    const workspace = (): { w: number; h: number } => {
-        // The window layer already ends above the taskbar
-        const parent = frameRef.current?.parentElement;
-        if (parent) {
-            const r = parent.getBoundingClientRect();
-            return { w: r.width, h: r.height };
-        }
-        return {
-            w: typeof window !== 'undefined' ? window.innerWidth : 1280,
-            h: typeof window !== 'undefined' ? window.innerHeight - 60 : 720,
-        };
+    const workspace = () => {
+        const r = frameRef.current?.parentElement?.getBoundingClientRect();
+        return r ? { w: r.width, h: r.height } : { w: window.innerWidth, h: window.innerHeight - 120 };
+    };
+    const applyZone = (zone: SnapZone | 'max') => {
+        if (zone === 'max') onMaximize();
+        else onRect(zoneRect(zone, workspace()));
     };
 
-    const applyZone = (zone: SnapZone) => {
-        onRect(zoneRect(zone, workspace()));
-    };
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
-    // The focused window carries the system accent — a hairline ring plus a
-    // soft halo, layered under the existing depth shadow.
-    const focusGlow =
-        '0 28px 80px -16px rgba(0,0,0,0.85), 0 0 0 1px color-mix(in srgb, var(--os-accent, #34d399) 45%, transparent), 0 0 26px -8px color-mix(in srgb, var(--os-accent, #34d399) 40%, transparent)';
-
-    const style: CSSProperties = fillScreen
-        ? {
+    const style: CSSProperties = fill
+        ? phone
+            ? { position: 'absolute', inset: 0, zIndex: z }
+            : { position: 'absolute', left: 6, right: 6, top: 6, bottom: 6, zIndex: z }
+        : {
               position: 'absolute',
-              left: narrow ? 0 : 8,
-              right: narrow ? 0 : 8,
-              top: narrow ? 'max(0px, env(safe-area-inset-top, 0px))' : 8,
-              bottom: narrow ? 0 : 8,
-              width: undefined,
-              height: undefined,
+              left: x,
+              top: y,
+              width: Math.min(w, vw - 16),
+              height: Math.min(h, vh - 120),
               zIndex: z,
-              background: 'rgba(15,17,24,0.86)',
-              backdropFilter: 'blur(28px) saturate(1.35)',
-              WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
-          }
-        : bento && !maximized && !narrow
-          ? {
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                zIndex: z,
-                background: 'rgba(15,17,24,0.86)',
-                backdropFilter: 'blur(28px) saturate(1.35)',
-                WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
-            }
-          : {
-                position: 'absolute',
-                left: x,
-                top: y,
-                width: Math.min(w, typeof window !== 'undefined' ? window.innerWidth - 24 : w),
-                height: Math.min(h, typeof window !== 'undefined' ? window.innerHeight - 100 : h),
-                zIndex: z,
-                background: 'rgba(15,17,24,0.86)',
-                backdropFilter: 'blur(28px) saturate(1.35)',
-                WebkitBackdropFilter: 'blur(28px) saturate(1.35)',
-            };
+          };
 
-    const startResize = (dir: ResizeDir) => (e: React.PointerEvent) => {
-        if (narrow || maximized || bento) return;
-        e.stopPropagation();
-        onFocus();
-        resize.current = { dir, ox: e.clientX, oy: e.clientY, start: { x, y, w, h } };
+    const shadow = focused
+        ? '0 30px 80px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.12), 0 0 0 1px color-mix(in srgb, var(--os-accent, #34d399) 18%, transparent)'
+        : '0 16px 44px -16px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)';
+
+    const startDrag = (e: React.PointerEvent) => {
+        if (fill) return;
+        if ((e.target as HTMLElement).closest('[data-nodrag]')) return;
+        const o = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
+        setDragging(true);
         const move = (ev: PointerEvent) => {
-            const r = resize.current;
-            if (!r) return;
-            const dx = ev.clientX - r.ox;
-            const dy = ev.clientY - r.oy;
-            const next: Rect = { ...r.start };
-            if (r.dir.includes('e')) next.w = r.start.w + dx;
-            if (r.dir.includes('s')) next.h = r.start.h + dy;
-            if (r.dir.includes('w')) {
-                next.w = r.start.w - dx;
-                next.x = r.start.x + dx;
-            }
-            if (r.dir.includes('n')) {
-                next.h = r.start.h - dy;
-                next.y = r.start.y + dy;
-            }
-            if (next.w >= 280 && next.h >= 200) onRect(next);
+            onMove(o.sx + (ev.clientX - o.ox), Math.max(0, o.sy + (ev.clientY - o.oy)));
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            const px = ev.clientX;
+            const py = ev.clientY;
+            if (py <= 36) setEdge('max');
+            else if (px <= 6) setEdge(py < H * 0.25 ? 'tl' : py > H * 0.75 ? 'bl' : 'left');
+            else if (px >= W - 6) setEdge(py < H * 0.25 ? 'tr' : py > H * 0.75 ? 'br' : 'right');
+            else setEdge(null);
         };
         const up = () => {
-            resize.current = null;
+            setDragging(false);
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            const zone = edgeRef.current;
+            setEdge(null);
+            if (zone) applyZone(zone);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+    };
+
+    const startResize = (dir: ResizeDir) => (e: React.PointerEvent) => {
+        if (fill) return;
+        e.stopPropagation();
+        onFocus();
+        const start = { x, y, w, h, ox: e.clientX, oy: e.clientY };
+        const move = (ev: PointerEvent) => {
+            const dx = ev.clientX - start.ox;
+            const dy = ev.clientY - start.oy;
+            const n: Rect = { x: start.x, y: start.y, w: start.w, h: start.h };
+            if (dir.includes('e')) n.w = start.w + dx;
+            if (dir.includes('s')) n.h = start.h + dy;
+            if (dir.includes('w')) {
+                n.w = start.w - dx;
+                n.x = start.x + dx;
+            }
+            if (dir.includes('n')) {
+                n.h = start.h - dy;
+                n.y = start.y + dy;
+            }
+            if (n.w >= 300 && n.h >= 220) onRect(n);
+        };
+        const up = () => {
             window.removeEventListener('pointermove', move);
             window.removeEventListener('pointerup', up);
         };
@@ -203,257 +233,130 @@ export default function OsWindowFrame({
         window.addEventListener('pointerup', up);
     };
 
-    const edgePreviewRect = (): CSSProperties | null => {
-        if (!edgeZone) return null;
+    const preview = (() => {
+        if (!edge) return null;
         const ws = workspace();
-        const base: CSSProperties = {
-            position: 'absolute',
-            zIndex: 9999,
-            pointerEvents: 'none',
-        };
-        if (edgeZone === 'max') return { ...base, left: 4, top: 4, width: ws.w - 8, height: ws.h - 8 };
-        const r = zoneRect(edgeZone, ws);
-        return { ...base, left: r.x + 4, top: r.y + 4, width: r.w - 8, height: r.h - 8 };
-    };
-
-    const preview = edgePreviewRect();
+        const r = edge === 'max' ? { x: 6, y: 6, w: ws.w - 12, h: ws.h - 12 } : zoneRect(edge, ws);
+        return { left: r.x, top: r.y, width: r.w, height: r.h } as CSSProperties;
+    })();
 
     return (
         <>
             {preview && (
                 <div
-                    className="rounded-2xl border-2 border-white/40 bg-white/10 backdrop-blur-sm transition-all duration-75"
+                    className="pointer-events-none absolute z-[9999] rounded-xl border border-white/30 bg-white/[0.08] backdrop-blur-[2px] transition-all duration-100"
                     style={preview}
                 />
             )}
             <motion.div
                 ref={frameRef}
                 data-os-window
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.965, y: 12 }}
+                initial={reduce ? false : phone ? { opacity: 0, y: 24 } : { opacity: 0, scale: 0.94, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 8 }}
-                transition={
-                    reduceMotion
-                        ? { duration: 0.12 }
-                        : // Spring reads as weight rather than a timed fade
-                          { type: 'spring', stiffness: 520, damping: 38, mass: 0.7 }
-                }
-                className={`flex flex-col overflow-hidden border shadow-2xl ${
-                    narrow ? 'rounded-none sm:rounded-xl' : 'rounded-xl'
-                } ${borderCls} ${focused ? '' : 'shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] opacity-[0.97]'} ${
-                    bento && !maximized && !narrow ? 'h-full w-full absolute inset-0' : ''
-                }`}
-                style={
-                    (focused
-                        ? { ...style, boxShadow: focusGlow }
-                        : style) as unknown as import('framer-motion').MotionStyle
-                }
-                onMouseDown={onFocus}
+                exit={reduce ? { opacity: 0 } : phone ? { opacity: 0, y: 30 } : { opacity: 0, scale: 0.92, y: 16 }}
+                transition={reduce ? { duration: 0.1 } : { type: 'spring', stiffness: 480, damping: 36, mass: 0.7 }}
+                className={`flex flex-col overflow-hidden bg-[#101219] ${phone ? '' : 'rounded-xl'} ${dragging ? 'select-none' : ''}`}
+                style={{ ...style, boxShadow: phone ? undefined : shadow } as unknown as MotionStyle}
+                onPointerDown={onFocus}
             >
-                <div
-                    className={`shrink-0 relative flex items-center border-b border-white/[0.07] cursor-default ${
-                        narrow ? 'h-11 min-h-[44px] px-2.5' : 'h-10 px-3'
-                    } ${focused ? 'bg-white/[0.07]' : 'bg-white/[0.03]'}`}
-                    onDoubleClick={() => {
-                        if (!narrow) onMaximize();
-                    }}
-                    onPointerDown={(e) => {
-                        if (narrow || maximized || bento) return;
-                        // Traffic lights and popovers must not start a drag
-                        if ((e.target as HTMLElement).closest('[data-traffic]')) return;
-                        drag.current = { ox: e.clientX, oy: e.clientY, sx: x, sy: y };
-                        setDragging(true);
-                        const move = (ev: PointerEvent) => {
-                            if (!drag.current) return;
-                            onMove(
-                                drag.current.sx + (ev.clientX - drag.current.ox),
-                                drag.current.sy + (ev.clientY - drag.current.oy),
-                            );
-                            // Aero edge detection
-                            const vw = window.innerWidth;
-                            const px = ev.clientX;
-                            const py = ev.clientY;
-                            if (py <= 6) setEdgeZone('max');
-                            else if (px <= 8) setEdgeZone(py < window.innerHeight * 0.25 ? 'tl' : py > window.innerHeight * 0.75 ? 'bl' : 'left');
-                            else if (px >= vw - 8) setEdgeZone(py < window.innerHeight * 0.25 ? 'tr' : py > window.innerHeight * 0.75 ? 'br' : 'right');
-                            else setEdgeZone(null);
-                        };
-                        const up = () => {
-                            drag.current = null;
-                            setDragging(false);
-                            window.removeEventListener('pointermove', move);
-                            window.removeEventListener('pointerup', up);
-                            const zone = edgeZoneRef.current;
-                            setEdgeZone(null);
-                            if (zone === 'max') onMaximize();
-                            else if (zone) applyZone(zone);
-                        };
-                        window.addEventListener('pointermove', move);
-                        window.addEventListener('pointerup', up);
-                    }}
-                >
-                    {/* Traffic lights. Grey when unfocused; glyphs appear on
-                        hover of the group, exactly like the real thing. */}
-                    <div data-traffic className="group flex items-center gap-2 shrink-0">
+                {phone ? (
+                    <div
+                        className="relative flex h-12 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#15171f] px-1.5"
+                        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', boxSizing: 'content-box' }}
+                    >
                         <button
                             type="button"
-                            title="Close"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onClose();
-                            }}
-                            className={`flex items-center justify-center rounded-full border transition-colors ${
-                                narrow ? 'w-4 h-4' : 'w-3 h-3'
-                            } ${
-                                focused
-                                    ? 'bg-[#ff5f57] border-[#e0443e]'
-                                    : 'bg-white/20 border-white/10 group-hover:bg-[#ff5f57] group-hover:border-[#e0443e]'
-                            }`}
+                            onClick={onMinimize}
+                            className="flex h-11 items-center gap-0.5 rounded-lg px-2 text-[15px] text-[var(--os-accent,#34d399)] touch-manipulation"
+                            aria-label="Home"
                         >
-                            <span className="opacity-0 group-hover:opacity-100 text-[9px] leading-none font-bold text-black/60 select-none">
-                                ×
-                            </span>
+                            <ChevronLeft size={22} /> Home
                         </button>
+                        <span className="pointer-events-none absolute inset-x-24 truncate text-center text-[15px] font-semibold text-white">
+                            {title}
+                        </span>
                         <button
                             type="button"
-                            title="Minimize"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onMinimize();
-                            }}
-                            className={`flex items-center justify-center rounded-full border transition-colors ${
-                                narrow ? 'w-4 h-4' : 'w-3 h-3'
-                            } ${
-                                focused
-                                    ? 'bg-[#febc2e] border-[#d89e24]'
-                                    : 'bg-white/20 border-white/10 group-hover:bg-[#febc2e] group-hover:border-[#d89e24]'
-                            }`}
+                            onClick={onClose}
+                            className="flex h-11 w-11 items-center justify-center rounded-full text-white/60 touch-manipulation active:bg-white/10"
+                            aria-label="Close"
                         >
-                            <span className="opacity-0 group-hover:opacity-100 text-[9px] leading-none font-bold text-black/60 select-none">
-                                −
-                            </span>
+                            <X size={19} />
                         </button>
-                        <div
-                            className="relative"
-                            onMouseEnter={() => {
-                                if (narrow) return;
-                                if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
-                                layoutsTimer.current = setTimeout(() => setLayoutsOpen(true), 460);
-                            }}
-                            onMouseLeave={() => {
-                                if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
-                                layoutsTimer.current = setTimeout(() => setLayoutsOpen(false), 240);
-                            }}
-                        >
-                            <button
-                                type="button"
-                                title="Zoom · hover for tiling"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setLayoutsOpen(false);
-                                    onMaximize();
-                                }}
-                                className={`flex items-center justify-center rounded-full border transition-colors ${
-                                    narrow ? 'w-4 h-4' : 'w-3 h-3'
-                                } ${
-                                    focused
-                                        ? 'bg-[#28c840] border-[#1dad2b]'
-                                        : 'bg-white/20 border-white/10 group-hover:bg-[#28c840] group-hover:border-[#1dad2b]'
-                                }`}
-                            >
-                                <span className="opacity-0 group-hover:opacity-100 text-[8px] leading-none font-bold text-black/60 select-none">
-                                    +
-                                </span>
-                            </button>
-                            {layoutsOpen && (
-                                <div
-                                    className="absolute left-0 top-full mt-2 z-50 rounded-xl border border-white/15 bg-[#181b24]/95 backdrop-blur-2xl shadow-2xl p-2 ring-1 ring-black/50"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <p className="text-[8px] uppercase tracking-[0.25em] text-white/40 font-mono mb-1.5 px-0.5 whitespace-nowrap">
-                                        Move &amp; tile
-                                    </p>
-                                    <div className="grid grid-cols-3 gap-1.5">
-                                        {(
-                                            [
-                                                ['left', 'Left half'],
-                                                ['right', 'Right half'],
-                                                ['max', 'Fill'],
-                                                ['tl', 'Top-left'],
-                                                ['tr', 'Top-right'],
-                                                ['bl', 'Bottom-left'],
-                                                ['br', 'Bottom-right'],
-                                            ] as [SnapZone | 'max', string][]
-                                        ).map(([zone, label]) => (
-                                            <button
-                                                key={zone}
-                                                type="button"
-                                                title={label}
-                                                onClick={() => {
-                                                    setLayoutsOpen(false);
-                                                    if (zone === 'max') onMaximize();
-                                                    else applyZone(zone);
-                                                }}
-                                                className="w-12 h-9 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/15 hover:border-white/35 relative overflow-hidden transition-colors"
-                                            >
-                                                <span
-                                                    className={`absolute bg-white/50 rounded-[3px] ${
-                                                        zone === 'left'
-                                                            ? 'left-1 top-1 bottom-1 right-1/2 mr-0.5'
-                                                            : zone === 'right'
-                                                              ? 'right-1 top-1 bottom-1 left-1/2 ml-0.5'
-                                                              : zone === 'max'
-                                                                ? 'inset-1'
-                                                                : zone === 'tl'
-                                                                  ? 'left-1 top-1 right-1/2 bottom-1/2 mr-0.5 mb-0.5'
-                                                                  : zone === 'tr'
-                                                                    ? 'right-1 top-1 left-1/2 bottom-1/2 ml-0.5 mb-0.5'
-                                                                    : zone === 'bl'
-                                                                      ? 'left-1 bottom-1 right-1/2 top-1/2 mr-0.5 mt-0.5'
-                                                                      : 'right-1 bottom-1 left-1/2 top-1/2 ml-0.5 mt-0.5'
-                                                    }`}
-                                                />
-                                            </button>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            title="Bento hero"
-                                            onClick={() => {
-                                                setLayoutsOpen(false);
-                                                onSnap('hero');
-                                            }}
-                                            className="w-12 h-9 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/15 hover:border-white/35 relative overflow-hidden transition-colors"
-                                        >
-                                            <span className="absolute left-1 top-1 bottom-1 right-1/2 mr-0.5 bg-amber-300/60 rounded-[3px]" />
-                                            <span className="absolute right-1 top-1 left-1/2 bottom-1/2 ml-0.5 mb-0.5 bg-white/40 rounded-[3px]" />
-                                            <span className="absolute right-1 bottom-1 left-1/2 top-1/2 ml-0.5 mt-0.5 bg-white/40 rounded-[3px]" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </div>
-
-                    {/* Centered title, absolute so the lights never shift it */}
-                    <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center gap-1.5 px-16">
-                        <OsIconTile app={app} size="sm" open={focused} />
+                ) : (
+                    <div
+                        className={`relative flex h-[38px] shrink-0 items-center border-b border-black/30 px-3.5 ${
+                            focused ? 'bg-[#1b1e28]' : 'bg-[#16181f]'
+                        }`}
+                        onPointerDown={startDrag}
+                        onDoubleClick={onMaximize}
+                    >
+                        <div data-nodrag className="group/lights relative z-10 flex items-center gap-2">
+                            <Light color="#ff5f57" edge="#e0443e" glyph="×" focused={focused} title="Close" onClick={onClose} />
+                            <Light color="#febc2e" edge="#d89e24" glyph="−" focused={focused} title="Minimise" onClick={onMinimize} />
+                            <div
+                                className="relative flex"
+                                onMouseEnter={() => {
+                                    if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
+                                    layoutsTimer.current = setTimeout(() => setLayouts(true), 420);
+                                }}
+                                onMouseLeave={() => {
+                                    if (layoutsTimer.current) clearTimeout(layoutsTimer.current);
+                                    layoutsTimer.current = setTimeout(() => setLayouts(false), 220);
+                                }}
+                            >
+                                <Light
+                                    color="#28c840"
+                                    edge="#1dad2b"
+                                    glyph="+"
+                                    focused={focused}
+                                    title="Zoom · hover to tile"
+                                    onClick={() => {
+                                        setLayouts(false);
+                                        onMaximize();
+                                    }}
+                                />
+                                {layouts && (
+                                    <div className="absolute left-0 top-full z-50 mt-2.5 rounded-xl border border-white/12 bg-[#1d2029]/95 p-2 shadow-2xl backdrop-blur-2xl">
+                                        <p className="mb-1.5 px-0.5 text-[11px] font-medium text-white/45">Move &amp; resize</p>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            {LAYOUTS.map(([zone, label, cls]) => (
+                                                <button
+                                                    key={zone}
+                                                    type="button"
+                                                    title={label}
+                                                    onClick={() => {
+                                                        setLayouts(false);
+                                                        applyZone(zone);
+                                                    }}
+                                                    className="group/l relative h-9 w-12 overflow-hidden rounded-md bg-white/[0.06] ring-1 ring-white/10 hover:ring-white/30"
+                                                >
+                                                    <span className={`absolute rounded-[3px] bg-white/35 group-hover/l:bg-[var(--os-accent,#34d399)] ${cls}`} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                         <span
-                            className={`text-[12px] sm:text-[13px] font-semibold truncate tracking-tight max-w-[60%] ${
-                                focused ? 'text-white/90' : 'text-white/40'
+                            className={`pointer-events-none absolute inset-x-24 truncate text-center text-[13px] font-semibold tracking-tight ${
+                                focused ? 'text-white/85' : 'text-white/35'
                             }`}
                         >
                             {title}
                         </span>
                     </div>
-                </div>
-                <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto bg-[#0b0d14]/70 overscroll-contain">
-                    {children}
-                </div>
+                )}
 
-                {/* Resize handles — float mode on desktop only */}
-                {floating &&
-                    !narrow &&
-                    RESIZE_HANDLES.map((hd) => (
+                {/* contain: paint makes the window the containing block for any
+                    position:fixed a hosted feature draws — its backdrop or modal
+                    stays inside this window instead of painting the desktop */}
+                <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [contain:paint]">{children}</div>
+
+                {!fill &&
+                    HANDLES.map((hd) => (
                         <div
                             key={hd.dir}
                             className={`absolute z-20 ${hd.cls}`}

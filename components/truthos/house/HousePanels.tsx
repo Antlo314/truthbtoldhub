@@ -318,7 +318,7 @@ export default function HousePanels() {
     if (panel === 'library') {
         return (
             <Shell title="Library" accent="text-violet-300" onClose={onClose} full>
-                <LibraryClient />
+                <LibraryClient embedded />
             </Shell>
         );
     }

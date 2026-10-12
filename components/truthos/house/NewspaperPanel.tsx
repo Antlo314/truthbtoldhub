@@ -36,7 +36,8 @@ const DESKS: { key: keyof Feeds; label: string }[] = [
     { key: 'health', label: 'Body' },
 ];
 
-export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
+/** Without `onClose` (inside the Ledger app) the paper has no close button — its window does. */
+export default function NewspaperPanel({ onClose }: { onClose?: () => void }) {
     const [feeds, setFeeds] = useState<Feeds | null>(null);
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
@@ -97,7 +98,7 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
                     <p className="text-[10px] tracking-[0.38em] uppercase text-[#7a6a52] font-medium">
                         {dateLine}
                     </p>
-                    <button
+                    {onClose && <button
                         type="button"
                         onClick={() => {
                             onClose();
@@ -107,7 +108,7 @@ export default function NewspaperPanel({ onClose }: { onClose: () => void }) {
                         aria-label="Put the paper down"
                     >
                         <X size={14} />
-                    </button>
+                    </button>}
                 </div>
                 <div className="text-center mt-1 mb-2">
                     <p className="text-[9px] tracking-[0.52em] uppercase text-[#9a8460]">The Sanctum</p>

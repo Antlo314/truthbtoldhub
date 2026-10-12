@@ -9,6 +9,7 @@ import {
 } from '@/lib/game/veilLevels';
 import { useArcadeInputProfile } from './useArcadeInputProfile';
 import KeyboardHintBar from '@/components/game/controls/KeyboardHintBar';
+import { drawGlow, loadArcadeSprites, sprite, tinted } from '@/lib/game/arcadeSprites';
 
 // ============================================================
 //  VEIL — a Geometry-Dash-style rhythm runner for the Sanctum
@@ -436,6 +437,9 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             if (!ctx) return;
             const P = dim.px, W = dim.w, H = dim.h, floorY = dim.floorY;
             const reduce = reduceRef.current;
+            // Kenney skins — RENDER ONLY. Nothing below may feed back into the sim.
+            loadArcadeSprites();
+            const skinDpr = Math.min(3, window.devicePixelRatio || 1);
             const cameraX = st.px - PLAYER_SCREEN_X;
             const now = performance.now();
             const beat = ((st.simTime * 1000) % BEAT_MS) / BEAT_MS;
@@ -546,6 +550,15 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     case 'coin': {
                         if (o.taken) break;
                         const cyp = sy(o.y);
+                        const coinImg = sprite('coin');
+                        if (coinImg) {
+                            // a coin turning on its edge
+                            const turn = reduce ? 1 : Math.max(0.18, Math.abs(Math.cos(now * 0.004 + o.x)));
+                            const d = P * 0.64;
+                            drawGlow(ctx, 'glow', PAL.coin, ox, cyp, P * 1.3, 0.35);
+                            ctx.drawImage(coinImg, ox - (d * turn) / 2, cyp - d / 2, d * turn, d);
+                            break;
+                        }
                         ctx.save(); ctx.shadowColor = PAL.coin; ctx.shadowBlur = reduce ? 0 : 10;
                         ctx.strokeStyle = PAL.coin; ctx.lineWidth = 2.5;
                         ctx.beginPath(); ctx.arc(ox, cyp, P * 0.28, 0, Math.PI * 2); ctx.stroke();
@@ -555,6 +568,12 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     case 'shard': {
                         if (o.taken) break;
                         const cyp = sy(o.y);
+                        const shardTile = tinted('star4', PAL.shard, P * 0.8 * skinDpr);
+                        if (shardTile) {
+                            drawGlow(ctx, 'nova', PAL.shard, ox, cyp, P * 1.8, 0.5 + (reduce ? 0.2 : pulse * 0.4), reduce ? 0 : now * 0.001);
+                            ctx.drawImage(shardTile, ox - P * 0.4, cyp - P * 0.4, P * 0.8, P * 0.8);
+                            break;
+                        }
                         ctx.save(); ctx.shadowColor = PAL.shard; ctx.shadowBlur = reduce ? 0 : 12;
                         ctx.strokeStyle = PAL.shard; ctx.lineWidth = 2.5;
                         ctx.beginPath(); ctx.arc(ox, cyp, P * 0.30, 0, Math.PI * 2); ctx.stroke();
@@ -566,6 +585,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     case 'orb': {
                         const cyp = sy(o.y);
                         const col = o.variant === 'pink' ? '#ff6bd6' : PAL.orb;
+                        drawGlow(ctx, 'halo', col, ox, cyp, P * 1.5, 0.55 + (reduce ? 0.2 : pulse * 0.4), reduce ? 0 : now * 0.0015);
                         ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = reduce ? 0 : 10;
                         ctx.fillStyle = col; ctx.globalAlpha = 0.35 + (reduce ? 0.3 : pulse * 0.5);
                         ctx.beginPath(); ctx.arc(ox, cyp, P * 0.32, 0, Math.PI * 2); ctx.fill();
@@ -592,6 +612,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                         ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
                         ctx.beginPath(); ctx.ellipse(ox, cyp, P * 0.42, P * 1.4, 0, 0, Math.PI * 2); ctx.stroke();
                         ctx.restore();
+                        drawGlow(ctx, 'flare', col, ox, cyp, P * 2.2, 0.7);
                         break;
                     }
                 }
@@ -602,8 +623,9 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 ctx.globalCompositeOperation = 'lighter';
                 for (let i = 0; i < st.trail.length; i++) {
                     const t = st.trail[i]; const a = (i / st.trail.length) * 0.4;
-                    ctx.fillStyle = accent; ctx.globalAlpha = a;
                     const s2 = P * 0.5 * (i / st.trail.length);
+                    if (drawGlow(ctx, 'glow', accent, t.x, t.y, s2 * 2.2, a * 1.6)) continue;
+                    ctx.fillStyle = accent; ctx.globalAlpha = a;
                     ctx.fillRect(t.x - s2 / 2, t.y - s2 / 2, s2, s2);
                 }
                 ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -636,15 +658,23 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 const tilt = Math.max(-0.5, Math.min(0.5, -st.vy / 30)) * st.gravitySign;
                 ctx.rotate(tilt);
                 const s2 = P * 0.7;
+                const ship = tinted('ship', accent, P * 0.95 * skinDpr, 'shade');
+                if (ship) {
+                    // the sprite points up; the run goes right
+                    ctx.rotate(Math.PI / 2);
+                    ctx.drawImage(ship, -P * 0.475, -P * 0.475, P * 0.95, P * 0.95);
+                } else {
                 ctx.fillStyle = accent;
                 ctx.beginPath(); ctx.moveTo(-s2 / 2, -s2 / 2); ctx.lineTo(s2 / 2, 0); ctx.lineTo(-s2 / 2, s2 / 2); ctx.closePath(); ctx.fill();
                 ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+                }
             }
             ctx.restore();
 
             // Aegis ring — orbits the player while a Source Shard is held
             if (st.shield) {
                 const rr = P * (0.62 + (reduce ? 0 : pulse * 0.08));
+                drawGlow(ctx, 'ring', PAL.shard, pxc, pyc, rr * 2.6, 0.7);
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = PAL.shard; ctx.shadowColor = PAL.shard; ctx.shadowBlur = reduce ? 0 : 12;
@@ -656,6 +686,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
             // particles
             for (const pt of st.particles) {
                 const a = Math.max(0, 1 - pt.life / pt.max);
+                if (drawGlow(ctx, 'sparkle', pt.color, sx(pt.x), sy(pt.y), P * (0.35 + 0.4 * a), a, pt.life * 4)) continue;
                 ctx.globalAlpha = a; ctx.fillStyle = pt.color;
                 ctx.fillRect(sx(pt.x) - 2, sy(pt.y) - 2, 4, 4);
             }
@@ -792,7 +823,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 </button>
                 <div className="text-center">
                     <p className="text-[8px] uppercase tracking-[0.35em] text-white/35">Arcade</p>
-                    <p className="font-ritual text-xl tracking-[0.3em] leading-none" style={{ color: accent }}>VEIL</p>
+                    <p className="text-[18px] font-black tracking-[0.2em] leading-none" style={{ color: accent }}>VEIL</p>
                 </div>
                 <div className="flex items-center gap-1">
                     <button onClick={toggleMute} className="p-2.5 rounded-full bg-black/40 border border-white/10 text-zinc-200 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Mute">
@@ -806,11 +837,11 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
 
             {/* HUD */}
             <div className="flex items-center justify-center gap-3.5 px-3 pt-2 shrink-0">
-                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Score</p><p className="font-ritual text-lg leading-tight" style={{ color: accent }}>{score.toLocaleString()}</p></div>
-                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Coins</p><p className="font-ritual text-lg leading-tight text-amber-300">{coins}</p></div>
-                <div className="text-center px-1.5 flex flex-col items-center"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Aegis</p>
+                <div className="text-center px-1.5"><p className="text-[10.5px] text-white/50 leading-none">Score</p><p className="font-bold tabular-nums text-lg leading-tight" style={{ color: accent }}>{score.toLocaleString()}</p></div>
+                <div className="text-center px-1.5"><p className="text-[10.5px] text-white/50 leading-none">Coins</p><p className="font-bold tabular-nums text-lg leading-tight text-amber-300">{coins}</p></div>
+                <div className="text-center px-1.5 flex flex-col items-center"><p className="text-[10.5px] text-white/50 leading-none">Aegis</p>
                     <span className="mt-1 inline-block rounded-full" style={{ width: 16, height: 16, border: `2px solid ${shield ? PAL.shard : 'rgba(255,255,255,0.25)'}`, background: shield ? PAL.shard : 'transparent', boxShadow: shield ? `0 0 8px ${PAL.shard}` : 'none' }} /></div>
-                <div className="text-center px-1.5"><p className="text-[8px] font-mono uppercase tracking-[0.25em] text-white/45 leading-none">Try</p><p className="font-ritual text-lg leading-tight text-white">{attempt}</p></div>
+                <div className="text-center px-1.5"><p className="text-[10.5px] text-white/50 leading-none">Try</p><p className="font-bold tabular-nums text-lg leading-tight text-white">{attempt}</p></div>
             </div>
 
             {/* play surface — PC: keyboard (+ click); phone: tap/hold */}
@@ -819,7 +850,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
 
                 {!started && status === 'playing' && (
                     <div className="absolute inset-0 flex items-end justify-center pb-[18%] pointer-events-none">
-                        <p className="font-ritual text-sm tracking-[0.2em] uppercase animate-pulse text-center px-4" style={{ color: accent }}>
+                        <p className="font-bold tabular-nums text-sm tracking-[0.2em] uppercase animate-pulse text-center px-4" style={{ color: accent }}>
                             {isKeyboard
                                 ? 'Space / W · hold to fly · gather the Source'
                                 : 'Tap to jump · hold to fly · gather the Source'}
@@ -830,7 +861,7 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                 {status === 'paused' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                         <div className="text-center">
-                            <p className="font-ritual text-2xl gold-shimmer mb-4">Paused</p>
+                            <p className="font-bold tabular-nums text-2xl text-white mb-4">Paused</p>
                             <button onClick={() => a.togglePause?.()} className="px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] text-black" style={{ background: accent }}>Resume</button>
                         </div>
                     </div>
@@ -840,12 +871,12 @@ export default function VeilGame({ accent, onExit, onGameOver, onReset, submitSt
                     <div className="absolute inset-0 flex items-center justify-center bg-black/82 backdrop-blur-sm p-4">
                         <div className="w-full max-w-xs text-center">
                             <p className="text-[10px] tracking-[0.4em] uppercase text-white/50 mb-1">The veil holds</p>
-                            <h2 className="font-ritual text-3xl gold-shimmer mb-1">Game Over</h2>
+                            <h2 className="font-bold tabular-nums text-3xl text-white mb-1">Game Over</h2>
                             {isNewBest && <p className="text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: accent }}>✦ New personal best</p>}
                             <div className="grid grid-cols-3 gap-2 my-4">
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Score</p><p className="font-ritual text-xl" style={{ color: accent }}>{score.toLocaleString()}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Coins</p><p className="font-ritual text-xl text-amber-300">{coins}</p></div>
-                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[8px] uppercase tracking-widest text-white/40">Try</p><p className="font-ritual text-xl text-white">{attempt}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Score</p><p className="font-bold tabular-nums text-xl" style={{ color: accent }}>{score.toLocaleString()}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Coins</p><p className="font-bold tabular-nums text-xl text-amber-300">{coins}</p></div>
+                                <div className="rounded-xl border border-white/10 bg-white/[0.03] py-2"><p className="text-[11px] text-white/45">Try</p><p className="font-bold tabular-nums text-xl text-white">{attempt}</p></div>
                             </div>
                             <p className="text-[11px] font-mono tracking-wide mb-4 min-h-[1.2em]" style={{ color: submitState === 'error' ? '#f87171' : 'rgba(255,255,255,0.6)' }}>
                                 {submitState === 'saving' && 'Recording your score…'}

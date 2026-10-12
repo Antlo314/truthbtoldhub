@@ -4,7 +4,7 @@
  * Primary home surface: Truth.OS desktop first.
  * Leave terminal pans out into the optional 3D Chamber.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
 import TruthOSShell from './TruthOSShell';
@@ -26,6 +26,18 @@ const HouseExperience = dynamic(
 export default function TruthOSDesktop() {
     /** Start in the 3D world. Truth.OS is a CTA for anyone who will not walk. */
     const [chamber, setChamber] = useState(true);
+    /**
+     * Loaded inside a frame (the OS Browser navigated to "/"): never boot a
+     * second OS and a second 3D world inside the first.
+     */
+    const [framed, setFramed] = useState(false);
+    useEffect(() => {
+        try {
+            setFramed(window.self !== window.top);
+        } catch {
+            setFramed(true);
+        }
+    }, []);
     const [panning, setPanning] = useState(false);
     const clearDesktop = useTruthOs((s) => s.clearDesktop);
     const setSessionEmail = useTruthOs((s) => s.setSessionEmail);
@@ -63,8 +75,18 @@ export default function TruthOSDesktop() {
         sacredUi.access();
     }, []);
 
+    if (framed) {
+        return (
+            <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-2 bg-[#0b0d13] px-6 text-center">
+                <span className="bg-gradient-to-br from-amber-100 to-amber-500 bg-clip-text text-4xl font-black text-transparent">✦</span>
+                <p className="text-[15px] font-semibold text-white">Truth.OS is already open</p>
+                <p className="max-w-xs text-[13px] text-white/50">You are looking at it. Use the dock or the App Library to open anything else.</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="fixed inset-0 bg-black overflow-hidden">
+        <div className="fixed inset-0 bg-black overflow-clip">
             <AnimatePresence mode="wait">
                 {!chamber ? (
                     <motion.div

@@ -61,7 +61,7 @@ function saveFs(nodes: VNode[]) {
 }
 
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-    return <div className={`h-full overflow-hidden flex flex-col bg-zinc-950 text-zinc-200 ${className}`}>{children}</div>;
+    return <div className={`h-full overflow-hidden flex flex-col bg-[#101219] text-zinc-200 ${className}`}>{children}</div>;
 }
 
 /* ─── Calculator ─────────────────────────────────────────── */
@@ -216,7 +216,7 @@ export function NotepadApp({ nodeId, name }: { nodeId?: string; name?: string } 
     return (
         <Panel>
             <div className="shrink-0 px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2">
-                <p className="text-[10px] uppercase tracking-widest text-white/40 font-mono truncate">
+                <p className="text-[11.5px] text-white/40 truncate">
                     {bound ? name || 'Document' : 'Notepad'}
                 </p>
                 <div className="flex items-center gap-3 shrink-0">
@@ -238,7 +238,7 @@ export function NotepadApp({ nodeId, name }: { nodeId?: string; name?: string } 
             <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="flex-1 w-full resize-none bg-zinc-950 text-zinc-100 p-4 font-mono text-sm outline-none min-h-[240px]"
+                className="flex-1 w-full resize-none bg-[#101219] text-zinc-100 p-4 font-mono text-sm outline-none min-h-[240px]"
                 spellCheck={false}
             />
         </Panel>
@@ -578,13 +578,13 @@ export function PaintApp() {
                     >
                         <Redo2 size={14} />
                     </button>
-                    <button type="button" onClick={clear} className="ml-auto text-[10px] uppercase tracking-widest text-white/50 hover:text-white px-2 py-1">
+                    <button type="button" onClick={clear} className="ml-auto text-[11.5px] text-white/50 hover:text-white px-2 py-1">
                         Clear
                     </button>
                     <button
                         type="button"
                         onClick={saveToFs}
-                        className="text-[10px] uppercase tracking-widest text-emerald-300/90 hover:text-emerald-200 px-2 py-1 border border-emerald-500/30 rounded-lg"
+                        className="text-[11.5px] text-emerald-300/90 hover:text-emerald-200 px-2 py-1 border border-emerald-500/30 rounded-lg"
                     >
                         Save to Pictures
                     </button>
@@ -794,7 +794,7 @@ export function FileExplorerApp() {
                         key={label as string}
                         type="button"
                         onClick={fn as () => void}
-                        className="px-2.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider border border-white/10 text-white/60 hover:bg-white/5 hover:text-white min-h-[36px]"
+                        className="px-2.5 py-1.5 rounded-lg text-[11.5px] border border-white/10 text-white/60 hover:bg-white/5 hover:text-white min-h-[36px]"
                     >
                         {label as string}
                     </button>

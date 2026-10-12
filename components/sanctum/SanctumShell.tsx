@@ -54,7 +54,10 @@ export default function SanctumShell({ children }: { children: React.ReactNode }
     useEffect(() => {
         try {
             const q = new URLSearchParams(window.location.search);
-            setEmbedded(q.get('embed') === '1' || window.self !== window.top);
+            const framed = q.get('embed') === '1' || window.self !== window.top;
+            setEmbedded(framed);
+            // Pages read this to drop chrome a Truth.OS window already provides
+            document.documentElement.dataset.embed = framed ? '1' : '';
         } catch {
             setEmbedded(false);
         }

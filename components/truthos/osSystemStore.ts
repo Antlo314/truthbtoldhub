@@ -2,8 +2,9 @@
 
 /**
  * Truth.OS system services — theme (wallpaper + accent), notifications,
- * system flyouts (quick settings / calendar / notification center / widgets),
- * task view, lock screen, brightness & night light.
+ * the two top-bar panels (Control Center, Today), the full-screen overlays
+ * (Spotlight, App Library, Mission Control, shortcuts), lock screen,
+ * brightness & night light.
  * Persisted to localStorage so the desktop feels like a real installed OS.
  */
 import { create } from 'zustand';
@@ -33,10 +34,11 @@ export type OsNotification = {
     toast?: boolean;
 };
 
-export type OsFlyout = 'quick' | 'calendar' | 'notifications' | 'widgets' | null;
+/** Panels that drop from the top bar: Control Center and Today (calendar + notifications) */
+export type OsFlyout = 'control' | 'today' | null;
 
 /** Full-screen system overlays that own the keyboard while open */
-export type OsOverlay = 'palette' | 'switcher' | 'shortcuts' | null;
+export type OsOverlay = 'spotlight' | 'library' | 'mission' | 'shortcuts' | null;
 
 type OsTheme = {
     wallpaper: string;
@@ -105,7 +107,6 @@ type OsSystemState = OsTheme & {
     /** ids currently visible as toasts */
     toastIds: string[];
     flyout: OsFlyout;
-    taskView: boolean;
     locked: boolean;
     /** desktop right-click context menu position (null = closed) */
     ctxMenu: { x: number; y: number } | null;
@@ -132,7 +133,7 @@ type OsSystemState = OsTheme & {
 
     setFlyout: (f: OsFlyout) => void;
     toggleFlyout: (f: Exclude<OsFlyout, null>) => void;
-    setTaskView: (v: boolean) => void;
+    toggleOverlay: (o: Exclude<OsOverlay, null>) => void;
     setLocked: (v: boolean) => void;
     setCtxMenu: (p: { x: number; y: number } | null) => void;
 };
@@ -142,7 +143,6 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
     notifications: [],
     toastIds: [],
     flyout: null,
-    taskView: false,
     locked: false,
     ctxMenu: null,
     overlay: null,
@@ -178,10 +178,10 @@ export const useOsSystem = create<OsSystemState>((set, get) => ({
         set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
     clearNotifications: () => set({ notifications: [], toastIds: [] }),
 
-    setFlyout: (f) => set({ flyout: f, ctxMenu: null }),
-    toggleFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f, ctxMenu: null })),
-    setTaskView: (v) => set({ taskView: v, flyout: null, ctxMenu: null }),
-    setLocked: (v) => set({ locked: v, flyout: null, taskView: false, ctxMenu: null }),
+    setFlyout: (f) => set({ flyout: f, ctxMenu: null, overlay: null }),
+    toggleFlyout: (f) => set((s) => ({ flyout: s.flyout === f ? null : f, ctxMenu: null, overlay: null })),
+    toggleOverlay: (o) => set((s) => ({ overlay: s.overlay === o ? null : o, flyout: null, ctxMenu: null })),
+    setLocked: (v) => set({ locked: v, flyout: null, overlay: null, ctxMenu: null }),
     setCtxMenu: (p) => set({ ctxMenu: p }),
 }));
 

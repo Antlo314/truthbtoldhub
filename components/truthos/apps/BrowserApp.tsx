@@ -9,18 +9,21 @@ import { useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ExternalLink, Home, RotateCw, Star } from 'lucide-react';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 
+/**
+ * Only the sanctum pages with no app of their own. The Hall, the Library
+ * and the Cinema open as apps; bookmarking their pages here was the same
+ * screen twice.
+ */
 const BOOKMARKS: { path: string; label: string }[] = [
-    { path: '/archive?embed=1', label: 'The Hall' },
-    { path: '/library?embed=1', label: 'Library' },
-    { path: '/cinema?embed=1', label: 'Cinema' },
-    { path: '/cineworks?embed=1', label: 'Cineworks' },
-    { path: '/codex?embed=1', label: 'Codex' },
-    { path: '/support?embed=1', label: 'Support' },
-    { path: '/treasury?embed=1', label: 'Treasury' },
-    { path: '/self?embed=1', label: 'Soul page' },
+    { path: '/codex', label: 'Codex' },
+    { path: '/self', label: 'Your Page' },
+    { path: '/treasury', label: 'Treasury' },
+    { path: '/cineworks', label: 'Cineworks' },
+    { path: '/support', label: 'Support' },
+    { path: '/hierarchy', label: 'Hierarchy' },
 ];
 
-const HOME_PATH = '/archive?embed=1';
+const HOME_PATH = '/codex';
 
 function normalize(raw: string): { internal: string | null; external: string | null } {
     const t = raw.trim();
@@ -75,9 +78,9 @@ export function BrowserApp({ initialPath }: { initialPath?: string } = {}) {
     const isBookmarked = useMemo(() => BOOKMARKS.some((b) => b.path === current), [current]);
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[300px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[300px]">
             {/* Toolbar */}
-            <div className="shrink-0 flex items-center gap-1 px-2 py-1.5 border-b border-white/10 bg-black/40">
+            <div className="shrink-0 flex items-center gap-1 px-2 py-1.5 border-b border-white/[0.07] bg-[#171a22]">
                 <button
                     type="button"
                     onClick={() => nav(-1)}
@@ -116,17 +119,17 @@ export function BrowserApp({ initialPath }: { initialPath?: string } = {}) {
                     <Home size={14} />
                 </button>
                 <form
-                    className="flex-1 min-w-0 flex items-center gap-2 h-9 px-3 rounded-xl border border-white/12 bg-white/[0.05] focus-within:border-cyan-400/50"
+                    className="flex-1 min-w-0 flex items-center gap-2 h-8 px-3 rounded-lg bg-white/[0.08] focus-within:ring-2 focus-within:ring-[var(--os-accent,#34d399)]/60"
                     onSubmit={(e) => {
                         e.preventDefault();
                         go(bar);
                     }}
                 >
-                    <span className="text-[10px] text-cyan-300/70 font-mono shrink-0">sanctum://</span>
+                    <span className="text-[12px] text-white/40 shrink-0">sanctum://</span>
                     <input
                         value={bar.replace(/^\//, '')}
                         onChange={(e) => setBar(`/${e.target.value.replace(/^\/+/, '')}`)}
-                        className="flex-1 min-w-0 bg-transparent outline-none text-[12px] text-white placeholder:text-zinc-600"
+                        className="flex-1 min-w-0 bg-transparent outline-none text-[13px] text-white placeholder:text-white/30"
                         placeholder="route or url…"
                         autoCapitalize="off"
                         autoCorrect="off"
@@ -146,7 +149,7 @@ export function BrowserApp({ initialPath }: { initialPath?: string } = {}) {
                 </a>
             </div>
             {/* Bookmarks bar */}
-            <div className="shrink-0 flex items-center gap-1 px-2 py-1 border-b border-white/8 bg-black/25 overflow-x-auto no-scrollbar">
+            <div className="shrink-0 flex items-center gap-1 px-2 py-1 border-b border-white/[0.07] bg-[#141720] overflow-x-auto no-scrollbar">
                 {BOOKMARKS.map((b) => (
                     <button
                         key={b.path}
@@ -154,8 +157,8 @@ export function BrowserApp({ initialPath }: { initialPath?: string } = {}) {
                         onClick={() => go(b.path)}
                         className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] transition-colors min-h-[32px] touch-manipulation ${
                             current === b.path
-                                ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30'
-                                : 'text-zinc-400 hover:bg-white/8 hover:text-zinc-200 border border-transparent'
+                                ? 'bg-white/[0.12] text-white'
+                                : 'text-white/55 hover:bg-white/[0.07] hover:text-white'
                         }`}
                     >
                         {b.label}

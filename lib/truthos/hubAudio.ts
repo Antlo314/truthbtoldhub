@@ -522,8 +522,8 @@ class HubAudioController {
     }
 
     // ── Arcade ────────────────────────────────────────────
-    arcadeGame(id: 'serpent' | 'tetra' | 'veil') {
-        const map = { serpent: 'arcade_serpent', tetra: 'arcade_tetra', veil: 'arcade_veil' } as const;
+    arcadeGame(id: 'serpent' | 'tetra' | 'veil' | 'ascent') {
+        const map = { serpent: 'arcade_serpent', tetra: 'arcade_tetra', veil: 'arcade_veil', ascent: 'house_studio_pulse' } as const;
         this.playMusic(map[id]);
         this.playSfx('arcade_start', { duck: true });
     }

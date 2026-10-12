@@ -21,7 +21,6 @@ import { setWalkerState } from './walkerPose';
 import { saveSettings } from '@/lib/game/settings';
 // isOnLivingRug inlined in onPose for rug footsteps
 import TruthGuideWidget from './TruthGuideWidget';
-import TruthOSShell from '../TruthOSShell';
 import { useTruthOs } from '../truthOsStore';
 import { useClientDevice } from '../engine/useClientDevice';
 import {
@@ -139,7 +138,7 @@ export default function HouseExperience({
     const character = useGameStore((s) => s.character);
     const loadFromCloud = useGameStore((s) => s.loadFromCloud);
     const { device } = useClientDevice();
-    const { enterOs, closeToRoom } = useTruthOs();
+    const { closeToRoom } = useTruthOs();
     const openPanel = useHouseUi((s) => s.openPanel);
     const closePanel = useHouseUi((s) => s.closePanel);
     const setSoonMessage = useHouseUi((s) => s.setSoonMessage);
@@ -200,7 +199,15 @@ export default function HouseExperience({
             });
         }, 6500);
     }, []);
-    const [osOpen, setOsOpen] = useState(false);
+    /**
+     * The desk is the door back to Truth.OS. The house no longer carries a
+     * second, nested copy of the OS: it hands back to the one that opened it
+     * (or to "/" when the house was opened on its own, at /world).
+     */
+    const goToTerminal = useCallback(() => {
+        if (onReturnToTerminal) onReturnToTerminal();
+        else window.location.assign('/');
+    }, [onReturnToTerminal]);
     const [canvasError, setCanvasError] = useState<string | null>(null);
     const [activity, setActivity] = useState<'move' | 'look' | 'jump' | 'idle' | null>(null);
     const [hasLooked, setHasLooked] = useState(false);
@@ -212,7 +219,7 @@ export default function HouseExperience({
     const hotspotRef = useRef<Hotspot | null>(null);
 
     const isMobile = device === 'mobile';
-    const uiLocked = osOpen || authOpen || !!panel || paused;
+    const uiLocked = authOpen || !!panel || paused;
     const {
         shellRef,
         pointerLocked,
@@ -333,8 +340,7 @@ export default function HouseExperience({
                 void loadFromCloud();
                 if (pendingOsLogin.current) {
                     pendingOsLogin.current = false;
-                    setOsOpen(true);
-                    enterOs();
+                    goToTerminal();
                 }
             } else {
                 const gid = ensureGuestId();
@@ -342,7 +348,6 @@ export default function HouseExperience({
                 setPresenceKey(gid);
                 setGuest(true);
                 setAuthed(true);
-                setOsOpen(false);
                 closeToRoom();
                 try {
                     localStorage.setItem('tbth-house-guest', '1');
@@ -356,7 +361,7 @@ export default function HouseExperience({
             cancelled = true;
             sub.subscription.unsubscribe();
         };
-    }, [loadFromCloud, enterOs, closeToRoom]);
+    }, [loadFromCloud, closeToRoom, goToTerminal]);
 
     // Join once per presence identity — not on every avatar field tick (that spawned ghosts)
     useEffect(() => {
@@ -442,25 +447,8 @@ export default function HouseExperience({
             if (h.action.type === 'os') {
                 markVisited('computer');
                 // Terminal is the primary surface — no re-entry from chamber
-                if (disableOsBoot) {
-                    // The desk IS the terminal. Sitting back down means going
-                    // back to Truth.OS — same path as the top-left button.
-                    if (onReturnToTerminal) {
-                        onReturnToTerminal();
-                        return;
-                    }
-                    setSoonMessage('Return to Truth.OS with the button at the top-left of the chamber.');
-                    window.setTimeout(() => setSoonMessage(null), 3800);
-                    return;
-                }
-                // Truth.OS requires a real signed-in soul (not guest)
-                if (guest) {
-                    pendingOsLogin.current = true;
-                    setAuthOpen(true);
-                    return;
-                }
-                setOsOpen(true);
-                enterOs();
+                // The desk IS the terminal: sitting back down goes back to Truth.OS
+                goToTerminal();
                 return;
             }
             if (h.action.type === 'panel') {
@@ -476,7 +464,7 @@ export default function HouseExperience({
                 window.setTimeout(() => setSoonMessage(null), 4200);
             }
         },
-        [enterOs, openPanel, guest, setSoonMessage, disableOsBoot, onReturnToTerminal, toggleSeated, doEmote],
+        [openPanel, setSoonMessage, goToTerminal, toggleSeated, doEmote],
     );
 
     const tryInteract = useCallback(() => {
@@ -526,18 +514,14 @@ export default function HouseExperience({
                 if (id) doEmote(id);
                 return;
             }
-            if (e.code === 'KeyM' && !osOpen && !authOpen && !composing) {
+            if (e.code === 'KeyM' && !authOpen && !composing) {
                 e.preventDefault();
                 if (panel === 'wayfinder') closePanel();
                 else if (!panel) openPanel('wayfinder');
                 return;
             }
             if (e.code === 'Escape') {
-                if (osOpen) {
-                    setOsOpen(false);
-                    closeToRoom();
-                    hubAudio.osExitToHouse();
-                } else if (panel) {
+                if (panel) {
                     closePanel();
                 } else if (paused) {
                     setPaused(false);
@@ -548,7 +532,7 @@ export default function HouseExperience({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [hotspot, uiLocked, osOpen, panel, paused, composing, activateHotspot, closeToRoom, closePanel, openPanel, setPaused, authOpen, toggleView, doEmote]);
+    }, [hotspot, uiLocked, panel, paused, composing, activateHotspot, closePanel, openPanel, setPaused, authOpen, toggleView, doEmote]);
 
     const onAuthSuccess = () => {
         try {
@@ -563,35 +547,11 @@ export default function HouseExperience({
         void loadFromCloud();
         if (pendingOsLogin.current) {
             pendingOsLogin.current = false;
-            setOsOpen(true);
-            enterOs();
+            goToTerminal();
         }
     };
 
-    const onLogout = async () => {
-        await presence.current?.leave();
-        try {
-            localStorage.setItem('tbth-house-guest', '1');
-            localStorage.removeItem('tbth-demo');
-        } catch {
-            /* */
-        }
-        try {
-            await supabase.auth.signOut();
-        } catch {
-            /* */
-        }
-        const gid = ensureGuestId();
-        selfId.current = gid;
-        setPresenceKey(gid);
-        setGuest(true);
-        setAuthed(true);
-        setOsOpen(false);
-        closeToRoom();
-        setAuthOpen(false);
-    };
-
-    const showHud = ready && authed && !osOpen && !authOpen && !panel && !paused;
+    const showHud = ready && authed && !authOpen && !panel && !paused;
 
     useEffect(() => {
         if (!showHud || !hasMoved) return;
@@ -698,14 +658,7 @@ export default function HouseExperience({
             <WorldHud
                 visible={showHud}
                 compact={isMobile}
-                onOpenOs={() => {
-                    if (onReturnToTerminal) {
-                        onReturnToTerminal();
-                        return;
-                    }
-                    setOsOpen(true);
-                    enterOs();
-                }}
+                onOpenOs={goToTerminal}
             />
 
             {showHud && (
@@ -822,31 +775,6 @@ export default function HouseExperience({
                 </div>
             )}
 
-            {/* Nested OS only when house is primary host (legacy). Chamber mode never re-opens terminal. */}
-            {osOpen && !disableOsBoot && (
-                <div
-                    className="fixed z-50 inset-0 sm:inset-[1.5%] sm:rounded-xl overflow-hidden border-0 sm:border border-zinc-700 shadow-2xl bg-black"
-                    data-allow-select
-                >
-                    <button
-                        type="button"
-                        className="absolute top-2 right-2 z-[60] text-[10px] uppercase tracking-widest text-white/50 hover:text-white bg-black/50 px-2 py-1 rounded"
-                        onClick={() => {
-                            setOsOpen(false);
-                            closeToRoom();
-                        }}
-                    >
-                        Exit OS · house
-                    </button>
-                    <TruthOSShell
-                        onLogout={onLogout}
-                        onEnterChamber={() => {
-                            setOsOpen(false);
-                            closeToRoom();
-                        }}
-                    />
-                </div>
-            )}
         </div>
     );
 }

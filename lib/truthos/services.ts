@@ -1,16 +1,15 @@
 /**
- * Truth.OS service registry — one catalog, two doors.
+ * Truth.OS catalog — every program and sanctum page, listed once.
  *
- * Every product service has an OS home (app, folder item, or in-OS browser
- * route) and a map home (house hotspot or jungle destination). System
- * utilities stay OS-only. Architect tools stay off the public map.
- *
- * Launchpad folders, the command palette, and house hotspots all read
- * this file so the two worlds cannot drift.
+ * The App Library groups it, Spotlight searches it, the phone home screen
+ * lays it out. Each entry opens exactly one thing: an app, or a sanctum
+ * page in the Browser for the few pages that have no app of their own.
+ * Pages that DO have an app (the Hall, the Library, the Cinema) are not
+ * listed twice.
  */
 import type { OsAppId } from '@/components/truthos/truthOsStore';
 
-export type OsFolderId = 'sanctum' | 'community' | 'worlds' | 'studio' | 'tools' | 'system';
+export type OsGroupId = 'sanctum' | 'community' | 'play' | 'create' | 'tools' | 'system';
 
 export type ServiceLaunch =
     | { kind: 'app'; app: OsAppId }
@@ -20,84 +19,74 @@ export type Service = {
     id: string;
     label: string;
     hint: string;
-    folder: OsFolderId;
+    group: OsGroupId;
     launch: ServiceLaunch;
-    /** Where this service lives in the 3D world. `none` = OS-only. */
-    map: 'hotspot' | 'destination' | 'none';
-    mapId?: string;
     adminOnly?: boolean;
-    gated?: boolean;
 };
 
-export const FOLDER_META: Record<OsFolderId, { label: string; hint: string }> = {
-    sanctum: { label: 'Sanctum', hint: 'word · guide · memory' },
-    community: { label: 'Community', hint: 'souls · the wall' },
-    worlds: { label: 'Worlds', hint: 'house · play · vessel' },
-    studio: { label: 'Studio', hint: 'film · sound · paint' },
-    tools: { label: 'Tools', hint: 'files · notes · time' },
-    system: { label: 'System', hint: 'settings · account' },
+export const GROUP_META: Record<OsGroupId, { label: string }> = {
+    sanctum: { label: 'Sanctum' },
+    community: { label: 'Community' },
+    play: { label: 'Play & watch' },
+    create: { label: 'Create' },
+    tools: { label: 'Tools' },
+    system: { label: 'System' },
 };
 
-export const FOLDER_ORDER: OsFolderId[] = [
-    'sanctum',
-    'community',
-    'worlds',
-    'studio',
-    'tools',
-    'system',
-];
+export const GROUP_ORDER: OsGroupId[] = ['sanctum', 'community', 'play', 'create', 'tools', 'system'];
+
+const app = (id: string, label: string, hint: string, group: OsGroupId, a: OsAppId, adminOnly = false): Service => ({
+    id,
+    label,
+    hint,
+    group,
+    launch: { kind: 'app', app: a },
+    adminOnly,
+});
+const page = (id: string, label: string, hint: string, group: OsGroupId, path: string): Service => ({
+    id,
+    label,
+    hint,
+    group,
+    launch: { kind: 'browser', path, name: label },
+});
 
 export const SERVICES: Service[] = [
-    /* ── Sanctum ── */
-    { id: 'guide', label: 'Guide', hint: 'Truth', folder: 'sanctum', launch: { kind: 'app', app: 'truth' }, map: 'hotspot', mapId: 'computer' },
-    { id: 'ledger', label: 'Ledger', hint: 'daily word', folder: 'sanctum', launch: { kind: 'app', app: 'ledger' }, map: 'hotspot', mapId: 'ledger', gated: true },
-    { id: 'library', label: 'Library', hint: 'scrolls', folder: 'sanctum', launch: { kind: 'app', app: 'library' }, map: 'hotspot', mapId: 'library' },
-    { id: 'codex', label: 'Codex', hint: 'memory', folder: 'sanctum', launch: { kind: 'browser', path: '/codex', name: 'Codex' }, map: 'hotspot', mapId: 'codex' },
-    { id: 'updates', label: 'Updates', hint: 'dispatches', folder: 'sanctum', launch: { kind: 'app', app: 'updates' }, map: 'hotspot', mapId: 'envelope' },
+    app('guide', 'Guide', 'Ask Truth', 'sanctum', 'truth'),
+    app('ledger', 'Ledger', 'Dispatches · the Daily Word', 'sanctum', 'ledger'),
+    app('library', 'Library', 'Scrolls', 'sanctum', 'library'),
+    page('codex', 'Codex', 'Memory and whispers', 'sanctum', '/codex'),
 
-    /* ── Community ── */
-    { id: 'hall', label: 'The Hall', hint: 'gather', folder: 'community', launch: { kind: 'app', app: 'archive' }, map: 'destination', mapId: 'hall' },
-    { id: 'wall', label: 'The Wall', hint: 'one mark a year', folder: 'community', launch: { kind: 'app', app: 'wall' }, map: 'hotspot', mapId: 'wall', gated: true },
-    { id: 'profile', label: 'Profiles', hint: 'your page', folder: 'community', launch: { kind: 'browser', path: '/self', name: 'Soul page' }, map: 'destination', mapId: 'soul_mirror' },
-    { id: 'offering', label: 'Offering', hint: 'sustain', folder: 'community', launch: { kind: 'app', app: 'offering' }, map: 'hotspot', mapId: 'mailbox', gated: true },
-    { id: 'treasury', label: 'Treasury', hint: 'the pool', folder: 'community', launch: { kind: 'browser', path: '/treasury', name: 'Treasury' }, map: 'hotspot', mapId: 'mailbox' },
+    app('hall', 'The Hall', 'Gather and talk', 'community', 'archive'),
+    app('wall', 'The Mark', 'One mark a year', 'community', 'wall'),
+    app('offering', 'Offering', 'Keep the house open', 'community', 'offering'),
+    page('profile', 'Your Page', 'Profile and history', 'community', '/self'),
+    page('treasury', 'Treasury', 'The pool', 'community', '/treasury'),
 
-    /* ── Worlds ── */
-    { id: 'house', label: 'The House', hint: 'leave terminal', folder: 'worlds', launch: { kind: 'app', app: 'chamber' }, map: 'none' },
-    { id: 'arcade', label: 'Arcade', hint: 'play', folder: 'worlds', launch: { kind: 'app', app: 'arcade' }, map: 'hotspot', mapId: 'arcade', gated: true },
-    { id: 'soul', label: 'Soul', hint: 'vessel', folder: 'worlds', launch: { kind: 'app', app: 'soul' }, map: 'destination', mapId: 'soul_mirror', gated: true },
-    { id: 'studio', label: 'Studio', hint: 'signal', folder: 'worlds', launch: { kind: 'app', app: 'studio' }, map: 'destination', mapId: 'studio' },
-    { id: 'cinema', label: 'Cinema', hint: 'films', folder: 'worlds', launch: { kind: 'app', app: 'media' }, map: 'destination', mapId: 'cinema' },
+    app('arcade', 'Arcade', 'Four games · seasonal crown', 'play', 'arcade'),
+    app('soul', 'Soul', 'Shape your vessel', 'play', 'soul'),
+    app('cinema', 'Cinema', 'House films', 'play', 'media'),
+    page('cineworks', 'Cineworks', 'Prophetic breakdowns', 'play', '/cineworks'),
 
-    /* ── Studio ── */
-    { id: 'paint', label: 'Paint', hint: 'canvas', folder: 'studio', launch: { kind: 'app', app: 'paint' }, map: 'none' },
-    { id: 'photos', label: 'Photos', hint: 'images', folder: 'studio', launch: { kind: 'app', app: 'photos' }, map: 'none' },
-    { id: 'music', label: 'Music', hint: 'sound', folder: 'studio', launch: { kind: 'app', app: 'music' }, map: 'none' },
-    { id: 'media', label: 'Media', hint: 'player', folder: 'studio', launch: { kind: 'app', app: 'media' }, map: 'destination', mapId: 'cinema' },
-    { id: 'cineworks', label: 'Cineworks', hint: 'catalog', folder: 'studio', launch: { kind: 'browser', path: '/cineworks', name: 'Cineworks' }, map: 'destination', mapId: 'cinema' },
+    app('music', 'Music', 'The sanctum score', 'create', 'music'),
+    app('photos', 'Photos', 'Stills and wallpapers', 'create', 'photos'),
+    app('paint', 'Paint', 'A canvas', 'create', 'paint'),
 
-    /* ── Tools ── */
-    { id: 'browser', label: 'Browser', hint: 'sanctum://', folder: 'tools', launch: { kind: 'app', app: 'browser' }, map: 'none' },
-    { id: 'files', label: 'Files', hint: 'documents', folder: 'tools', launch: { kind: 'app', app: 'files' }, map: 'none' },
-    { id: 'notepad', label: 'Notepad', hint: 'notes', folder: 'tools', launch: { kind: 'app', app: 'notepad' }, map: 'none' },
-    { id: 'tasks', label: 'To-Do', hint: 'list', folder: 'tools', launch: { kind: 'app', app: 'tasks' }, map: 'none' },
-    { id: 'calculator', label: 'Calculator', hint: 'sums', folder: 'tools', launch: { kind: 'app', app: 'calculator' }, map: 'none' },
-    { id: 'clock', label: 'Clock', hint: 'time', folder: 'tools', launch: { kind: 'app', app: 'clock' }, map: 'none' },
-    { id: 'terminal', label: 'Terminal', hint: 'console', folder: 'tools', launch: { kind: 'app', app: 'terminal' }, map: 'none' },
+    app('browser', 'Browser', 'Sanctum pages', 'tools', 'browser'),
+    app('files', 'Files', 'Documents', 'tools', 'files'),
+    app('notes', 'Notes', 'Plain text', 'tools', 'notepad'),
+    app('tasks', 'To-Do', 'Today’s list', 'tools', 'tasks'),
+    app('calculator', 'Calculator', 'Sums', 'tools', 'calculator'),
+    app('clock', 'Clock', 'World clocks · stopwatch', 'tools', 'clock'),
+    app('terminal', 'Terminal', 'soulsh', 'tools', 'terminal'),
 
-    /* ── System ── */
-    { id: 'settings', label: 'Settings', hint: 'preferences', folder: 'system', launch: { kind: 'app', app: 'settings' }, map: 'none' },
-    { id: 'account', label: 'Account', hint: 'identity', folder: 'system', launch: { kind: 'app', app: 'account' }, map: 'none', gated: true },
-    { id: 'taskmgr', label: 'Task Manager', hint: 'system', folder: 'system', launch: { kind: 'app', app: 'taskmgr' }, map: 'none' },
-    { id: 'admin', label: 'Admin', hint: 'architect', folder: 'system', launch: { kind: 'app', app: 'admin' }, map: 'none', adminOnly: true, gated: true },
+    app('settings', 'Settings', 'Account · look · sound', 'system', 'settings'),
+    app('activity', 'Activity', 'Windows and frame rate', 'system', 'taskmgr'),
+    app('admin', 'Console', 'Architect tools', 'system', 'admin', true),
 ];
 
-export function servicesIn(folder: OsFolderId, opts?: { admin?: boolean }): Service[] {
-    return SERVICES.filter((s) => s.folder === folder && (!s.adminOnly || opts?.admin));
-}
-
-export function serviceById(id: string): Service | undefined {
-    return SERVICES.find((s) => s.id === id);
+export function servicesIn(group: OsGroupId, opts?: { admin?: boolean }): Service[] {
+    return SERVICES.filter((s) => s.group === group && (!s.adminOnly || opts?.admin));
 }
 
 export function searchableServices(opts?: { admin?: boolean }): Service[] {

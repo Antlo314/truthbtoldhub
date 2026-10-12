@@ -80,7 +80,8 @@ function deriveTitle(filename: string): string {
         .trim();
 }
 
-export default function LibraryClient() {
+/** `embedded`: inside a Truth.OS window — no back button (it would navigate the whole OS away) */
+export default function LibraryClient({ embedded = false }: { embedded?: boolean } = {}) {
     const router = useRouter();
 
     const [docs, setDocs] = useState<LibraryDoc[]>([]);
@@ -262,7 +263,7 @@ export default function LibraryClient() {
                 style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
 
                 <header className="flex items-center gap-3 py-4 mb-1">
-                    <button
+                    {!embedded && <button
                         onClick={() => {
                             if (typeof window !== 'undefined' && window.history.length > 1) router.back();
                             else router.push('/');
@@ -271,7 +272,7 @@ export default function LibraryClient() {
                         aria-label="Go back"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                    </button>
+                    </button>}
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="grid place-items-center w-10 h-10 rounded-xl border border-aether-gold/30 bg-aether-gold/10 shrink-0">
                             <BookOpen className="w-5 h-5 text-aether-gold" />

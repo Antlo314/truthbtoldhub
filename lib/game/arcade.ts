@@ -24,8 +24,7 @@ export interface ArcadeGameDef {
     live: boolean;
 }
 
-// The arcade's game roster. More slots are reserved so the lobby
-// reads as a growing arcade, not a one-off.
+// The arcade's game roster — three 2D canvas games and one 3D runner.
 export const ARCADE_GAMES: ArcadeGameDef[] = [
     {
         id: 'tetra',
@@ -56,13 +55,14 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
         live: true,
     },
     {
-        id: 'soon',
-        title: 'More Trials Coming',
-        tagline: 'New arcade challenges will open here. Keep watch.',
-        scoreUnit: '',
-        metric: '',
-        accent: '#a855f7',
-        live: false,
+        id: 'ascent',
+        title: 'Ascent',
+        tagline: 'Run the sky-road over the cloud sea. Gather the gold, go around the shards.',
+        scoreUnit: 'points',
+        metric: 'coins',
+        levelLabel: 'Stage',
+        accent: '#f59e0b',
+        live: true,
     },
 ];
 

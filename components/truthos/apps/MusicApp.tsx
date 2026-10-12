@@ -511,7 +511,7 @@ export function MusicApp() {
     const seekMax = duration > 0 ? duration : 1;
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[220px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[220px]">
             <audio
                 ref={audioRef}
                 preload="metadata"
@@ -544,14 +544,14 @@ export function MusicApp() {
                 <aside className="shrink-0 sm:w-56 flex flex-col min-h-0 max-h-[38%] sm:max-h-none border-b sm:border-b-0 sm:border-r border-white/10 bg-black/40">
                     <div className="shrink-0 flex items-center gap-1.5 px-3 pt-2.5 pb-1.5">
                         <ListMusic size={13} className="text-cyan-300 shrink-0" />
-                        <p className="text-[9px] uppercase tracking-[0.28em] text-cyan-300/80 font-mono truncate">
+                        <p className="text-[11px] text-cyan-300/80 truncate">
                             Library · {TRACKS.length}
                         </p>
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
                         {TRACK_GROUPS.map((group) => (
                             <div key={group.album} className="mb-1.5">
-                                <p className="px-1.5 py-1 text-[9px] uppercase tracking-[0.18em] text-zinc-600 font-mono">
+                                <p className="px-1.5 py-1 text-[11px] text-zinc-600">
                                     {group.album}
                                 </p>
                                 <ul className="space-y-0.5">
@@ -609,7 +609,7 @@ export function MusicApp() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/45 to-transparent" />
                         <div className="absolute inset-x-0 bottom-0 px-3.5 pb-2.5 pt-6">
-                            <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-300/80 font-mono truncate">
+                            <p className="text-[11px] text-cyan-300/80 truncate">
                                 {failed ? 'Source unavailable' : playing ? 'Now playing' : 'Paused'} ·{' '}
                                 {track.album}
                             </p>
@@ -621,7 +621,7 @@ export function MusicApp() {
                     </div>
 
                     {/* Transport */}
-                    <div className="shrink-0 border-t border-white/10 bg-zinc-950/95 px-3 py-2 space-y-2">
+                    <div className="shrink-0 border-t border-white/10 bg-[#101219]/95 px-3 py-2 space-y-2">
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] tabular-nums text-zinc-500 w-9 shrink-0">
                                 {fmtTime(time)}

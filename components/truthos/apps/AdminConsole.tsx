@@ -81,7 +81,7 @@ export default function AdminConsole() {
     return (
         <div className="h-full overflow-y-auto bg-[#0f1115] text-zinc-200 text-sm">
             <div className="sticky top-0 z-10 px-4 py-3 border-b border-white/10 bg-[#12151c]">
-                <p className="text-[10px] uppercase tracking-[0.3em] font-mono text-rose-400/90">Admin Console</p>
+                <p className="text-[11.5px] text-rose-400/90">Admin Console</p>
                 <p className="text-white font-semibold mt-0.5">Quick updates</p>
             </div>
 
@@ -111,7 +111,7 @@ export default function AdminConsole() {
                 </div>
 
                 <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-3 space-y-2">
-                    <p className="text-[10px] uppercase tracking-widest text-rose-300/80 font-mono">New dispatch</p>
+                    <p className="text-[11.5px] text-rose-300/80">New dispatch</p>
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -140,7 +140,7 @@ export default function AdminConsole() {
                         type="button"
                         disabled={posting}
                         onClick={() => void post()}
-                        className="w-full py-2.5 rounded-lg bg-rose-500 text-white text-[12px] font-semibold uppercase tracking-wider disabled:opacity-50 hover:bg-rose-400"
+                        className="w-full py-2.5 rounded-lg bg-rose-500 text-white text-[12px] font-semibold disabled:opacity-50 hover:bg-rose-400"
                     >
                         {posting ? 'Publishing…' : 'Publish update'}
                     </button>
@@ -153,11 +153,11 @@ export default function AdminConsole() {
 
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-widest text-white/40 font-mono">Recent</p>
+                        <p className="text-[11.5px] text-white/40">Recent</p>
                         <button
                             type="button"
                             onClick={() => void refresh()}
-                            className="text-[10px] text-white/40 hover:text-white uppercase tracking-wider"
+                            className="text-[11.5px] text-white/40 hover:text-white"
                         >
                             Refresh
                         </button>
@@ -183,7 +183,7 @@ export default function AdminConsole() {
                                     <div className="flex flex-col gap-1 shrink-0">
                                         <button
                                             type="button"
-                                            className="text-[9px] uppercase tracking-wider text-white/40 hover:text-amber-300"
+                                            className="text-[11px] text-white/40 hover:text-amber-300"
                                             onClick={async () => {
                                                 await updateBulletin(r.id, { pinned: !r.pinned });
                                                 void refresh();
@@ -193,7 +193,7 @@ export default function AdminConsole() {
                                         </button>
                                         <button
                                             type="button"
-                                            className="text-[9px] uppercase tracking-wider text-red-400/70 hover:text-red-300"
+                                            className="text-[11px] text-red-400/70 hover:text-red-300"
                                             onClick={async () => {
                                                 if (!confirm('Delete this update?')) return;
                                                 await deleteBulletin(r.id);

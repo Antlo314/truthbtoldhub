@@ -217,7 +217,7 @@ export function MonthCalendar({ date }: { date: Date }) {
     ];
     return (
         <div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[9px] uppercase tracking-wider text-sky-300/60 mb-1.5">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-sky-300/60 mb-1.5">
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
                     <span key={i}>{d}</span>
                 ))}
@@ -269,7 +269,7 @@ export function ClockApp() {
     }, [swMs]);
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[300px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[300px]">
             <div className="shrink-0 flex border-b border-white/10">
                 {(
                     [
@@ -302,7 +302,7 @@ export function ClockApp() {
                             <p className="text-5xl font-light text-white tabular-nums tracking-tight">
                                 {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
-                            <p className="text-[11px] text-sky-300/70 mt-1.5 uppercase tracking-[0.25em]">
+                            <p className="text-[11px] text-sky-300/70 mt-1.5">
                                 {now.toLocaleDateString([], {
                                     weekday: 'long',
                                     month: 'long',
@@ -510,14 +510,14 @@ export function TaskManagerApp() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[280px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[280px]">
             <div className="shrink-0 grid grid-cols-3 gap-2 p-3 border-b border-white/10">
                 <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-amber-300/70">FPS</p>
+                    <p className="text-[11px] text-amber-300/70">FPS</p>
                     <p className="text-xl text-white font-semibold tabular-nums">{fps || '—'}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">JS Heap</p>
+                    <p className="text-[11px] text-zinc-500">JS Heap</p>
                     <p className="text-xl text-white font-semibold tabular-nums">
                         {heap ? `${Math.round(heap.used / 1048576)} MB` : '—'}
                     </p>
@@ -531,23 +531,23 @@ export function TaskManagerApp() {
                     )}
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Windows</p>
+                    <p className="text-[11px] text-zinc-500">Windows</p>
                     <p className="text-xl text-white font-semibold tabular-nums">{windows.length}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">DPR · Cores</p>
+                    <p className="text-[11px] text-zinc-500">DPR · Cores</p>
                     <p className="text-xl text-white font-semibold tabular-nums">
                         {dpr}x · {cores ?? '—'}
                     </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Network</p>
+                    <p className="text-[11px] text-zinc-500">Network</p>
                     <p className={`text-xl font-semibold ${online ? 'text-emerald-300' : 'text-rose-300'}`}>
                         {online ? 'online' : 'offline'}
                     </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                    <p className="text-[9px] uppercase tracking-widest text-zinc-500">Battery</p>
+                    <p className="text-[11px] text-zinc-500">Battery</p>
                     <p className="text-xl text-white font-semibold tabular-nums">
                         {battery ? `${Math.round(battery.level * 100)}%${battery.charging ? ' ⚡' : ''}` : '—'}
                     </p>
@@ -555,8 +555,8 @@ export function TaskManagerApp() {
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
                 <table className="w-full text-left text-[12px]">
-                    <thead className="sticky top-0 bg-zinc-950/95 backdrop-blur">
-                        <tr className="text-[9px] uppercase tracking-widest text-zinc-500 border-b border-white/10">
+                    <thead className="sticky top-0 bg-[#101219]/95 backdrop-blur">
+                        <tr className="text-[11px] text-zinc-500 border-b border-white/10">
                             <th className="px-3 py-2 font-medium">Process</th>
                             <th className="px-2 py-2 font-medium text-right">Uptime</th>
                             <th className="px-2 py-2 font-medium text-right">Status</th>

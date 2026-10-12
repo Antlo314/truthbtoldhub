@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Ctrl+Tab window switcher (MRU order) and the Ctrl+/ shortcuts sheet.
+ * Ctrl+` window switcher (MRU order) and the Ctrl+/ shortcuts sheet.
  * The switcher stays open while Ctrl is held; releasing it commits the
  * highlighted window, exactly like a desktop alt-tab.
  */
@@ -20,7 +20,7 @@ export function OsWindowSwitcher({ windows, index }: { windows: OsWindow[]; inde
             transition={{ duration: 0.1 }}
             className="absolute inset-0 z-[76] flex items-center justify-center pointer-events-none px-4"
         >
-            <div className="rounded-2xl border border-white/15 bg-[#0d1017]/95 backdrop-blur-2xl shadow-2xl ring-1 ring-white/10 p-3 max-w-[92vw]">
+            <div className="rounded-3xl border border-white/[0.14] bg-[#1d2029]/85 backdrop-blur-3xl shadow-2xl p-3 max-w-[92vw]">
                 <div className="flex items-center gap-2 flex-wrap justify-center max-w-2xl">
                     {windows.map((w, i) => (
                         <div
@@ -31,7 +31,7 @@ export function OsWindowSwitcher({ windows, index }: { windows: OsWindow[]; inde
                                     : 'border-transparent opacity-60'
                             }`}
                         >
-                            <OsIconTile app={w.app} size="lg" open={i === index} />
+                            <OsIconTile app={w.app} size="lg" />
                             <span className="text-[10px] text-white/85 text-center leading-tight line-clamp-2">
                                 {w.title}
                             </span>
@@ -52,30 +52,24 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
     {
         title: 'System',
         items: [
-            { keys: 'Ctrl K', label: 'Command palette' },
-            { keys: 'Ctrl E', label: 'Start menu' },
-            { keys: 'Ctrl /', label: 'This shortcut sheet' },
-            { keys: 'Esc', label: 'Close the top overlay' },
+            { keys: 'Ctrl K', label: 'Spotlight — search or ask Truth' },
+            { keys: 'Ctrl E', label: 'App Library' },
+            { keys: 'Ctrl ,', label: 'Settings' },
+            { keys: 'Ctrl L', label: 'Lock screen' },
+            { keys: 'Ctrl /', label: 'This sheet' },
+            { keys: 'Esc', label: 'Close the top panel' },
         ],
     },
     {
         title: 'Windows',
         items: [
-            { keys: 'Ctrl `', label: 'Switch window (hold to cycle)' },
-            { keys: 'Ctrl ⇧ `', label: 'Switch window, backwards' },
-            { keys: 'Ctrl ↑', label: 'Task view' },
-            { keys: 'Ctrl ⇧ ←/→', label: 'Snap window to half' },
-            { keys: 'Ctrl ⇧ ↑', label: 'Maximise window' },
-            { keys: 'Ctrl ⇧ ↓', label: 'Minimise window' },
+            { keys: 'Ctrl `', label: 'Switch window (hold Ctrl to cycle)' },
+            { keys: 'Ctrl ↑', label: 'Mission Control' },
+            { keys: 'Ctrl W', label: 'Close window' },
+            { keys: 'Ctrl ⇧ ←/→', label: 'Snap to left / right half' },
+            { keys: 'Ctrl ⇧ ↑', label: 'Zoom' },
+            { keys: 'Ctrl ⇧ ↓', label: 'Minimise' },
             { keys: 'Ctrl D', label: 'Show desktop' },
-        ],
-    },
-    {
-        title: 'Workspaces',
-        items: [
-            { keys: 'Ctrl Alt ←/→', label: 'Previous / next desktop' },
-            { keys: 'Ctrl Alt 1–4', label: 'Jump to desktop' },
-            { keys: 'Ctrl Alt ⇧ ←/→', label: 'Move window to desktop' },
         ],
     },
 ];
@@ -97,7 +91,7 @@ export function OsShortcutsSheet({ onClose }: { onClose: () => void }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2.5 shrink-0">
-                    <Keyboard size={16} className="text-emerald-300" />
+                    <Keyboard size={16} className="text-[var(--os-accent,#34d399)]" />
                     <p className="text-[13px] text-white font-semibold flex-1">Keyboard shortcuts</p>
                     <button
                         type="button"

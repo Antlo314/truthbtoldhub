@@ -267,7 +267,7 @@ export function TasksApp() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-zinc-950 text-zinc-200 min-h-[220px]">
+        <div className="h-full flex flex-col bg-[#101219] text-zinc-200 min-h-[220px]">
             {/* Compose */}
             <form
                 className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-white/10 bg-black/40"
@@ -425,7 +425,7 @@ export function TasksApp() {
                                     type="button"
                                     onClick={() => cyclePriority(task)}
                                     title="Change priority"
-                                    className={`px-2.5 h-9 min-h-[36px] rounded-lg border text-[10px] font-semibold uppercase tracking-wider touch-manipulation ${meta.chip}`}
+                                    className={`px-2.5 h-9 min-h-[36px] rounded-lg border text-[11.5px] font-semibold touch-manipulation ${meta.chip}`}
                                 >
                                     {meta.label}
                                 </button>
@@ -452,12 +452,12 @@ export function TasksApp() {
                                 </label>
 
                                 {overdue && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                                    <span className="text-[11.5px] font-semibold text-rose-300">
                                         Overdue
                                     </span>
                                 )}
                                 {dueToday && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                                    <span className="text-[11.5px] font-semibold text-amber-300">
                                         Today
                                     </span>
                                 )}
@@ -490,14 +490,14 @@ export function TasksApp() {
 
             {/* Summary */}
             <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-t border-white/10 bg-black/40">
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono truncate flex-1 min-w-0">
+                <p className="text-[11.5px] text-zinc-500 truncate flex-1 min-w-0">
                     {activeCount} active · {doneCount} done
                 </p>
                 <button
                     type="button"
                     onClick={clearCompleted}
                     disabled={doneCount === 0}
-                    className="shrink-0 px-3 py-1.5 rounded-lg border border-white/15 text-[10px] uppercase tracking-wider text-zinc-400 hover:bg-white/5 hover:text-white disabled:opacity-30 min-h-[36px] touch-manipulation"
+                    className="shrink-0 px-3 py-1.5 rounded-lg border border-white/15 text-[11.5px] text-zinc-400 hover:bg-white/5 hover:text-white disabled:opacity-30 min-h-[36px] touch-manipulation"
                 >
                     Clear completed
                 </button>

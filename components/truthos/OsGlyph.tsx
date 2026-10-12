@@ -37,17 +37,6 @@ const Truth: Glyph = () => (
     </>
 );
 
-const Updates: Glyph = () => (
-    <>
-        <rect x="2.5" y="4" width="15" height="16" rx="1.8" fill="currentColor" />
-        <path fill="currentColor" fillOpacity={0.75} d="M17.5 8h3a1.5 1.5 0 0 1 1.5 1.5v8.7a1.8 1.8 0 0 1-3.6 0Z" />
-        <rect x="4.6" y="6.2" width="10.8" height="4.4" rx="0.8" {...LIT} />
-        <rect x="4.6" y="12.2" width="10.8" height="1.5" rx="0.75" {...DARK} />
-        <rect x="4.6" y="15" width="10.8" height="1.5" rx="0.75" {...DARK} />
-        <rect x="4.6" y="17.8" width="7" height="1.5" rx="0.75" {...DARK} />
-    </>
-);
-
 const Ledger: Glyph = () => (
     <>
         <path fill="currentColor" d="M3 4.4c2.6-1.1 5.4-1.1 8.2 0v15.2c-2.8-1.1-5.6-1.1-8.2 0Z" />
@@ -92,18 +81,6 @@ const Offering: Glyph = () => (
         <path {...DARK} d="M6 14.8h12c-.6 2.2-2.6 3.8-5 3.8h-2c-2.4 0-4.4-1.6-5-3.8Z" />
         <path fill="currentColor" d="M12 2.2c1.9 2.2 3 3.5 3 5a3 3 0 1 1-6 0c0-1.5 1.1-2.8 3-5Z" />
         <path {...LIT} d="M12 2.2c.8.9 1.4 1.6 1.8 2.2-.5.9-1.2 1.4-1.8 1.5Z" />
-    </>
-);
-
-const Visions: Glyph = () => (
-    <>
-        <path
-            fill="currentColor"
-            d="M12 4.4c5 0 9.2 3.4 10.8 7.6C21.2 16.2 17 19.6 12 19.6S2.8 16.2 1.2 12C2.8 7.8 7 4.4 12 4.4Z"
-        />
-        <circle cx="12" cy="12" r="4.6" {...DARK} />
-        <circle cx="12" cy="12" r="2.4" {...LIT} />
-        <path {...LIT} d="M12 4.4c3.6 0 6.9 1.8 8.9 4.4-2.4-1.4-5.4-2.2-8.9-2.2s-6.5.8-8.9 2.2C5.1 6.2 8.4 4.4 12 4.4Z" />
     </>
 );
 
@@ -190,15 +167,6 @@ const NotepadG: Glyph = () => (
         <rect x="7.2" y="10" width="9.6" height="1.6" rx="0.8" {...DARK} />
         <rect x="7.2" y="13.4" width="9.6" height="1.6" rx="0.8" {...DARK} />
         <rect x="7.2" y="16.8" width="6" height="1.6" rx="0.8" {...DARK} />
-    </>
-);
-
-const AccountG: Glyph = () => (
-    <>
-        <circle cx="12" cy="7.6" r="4.6" fill="currentColor" />
-        <path fill="currentColor" d="M12 13.8c4.6 0 8.4 2.9 8.4 6.4v1.4H3.6v-1.4c0-3.5 3.8-6.4 8.4-6.4Z" />
-        <circle cx="12" cy="6.4" r="2.4" {...LIT} />
-        <path {...DARK} d="M12 13.8c1.5 0 3 .3 4.3.9-1.2 1.2-2.7 1.9-4.3 1.9s-3.1-.7-4.3-1.9c1.3-.6 2.8-.9 4.3-.9Z" />
     </>
 );
 
@@ -336,40 +304,18 @@ const TasksG: Glyph = () => (
     </>
 );
 
-const JourneyG: Glyph = () => (
+/** The Mark — a plaster wall, one painted cell */
+const WallG: Glyph = () => (
     <>
-        <circle cx="12" cy="12" r="10.2" fill="currentColor" />
-        <circle cx="12" cy="12" r="10.2" {...LIT} />
-        <circle cx="12" cy="12" r="8.3" fill="currentColor" />
-        <circle cx="12" cy="12" r="8.3" {...DARK} />
-        {/* Needle: lit north half, shadowed south half */}
-        <path {...LIT} d="M12 12 16.4 7.6 13.7 13.2Z" />
-        <path fill="#fff" fillOpacity={0.75} d="M12 12 7.6 16.4 10.3 10.8Z" />
-        <circle cx="12" cy="12" r="1.15" fill="currentColor" />
-        {[0, 90, 180, 270].map((a) => (
-            <rect
-                key={a}
-                x="11.5"
-                y="2.5"
-                width="1"
-                height="1.9"
-                rx="0.5"
-                {...LIT}
-                transform={`rotate(${a} 12 12)`}
-            />
-        ))}
-    </>
-);
-
-const VaultG: Glyph = () => (
-    <>
-        {/* Pack body with a lid flap and buckles */}
-        <path fill="currentColor" d="M5 9.4a5.6 5.6 0 0 1 5.6-5.6h2.8A5.6 5.6 0 0 1 19 9.4v9.4a2.8 2.8 0 0 1-2.8 2.8H7.8A2.8 2.8 0 0 1 5 18.8Z" />
-        <path {...LIT} d="M8.6 4.6a5.6 5.6 0 0 1 2-.8v3.6a2 2 0 0 0 4 0V3.8c.72.15 1.4.42 2 .8v2.9a4 4 0 0 1-8 0Z" />
-        <path {...DARK} d="M5 11.6h14v4.2H5Z" />
-        <rect x="9.4" y="12.4" width="5.2" height="2.6" rx="0.8" {...LIT} />
-        <rect x="7.2" y="17.6" width="2.2" height="1.7" rx="0.6" {...LIT} />
-        <rect x="14.6" y="17.6" width="2.2" height="1.7" rx="0.6" {...LIT} />
+        <rect x="2.5" y="3.5" width="19" height="17" rx="2" fill="currentColor" />
+        <rect x="4.2" y="5.2" width="7" height="4" rx="0.7" {...DARK} />
+        <rect x="12.8" y="5.2" width="7" height="4" rx="0.7" {...DARK} />
+        <rect x="4.2" y="10.6" width="3.6" height="4" rx="0.7" {...DARK} />
+        <rect x="16.2" y="10.6" width="3.6" height="4" rx="0.7" {...DARK} />
+        <rect x="4.2" y="16" width="7" height="3" rx="0.7" {...DARK} />
+        <rect x="12.8" y="16" width="7" height="3" rx="0.7" {...DARK} />
+        <rect x="9" y="10.2" width="6" height="4.8" rx="1" {...LIT} />
+        <circle cx="12" cy="12.6" r="1.4" fill="currentColor" />
     </>
 );
 
@@ -377,7 +323,6 @@ const VaultG: Glyph = () => (
 
 const GLYPHS: Record<OsAppId, Glyph> = {
     truth: Truth,
-    updates: Updates,
     ledger: Ledger,
     soul: Soul,
     arcade: Arcade,
@@ -388,10 +333,8 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     calculator: CalculatorG,
     paint: PaintG,
     notepad: NotepadG,
-    account: AccountG,
     settings: SettingsG,
     admin: AdminG,
-    chamber: ChamberG,
     terminal: TerminalG,
     media: MediaG,
     photos: PhotosG,
@@ -400,11 +343,19 @@ const GLYPHS: Record<OsAppId, Glyph> = {
     browser: BrowserG,
     music: MusicG,
     tasks: TasksG,
-    wall: PaintG,
-    studio: MediaG,
+    wall: WallG,
 };
 
-export function OsGlyph({ app, size = 20 }: { app: OsAppId; size?: number }) {
+/** The door into the 3D house — the dock's one special tile */
+export function HouseGlyph({ size = 20 }: { size?: number | string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false" className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]">
+            <ChamberG />
+        </svg>
+    );
+}
+
+export function OsGlyph({ app, size = 20 }: { app: OsAppId; size?: number | string }) {
     const G = GLYPHS[app] ?? Truth;
     return (
         <svg

@@ -1,62 +1,46 @@
 'use client';
 
 /**
- * Truth.OS command palette (Ctrl/Cmd+K) — one box that searches every
- * program, system action, and saved document, evaluates arithmetic, and
- * jumps to sanctum routes. Keyboard-first: ↑↓ to move, Enter to run.
+ * Spotlight (Ctrl/Cmd+K) — one box for every program, sanctum page,
+ * system action and saved document. It does sums, and anything that isn't
+ * a command becomes a question for Truth. ↑↓ to move, Enter to run.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import {
-    ArrowRight,
     Calculator as CalcIcon,
+    DoorOpen,
     FileText,
-    Globe,
+    Lock,
+    LogOut,
+    Moon,
+    RefreshCw,
     Search,
-    Settings2,
     Sparkles,
     SquareStack,
     Volume2,
     VolumeX,
+    BellOff,
 } from 'lucide-react';
 import { APP_META, useTruthOs, type OsAppId } from './truthOsStore';
 import { useOsSystem } from './osSystemStore';
-import { ACCENT_STYLES, OsIconTile, getAppAccent } from './OsIcon';
+import { OsIconTile, ServiceTile } from './OsIcon';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { isAdminEmail } from '@/lib/adminEmails';
 import { isMuted, setMuted, subscribe as voiceSub } from '@/lib/truthVoice';
+import { searchableServices, type Service } from '@/lib/truthos/services';
 
-/**
- * What the palette hands the guide when you ask to be shown around. The
- * guide's own greeting says "say guide me, and I will walk you through this
- * system" — this is that, typed for you.
- */
 const GUIDE_PROMPT = 'Guide me through Truth.OS';
-
-type CmdKind = 'app' | 'action' | 'file' | 'route' | 'math';
 
 type Command = {
     id: string;
-    kind: CmdKind;
     title: string;
     sub?: string;
-    app?: OsAppId;
-    icon?: ReactNode;
+    icon: ReactNode;
     keywords?: string;
+    section: 'Top hit' | 'Programs' | 'Pages' | 'Actions' | 'Documents' | 'Ask';
     run: () => void;
 };
-
-/** Sanctum routes the browser can jump to */
-const ROUTES: { path: string; label: string }[] = [
-    { path: '/library', label: 'Library' },
-    { path: '/archive', label: 'The Hall' },
-    { path: '/cinema', label: 'Cinema' },
-    { path: '/cineworks', label: 'Cineworks' },
-    { path: '/codex', label: 'Codex' },
-    { path: '/support', label: 'Support' },
-    { path: '/self', label: 'Soul page' },
-    { path: '/treasury', label: 'Treasury' },
-];
 
 type VNodeLite = { id: string; name: string; type: 'folder' | 'file'; kind?: string };
 
@@ -64,8 +48,7 @@ function readVfs(): VNodeLite[] {
     if (typeof window === 'undefined') return [];
     try {
         const raw = localStorage.getItem('truthos_vfs_v1');
-        if (!raw) return [];
-        const parsed = JSON.parse(raw) as VNodeLite[];
+        const parsed = raw ? (JSON.parse(raw) as VNodeLite[]) : [];
         return Array.isArray(parsed) ? parsed.filter((n) => n.type === 'file') : [];
     } catch {
         return [];
@@ -88,7 +71,7 @@ function tryMath(q: string): string | null {
     }
 }
 
-/** Subsequence fuzzy match — returns a score, or -1 when it doesn't match */
+/** Subsequence fuzzy match — a score, or -1 when it doesn't match */
 function score(hay: string, needle: string): number {
     if (!needle) return 0;
     const h = hay.toLowerCase();
@@ -98,32 +81,30 @@ function score(hay: string, needle: string): number {
     if (direct > 0) return 700 - direct;
     let hi = 0;
     let gaps = 0;
-    let matched = 0;
-    for (let ni = 0; ni < n.length; ni++) {
-        const c = n[ni];
-        if (c === ' ') {
-            matched++;
-            continue;
-        }
+    for (const c of n) {
+        if (c === ' ') continue;
         const found = h.indexOf(c, hi);
         if (found === -1) return -1;
-        if (found > hi) gaps += found - hi;
+        gaps += found - hi;
         hi = found + 1;
-        matched++;
     }
-    return matched === n.length ? Math.max(1, 400 - gaps * 6) : -1;
+    return Math.max(1, 400 - gaps * 6);
 }
+
+const actionIcon = (node: ReactNode) => (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-white/[0.1] text-white/80">{node}</span>
+);
 
 export default function OsCommandPalette({
     phone,
     onClose,
-    onEnterChamber,
+    onHouse,
     onLogout,
     onRestart,
 }: {
     phone: boolean;
     onClose: () => void;
-    onEnterChamber?: () => void;
+    onHouse?: () => void;
     onLogout: () => void;
     onRestart: () => void;
 }) {
@@ -131,181 +112,110 @@ export default function OsCommandPalette({
     const [sel, setSel] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
-
     const openApp = useTruthOs((s) => s.openApp);
-    const setDesktop = useTruthOs((s) => s.setDesktop);
-    const setLayoutMode = useTruthOs((s) => s.setLayoutMode);
-    const layoutMode = useTruthOs((s) => s.layoutMode);
     const clearAll = useTruthOs((s) => s.clearDesktop);
     const sessionEmail = useTruthOs((s) => s.sessionEmail);
-
     const sys = useOsSystem();
-
-    // Truth's voice — mirrored so the toggle's label is right while the palette is open
-    const [voiceMuted, setVoiceMuted] = useState(true);
-    useEffect(() => voiceSub((s) => setVoiceMuted(s.muted)), []);
-
+    const [voiceOff, setVoiceOff] = useState(true);
+    useEffect(() => voiceSub((s) => setVoiceOff(s.muted)), []);
     useEffect(() => {
         inputRef.current?.focus();
     }, []);
 
+    const launchService = (s: Service) => {
+        if (s.launch.kind === 'app') openApp(s.launch.app);
+        else openApp('browser', { payload: { content: s.launch.path, name: s.launch.name } });
+    };
+
     const commands = useMemo<Command[]>(() => {
         const list: Command[] = [];
-
-        // Programs
-        (Object.keys(APP_META) as OsAppId[]).forEach((app) => {
-            if (app === 'admin' && !isAdminEmail(sessionEmail)) return;
+        for (const s of searchableServices({ admin: isAdminEmail(sessionEmail) })) {
             list.push({
-                id: `app:${app}`,
-                kind: 'app',
-                title: APP_META[app].title,
-                sub: 'Program',
-                app,
-                keywords: app,
-                run: () => openApp(app),
+                id: `svc:${s.id}`,
+                title: s.label,
+                sub: s.hint,
+                icon: <ServiceTile service={s} size={28} />,
+                keywords: `${s.id} ${s.launch.kind === 'app' ? s.launch.app : s.launch.path}`,
+                section: s.launch.kind === 'app' ? 'Programs' : 'Pages',
+                run: () => launchService(s),
             });
-        });
+        }
+        const act = (id: string, title: string, icon: ReactNode, run: () => void, keywords = '') =>
+            list.push({ id: `act:${id}`, title, icon: actionIcon(icon), keywords: `${id} ${keywords}`, section: 'Actions', run });
 
-        // System actions
-        const action = (id: string, title: string, sub: string, run: () => void, icon?: ReactNode) =>
-            list.push({ id: `act:${id}`, kind: 'action', title, sub, run, icon, keywords: id });
-
-        // Truth — the guide is a program like any other, so it opens the same way
-        list.push({
-            id: 'act:ask',
-            kind: 'action',
-            title: 'Ask Truth',
-            sub: 'Truth',
-            app: 'truth',
-            keywords: 'ask truth guide help question',
-            run: () => openApp('truth'),
-        });
         list.push({
             id: 'act:guide',
-            kind: 'action',
             title: 'Guide me through Truth.OS',
-            sub: 'Truth',
-            app: 'truth',
-            keywords: 'guide tour walkthrough help how',
-            // The guide app receives this as initialPrompt and asks it for you
-            // (OsApps.tsx → TruthGuideApp). No spoken replay here: the answer
-            // Truth writes back IS the walkthrough, and playing a canned boot
-            // line over the top of him talking was the wrong idea.
+            sub: 'Truth walks you round',
+            icon: <OsIconTile app="truth" size={28} />,
+            keywords: 'tour help how walkthrough',
+            section: 'Actions',
             run: () => openApp('truth', { payload: { content: GUIDE_PROMPT } }),
         });
-        action(
-            'voice',
-            `Truth · voice ${voiceMuted ? 'on' : 'off'}`,
-            'Truth',
-            () => {
-                const next = !isMuted();
-                setMuted(next);
-                useOsSystem.getState().notify({
-                    title: next ? 'Truth is quiet' : 'Truth will speak',
-                    body: next ? 'Turn the voice back on any time.' : 'Guide lines play once, in his own voice.',
-                    accent: 'amber',
-                });
-            },
-            voiceMuted ? <Volume2 size={15} /> : <VolumeX size={15} />,
-        );
+        if (onHouse) act('house', 'Enter the House', <DoorOpen size={15} />, onHouse, '3d world chamber walk');
+        act('mission', 'Mission Control', <SquareStack size={15} />, () => sys.toggleOverlay('mission'), 'windows overview');
+        act('nightlight', `Turn night light ${sys.nightLight ? 'off' : 'on'}`, <Moon size={15} />, () => sys.setNightLight(!sys.nightLight), 'display warm');
+        act('dnd', `Turn Do Not Disturb ${sys.doNotDisturb ? 'off' : 'on'}`, <BellOff size={15} />, () => sys.setDoNotDisturb(!sys.doNotDisturb), 'focus quiet');
+        act('voice', `Truth’s voice ${voiceOff ? 'on' : 'off'}`, voiceOff ? <Volume2 size={15} /> : <VolumeX size={15} />, () => setMuted(!isMuted()), 'speak mute');
+        act('wallpaper', 'Change wallpaper', <Sparkles size={15} />, () => openApp('settings', { payload: { section: 'appearance' } }), 'appearance background accent');
+        act('closeall', 'Close all windows', <SquareStack size={15} />, clearAll);
+        act('lock', 'Lock screen', <Lock size={15} />, () => sys.setLocked(true));
+        act('restart', 'Restart Truth.OS', <RefreshCw size={15} />, onRestart, 'reboot');
+        if (sessionEmail) act('signout', 'Sign out', <LogOut size={15} />, onLogout, 'logout');
 
-        action('lock', 'Lock screen', 'System', () => sys.setLocked(true));
-        action('restart', 'Restart Truth.OS', 'System', onRestart);
-        action('taskview', 'Open task view', 'Window', () => sys.setTaskView(true), <SquareStack size={15} />);
-        action('closeall', 'Close all windows', 'Window', clearAll);
-        action('nightlight', `Night light ${sys.nightLight ? 'off' : 'on'}`, 'Display', () =>
-            sys.setNightLight(!sys.nightLight),
-        );
-        action('dnd', `Do not disturb ${sys.doNotDisturb ? 'off' : 'on'}`, 'Display', () =>
-            sys.setDoNotDisturb(!sys.doNotDisturb),
-        );
-        action('wallpaper', 'Change wallpaper', 'Personalize', () => openApp('settings'), <Settings2 size={15} />);
-        action('notifications', 'Open notification centre', 'System', () => sys.setFlyout('notifications'));
-        action('widgets', 'Open widgets', 'System', () => sys.setFlyout('widgets'));
-        for (let i = 0; i < 4; i++) {
-            action(`desk${i + 1}`, `Go to desktop ${i + 1}`, 'Workspace', () => setDesktop(i));
-        }
-        if (onEnterChamber) action('chamber', 'Leave terminal → 3D house', 'Navigate', onEnterChamber, <Sparkles size={15} />);
-        action('signout', 'Sign out', 'Account', onLogout);
-
-        // Saved documents from the virtual file system
         for (const f of readVfs()) {
             const target: OsAppId = f.kind === 'png' ? 'photos' : 'notepad';
             list.push({
                 id: `file:${f.id}`,
-                kind: 'file',
                 title: f.name,
                 sub: `Open in ${APP_META[target].label}`,
-                app: target,
-                icon: <FileText size={15} />,
+                icon: actionIcon(<FileText size={15} />),
+                section: 'Documents',
                 run: () => openApp(target, { payload: { nodeId: f.id, name: f.name } }),
             });
         }
-
-        // Routes → open in the in-OS browser
-        for (const r of ROUTES) {
-            list.push({
-                id: `route:${r.path}`,
-                kind: 'route',
-                title: r.label,
-                sub: `Browse ${r.path}`,
-                icon: <Globe size={15} />,
-                keywords: r.path,
-                run: () => openApp('browser', { payload: { content: r.path, name: r.label } }),
-            });
-        }
-
         return list;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [layoutMode, sessionEmail, sys.nightLight, sys.doNotDisturb, voiceMuted]);
+    }, [sessionEmail, sys.nightLight, sys.doNotDisturb, voiceOff, onHouse]);
 
     const results = useMemo(() => {
         const query = q.trim();
         const out: Command[] = [];
-
         const math = tryMath(query);
         if (math !== null) {
             out.push({
                 id: 'math',
-                kind: 'math',
                 title: `${query.replace(/^=\s*/, '')} = ${math}`,
-                sub: 'Copy result',
-                icon: <CalcIcon size={15} />,
+                sub: 'Copy the result',
+                icon: actionIcon(<CalcIcon size={15} />),
+                section: 'Top hit',
                 run: () => {
                     navigator.clipboard?.writeText(math).catch(() => undefined);
-                    useOsSystem.getState().notify({
-                        title: 'Copied',
-                        body: `${math} is on the clipboard.`,
-                        accent: 'emerald',
-                    });
+                    useOsSystem.getState().notify({ title: 'Copied', body: `${math} is on the clipboard.`, accent: 'emerald' });
                 },
             });
         }
-
-        if (!query) {
-            return [...out, ...commands.filter((c) => c.kind === 'app').slice(0, 8)];
-        }
-
+        if (!query) return [...out, ...commands.filter((c) => c.section === 'Programs').slice(0, 7)];
         const scored = commands
-            .map((c) => ({
-                c,
-                s: Math.max(score(c.title, query), score(c.keywords ?? '', query) - 40),
-            }))
+            .map((c) => ({ c, s: Math.max(score(c.title, query), score(c.keywords ?? '', query) - 60) }))
             .filter((r) => r.s > 0)
             .sort((a, b) => b.s - a.s)
-            .slice(0, 40)
-            .map((r) => r.c);
+            .slice(0, 24)
+            .map((r, i) => (i === 0 && r.s >= 600 && !out.length ? { ...r.c, section: 'Top hit' as const } : r.c));
+        const ask: Command = {
+            id: 'ask',
+            title: `Ask Truth “${query}”`,
+            sub: 'The guide answers',
+            icon: <OsIconTile app="truth" size={28} />,
+            section: 'Ask',
+            run: () => openApp('truth', { payload: { content: query } }),
+        };
+        return math ? [...out, ...scored] : [...out, ...scored, ask];
+    }, [q, commands, openApp]);
 
-        return [...out, ...scored];
-    }, [q, commands]);
-
+    useEffect(() => setSel(0), [q]);
     useEffect(() => {
-        setSel(0);
-    }, [q]);
-
-    useEffect(() => {
-        const el = listRef.current?.querySelector<HTMLElement>(`[data-idx="${sel}"]`);
-        el?.scrollIntoView({ block: 'nearest' });
+        listRef.current?.querySelector<HTMLElement>(`[data-idx="${sel}"]`)?.scrollIntoView({ block: 'nearest' });
     }, [sel]);
 
     const run = (c: Command | undefined) => {
@@ -315,26 +225,25 @@ export default function OsCommandPalette({
         onClose();
     };
 
+    let lastSection = '';
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className={`absolute inset-0 z-[75] bg-black/50 backdrop-blur-sm flex items-start justify-center px-3 ${
-                phone ? 'pt-[8vh]' : 'pt-[12vh]'
-            }`}
+            className={`absolute inset-0 z-[75] flex items-start justify-center bg-black/25 px-3 ${phone ? 'pt-[9vh]' : 'pt-[16vh]'}`}
             onClick={onClose}
         >
             <motion.div
-                initial={{ opacity: 0, y: -12, scale: 0.98 }}
+                initial={{ opacity: 0, y: -10, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.14 }}
-                className="w-full max-w-xl rounded-2xl border border-white/15 bg-[#0e1118]/97 shadow-2xl ring-1 ring-white/10 overflow-hidden flex flex-col max-h-[min(70vh,520px)]"
+                className="flex max-h-[min(64vh,520px)] w-full max-w-[640px] flex-col overflow-hidden rounded-2xl border border-white/[0.14] bg-[#1d2029]/85 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.9)] backdrop-blur-3xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center gap-2.5 px-4 h-14 border-b border-white/10 shrink-0">
-                    <Search size={17} className="text-emerald-300/80 shrink-0" />
+                <div className="flex h-14 shrink-0 items-center gap-3 px-4">
+                    <Search size={19} className="shrink-0 text-white/45" />
                     <input
                         ref={inputRef}
                         value={q}
@@ -354,80 +263,46 @@ export default function OsCommandPalette({
                                 onClose();
                             }
                         }}
-                        placeholder="Search programs, actions, files… or type a sum"
-                        className="flex-1 min-w-0 bg-transparent outline-none text-[15px] text-white placeholder:text-white/35"
+                        placeholder="Search, or ask Truth"
+                        className="min-w-0 flex-1 bg-transparent text-[19px] font-light text-white outline-none placeholder:text-white/35"
                         autoCapitalize="off"
                         autoCorrect="off"
                         spellCheck={false}
                     />
-                    <kbd className="hidden sm:block text-[10px] text-white/35 font-mono border border-white/15 rounded px-1.5 py-0.5 shrink-0">
-                        esc
-                    </kbd>
                 </div>
-
-                <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto p-2">
-                    {results.length === 0 && (
-                        <p className="text-center text-[13px] text-white/40 py-10">
-                            Nothing matches “{q}”.
-                        </p>
-                    )}
-                    {results.map((c, i) => {
-                        const accent = c.app ? ACCENT_STYLES[getAppAccent(c.app)] : null;
-                        const active = i === sel;
-                        return (
-                            <button
-                                key={c.id}
-                                type="button"
-                                data-idx={i}
-                                onMouseEnter={() => setSel(i)}
-                                onClick={() => run(c)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors min-h-[46px] touch-manipulation ${
-                                    active ? 'bg-white/12' : 'hover:bg-white/[0.06]'
-                                }`}
-                            >
-                                {c.app ? (
-                                    <OsIconTile app={c.app} size="sm" />
-                                ) : (
-                                    <span
-                                        className={`w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 border ${
-                                            active
-                                                ? 'bg-white/15 border-white/25 text-white'
-                                                : 'bg-white/[0.06] border-white/10 text-white/60'
-                                        }`}
-                                    >
-                                        {c.icon ?? <ArrowRight size={14} />}
-                                    </span>
-                                )}
-                                <span className="min-w-0 flex-1">
-                                    <span className="block text-[13px] text-white font-medium truncate">
-                                        {c.title}
-                                    </span>
-                                    {c.sub && (
-                                        <span className="block text-[11px] text-white/45 truncate">
-                                            {c.sub}
-                                        </span>
+                {results.length > 0 && (
+                    <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto border-t border-white/[0.08] p-1.5">
+                        {results.map((c, i) => {
+                            const header = c.section !== lastSection ? c.section : null;
+                            lastSection = c.section;
+                            const active = i === sel;
+                            return (
+                                <div key={c.id}>
+                                    {header && q.trim() && (
+                                        <p className="px-2.5 pb-1 pt-2 text-[11.5px] font-semibold text-white/40">{header}</p>
                                     )}
-                                </span>
-                                {active && (
-                                    <kbd
-                                        className={`hidden sm:block text-[9px] font-mono border rounded px-1.5 py-0.5 shrink-0 ${
-                                            accent ? `${accent.soft} text-white/80` : 'border-white/20 text-white/50'
+                                    <button
+                                        type="button"
+                                        data-idx={i}
+                                        onMouseMove={() => setSel(i)}
+                                        onClick={() => run(c)}
+                                        className={`flex min-h-[42px] w-full items-center gap-3 rounded-lg px-2.5 py-1.5 text-left touch-manipulation ${
+                                            active ? 'bg-[var(--os-accent,#34d399)] text-black' : 'text-white'
                                         }`}
                                     >
-                                        ↵
-                                    </kbd>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="shrink-0 px-3 py-2 border-t border-white/10 bg-black/30 flex items-center gap-3 text-[10px] text-white/35 font-mono">
-                    <span>↑↓ move</span>
-                    <span>↵ run</span>
-                    <span className="hidden sm:inline">type = for maths</span>
-                    <span className="ml-auto">{results.length} result{results.length === 1 ? '' : 's'}</span>
-                </div>
+                                        {c.icon}
+                                        <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{c.title}</span>
+                                        {c.sub && (
+                                            <span className={`hidden shrink-0 truncate text-[12px] sm:block ${active ? 'text-black/60' : 'text-white/40'}`}>
+                                                {c.sub}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </motion.div>
         </motion.div>
     );

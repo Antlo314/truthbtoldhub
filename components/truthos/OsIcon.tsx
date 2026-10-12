@@ -1,45 +1,22 @@
-
 'use client';
 
 /**
- * Truth.OS app icons — colored squircle tiles with real press / open states.
- * Lucide glyphs for sharpness; one component for dock, Start, home, windows.
+ * Truth.OS 4 app icons.
+ *
+ * Each app owns a two-stop gradient chosen for it — not a shared accent
+ * family — so the dock reads as a set of distinct, recognisable things.
+ * The tile is a continuous-corner square with a soft top light and a hairline
+ * inner rim; no glossy half-sweep. Glyphs are the bespoke solids in OsGlyph.
+ *
+ * `size` takes a preset or a pixel number; `fill` makes the tile take its
+ * parent's box (the dock animates the parent for magnification).
  */
+import type { CSSProperties } from 'react';
 import type { OsAppId } from './truthOsStore';
-import { OsGlyph } from './OsGlyph';
-import {
-    Activity,
-    BookOpen,
-    Calculator,
-    Clapperboard,
-    Clock,
-    DoorOpen,
-    FileText,
-    FolderOpen,
-    Gamepad2,
-    Gift,
-    Globe,
-    Hash,
-    Heart,
-    Image,
-    Images,
-    Backpack,
-    Compass,
-    Library,
-    ListChecks,
-    Music,
-    Newspaper,
-    Palette,
-    Paintbrush,
-    Settings,
-    Shield,
-    Sparkles,
-    SquareTerminal,
-    User,
-    Users,
-    type LucideIcon,
-} from 'lucide-react';
 import { APP_META } from './truthOsStore';
+import { HouseGlyph, OsGlyph } from './OsGlyph';
+import { Film, Globe, Landmark, ScrollText, UserRound, type LucideIcon } from 'lucide-react';
+import type { Service } from '@/lib/truthos/services';
 
 export type OsAccentId =
     | 'emerald'
@@ -53,300 +30,140 @@ export type OsAccentId =
     | 'pink'
     | 'zinc';
 
-export const ACCENT_STYLES: Record<
-    OsAccentId,
-    { tile: string; glow: string; ring: string; bar: string; soft: string }
-> = {
-    emerald: {
-        tile: 'from-emerald-400 via-emerald-500 to-teal-600',
-        glow: 'shadow-[0_4px_20px_rgba(16,185,129,0.45)]',
-        ring: 'ring-emerald-400/50',
-        bar: 'bg-emerald-400',
-        soft: 'border-emerald-400/40 bg-emerald-500/10',
-    },
-    amber: {
-        tile: 'from-amber-300 via-amber-400 to-orange-500',
-        glow: 'shadow-[0_4px_20px_rgba(251,191,36,0.4)]',
-        ring: 'ring-amber-400/50',
-        bar: 'bg-amber-400',
-        soft: 'border-amber-400/40 bg-amber-500/10',
-    },
-    gold: {
-        tile: 'from-yellow-300 via-amber-400 to-yellow-600',
-        glow: 'shadow-[0_4px_20px_rgba(245,196,81,0.45)]',
-        ring: 'ring-amber-300/50',
-        bar: 'bg-amber-300',
-        soft: 'border-amber-300/40 bg-amber-400/10',
-    },
-    cyan: {
-        tile: 'from-cyan-300 via-cyan-400 to-sky-600',
-        glow: 'shadow-[0_4px_20px_rgba(34,211,238,0.4)]',
-        ring: 'ring-cyan-400/50',
-        bar: 'bg-cyan-400',
-        soft: 'border-cyan-400/40 bg-cyan-500/10',
-    },
-    violet: {
-        tile: 'from-violet-400 via-purple-500 to-fuchsia-600',
-        glow: 'shadow-[0_4px_20px_rgba(167,139,250,0.45)]',
-        ring: 'ring-violet-400/50',
-        bar: 'bg-violet-400',
-        soft: 'border-violet-400/40 bg-violet-500/10',
-    },
-    rose: {
-        tile: 'from-rose-400 via-rose-500 to-pink-600',
-        glow: 'shadow-[0_4px_20px_rgba(251,113,133,0.4)]',
-        ring: 'ring-rose-400/50',
-        bar: 'bg-rose-400',
-        soft: 'border-rose-400/40 bg-rose-500/10',
-    },
-    sky: {
-        tile: 'from-sky-300 via-sky-400 to-blue-600',
-        glow: 'shadow-[0_4px_20px_rgba(56,189,248,0.4)]',
-        ring: 'ring-sky-400/50',
-        bar: 'bg-sky-400',
-        soft: 'border-sky-400/40 bg-sky-500/10',
-    },
-    indigo: {
-        tile: 'from-indigo-400 via-indigo-500 to-violet-700',
-        glow: 'shadow-[0_4px_20px_rgba(129,140,248,0.45)]',
-        ring: 'ring-indigo-400/50',
-        bar: 'bg-indigo-400',
-        soft: 'border-indigo-400/40 bg-indigo-500/10',
-    },
-    pink: {
-        tile: 'from-pink-300 via-pink-400 to-rose-500',
-        glow: 'shadow-[0_4px_20px_rgba(244,114,182,0.4)]',
-        ring: 'ring-pink-400/50',
-        bar: 'bg-pink-400',
-        soft: 'border-pink-400/40 bg-pink-500/10',
-    },
-    zinc: {
-        tile: 'from-slate-300 via-slate-400 to-slate-600',
-        glow: 'shadow-[0_4px_16px_rgba(148,163,184,0.35)]',
-        ring: 'ring-slate-400/40',
-        bar: 'bg-slate-300',
-        soft: 'border-slate-400/35 bg-slate-500/10',
-    },
+/** Tailwind snippets for accent-tinted UI (toasts, dots) */
+export const ACCENT_STYLES: Record<OsAccentId, { bar: string; soft: string }> = {
+    emerald: { bar: 'bg-emerald-400', soft: 'border-emerald-400/30 bg-emerald-500/10' },
+    amber: { bar: 'bg-amber-400', soft: 'border-amber-400/30 bg-amber-500/10' },
+    gold: { bar: 'bg-amber-300', soft: 'border-amber-300/30 bg-amber-400/10' },
+    cyan: { bar: 'bg-cyan-400', soft: 'border-cyan-400/30 bg-cyan-500/10' },
+    violet: { bar: 'bg-violet-400', soft: 'border-violet-400/30 bg-violet-500/10' },
+    rose: { bar: 'bg-rose-400', soft: 'border-rose-400/30 bg-rose-500/10' },
+    sky: { bar: 'bg-sky-400', soft: 'border-sky-400/30 bg-sky-500/10' },
+    indigo: { bar: 'bg-indigo-400', soft: 'border-indigo-400/30 bg-indigo-500/10' },
+    pink: { bar: 'bg-pink-400', soft: 'border-pink-400/30 bg-pink-500/10' },
+    zinc: { bar: 'bg-slate-300', soft: 'border-slate-400/30 bg-slate-500/10' },
 };
 
-const APP_ICON: Record<OsAppId, { Icon: LucideIcon; accent: OsAccentId }> = {
-    truth: { Icon: Sparkles, accent: 'emerald' },
-    updates: { Icon: Newspaper, accent: 'amber' },
-    ledger: { Icon: BookOpen, accent: 'gold' },
-    soul: { Icon: Heart, accent: 'cyan' },
-    arcade: { Icon: Gamepad2, accent: 'violet' },
-    offering: { Icon: Gift, accent: 'rose' },
-    library: { Icon: Library, accent: 'sky' },
-    archive: { Icon: Users, accent: 'indigo' },
-    files: { Icon: FolderOpen, accent: 'sky' },
-    calculator: { Icon: Calculator, accent: 'emerald' },
-    paint: { Icon: Palette, accent: 'pink' },
-    notepad: { Icon: FileText, accent: 'zinc' },
-    account: { Icon: User, accent: 'cyan' },
-    settings: { Icon: Settings, accent: 'zinc' },
-    admin: { Icon: Shield, accent: 'rose' },
-    chamber: { Icon: DoorOpen, accent: 'emerald' },
-    terminal: { Icon: SquareTerminal, accent: 'emerald' },
-    media: { Icon: Clapperboard, accent: 'violet' },
-    photos: { Icon: Images, accent: 'pink' },
-    clock: { Icon: Clock, accent: 'sky' },
-    taskmgr: { Icon: Activity, accent: 'zinc' },
-    browser: { Icon: Globe, accent: 'cyan' },
-    music: { Icon: Music, accent: 'violet' },
-    tasks: { Icon: ListChecks, accent: 'gold' },
-    wall: { Icon: Paintbrush, accent: 'amber' },
-    studio: { Icon: Sparkles, accent: 'rose' },
+type Tile = { from: string; to: string; glyph?: string; accent: OsAccentId };
+
+const TILES: Record<OsAppId, Tile> = {
+    truth: { from: '#5eead4', to: '#0f766e', accent: 'emerald' },
+    ledger: { from: '#fde68a', to: '#b45309', accent: 'gold' },
+    library: { from: '#7dd3fc', to: '#1d4ed8', accent: 'sky' },
+    archive: { from: '#a5b4fc', to: '#4338ca', accent: 'indigo' },
+    wall: { from: '#fdba74', to: '#c2410c', accent: 'amber' },
+    offering: { from: '#fda4af', to: '#be123c', accent: 'rose' },
+    arcade: { from: '#c4b5fd', to: '#6d28d9', accent: 'violet' },
+    soul: { from: '#67e8f9', to: '#0e7490', accent: 'cyan' },
+    media: { from: '#f0abfc', to: '#86198f', accent: 'pink' },
+    paint: { from: '#f9a8d4', to: '#be185d', accent: 'pink' },
+    photos: { from: '#fde68a', to: '#ec4899', accent: 'pink' },
+    music: { from: '#fb7185', to: '#9f1239', accent: 'rose' },
+    browser: { from: '#93c5fd', to: '#1e40af', accent: 'sky' },
+    files: { from: '#7dd3fc', to: '#0369a1', accent: 'sky' },
+    notepad: { from: '#fef08a', to: '#ca8a04', glyph: '#422006', accent: 'amber' },
+    tasks: { from: '#86efac', to: '#15803d', accent: 'emerald' },
+    calculator: { from: '#52525b', to: '#18181b', glyph: '#fb923c', accent: 'zinc' },
+    clock: { from: '#3f3f46', to: '#09090b', accent: 'zinc' },
+    terminal: { from: '#334155', to: '#020617', glyph: '#4ade80', accent: 'emerald' },
+    settings: { from: '#a1a1aa', to: '#3f3f46', accent: 'zinc' },
+    taskmgr: { from: '#1f2937', to: '#030712', glyph: '#34d399', accent: 'emerald' },
+    admin: { from: '#fca5a5', to: '#991b1b', accent: 'rose' },
 };
+
+const HOUSE_TILE: Tile = { from: '#fde68a', to: '#a16207', glyph: '#1c1305', accent: 'gold' };
 
 export function getAppAccent(app: OsAppId): OsAccentId {
-    return APP_ICON[app]?.accent ?? 'emerald';
+    return TILES[app]?.accent ?? 'emerald';
 }
 
-/** Icon + accent from here, label from APP_META — one name per app. */
 export function getAppIconMeta(app: OsAppId) {
-    const icon = APP_ICON[app] ?? { Icon: Hash, accent: 'emerald' as OsAccentId };
-    return { ...icon, label: APP_META[app]?.label ?? app };
+    return { accent: getAppAccent(app), label: APP_META[app]?.label ?? app };
 }
 
-type Size = 'sm' | 'md' | 'lg' | 'xl';
+/** The two gradient stops, for UI that wants an app's colour (window glow, splash) */
+export function appColors(app: OsAppId): { from: string; to: string } {
+    const t = TILES[app] ?? TILES.truth;
+    return { from: t.from, to: t.to };
+}
 
-const SIZE: Record<Size, { box: string; icon: number }> = {
-    sm: { box: 'w-8 h-8 rounded-[10px]', icon: 17 },
-    md: { box: 'w-10 h-10 rounded-[13px]', icon: 22 },
-    lg: { box: 'w-12 h-12 rounded-[15px]', icon: 27 },
-    xl: { box: 'w-14 h-14 rounded-[18px]', icon: 32 },
-};
+const PRESET = { xs: 22, sm: 28, md: 40, lg: 52, xl: 64, xxl: 76 } as const;
+export type OsIconSize = keyof typeof PRESET | number;
 
-/**
- * App tile — a physical, moulded key rather than a flat gradient square:
- * a lit top bevel, a shadowed bottom lip, a hairline rim, a soft coloured
- * cast shadow, and a glossy sweep across the upper third.
- */
-export function OsIconTile({
-    app,
-    size = 'md',
-    open = false,
-    className = '',
-}: {
-    app: OsAppId;
-    size?: Size;
-    open?: boolean;
-    className?: string;
-}) {
-    const { accent } = getAppIconMeta(app);
-    const a = ACCENT_STYLES[accent];
-    const s = SIZE[size];
+function tileStyle(t: Tile, px: number | null): CSSProperties {
+    return {
+        width: px ?? '100%',
+        height: px ?? '100%',
+        // Continuous-corner feel: ~23% radius, the iOS/macOS squircle proportion
+        borderRadius: px ? Math.round(px * 0.235) : '23.5%',
+        background: `radial-gradient(120% 90% at 22% 8%, rgba(255,255,255,0.32), transparent 52%), linear-gradient(160deg, ${t.from}, ${t.to})`,
+        color: t.glyph ?? '#ffffff',
+        boxShadow: [
+            'inset 0 1px 0 rgba(255,255,255,0.38)',
+            'inset 0 0 0 1px rgba(255,255,255,0.10)',
+            'inset 0 -6px 12px -6px rgba(0,0,0,0.35)',
+            px && px < 30 ? '0 1px 2px rgba(0,0,0,0.45)' : '0 4px 14px -4px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.4)',
+        ].join(', '),
+    };
+}
+
+function Tile({ t, size, children, className = '' }: { t: Tile; size: OsIconSize | 'fill'; children: React.ReactNode; className?: string }) {
+    const px = size === 'fill' ? null : typeof size === 'number' ? size : PRESET[size];
     return (
         <span
-            className={`relative inline-flex items-center justify-center shrink-0 ${s.box} bg-gradient-to-br ${a.tile} text-white ${a.glow} ring-1 ${open ? a.ring : 'ring-black/25'} ${className}`}
-            style={{
-                boxShadow: [
-                    'inset 0 1.5px 0 rgba(255,255,255,0.55)',
-                    'inset 0 -2px 3px rgba(0,0,0,0.32)',
-                    'inset 2px 0 3px rgba(255,255,255,0.12)',
-                    'inset -2px 0 3px rgba(0,0,0,0.18)',
-                    '0 2px 5px rgba(0,0,0,0.42)',
-                ].join(', '),
-            }}
+            className={`relative inline-flex shrink-0 items-center justify-center select-none ${className}`}
+            style={tileStyle(t, px)}
         >
-            <span className="relative z-10 flex items-center justify-center">
-                <OsGlyph app={app} size={s.icon} />
-            </span>
-            {/* glossy sweep across the upper third */}
-            <span className="pointer-events-none absolute inset-x-0 top-0 h-[42%] rounded-t-[inherit] bg-gradient-to-b from-white/35 to-transparent" />
-            {/* bottom colour bounce */}
-            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[28%] rounded-b-[inherit] bg-gradient-to-t from-black/22 to-transparent" />
+            {children}
         </span>
     );
 }
 
-/** Labeled launcher button (Start menu / utility grid) */
-export function OsAppButton({
+export function OsIconTile({
     app,
-    label,
-    open = false,
-    large = false,
-    compact = false,
-    onClick,
+    size = 'md',
+    className = '',
 }: {
     app: OsAppId;
-    label?: string;
-    open?: boolean;
-    large?: boolean;
-    /** Tighter tiles for phone Start grids */
-    compact?: boolean;
-    onClick: () => void;
+    size?: OsIconSize | 'fill';
+    className?: string;
 }) {
-    const meta = getAppIconMeta(app);
-    const a = ACCENT_STYLES[meta.accent];
+    const t = TILES[app] ?? TILES.truth;
+    const px = size === 'fill' ? null : typeof size === 'number' ? size : PRESET[size];
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`group flex flex-col items-center justify-center gap-1 sm:gap-1.5 rounded-2xl border bg-white/[0.05] hover:bg-white/[0.1] transition-all active:scale-[0.94] duration-150 touch-manipulation select-none w-full ${
-                open ? `${a.soft} border` : 'border-white/12 hover:border-white/25'
-            } ${
-                large
-                    ? 'min-h-[92px] p-3'
-                    : compact
-                      ? 'min-h-[72px] sm:min-h-[80px] p-1.5 sm:p-2'
-                      : 'min-h-[80px] sm:min-h-[76px] p-2'
-            }`}
-        >
-            <OsIconTile
-                app={app}
-                size={large ? 'lg' : compact ? 'md' : 'md'}
-                open={open}
-                className="motion-safe:group-hover:scale-105 transition-transform duration-150 [@media(hover:none)]:group-hover:scale-100"
-            />
-            <span className="text-[10px] sm:text-[11px] font-medium text-white/90 group-hover:text-white text-center leading-tight px-0.5 line-clamp-2">
-                {label ?? meta.label}
-            </span>
-            {open && <span className={`h-0.5 w-4 rounded-full ${a.bar}`} />}
-        </button>
+        <Tile t={t} size={size} className={className}>
+            <OsGlyph app={app} size={px ? Math.round(px * 0.58) : '58%'} />
+        </Tile>
     );
 }
 
-/** Taskbar running app pill */
-export function OsTaskbarItem({
-    app,
-    title,
-    focused,
-    minimized,
-    onClick,
-    iconOnly = false,
-}: {
-    app: OsAppId;
-    title: string;
-    focused: boolean;
-    minimized?: boolean;
-    onClick: () => void;
-    /** Phone dock: icon-first, 44px min hit */
-    iconOnly?: boolean;
-}) {
-    const accent = getAppAccent(app);
-    const a = ACCENT_STYLES[accent];
+/** The gold door into the 3D house */
+export function HouseTile({ size = 'md', className = '' }: { size?: OsIconSize | 'fill'; className?: string }) {
+    const px = size === 'fill' ? null : typeof size === 'number' ? size : PRESET[size];
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            title={title}
-            aria-label={title}
-            className={`relative rounded-xl text-[11px] border transition-all duration-150 flex items-center justify-center gap-2 shrink-0 active:scale-[0.96] touch-manipulation select-none ${
-                iconOnly
-                    ? 'min-w-[44px] min-h-[44px] h-11 w-11 p-0'
-                    : 'h-10 min-h-[40px] pl-1.5 pr-2.5 max-w-[160px]'
-            } ${
-                focused && !minimized
-                    ? `bg-white/14 border-white/20 text-white ${a.glow}`
-                    : minimized
-                      ? 'border-white/5 text-white/40 hover:bg-white/8'
-                      : 'border-transparent text-white/70 hover:bg-white/10 hover:text-white'
-            }`}
-        >
-            <OsIconTile app={app} size={iconOnly ? 'md' : 'sm'} open={focused && !minimized} />
-            {!iconOnly && <span className="truncate hidden sm:inline font-medium">{title}</span>}
-            <span
-                className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all ${
-                    focused && !minimized ? `w-5 ${a.bar}` : minimized ? 'w-1.5 bg-white/25' : `w-2 ${a.bar}/70`
-                }`}
-            />
-        </button>
+        <Tile t={HOUSE_TILE} size={size} className={className}>
+            <HouseGlyph size={px ? Math.round(px * 0.58) : '58%'} />
+        </Tile>
     );
 }
 
-/** Home bento card with colored icon */
-export function OsHomeCard({
-    app,
-    title,
-    blurb,
-    span,
-    onClick,
-}: {
-    app: OsAppId;
-    title: string;
-    blurb: string;
-    span?: string;
-    onClick: () => void;
-}) {
-    const accent = getAppAccent(app);
-    const a = ACCENT_STYLES[accent];
+/* ── Sanctum pages that open in the Browser ─────────────── */
+
+const PAGE_TILES: Record<string, { from: string; to: string; Icon: LucideIcon }> = {
+    codex: { from: '#e9d5ff', to: '#7e22ce', Icon: ScrollText },
+    profile: { from: '#bae6fd', to: '#0f766e', Icon: UserRound },
+    treasury: { from: '#fde047', to: '#a16207', Icon: Landmark },
+    cineworks: { from: '#fecaca', to: '#7f1d1d', Icon: Film },
+};
+
+/** Tile for a catalog entry: the app's own icon, or a page tile */
+export function ServiceTile({ service, size = 'md' }: { service: Service; size?: OsIconSize | 'fill' }) {
+    if (service.launch.kind === 'app') return <OsIconTile app={service.launch.app} size={size} />;
+    const p = PAGE_TILES[service.id] ?? { from: '#cbd5e1', to: '#334155', Icon: Globe };
+    const px = size === 'fill' ? null : typeof size === 'number' ? size : PRESET[size];
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`group relative text-left rounded-2xl border border-white/12 bg-black/50 sm:bg-black/50 hover:bg-black/60 backdrop-blur-md p-3 sm:p-4 transition-all active:scale-[0.98] shadow-lg overflow-hidden min-h-[100px] sm:min-h-[104px] touch-manipulation select-none w-full ${
-                a.soft
-            } ${span || ''}`}
-        >
-            <span className={`absolute left-0 top-0 bottom-0 w-1 ${a.bar}`} />
-            <OsIconTile
-                app={app}
-                size="lg"
-                className="mb-2 sm:mb-2.5 motion-safe:group-hover:scale-105 transition-transform [@media(hover:none)]:group-hover:scale-100"
-            />
-            <span className="block text-sm sm:text-base font-semibold text-white tracking-tight">{title}</span>
-            <span className="block text-[11px] sm:text-[12px] text-white/70 mt-0.5 leading-snug line-clamp-2">{blurb}</span>
-        </button>
+        <Tile t={{ from: p.from, to: p.to, accent: 'sky' }} size={size}>
+            <p.Icon strokeWidth={2.2} style={{ width: px ? Math.round(px * 0.5) : '50%', height: px ? Math.round(px * 0.5) : '50%' }} />
+        </Tile>
     );
 }
