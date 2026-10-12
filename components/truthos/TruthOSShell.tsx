@@ -37,6 +37,7 @@ import { OsShortcutsSheet, OsWindowSwitcher } from './OsSwitcher';
 import type { Service } from '@/lib/truthos/services';
 import { useGameStore } from '@/lib/store/useGameStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
+import { holdInbox, syncTitle, useInbox } from '@/lib/archive/inbox';
 
 const BOOT_STEPS = 8;
 
@@ -180,6 +181,24 @@ export default function TruthOSShell({
     }, [os]);
 
     useOsGameBridge(bootDone);
+
+    // Whispers reach the desktop: a toast unless the Hall is already in front,
+    // the dock badge and the tab title follow the unread count
+    useEffect(() => {
+        const release = holdInbox((w) => {
+            const st = useTruthOs.getState();
+            const front = st.windows.find((x) => x.id === st.focusId && !x.minimized);
+            if (front?.app === 'archive') return;
+            useOsSystem.getState().notify({ title: `Whisper from ${w.from}`, body: w.text, accent: 'violet' });
+        });
+        const unsub = useInbox.subscribe((s) => syncTitle(s.dmUnread));
+        syncTitle(useInbox.getState().dmUnread);
+        return () => {
+            release();
+            unsub();
+            syncTitle(0);
+        };
+    }, []);
 
     // While the OS is up, page-level chrome that duplicates it (the floating
     // sound button) stands down — see globals.css [data-os]

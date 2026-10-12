@@ -41,6 +41,8 @@ import PlainDialogue, { type Dialogue } from './PlainDialogue';
 import PlainPause from './PlainPause';
 import { FullMap, MiniMap } from './PlainMap';
 import { loadPlainView, savePlainView } from './plainView';
+import { holdInbox } from '@/lib/archive/inbox';
+import { isSoulId, sendWhisper } from '@/lib/archive/whisper';
 
 const PlainCanvas = dynamic(() => import('./PlainCanvas'), {
     ssr: false,
@@ -118,8 +120,18 @@ export default function PlainExperience({
     const [meditate, setMeditate] = useState<number | null>(null);
     const meditateT = useRef(0);
     const hinted = useRef(new Set<string>());
+    /** a whisper being written to a live soul on the plain */
+    const [whisperTo, setWhisperTo] = useState<{ id: string; name: string } | null>(null);
+    const [whisperDraft, setWhisperDraft] = useState('');
+    const [whisperBusy, setWhisperBusy] = useState(false);
+    /** the last whisper that reached you out here, for a moment, with Reply */
+    const [heard, setHeard] = useState<{ fromId: string; from: string; text: string; at: number } | null>(null);
+    const peersRef = useRef<HousePeer[]>([]);
+    peersRef.current = peers;
+    const guestRef = useRef(true);
+    guestRef.current = guest;
 
-    const uiLocked = authOpen || paused || !!dialogue || mapOpen;
+    const uiLocked = authOpen || paused || !!dialogue || mapOpen || !!whisperTo;
     const { shellRef, requestPointerLock } = useHouseImmersion({ enabled: true, mobile: isMobile, uiLocked });
 
     /* ── toasts ─────────────────────────────────────────────── */
@@ -155,6 +167,20 @@ export default function PlainExperience({
             requestPointerLock();
         }
     }, [uiLocked, isMobile, requestPointerLock]);
+
+    /* ── whispers find you out here too ──────────────────────── */
+    useEffect(() => {
+        const release = holdInbox((w) => {
+            setHeard({ fromId: w.fromId, from: w.from, text: w.text, at: Date.now() });
+            hubAudio.playSfx('ui_open', { volume: 0.25 });
+        });
+        return release;
+    }, []);
+    useEffect(() => {
+        if (!heard) return;
+        const t = window.setTimeout(() => setHeard(null), 9000);
+        return () => window.clearTimeout(t);
+    }, [heard]);
 
     /* ── who you are ─────────────────────────────────────────── */
     useEffect(() => {
@@ -418,6 +444,21 @@ export default function PlainExperience({
             }
         }
         if (best) return best;
+        // a live soul at arm's length: whisper to them
+        let near: HousePeer | null = null;
+        let nd = 2.8;
+        for (const p of peersRef.current) {
+            if (p.kind !== 'live') continue;
+            const d = Math.hypot(x - p.x, z - p.z);
+            if (d < nd) {
+                nd = d;
+                near = p;
+            }
+        }
+        if (near) {
+            const canWhisper = isSoulId(near.id) && !guestRef.current;
+            return { id: `peer:${near.id}`, kind: 'peer', label: near.name, hint: canWhisper ? `Whisper to ${near.name}` : guestRef.current ? 'Sign in to whisper' : `${near.name} is a guest`, x: near.x, z: near.z };
+        }
         for (let i = 0; i < SIGNS.length; i++) {
             const s = SIGNS[i];
             if (Math.hypot(x - s.x, z - s.z) < 2.6) return { id: `sign${i}`, kind: 'place', label: 'Signpost', hint: 'Read', x: s.x, z: s.z };
@@ -440,6 +481,15 @@ export default function PlainExperience({
             doEmote('interact');
             if (h.kind === 'gate') {
                 onEnterLair();
+                return;
+            }
+            if (h.kind === 'peer') {
+                const id = h.id.slice(5);
+                if (guestRef.current) setAuthOpen(true);
+                else if (isSoulId(id)) {
+                    setWhisperDraft('');
+                    setWhisperTo({ id, name: h.label });
+                }
                 return;
             }
             if (h.kind === 'place') {
@@ -475,6 +525,7 @@ export default function PlainExperience({
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
             if (dialogue) return;
+            if (whisperTo) return;
             if (e.code === 'Escape') {
                 if (mapOpen) setMapOpen(false);
                 else setPaused(!useHouseUi.getState().paused);
@@ -492,6 +543,13 @@ export default function PlainExperience({
                 return;
             }
             if (composing) return;
+            if (e.code === 'KeyR' && heard && !guestRef.current) {
+                e.preventDefault();
+                setWhisperDraft('');
+                setWhisperTo({ id: heard.fromId, name: heard.from });
+                setHeard(null);
+                return;
+            }
             if (e.code === 'KeyE' && hotspotRef.current) {
                 activate(hotspotRef.current);
                 return;
@@ -509,7 +567,7 @@ export default function PlainExperience({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [dialogue, mapOpen, authOpen, composing, uiLocked, activate, toggleView, doEmote, setPaused]);
+    }, [dialogue, whisperTo, mapOpen, authOpen, composing, uiLocked, activate, toggleView, doEmote, setPaused, heard]);
 
     const showHud = !authOpen && !paused && !mapOpen;
     // HouseMobileControls speaks the house's hotspot type; it only reads the label
@@ -626,6 +684,69 @@ export default function PlainExperience({
                             className="w-full rounded-2xl border border-emerald-400/40 bg-black/85 px-4 py-3 text-sm text-white outline-none backdrop-blur-md placeholder:text-white/35 focus:border-emerald-400/70"
                         />
                     </form>
+                </div>
+            )}
+            {whisperTo && (
+                <div className="fixed inset-x-0 bottom-24 z-[66] flex justify-center px-4">
+                    <form
+                        onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (whisperBusy || !whisperDraft.trim()) return;
+                            setWhisperBusy(true);
+                            const r = await sendWhisper(whisperTo.id, whisperDraft);
+                            setWhisperBusy(false);
+                            if (r.ok) {
+                                toast(`Whispered to ${whisperTo.name}`, 'info');
+                                setWhisperTo(null);
+                                setWhisperDraft('');
+                            } else toast(r.error, 'info', 4500);
+                        }}
+                        className="w-full max-w-lg rounded-2xl border border-violet-300/40 bg-black/85 p-3 backdrop-blur-md"
+                    >
+                        <p className="mb-2 px-1 text-[11px] uppercase tracking-[0.16em] text-violet-200/80">Whisper to {whisperTo.name} · only they will see it</p>
+                        <input
+                            autoFocus
+                            value={whisperDraft}
+                            maxLength={2000}
+                            onChange={(e) => setWhisperDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Escape') {
+                                    setWhisperTo(null);
+                                    setWhisperDraft('');
+                                }
+                            }}
+                            placeholder="Write a whisper…"
+                            className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-violet-300/60"
+                        />
+                        <div className="mt-2 flex justify-end gap-2">
+                            <button type="button" onClick={() => setWhisperTo(null)} className="min-h-[38px] rounded-xl px-3 text-[13px] text-white/60 hover:text-white">
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={whisperBusy || !whisperDraft.trim()} className="min-h-[38px] rounded-xl border border-violet-300/50 bg-violet-400/15 px-4 text-[13px] text-violet-50 disabled:opacity-40">
+                                {whisperBusy ? 'Sending…' : 'Whisper'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {heard && !whisperTo && (
+                <div className="fixed left-3 z-[60] max-w-[min(340px,80vw)] rounded-2xl border border-violet-300/40 bg-black/80 p-3 shadow-2xl backdrop-blur-md" style={{ bottom: `calc(${isMobile ? '13rem' : '1rem'} + env(safe-area-inset-bottom, 0px))` }}>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-violet-200/80">Whisper from {heard.from}</p>
+                    <p className="mt-1 line-clamp-3 text-[13px] text-white/90">{heard.text}</p>
+                    {!guest && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setWhisperDraft('');
+                                setWhisperTo({ id: heard.fromId, name: heard.from });
+                                setHeard(null);
+                            }}
+                            className="mt-2 rounded-lg border border-violet-300/40 px-3 py-1.5 text-[12px] text-violet-100"
+                        >
+                            Reply{isMobile ? '' : ' · R'}
+                        </button>
+                    )}
                 </div>
             )}
             {selfSaid && !composing && (

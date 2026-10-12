@@ -25,6 +25,7 @@ import { LayoutGrid } from 'lucide-react';
 import type { OsAppId, OsWindow } from './truthOsStore';
 import { APP_META, MULTI_INSTANCE } from './truthOsStore';
 import { HouseTile, OsIconTile } from './OsIcon';
+import { useInbox } from '@/lib/archive/inbox';
 
 const BASE = 50;
 const PEAK = 76;
@@ -39,6 +40,7 @@ function Magnified({
     running,
     focused,
     bouncing,
+    badge = 0,
     onClick,
     onContextMenu,
     children,
@@ -48,6 +50,8 @@ function Magnified({
     running?: boolean;
     focused?: boolean;
     bouncing?: boolean;
+    /** unread count — the red dot every dock has taught us to read */
+    badge?: number;
     onClick: () => void;
     onContextMenu?: (e: React.MouseEvent, el: HTMLElement) => void;
     children: React.ReactNode;
@@ -94,11 +98,20 @@ function Magnified({
                 )}
             </AnimatePresence>
             {children}
+            {badge > 0 && <DockBadge n={badge} />}
             <span
                 className={`absolute -bottom-[7px] h-[4px] w-[4px] rounded-full transition-opacity ${running ? 'opacity-100' : 'opacity-0'}`}
                 style={{ background: focused ? 'var(--os-accent, #fff)' : 'rgba(255,255,255,0.7)' }}
             />
         </motion.button>
+    );
+}
+
+function DockBadge({ n }: { n: number }) {
+    return (
+        <span className="pointer-events-none absolute -right-1 -top-1 flex h-[19px] min-w-[19px] items-center justify-center rounded-full border-2 border-[#15161c] bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow">
+            {n > 99 ? '99+' : n}
+        </span>
     );
 }
 
@@ -129,6 +142,7 @@ export default function OsDock({
     onLibrary: () => void;
     onHouse?: () => void;
 }) {
+    const dmUnread = useInbox((s) => s.dmUnread);
     const mouseX = useMotionValue(Infinity);
     const [bounce, setBounce] = useState<string | null>(null);
     const [menu, setMenu] = useState<Menu | null>(null);
@@ -167,7 +181,10 @@ export default function OsDock({
                         onClick={() => launch(app)}
                         className="transition-transform active:scale-90 touch-manipulation"
                     >
-                        <OsIconTile app={app} size={54} />
+                        <span className="relative block">
+                            <OsIconTile app={app} size={54} />
+                            {app === 'archive' && dmUnread > 0 && <DockBadge n={dmUnread} />}
+                        </span>
                     </button>
                 ))}
                 {/* the world's door rides the phone dock too — always one tap away */}
@@ -230,6 +247,7 @@ export default function OsDock({
                             label={APP_META[app].label}
                             running={running.includes(app)}
                             focused={focusApp === app}
+                            badge={app === 'archive' ? dmUnread : 0}
                             bouncing={bounce === app}
                             onClick={() => launch(app)}
                             onContextMenu={(_, el) => {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArchiveMessage, ArchiveReaction } from '@/lib/store/useArchiveStore';
 import { QUICK_EMOJI, groupReactions, tierColor, DEFAULT_AVATAR, relativeTime } from '@/lib/archive/access';
 import { Trash2, Pencil, Reply, Pin, PinOff, SmilePlus, Check, X, CornerDownRight, RotateCcw } from 'lucide-react';
+import { RichText, clockTime } from '@/lib/archive/chatFormat';
 
 interface MessageBubbleProps {
     message: ArchiveMessage;
@@ -20,22 +21,36 @@ interface MessageBubbleProps {
     onReply?: () => void;
     onPinToggle?: () => void;
     onOpenProfile?: (userId: string) => void;
+    /** this message @mentions the reader */
+    mentioned?: boolean;
+    /** the reader's handles, so their own name shines in the text */
+    handles?: string[];
+    /** bumps when the reader asks to edit this message (ArrowUp in the composer) */
+    editRequest?: number;
 }
 
 export default function MessageBubble({
     message, isGrouped = false, reactions = [], myId,
     canModerate = false, canPin = false,
     onDelete, onRestore, onSaveEdit, onReact, onUnreact, onReply, onPinToggle, onOpenProfile,
+    mentioned = false, handles = [], editRequest = 0,
 }: MessageBubbleProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(message.content);
     const [showEmoji, setShowEmoji] = useState(false);
 
+    useEffect(() => {
+        if (!editRequest) return;
+        setDraft(message.content);
+        setEditing(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editRequest]);
+
     const isMine = myId && message.author_id === myId;
     const isDeleted = Boolean(message.deleted_at);
     const grouped = groupReactions(reactions, myId);
     const timestamp = new Date(message.created_at);
-    const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeString = clockTime(message.created_at);
     const fullDate = timestamp.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const nameColor = tierColor(message.author?.tier);
 
@@ -51,7 +66,7 @@ export default function MessageBubble({
 
     // Hover action bar (shared by grouped + full layouts)
     const ActionBar = (
-        <div className="absolute right-4 -top-3 hidden group-hover:flex items-center bg-aether-surface border border-white/10 shadow-2xl rounded-lg overflow-visible z-20">
+        <div className="absolute right-4 -top-3 hidden group-hover:flex group-focus-within:flex items-center bg-aether-surface border border-white/10 shadow-2xl rounded-lg overflow-visible z-20">
             <div className="relative">
                 <button onClick={() => setShowEmoji((v) => !v)} title="React" className="p-1.5 text-zinc-400 hover:text-aether-gold hover:bg-white/5 transition-colors">
                     <SmilePlus className="w-4 h-4" />
@@ -133,7 +148,7 @@ export default function MessageBubble({
                 }}
                 rows={Math.min(6, draft.split('\n').length)}
                 autoFocus
-                className="w-full bg-black/40 border border-aether-gold/30 rounded-lg px-3 py-2 text-[14px] text-zinc-100 font-mono focus:outline-none focus:border-aether-gold/60 resize-none"
+                className="w-full bg-black/40 border border-aether-gold/30 rounded-lg px-3 py-2 text-[15px] text-zinc-100 focus:outline-none focus:border-aether-gold/60 resize-none"
             />
             <div className="flex items-center gap-2 mt-1.5">
                 <button onClick={saveEdit} className="flex items-center gap-1 px-2 py-1 rounded bg-aether-gold text-black text-[9px] font-black uppercase tracking-widest">
@@ -145,7 +160,7 @@ export default function MessageBubble({
             </div>
         </div>
     ) : isDeleted ? (
-        <div className="break-words text-[14px] leading-relaxed text-zinc-500 font-mono tracking-tight whitespace-pre-wrap pr-4 opacity-70">
+        <div className="break-words text-[15px] leading-relaxed text-zinc-500 whitespace-pre-wrap pr-4 opacity-70">
             <span className="line-through decoration-red-500/40">{message.content}</span>
             <span className="block text-[9px] text-red-400/80 mt-1 select-none font-mono uppercase tracking-wider">
                 Removed{message.deletion_reason?.startsWith('gemini') ? ' · Sentinel' : ' · Architect'}
@@ -153,22 +168,23 @@ export default function MessageBubble({
             </span>
         </div>
     ) : (
-        <div className="break-words text-[14px] leading-relaxed text-zinc-200 font-mono tracking-tight whitespace-pre-wrap pr-4">
-            {message.content}
-            {message.is_edited && <span className="text-[9px] text-zinc-600 ml-1 select-none font-mono italic">(edited)</span>}
+        <div className={`break-words text-[15px] leading-relaxed text-zinc-200 whitespace-pre-wrap pr-4 ${message.optimistic ? 'opacity-60' : ''}`}>
+            <RichText text={message.content} handles={handles} />
+            {message.is_edited && <span className="text-[10px] text-zinc-600 ml-1.5 select-none">(edited)</span>}
         </div>
     );
 
     const pinnedRing = message.pinned && !isDeleted ? 'bg-aether-gold/[0.04] border-l-2 border-aether-gold/40' : '';
     const deletedRing = isDeleted ? 'bg-red-500/[0.04] border-l-2 border-red-500/30' : '';
+    const mentionRing = mentioned && !isDeleted && !message.pinned ? 'bg-aether-gold/[0.06] border-l-2 border-aether-gold/70' : '';
 
     if (isGrouped) {
         return (
-            <div className={`flex flex-col mt-0.5 hover:bg-white/[0.03] -mx-4 px-4 py-0.5 group relative transition-colors ${pinnedRing} ${deletedRing}`}>
+            <div className={`flex flex-col mt-0.5 hover:bg-white/[0.03] -mx-4 px-4 py-0.5 group relative transition-colors ${pinnedRing} ${deletedRing} ${mentionRing}`}>
                 {ReplyPreview}
                 <div className="flex">
                     <div className="w-[50px] shrink-0 text-center select-none pt-0.5">
-                        <span className="text-[9px] text-zinc-600 opacity-0 group-hover:opacity-100 font-mono tracking-tighter transition-opacity" title={fullDate}>
+                        <span className="text-[10px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" title={fullDate}>
                             {timeString}
                         </span>
                     </div>
@@ -183,7 +199,7 @@ export default function MessageBubble({
     }
 
     return (
-        <div className={`flex flex-col mt-5 hover:bg-white/[0.03] -mx-4 px-4 py-1.5 group relative transition-colors ${pinnedRing} ${deletedRing}`}>
+        <div className={`flex flex-col mt-4 hover:bg-white/[0.03] -mx-4 px-4 py-1.5 group relative transition-colors ${pinnedRing} ${deletedRing} ${mentionRing}`}>
             {message.pinned && !isDeleted && (
                 <div className="flex items-center gap-1 ml-[50px] mb-0.5 text-[8px] font-mono uppercase tracking-widest text-aether-gold/70">
                     <Pin className="w-2.5 h-2.5" /> Pinned by an Architect
@@ -207,11 +223,11 @@ export default function MessageBubble({
                     <h3 className="flex items-center gap-2 mb-1">
                         <button
                             onClick={() => message.author_id && onOpenProfile?.(message.author_id)}
-                            className={`font-bold text-[13px] tracking-wide ${nameColor} hover:underline font-mono uppercase`}
+                            className={`font-semibold text-[14px] ${nameColor} hover:underline`}
                         >
                             {message.author?.display_name || 'Anonymous'}
                         </button>
-                        <span className="text-[9px] text-zinc-600 font-mono tracking-tighter opacity-70" title={fullDate}>{relativeTime(message.created_at)}</span>
+                        <span className="text-[11px] text-zinc-500" title={fullDate}>{relativeTime(message.created_at)}</span>
                     </h3>
                     {Body}
                     {ReactionRow}

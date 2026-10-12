@@ -37,7 +37,7 @@ import { loadPlainPose, PLAIN_SPAWN, savePlainPose } from '@/lib/world/plainPose
 
 export type PlainHotspot = {
     id: string;
-    kind: 'npc' | 'gate' | 'place';
+    kind: 'npc' | 'gate' | 'place' | 'peer';
     label: string;
     hint: string;
     x: number;

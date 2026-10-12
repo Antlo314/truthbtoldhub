@@ -1,13 +1,37 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useArchiveStore, ArchiveMessage } from '@/lib/store/useArchiveStore';
 import { useSoulStore } from '@/lib/store/useSoulStore';
 import { supabase } from '@/lib/supabase';
 import MessageBubble from './MessageBubble';
 import ProfilePopout from './ProfilePopout';
 import { isArchitect, canPostChannel, DEFAULT_AVATAR } from '@/lib/archive/access';
-import { Hash, Lock, Send, Menu, Pin, X, CornerDownRight, ShieldAlert, Users } from 'lucide-react';
+import { Hash, Lock, Menu, Pin, X, CornerDownRight, ShieldAlert, Users, ChevronDown, Loader2 } from 'lucide-react';
+import ChatComposer, { type MentionCandidate } from './ChatComposer';
+import { DayDivider, NewDivider, dayKey, mentionsMe, myHandles } from '@/lib/archive/chatFormat';
+
+const PAGE = 60;
+
+/** One row of archive_messages (+ joined author) into the store's shape */
+function mapRow(m: any): ArchiveMessage {
+    return {
+        id: m.id,
+        channel_id: m.channel_id,
+        author_id: m.author_id,
+        content: m.content,
+        is_edited: m.is_edited,
+        reply_to_id: m.reply_to_id,
+        created_at: m.created_at,
+        pinned: m.pinned,
+        pinned_by: m.pinned_by,
+        pinned_at: m.pinned_at,
+        deleted_at: m.deleted_at ?? null,
+        deleted_by: m.deleted_by ?? null,
+        deletion_reason: m.deletion_reason ?? null,
+        author: m.author || { display_name: 'Anonymous' },
+    };
+}
 
 export default function ChatArea() {
     const {
@@ -27,6 +51,19 @@ export default function ChatArea() {
     const [cooldown, setCooldown] = useState(0);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollerRef = useRef<HTMLDivElement>(null);
+    /** within reach of the newest message — only then does a new one pull the view down */
+    const atBottom = useRef(true);
+    const [newBelow, setNewBelow] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const [loadingOlder, setLoadingOlder] = useState(false);
+    /** scrollHeight before a page of history was prepended, to hold the reader's place */
+    const prependFrom = useRef<number | null>(null);
+    /** your last_read_at when you walked in — where the "New" line goes */
+    const [readMarker, setReadMarker] = useState<string | null>(null);
+    const lastSeenId = useRef<string | null>(null);
+    const firstPaint = useRef(true);
+    const [editRequest, setEditRequest] = useState<{ id: string; n: number } | null>(null);
     const typingChannelRef = useRef<any>(null);
     const lastTypingSent = useRef(0);
     const lastSentAt = useRef(0);
@@ -66,10 +103,89 @@ export default function ChatArea() {
     const gateCtx = { isArchitect: isAdmin, isSupporter: !!myProfile?.is_supporter, isChatBanned: iAmBanned };
     const canPost = activeChannel ? canPostChannel(activeChannel, gateCtx) : false;
 
-    // Scroll to bottom on new messages
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [visibleMessages.length]);
+    // Follow the conversation only when you are at its end. Reading back
+    // through history used to be yanked to the bottom by every new word.
+    const lastMsg = visibleMessages[visibleMessages.length - 1];
+    useLayoutEffect(() => {
+        const el = scrollerRef.current;
+        if (!el) return;
+        if (prependFrom.current !== null) {
+            // a page of history went in above: keep the same words under the eye
+            el.scrollTop += el.scrollHeight - prependFrom.current;
+            prependFrom.current = null;
+            return;
+        }
+        if (!lastMsg) return;
+        if (firstPaint.current) {
+            firstPaint.current = false;
+            lastSeenId.current = lastMsg.id;
+            el.scrollTop = el.scrollHeight;
+            return;
+        }
+        if (lastMsg.id === lastSeenId.current) return;
+        lastSeenId.current = lastMsg.id;
+        if (atBottom.current || lastMsg.author_id === myId) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            setNewBelow(0);
+        } else {
+            setNewBelow((n) => n + 1);
+        }
+    }, [lastMsg, myId]);
+
+    const loadOlder = useCallback(async () => {
+        if (!activeChannelId || loadingOlder || !hasMore) return;
+        const list = useArchiveStore.getState().messages[activeChannelId] || [];
+        const oldest = list.find((m) => !m.optimistic);
+        if (!oldest) return;
+        setLoadingOlder(true);
+        const { data } = await supabase
+            .from('archive_messages')
+            .select('*, author:profiles(id, display_name, avatar_url, tier)')
+            .eq('channel_id', activeChannelId)
+            .lt('created_at', oldest.created_at)
+            .order('created_at', { ascending: false })
+            .limit(PAGE);
+        setLoadingOlder(false);
+        if (!data) return;
+        setHasMore(data.length === PAGE);
+        if (data.length === 0) return;
+        const older = data.map(mapRow).reverse();
+        const current = useArchiveStore.getState().messages[activeChannelId] || [];
+        const all = [...older, ...current.filter((m) => !older.some((o) => o.id === m.id))];
+        for (const m of older) {
+            const src = m.reply_to_id ? all.find((x) => x.id === m.reply_to_id) : null;
+            m.reply_to = m.reply_to_id ? (src ? { id: src.id, content: src.content.slice(0, 120), author_name: src.author?.display_name } : { id: m.reply_to_id, content: 'earlier message', author_name: 'soul' }) : null;
+        }
+        prependFrom.current = scrollerRef.current?.scrollHeight ?? null;
+        setMessages(activeChannelId, all);
+        const ids = older.map((m) => m.id);
+        const { data: rx } = await supabase.from('archive_reactions').select('*').in('message_id', ids);
+        if (rx) setReactionsForMessages(rx);
+    }, [activeChannelId, hasMore, loadingOlder, setMessages, setReactionsForMessages]);
+
+    const onScroll = () => {
+        const el = scrollerRef.current;
+        if (!el) return;
+        const near = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+        atBottom.current = near;
+        if (near && newBelow) setNewBelow(0);
+        if (el.scrollTop < 120) void loadOlder();
+    };
+
+    const handles = useMemo(() => myHandles(myProfile?.display_name, myProfile?.username), [myProfile?.display_name, myProfile?.username]);
+    const mentionCandidates = useMemo<MentionCandidate[]>(
+        () =>
+            activeMembers
+                .filter((m) => m.user_id !== myId && m.profile?.display_name)
+                .map((m) => ({ id: m.user_id, name: m.profile!.display_name, avatar: m.profile?.avatar_url })),
+        [activeMembers, myId],
+    );
+    /** first message from someone else after your last visit */
+    const firstNewId = useMemo(() => {
+        if (!readMarker) return null;
+        const t = new Date(readMarker).getTime();
+        return visibleMessages.find((m) => m.author_id !== myId && !m.optimistic && new Date(m.created_at).getTime() > t)?.id ?? null;
+    }, [readMarker, visibleMessages, myId]);
 
     // Slowmode countdown ticker
     useEffect(() => {
@@ -104,32 +220,21 @@ export default function ChatArea() {
         };
 
         const fetchMessages = async () => {
+            // the NEWEST page, then reversed — asking for the oldest 80 showed
+            // a busy hall's first day forever and never today
             const { data } = await supabase
                 .from('archive_messages')
                 .select('*, author:profiles(id, display_name, avatar_url, tier)')
                 .eq('channel_id', activeChannelId)
-                .order('created_at', { ascending: true })
-                .limit(80);
+                .order('created_at', { ascending: false })
+                .limit(PAGE);
             if (!data || cancelled) return;
 
-            const mapped: ArchiveMessage[] = data.map((m: any) => ({
-                id: m.id,
-                channel_id: m.channel_id,
-                author_id: m.author_id,
-                content: m.content,
-                is_edited: m.is_edited,
-                reply_to_id: m.reply_to_id,
-                created_at: m.created_at,
-                pinned: m.pinned,
-                pinned_by: m.pinned_by,
-                pinned_at: m.pinned_at,
-                deleted_at: m.deleted_at ?? null,
-                deleted_by: m.deleted_by ?? null,
-                deletion_reason: m.deletion_reason ?? null,
-                author: m.author || { display_name: 'Anonymous' },
-            }));
+            const mapped: ArchiveMessage[] = data.map(mapRow).reverse();
             // resolve reply previews from the loaded set
             for (const m of mapped) m.reply_to = buildReplyPreview(mapped, m.reply_to_id);
+            setHasMore(data.length === PAGE);
+            firstPaint.current = true;
             setMessages(activeChannelId, mapped);
 
             // load reactions for these messages
@@ -140,10 +245,27 @@ export default function ChatArea() {
             }
         };
 
-        fetchMessages();
-        // mark read
-        clearChannelUnread(activeChannelId);
-        supabase.rpc('mark_channel_read', { _channel: activeChannelId });
+        setReadMarker(null);
+        setNewBelow(0);
+        atBottom.current = true;
+        lastSeenId.current = null;
+        const enter = async () => {
+            // where you left off, read before it is moved to now
+            if (myId) {
+                const { data: rd } = await supabase
+                    .from('archive_reads')
+                    .select('last_read_at')
+                    .eq('user_id', myId)
+                    .eq('channel_id', activeChannelId)
+                    .maybeSingle();
+                if (!cancelled) setReadMarker(rd?.last_read_at ?? null);
+            }
+            await fetchMessages();
+            // mark read
+            clearChannelUnread(activeChannelId);
+            void supabase.rpc('mark_channel_read', { _channel: activeChannelId });
+        };
+        void enter();
 
         const sub = supabase.channel(`channel_${activeChannelId}_msgs`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'archive_messages', filter: `channel_id=eq.${activeChannelId}` }, async (payload) => {
@@ -215,8 +337,7 @@ export default function ChatArea() {
         });
     };
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSend = async () => {
         if (!newMessage.trim() || !activeChannelId || !myAuth || !canPost) return;
 
         // slowmode (client-side UX)
@@ -478,18 +599,26 @@ export default function ChatArea() {
             )}
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 xl:px-6 relative">
+            <div ref={scrollerRef} onScroll={onScroll} className="flex-1 overflow-y-auto custom-scrollbar p-4 xl:px-6 relative">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.03)_0%,transparent_80%)] pointer-events-none" />
                 <div className="flex flex-col justify-end min-h-full relative z-10">
-                    {/* Hall intro */}
-                    <div className="mt-8 mb-6">
+                    {hasMore && (
+                        <div className="flex justify-center py-3">
+                            <button type="button" onClick={() => void loadOlder()} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[12px] text-zinc-400 hover:text-white">
+                                {loadingOlder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                                {loadingOlder ? 'Loading earlier messages…' : 'Load earlier messages'}
+                            </button>
+                        </div>
+                    )}
+                    {/* Hall intro — only at the true beginning */}
+                    {!hasMore && <div className="mt-8 mb-6">
                         <div className="w-16 h-16 rounded-2xl bg-aether-surface border border-aether-gold/30 flex items-center justify-center mb-4 text-aether-gold">
                             <Hash className="w-8 h-8" />
                         </div>
                         <h1 className="font-ritual text-2xl md:text-3xl font-bold text-white mb-2 uppercase tracking-widest">#{activeChannel?.name}</h1>
                         <p className="text-[11px] text-zinc-500 tracking-widest">{activeChannel?.topic || 'The beginning of this chamber.'}</p>
-                    </div>
-                    <div className="w-full h-px bg-white/5 my-6" />
+                    </div>}
+                    {!hasMore && <div className="w-full h-px bg-white/5 my-6" />}
 
                     {visibleMessages.length === 0 && (
                         <p className="text-[12px] text-zinc-500 mb-6">
@@ -499,12 +628,19 @@ export default function ChatArea() {
 
                     {visibleMessages.map((msg, idx) => {
                         const prev = visibleMessages[idx - 1];
-                        const isGrouped = !!prev && !msg.deleted_at && !prev.deleted_at
+                        const newDay = !prev || dayKey(prev.created_at) !== dayKey(msg.created_at);
+                        const isNew = msg.id === firstNewId;
+                        const isGrouped = !newDay && !isNew && !!prev && !msg.deleted_at && !prev.deleted_at
                             && prev.author_id === msg.author_id && !msg.reply_to_id &&
                             (new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60000);
                         return (
+                            <div key={msg.id}>
+                            {newDay && <DayDivider iso={msg.created_at} />}
+                            {isNew && <NewDivider />}
                             <MessageBubble
-                                key={msg.id}
+                                mentioned={msg.author_id !== myId && mentionsMe(msg.content, handles)}
+                                handles={handles}
+                                editRequest={editRequest?.id === msg.id ? editRequest.n : 0}
                                 message={msg}
                                 isGrouped={isGrouped}
                                 reactions={reactions[msg.id]}
@@ -520,11 +656,28 @@ export default function ChatArea() {
                                 onPinToggle={msg.deleted_at ? undefined : () => handlePinToggle(msg)}
                                 onOpenProfile={(uid) => setProfileId(uid)}
                             />
+                            </div>
                         );
                     })}
                     <div ref={messagesEndRef} />
                 </div>
             </div>
+
+            {/* new words below while you read back */}
+            {newBelow > 0 && (
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                            setNewBelow(0);
+                        }}
+                        className="absolute -top-12 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-aether-gold px-3.5 py-1.5 text-[12px] font-semibold text-black shadow-xl"
+                    >
+                        {newBelow} new message{newBelow === 1 ? '' : 's'} <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                </div>
+            )}
 
             {/* Typing indicator / send error */}
             <div className="px-6 h-5 shrink-0">
@@ -562,28 +715,23 @@ export default function ChatArea() {
                         Sign in to speak in the Hall
                     </a>
                 ) : canPost ? (
-                    <form
-                        onSubmit={handleSend}
-                        className={`bg-aether-surface border border-white/5 flex items-center px-4 py-2.5 relative group focus-within:border-aether-gold/40 transition-all ${replyingTo ? 'rounded-b-xl rounded-tr-xl' : 'rounded-xl'}`}
-                    >
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => { setNewMessage(e.target.value); broadcastTyping(); }}
-                            placeholder={cooldown > 0 ? `Slowmode — wait ${cooldown}s…` : `Speak into #${activeChannel?.name || 'the hall'}…`}
-                            disabled={cooldown > 0}
-                            maxLength={2000}
-                            className="flex-1 bg-transparent border-none text-[14px] text-zinc-100 placeholder:text-zinc-700 font-mono tracking-wide focus:outline-none disabled:opacity-50"
-                        />
-                        <button
-                            type="submit"
-                            disabled={!newMessage.trim() || isSending || cooldown > 0}
-                            className={`p-2 ml-2 rounded-lg transition-all ${newMessage.trim() && cooldown === 0 ? 'bg-aether-gold text-black hover:bg-aether-gold-soft px-4' : 'text-zinc-700'}`}
-                        >
-                            <span className="md:inline hidden text-[9px] font-black uppercase tracking-widest mr-2">{isSending ? '…' : 'Send'}</span>
-                            <Send className="w-4 h-4 inline" />
-                        </button>
-                    </form>
+                    <ChatComposer
+                        value={newMessage}
+                        onChange={setNewMessage}
+                        onSubmit={() => void handleSend()}
+                        onTyping={broadcastTyping}
+                        onEscape={() => setReplyingTo(null)}
+                        onArrowUpEmpty={() => {
+                            const mine = [...visibleMessages].reverse().find((m) => m.author_id === myId && !m.deleted_at && !m.optimistic);
+                            if (mine) setEditRequest((r) => ({ id: mine.id, n: (r?.n ?? 0) + 1 }));
+                        }}
+                        placeholder={cooldown > 0 ? `Slowmode — wait ${cooldown}s…` : `Message #${activeChannel?.name || 'the hall'}`}
+                        disabled={cooldown > 0}
+                        sending={isSending}
+                        candidates={mentionCandidates}
+                        attached={!!replyingTo}
+                        autoFocusKey={activeChannelId}
+                    />
                 ) : (
                     <div className="flex items-center justify-center gap-2 bg-aether-surface/60 border border-white/5 rounded-xl px-4 py-3.5 text-zinc-500">
                         <ShieldAlert className="w-4 h-4 text-zinc-600" />

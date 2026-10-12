@@ -12,6 +12,7 @@ import MemberListSidebar from './MemberListSidebar';
 import { VoiceProvider } from './VoiceProvider';
 import SanctumWelcome from './SanctumWelcome';
 import { Hexagon } from 'lucide-react';
+import { holdInbox, syncTitle, useInbox } from '@/lib/archive/inbox';
 
 const SANCTUM_WS = '00000000-0000-0000-0000-000000000000';
 
@@ -42,6 +43,18 @@ export default function ArchiveClient() {
     }, []);
 
     useEffect(() => { fetchIdentity(); }, [fetchIdentity]);
+
+    // unread whispers in the tab title, kept live from anywhere in the Hall
+    useEffect(() => {
+        if (!user?.id) return;
+        const release = holdInbox();
+        const unsub = useInbox.subscribe((s) => syncTitle(s.dmUnread));
+        return () => {
+            release();
+            unsub();
+            syncTitle(0);
+        };
+    }, [user?.id]);
 
     useEffect(() => {
         const myId = user?.id;

@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { DEFAULT_AVATAR, relativeTime } from '@/lib/archive/access';
 import UserFooter from './UserFooter';
 import VoicePanel from './VoicePanel';
-import { PenSquare, Search, X, Loader2 } from 'lucide-react';
+import { PenSquare, Search, X, Loader2, Bell } from 'lucide-react';
+import { askNotifications, notificationsState } from '@/lib/archive/inbox';
 
 // The DM rail: a list of whisper threads + a soul search to begin a new one.
 export default function DMSidebar() {
@@ -19,6 +20,8 @@ export default function DMSidebar() {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const debounce = useRef<any>(null);
+    const [notif, setNotif] = useState<string>('unsupported');
+    useEffect(() => setNotif(notificationsState()), []);
 
     useEffect(() => {
         if (!searching) return;
@@ -64,6 +67,15 @@ export default function DMSidebar() {
             {/* Header */}
             <div className="h-12 border-b border-white/5 flex items-center justify-between px-4">
                 <h2 className="font-ritual text-white text-[13px] tracking-widest uppercase">Whispers</h2>
+                {user && notif === 'default' && (
+                    <button
+                        onClick={async () => setNotif(await askNotifications())}
+                        title="Notify me when a whisper arrives"
+                        className="ml-auto mr-1 flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/5 hover:text-aether-gold"
+                    >
+                        <Bell className="h-3.5 w-3.5" /> Notify me
+                    </button>
+                )}
                 <button
                     onClick={() => setSearching((v) => !v)}
                     title="New whisper"
