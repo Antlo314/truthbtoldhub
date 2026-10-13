@@ -17,6 +17,7 @@ import { wearFromAvatar } from './vesselLook';
 import { getWalkerPose, getWalkerState } from './walkerPose';
 import { useHouseUi } from './houseUiStore';
 import type { AvatarConfig } from '@/lib/game/avatar';
+import type { VesselGear } from '@/components/world/gear';
 
 export const LOCAL_BODY_LAYER = 1;
 
@@ -27,11 +28,14 @@ export default function LocalPlayerBody({
     aura = '#a78bfa',
     rigged = true,
     shadows = true,
+    gear,
 }: {
     avatar: AvatarConfig;
     aura?: string;
     rigged?: boolean;
     shadows?: boolean;
+    /** the plain: what you hold */
+    gear?: VesselGear;
 }) {
     const group = useRef<THREE.Group>(null);
     const wear = useMemo(
@@ -50,6 +54,10 @@ export default function LocalPlayerBody({
             emote: s.emote,
             emoteAt: s.emoteAt,
             talking: s.talking,
+            action: s.action ?? null,
+            actionAt: s.actionAt,
+            actionDur: s.actionDur,
+            combat: s.combat,
         };
     }, []);
 
@@ -76,6 +84,7 @@ export default function LocalPlayerBody({
                 motion={motion}
                 shadows={shadows}
                 rigged={rigged}
+                gear={gear}
                 fallback={
                     <Humanoid
                         look={{

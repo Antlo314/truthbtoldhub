@@ -15,7 +15,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { heightAt, isWater, LAKE, RISE, WATER_Y } from '@/lib/world/terrain';
+import { heightAt, isWater, LAKE, WATER_Y, sh } from '@/lib/world/terrain';
 import { moveOnPlain, rng, walkableAt } from '@/lib/world/plain';
 import { getWalkerPose } from '@/components/truthos/house/walkerPose';
 import { getSky } from '@/components/truthos/house/DayNightCycle';
@@ -63,7 +63,7 @@ export type Spawn = { id: string; kind: CreatureKind; x: number; z: number; seed
 function spawnList(): Spawn[] {
     const r = rng(0xc0ffee);
     const out: Spawn[] = [];
-    const place = (kind: CreatureKind, cx: number, cz: number, spread: number, n: number, water = false) => {
+    const place = (kind: CreatureKind, cx: number, cz: number, spread: number, n: number) => {
         let i = 0;
         let guard = 0;
         while (i < n && guard++ < 60) {
@@ -72,34 +72,24 @@ function spawnList(): Spawn[] {
             const x = cx + Math.cos(a) * d;
             const z = cz + Math.sin(a) * d;
             if (!walkableAt(x, z, CREATURE_DEFS[kind].radius)) continue;
-            if (!water && isWater(x, z, -0.2)) continue;
+            if (isWater(x, z, -0.2)) continue;
             out.push({ id: `${kind}_${out.length}`, kind, x, z, seed: Math.floor(r() * 1e9) });
             i++;
         }
     };
-    // deer: three herds on the meadow and the fields
-    place('deer', 40, 200, 18, 4);
-    place('deer', -40, 120, 16, 3);
-    place('deer', -20, 290, 20, 4);
-    // bulls on the Rise's lower slopes
-    place('bull', RISE.x - 40, RISE.z + 50, 22, 3);
-    // the hollow: foxes at its edge, a wolf pack deeper in
-    place('fox', 40, -70, 24, 3);
-    place('fox', -40, -90, 20, 2);
-    place('wolf', 10, -170, 24, 3);
-    // the lake: frogs on the shore, slimes in the damp
-    place('frog', LAKE.x + 60, LAKE.z + 30, 14, 4);
-    place('frog', LAKE.x - 10, LAKE.z + 70, 14, 3);
-    place('slime', LAKE.x + 80, LAKE.z - 30, 20, 3);
-    place('slime', -60, 60, 16, 2);
-    // blobs and mushnubs
-    place('blob', 60, 300, 20, 3);
-    place('blob', -90, 260, 18, 2);
-    place('mushnub', 0, -110, 26, 4);
-    place('mushnub', -160, 90, 14, 2);
-    // ghosts drift in the dark trees; glubs over the summit
-    place('ghost', 20, -140, 36, 3);
-    place('glub', RISE.x, RISE.z, 30, 3);
+    // The gentle ones only — everything that fights back lives in enemies.ts.
+    // Herd centres are in the plain's original coordinates, pulled in by sh().
+    const at = (x: number, z: number) => sh(x, z);
+    place('deer', ...at(40, 200), 15, 4);
+    place('deer', ...at(-40, 120), 13, 3);
+    place('deer', ...at(-20, 290), 16, 4);
+    place('deer', ...at(110, 150), 14, 3);
+    // foxes at the hollow's edge
+    place('fox', ...at(40, -70), 20, 3);
+    place('fox', ...at(-40, -90), 16, 2);
+    // frogs on the lakeshore
+    place('frog', LAKE.x + LAKE.r * 0.85, LAKE.z + 20, 12, 4);
+    place('frog', LAKE.x - 8, LAKE.z + LAKE.r * 0.9, 12, 3);
     return out;
 }
 

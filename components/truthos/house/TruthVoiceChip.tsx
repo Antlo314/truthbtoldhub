@@ -9,14 +9,14 @@
  * across sessions, so nobody has to mute Truth twice.
  */
 import { useEffect, useState } from 'react';
-import { subscribe, setMuted, textOf, type VoiceState } from '@/lib/truthVoice';
+import { subscribe, setMuted, captionOf, type VoiceState } from '@/lib/truthVoice';
 
 export function TruthVoiceChip({ compact = false }: { compact?: boolean }) {
     const [state, setState] = useState<VoiceState>({ speaking: null, muted: true, unlocked: false, ready: false });
     useEffect(() => subscribe(setState), []);
 
     const speaking = !!state.speaking;
-    const caption = state.speaking ? textOf(state.speaking) : '';
+    const caption = state.speaking ? captionOf(state.speaking) : '';
 
     return (
         <div className="pointer-events-auto flex flex-col items-end gap-1 max-w-[min(70vw,340px)]">

@@ -23,8 +23,22 @@ import {
     LAKE,
     RISE,
     WALK_R,
+    ISLAND_C,
+    CIRCLE_C,
+    PIER,
+    WORLD_SCALE,
+    sh,
     type Region,
 } from './terrain';
+
+export { PIER };
+
+/** The plain shrank by WORLD_SCALE; scatter thins with its area */
+const DENSITY = WORLD_SCALE * WORLD_SCALE * 1.08;
+const at = (x: number, z: number) => {
+    const [a, b] = sh(x, z);
+    return { x: a, z: b };
+};
 
 /* ── seeded random ──────────────────────────────────────────── */
 
@@ -218,8 +232,8 @@ function tryPlace(r: () => number, rule: Rule, spacingHash: Hash, scratch: Obsta
         } else {
             const a = r() * Math.PI * 2;
             const d = Math.sqrt(r()) * (ISLAND_R - 38);
-            x = Math.cos(a) * d;
-            z = 110 + Math.sin(a) * d;
+            x = ISLAND_C.x + Math.cos(a) * d;
+            z = ISLAND_C.z + Math.sin(a) * d;
         }
         if (distToIsland(x, z) > ISLAND_R - 36) continue;
         if (inLairBox(x, z, LAIR_SKIRT)) continue;
@@ -230,7 +244,7 @@ function tryPlace(r: () => number, rule: Rule, spacingHash: Hash, scratch: Obsta
         if (rule.road > 0 && roadDist(x, z) < ROAD_W + rule.road) continue;
         // keep the summit shrine, the cairns and every NPC post clear
         if (Math.hypot(x - RISE.x, z - RISE.z) < 16) continue;
-        if (CLEARINGS.some((c) => Math.hypot(x - c.x, z - c.z) < c.r)) continue;
+        if (clearings().some((c) => Math.hypot(x - c.x, z - c.z) < c.r)) continue;
         const list = spacingHash.near(x, z, rule.spacing, scratch);
         let ok = true;
         for (const o of list) {
@@ -248,16 +262,19 @@ function tryPlace(r: () => number, rule: Rule, spacingHash: Hash, scratch: Obsta
     return null;
 }
 
-/** Places that must stay empty of scatter (NPC posts, the shrine, the pier) */
-const CLEARINGS: { x: number; z: number; r: number }[] = [
-    { x: 0, z: 160, r: 9 },
-    { x: -108, z: 175, r: 12 },
-    { x: 150, z: 260, r: 16 },
-    { x: 10, z: 290, r: 8 },
-    { x: -200, z: 50, r: 22 },
-    { x: 10, z: -120, r: 8 },
-    { x: 4, z: 70, r: 7 },
-];
+/** Places that must stay empty of scatter: every soul's post, the shrine, the pier, the circle, the crossroads */
+let clearingCache: { x: number; z: number; r: number }[] | null = null;
+function clearings() {
+    if (clearingCache) return clearingCache;
+    clearingCache = [
+        ...NPCS.filter((n) => n.roam === 0).map((n) => ({ x: n.x, z: n.z, r: 7 })),
+        { ...at(0, 160), r: 10 },
+        { x: PIER.x, z: PIER.z, r: 10 },
+        { x: RISE.x, z: RISE.z, r: 15 },
+        { x: CIRCLE_C.x, z: CIRCLE_C.z, r: 18 },
+    ];
+    return clearingCache;
+}
 
 export function plainData(): PlainData {
     if (cache) return cache;
@@ -268,7 +285,7 @@ export function plainData(): PlainData {
     const solids = new Hash();
     const scratch: Obstacle[] = [];
     for (const rule of RULES) {
-        for (let i = 0; i < rule.count; i++) {
+        for (let i = 0; i < Math.round(rule.count * DENSITY); i++) {
             const p = tryPlace(r, rule, spacing, scratch);
             if (!p) continue;
             props.push(p);
@@ -283,8 +300,8 @@ export function plainData(): PlainData {
     // the stone circle: twelve standing stones and an altar
     for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
-        const x = -200 + Math.cos(a) * 15;
-        const z = 50 + Math.sin(a) * 15;
+        const x = CIRCLE_C.x + Math.cos(a) * 13;
+        const z = CIRCLE_C.z + Math.sin(a) * 13;
         const p: Prop = { kind: 'stoneTall', x, y: heightAt(x, z) - 0.4, z, yaw: -a, s: 3.4 + (i % 3) * 0.3 };
         props.push(p);
         (byKind.get('stoneTall') ?? byKind.set('stoneTall', []).get('stoneTall')!).push(p);
@@ -303,14 +320,12 @@ export function plainData(): PlainData {
         solids.add({ x: RISE.x + Math.cos(a) * 6, z: RISE.z + Math.sin(a) * 6, r: 0.7 });
     }
     solids.add({ x: RISE.x, z: RISE.z, r: 1.05 });
+    for (const o of fixtureSolids()) solids.add(o);
     cache = { props, byKind, solids };
     return cache;
 }
 
 /* ── the pier ───────────────────────────────────────────────── */
-
-/** Its land end on the shore of the Still Water, pointing into the lake */
-export const PIER = { x: -105, z: 174.2, yaw: -1.332, len: 15, w: 2.6, deckY: WATER_Y + 0.63 } as const;
 
 /** Is this point on the pier's boards? */
 export function onPier(x: number, z: number): boolean {
@@ -359,11 +374,12 @@ export function moveOnPlain(fromX: number, fromZ: number, toX: number, toZ: numb
 
 /* ── the hand-placed things ─────────────────────────────────── */
 
+/** On the Rise's shoulders, north, east, south, west of the summit */
 export const CAIRNS = [
-    { id: 'cairn_n', x: 150, z: 212 },
-    { id: 'cairn_e', x: 196, z: 262 },
-    { id: 'cairn_s', x: 148, z: 306 },
-    { id: 'cairn_w', x: 104, z: 258 },
+    { id: 'cairn_n', x: RISE.x, z: RISE.z - 38 },
+    { id: 'cairn_e', x: RISE.x + 37, z: RISE.z + 2 },
+    { id: 'cairn_s', x: RISE.x - 2, z: RISE.z + 37 },
+    { id: 'cairn_w', x: RISE.x - 36, z: RISE.z - 2 },
 ] as const;
 
 export type PickupKind = 'mote' | 'lily' | 'ember' | 'scroll';
@@ -395,10 +411,10 @@ let pickupCache: Pickup[] | null = null;
 export function pickups(): Pickup[] {
     if (pickupCache) return pickupCache;
     pickupCache = [
-        ...ring('mote', 'mote', 0, 130, 60, 9, 0x1a2b3c),
-        ...ring('lily', 'lily', LAKE.x, LAKE.z, LAKE.r - 6, 10, 0x4d5e6f),
-        ...ring('ember', 'ember', 10, -120, 55, 11, 0x7a8b9c),
-        { id: 'scroll_summit', kind: 'scroll', x: 150, z: 258 },
+        ...ring('mote', 'mote', at(0, 130).x, at(0, 130).z, 48, 9, 0x1a2b3c),
+        ...ring('lily', 'lily', LAKE.x, LAKE.z, LAKE.r - 5, 10, 0x4d5e6f),
+        ...ring('ember', 'ember', at(10, -120).x, at(10, -120).z, 44, 11, 0x7a8b9c),
+        { id: 'scroll_summit', kind: 'scroll', x: RISE.x, z: RISE.z - 2 },
     ];
     return pickupCache;
 }
@@ -412,12 +428,30 @@ export const PICKUP_LABEL: Record<PickupKind, string> = {
 
 /* ── NPCs ───────────────────────────────────────────────────── */
 
-export type NpcId = 'truth' | 'hana' | 'eli' | 'keeper' | 'lanternkeeper' | 'scribe' | 'wanderer1' | 'wanderer2' | 'wanderer3' | 'wanderer4';
+export type NpcId =
+    | 'truth'
+    | 'hana'
+    | 'eli'
+    | 'keeper'
+    | 'lanternkeeper'
+    | 'scribe'
+    | 'lydia'
+    | 'bartimaeus'
+    | 'widow'
+    | 'asa'
+    | 'wanderer1'
+    | 'wanderer2'
+    | 'wanderer3'
+    | 'wanderer4';
+
+/** What a soul is for: quests, trade, or the alms Matthew 6 asks of you */
+export type NpcRole = 'guide' | 'quest' | 'merchant' | 'poor' | 'walker';
 
 export type Npc = {
     id: NpcId;
     name: string;
     title: string;
+    role: NpcRole;
     /** home post */
     x: number;
     z: number;
@@ -425,49 +459,93 @@ export type Npc = {
     yaw: number;
     /** wander radius (0 = stands) */
     roam: number;
+    /** sits at the post (on a stone) */
+    seated?: boolean;
     /** wire-format wardrobe (vesselLook) */
     wear: { build: 'masc' | 'fem'; skin: number; hair: number; top: number; bottom: number; boots: number; hs: 'buzzed' | 'parted' | 'buns' | 'long' | 'none'; of: 'peasant' | 'ranger'; hd: 0 | 1; bd: 0 | 1 };
+    /** extra features the vessel kit lacks — built procedurally */
+    look?: { locs?: boolean };
     aura: string;
     /** lines said when there is no quest business */
     idle: string[];
 };
 
-export const NPCS: Npc[] = [
+type RawNpc = Omit<Npc, 'x' | 'z'> & { x: number; z: number };
+
+const RAW_NPCS: RawNpc[] = [
     {
-        id: 'truth', name: 'Truth', title: 'The Guide', x: 4, z: 70, yaw: Math.PI, roam: 0,
-        wear: { build: 'masc', skin: 1, hair: 0, top: 3, bottom: 6, boots: 1, hs: 'none', of: 'ranger', hd: 1, bd: 1 }, aura: '#fbbf24',
-        idle: ['The plain is wide. Walk it; it will not walk itself.', 'Every road out there comes back to this door.', 'Look up now and then. The sky here is not painted.'],
+        // Truth: a Black man in his thirties, locs to the shoulder, a short beard
+        id: 'truth', name: 'Truth', title: 'The Guide', role: 'guide', x: 4, z: 70, yaw: Math.PI, roam: 0,
+        wear: { build: 'masc', skin: 9, hair: 0, top: 3, bottom: 6, boots: 1, hs: 'none', of: 'ranger', hd: 0, bd: 1 },
+        look: { locs: true },
+        aura: '#fbbf24',
+        idle: ['The plain is wide. Walk it; it will not walk itself.', 'Every road out there comes back to this door.', 'Pray in secret. Fast in secret. Give in secret. That is where the strength comes from.'],
     },
     {
-        id: 'hana', name: 'Hana', title: 'The Gatherer', x: -101, z: 170.5, yaw: Math.PI / 2, roam: 0,
+        id: 'hana', name: 'Hana', title: 'The Gatherer', role: 'quest', x: 0, z: 0, yaw: Math.PI / 2, roam: 0,
         wear: { build: 'fem', skin: 3, hair: 2, top: 4, bottom: 1, boots: 2, hs: 'long', of: 'peasant', hd: 0, bd: 0 }, aura: '#34d399',
-        idle: ['The water only shows you what you bring to it.', 'The lilies open at dawn. So should you.'],
+        idle: ['The water only shows you what you bring to it.', 'Consider the lilies. They toil not, and still they are clothed.'],
     },
     {
-        id: 'eli', name: 'Eli', title: 'The Shepherd', x: 12, z: 290, yaw: -Math.PI * 0.3, roam: 0,
+        id: 'eli', name: 'Eli', title: 'The Shepherd', role: 'quest', x: 12, z: 290, yaw: -Math.PI * 0.3, roam: 0,
         wear: { build: 'masc', skin: 5, hair: 1, top: 0, bottom: 6, boots: 0, hs: 'buzzed', of: 'peasant', hd: 0, bd: 1 }, aura: '#a78bfa',
-        idle: ['The herds come down from the Rise at dusk. Stand still and they pass right by you.', 'Flowers don\'t ask who planted them.'],
+        idle: ['The herds come down from the Rise at dusk. Stand still and they pass right by you.', 'Wolves come out of the hollow after dark. Keep your staff close.'],
     },
     {
-        id: 'keeper', name: 'The Keeper', title: 'Of the Circle', x: -200, z: 32, yaw: 0, roam: 0,
+        id: 'keeper', name: 'The Keeper', title: 'Of the Circle', role: 'quest', x: -200, z: 32, yaw: 0, roam: 0,
         wear: { build: 'fem', skin: 6, hair: 4, top: 5, bottom: 5, boots: 3, hs: 'buns', of: 'ranger', hd: 1, bd: 0 }, aura: '#22d3ee',
         idle: ['Twelve stones. They were here before the house, and they will be here after.', 'Stillness is not nothing. It is the hardest thing you will do today.'],
     },
     {
-        id: 'lanternkeeper', name: 'Ama', title: 'The Lantern-keeper', x: 12, z: -116, yaw: Math.PI, roam: 0,
+        id: 'lanternkeeper', name: 'Ama', title: 'The Lantern-keeper', role: 'quest', x: 12, z: -116, yaw: Math.PI, roam: 0,
         wear: { build: 'fem', skin: 2, hair: 0, top: 2, bottom: 3, boots: 1, hs: 'parted', of: 'peasant', hd: 0, bd: 0 }, aura: '#f97316',
-        idle: ['The hollow is dark on purpose. Light is only light where it is dark.', 'Mind the mushrooms. The glowing ones are the ones you want.'],
+        idle: ['The hollow is dark on purpose. Light is only light where it is dark.', 'If the light that is in thee be darkness, how great is that darkness.'],
     },
     {
-        id: 'scribe', name: 'Obed', title: 'The Scribe', x: 154, z: 266, yaw: Math.PI * 1.2, roam: 0,
+        id: 'scribe', name: 'Obed', title: 'The Scribe', role: 'quest', x: 154, z: 266, yaw: Math.PI * 1.2, roam: 0,
         wear: { build: 'masc', skin: 4, hair: 3, top: 1, bottom: 2, boots: 4, hs: 'parted', of: 'ranger', hd: 0, bd: 0 }, aura: '#60a5fa',
         idle: ['From up here you can see every road at once. Down there you only ever see one.', 'A word carried is worth ten kept.'],
     },
-    { id: 'wanderer1', name: 'Micah', title: 'A walker', x: 40, z: 140, yaw: 0, roam: 60, wear: { build: 'masc', skin: 2, hair: 1, top: 6, bottom: 0, boots: 2, hs: 'parted', of: 'peasant', hd: 0, bd: 0 }, aura: '#f472b6', idle: ['Peace, soul.', 'Have you been up the Rise yet? Go at dusk.'] },
-    { id: 'wanderer2', name: 'Naomi', title: 'A walker', x: -60, z: 210, yaw: 0, roam: 70, wear: { build: 'fem', skin: 0, hair: 3, top: 3, bottom: 4, boots: 0, hs: 'long', of: 'peasant', hd: 0, bd: 0 }, aura: '#fde68a', idle: ['The lake is colder than it looks.', 'I keep finding motes near the crossroads. Keep your eyes low.'] },
-    { id: 'wanderer3', name: 'Jude', title: 'A walker', x: 90, z: 230, yaw: 0, roam: 50, wear: { build: 'masc', skin: 6, hair: 0, top: 5, bottom: 1, boots: 3, hs: 'buzzed', of: 'ranger', hd: 0, bd: 1 }, aura: '#34d399', idle: ['Four cairns. I only ever found three.', 'The scribe talks too much. Good man though.'] },
-    { id: 'wanderer4', name: 'Tirzah', title: 'A walker', x: -30, z: 100, yaw: 0, roam: 50, wear: { build: 'fem', skin: 5, hair: 2, top: 0, bottom: 6, boots: 1, hs: 'buns', of: 'peasant', hd: 0, bd: 0 }, aura: '#a78bfa', idle: ['Truth sent me out here a month ago. I never went back in.', 'Sit by the water a while. It helps.'] },
+    {
+        id: 'lydia', name: 'Lydia', title: 'Seller of purple', role: 'merchant', x: 11, z: 154, yaw: -Math.PI / 2, roam: 0,
+        wear: { build: 'fem', skin: 7, hair: 1, top: 6, bottom: 4, boots: 2, hs: 'buns', of: 'ranger', hd: 0, bd: 0 }, aura: '#c084fc',
+        idle: ['Bread, fish, oil, water — and better staves than the one you carry.', 'Pelts and gel I will buy. Bring them to me before they spoil.'],
+    },
+    {
+        id: 'bartimaeus', name: 'Bartimaeus', title: 'Blind, by the road', role: 'poor', x: -6, z: 112, yaw: Math.PI / 2, roam: 0, seated: true,
+        wear: { build: 'masc', skin: 8, hair: 8, top: 7, bottom: 7, boots: 0, hs: 'buzzed', of: 'peasant', hd: 1, bd: 1 }, aura: '#94a3b8',
+        idle: ['I hear you on the road. Most walk past.', 'Have mercy. Anything at all.'],
+    },
+    {
+        id: 'widow', name: 'Ruth', title: 'A widow, by the water', role: 'poor', x: -84, z: 162, yaw: 0, roam: 0, seated: true,
+        wear: { build: 'fem', skin: 5, hair: 7, top: 7, bottom: 7, boots: 0, hs: 'buns', of: 'peasant', hd: 1, bd: 0 }, aura: '#94a3b8',
+        idle: ['Two mites I had once. I gave them both.', 'The water is kind. People less so.'],
+    },
+    {
+        id: 'asa', name: 'Asa', title: 'Outside the camp', role: 'poor', x: 44, z: -40, yaw: -Math.PI / 2, roam: 0, seated: true,
+        wear: { build: 'masc', skin: 3, hair: 2, top: 7, bottom: 7, boots: 0, hs: 'long', of: 'peasant', hd: 1, bd: 1 }, aura: '#94a3b8',
+        idle: ['Do not come too close. Or come. Nobody else does.', 'The lantern-keeper leaves bread sometimes.'],
+    },
+    { id: 'wanderer1', name: 'Micah', title: 'A walker', role: 'walker', x: 40, z: 140, yaw: 0, roam: 48, wear: { build: 'masc', skin: 2, hair: 1, top: 6, bottom: 0, boots: 2, hs: 'parted', of: 'peasant', hd: 0, bd: 0 }, aura: '#f472b6', idle: ['Peace, soul.', 'Have you been up the Rise yet? Go at dusk.'] },
+    { id: 'wanderer2', name: 'Naomi', title: 'A walker', role: 'walker', x: -60, z: 210, yaw: 0, roam: 56, wear: { build: 'fem', skin: 0, hair: 3, top: 3, bottom: 4, boots: 0, hs: 'long', of: 'peasant', hd: 0, bd: 0 }, aura: '#fde68a', idle: ['The lake is colder than it looks.', 'Slimes come up out of the mire when it rains. Mind your feet.'] },
+    { id: 'wanderer3', name: 'Jude', title: 'A walker', role: 'walker', x: 90, z: 230, yaw: 0, roam: 40, wear: { build: 'masc', skin: 6, hair: 0, top: 5, bottom: 1, boots: 3, hs: 'buzzed', of: 'ranger', hd: 0, bd: 1 }, aura: '#34d399', idle: ['Four cairns. I only ever found three.', 'Pray before you go into the hollow. I mean it.'] },
+    { id: 'wanderer4', name: 'Tirzah', title: 'A walker', role: 'walker', x: -30, z: 100, yaw: 0, roam: 40, wear: { build: 'fem', skin: 5, hair: 2, top: 0, bottom: 6, boots: 1, hs: 'buns', of: 'peasant', hd: 0, bd: 0 }, aura: '#a78bfa', idle: ['Truth sent me out here a month ago. I never went back in.', 'Sit by the water a while. It helps.'] },
 ];
+
+/** Hana keeps the pier's land end; everyone else is pulled in with the shrunk plain */
+export const NPCS: Npc[] = RAW_NPCS.map((n) => {
+    if (n.id === 'hana') {
+        const s = Math.sin(PIER.yaw);
+        const c = Math.cos(PIER.yaw);
+        // a few steps back from the boards, to the side of the walkway
+        return { ...n, x: PIER.x - s * 4 + c * 2.4, z: PIER.z - c * 4 - s * 2.4, yaw: PIER.yaw + Math.PI };
+    }
+    if (n.id === 'truth') return n; // at the gate, which did not move
+    // the scribe keeps the summit, just outside the shrine's ring of stones
+    if (n.id === 'scribe') return { ...n, x: RISE.x + 7.5, z: RISE.z + 6.5 };
+    const [x, z] = sh(n.x, n.z);
+    return { ...n, x, z, roam: n.roam };
+});
 
 export const npc = (id: NpcId) => NPCS.find((n) => n.id === id)!;
 
@@ -479,20 +557,34 @@ export type Fixture =
     | { kind: 'shrine'; x: number; z: number }
     | { kind: 'lantern'; x: number; z: number }
     | { kind: 'campfire'; x: number; z: number }
-    | { kind: 'tent'; x: number; z: number; yaw: number };
+    | { kind: 'tent'; x: number; z: number; yaw: number }
+    | { kind: 'stall'; x: number; z: number; yaw: number }
+    | { kind: 'seat'; x: number; z: number };
+
+const crossroads = at(0, 160);
+const fieldsCamp = at(16, 294);
 
 export const FIXTURES: Fixture[] = [
-    { kind: 'signpost', x: 3, z: 160, yaw: 0.4 },
-    { kind: 'signpost', x: -3, z: 96, yaw: -0.2 },
-    { kind: 'signpost', x: 42, z: 24, yaw: 1.4 },
+    { kind: 'signpost', x: crossroads.x + 3, z: crossroads.z, yaw: 0.4 },
+    { kind: 'signpost', ...at(-3, 96), yaw: -0.2 },
+    { kind: 'signpost', ...at(42, 24), yaw: 1.4 },
     { kind: 'pier', x: PIER.x, z: PIER.z, yaw: PIER.yaw },
-    { kind: 'shrine', x: 150, z: 260 },
+    { kind: 'shrine', x: RISE.x, z: RISE.z },
     { kind: 'lantern', x: 3.2, z: 66 },
     { kind: 'lantern', x: -3.2, z: 66 },
-    { kind: 'lantern', x: 10, z: -118 },
-    { kind: 'lantern', x: -103.5, z: 171.2 },
-    { kind: 'lantern', x: 0, z: 158 },
-    { kind: 'campfire', x: 16, z: 294 },
-    { kind: 'tent', x: 20, z: 298, yaw: -1.2 },
-    { kind: 'campfire', x: -62, z: 214 },
+    { kind: 'lantern', ...at(10, -118) },
+    { kind: 'lantern', x: PIER.x + 1.6, z: PIER.z + 1.6 },
+    { kind: 'lantern', x: crossroads.x, z: crossroads.z - 2 },
+    { kind: 'campfire', ...fieldsCamp },
+    { kind: 'tent', x: fieldsCamp.x + 4, z: fieldsCamp.z + 4, yaw: -1.2 },
+    { kind: 'campfire', ...at(-62, 214) },
+    // Lydia's stall behind her at the crossroads
+    { kind: 'stall', x: npc('lydia').x + 1.8, z: npc('lydia').z, yaw: -Math.PI / 2 },
+    // stones the poor sit on
+    ...NPCS.filter((n) => n.seated).map((n) => ({ kind: 'seat' as const, x: n.x, z: n.z })),
 ];
+
+/** Where a stall or a seat stands, the walker cannot */
+export function fixtureSolids(): Obstacle[] {
+    return FIXTURES.filter((f) => f.kind === 'stall').map((f) => ({ x: f.x, z: f.z, r: 1.1 }));
+}

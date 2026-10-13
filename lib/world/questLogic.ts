@@ -4,13 +4,16 @@
  * the result to the store and shows the words.
  */
 import { PICKUP_LABEL, npc, type NpcId, type PickupKind } from './plain';
-import { currentStep, questAvailable, questsOf, QUESTS, type Quest, type QuestProgress, type WorldProgress } from './quests';
+import { currentStep, questAvailable, questsOf, QUESTS, type EnemyKind, type Quest, type QuestProgress, type WorldProgress } from './quests';
+import type { Discipline } from './disciplines';
 
 export type QuestEvent =
     | { kind: 'visit'; place: string }
     | { kind: 'gather'; item: PickupKind }
     | { kind: 'meditated'; place: string }
-    | { kind: 'talk'; npc: NpcId };
+    | { kind: 'talk'; npc: NpcId }
+    | { kind: 'kill'; enemy: EnemyKind }
+    | { kind: 'practice'; discipline: Discipline };
 
 export type QuestOutcome = {
     /** quests whose progress changed, with the new record */
@@ -66,6 +69,31 @@ export function applyEvent(w: WorldProgress, ev: QuestEvent): QuestOutcome {
                     out.toasts.push(`${q.name} · ${have} of ${s.places.length}`);
                 }
             }
+        }
+        return out;
+    }
+    if (ev.kind === 'kill') {
+        for (const q of QUESTS) {
+            const p = w.quests[q.id];
+            if (!p || p.done) continue;
+            const s = q.steps[p.step];
+            if (s.kind !== 'kill' || s.enemy !== ev.enemy) continue;
+            const n = { ...(p.n ?? {}) };
+            n[ev.enemy] = (n[ev.enemy] ?? 0) + 1;
+            if (n[ev.enemy] >= s.n) advance(q, p, out);
+            else {
+                out.changed.push({ quest: q, progress: { ...p, n } });
+                out.toasts.push(`${q.name} · ${n[ev.enemy]} of ${s.n}`);
+            }
+        }
+        return out;
+    }
+    if (ev.kind === 'practice') {
+        for (const q of QUESTS) {
+            const p = w.quests[q.id];
+            if (!p || p.done) continue;
+            const s = q.steps[p.step];
+            if (s.kind === 'practice' && s.discipline === ev.discipline) advance(q, p, out);
         }
         return out;
     }
@@ -151,8 +179,9 @@ export function markerFor(id: NpcId, w: WorldProgress): 'offer' | 'turnin' | nul
 }
 
 /** Where the active quests point — for the compass and the map */
-export function questTargets(w: WorldProgress): { questId: string; label: string; place?: string; npc?: NpcId; item?: PickupKind }[] {
-    const out: { questId: string; label: string; place?: string; npc?: NpcId; item?: PickupKind }[] = [];
+export type QuestTarget = { questId: string; label: string; place?: string; npc?: NpcId; item?: PickupKind; enemy?: EnemyKind };
+export function questTargets(w: WorldProgress): QuestTarget[] {
+    const out: QuestTarget[] = [];
     for (const q of QUESTS) {
         const s = currentStep(q, w);
         if (!s) continue;
@@ -163,6 +192,7 @@ export function questTargets(w: WorldProgress): { questId: string; label: string
             out.push({ questId: q.id, label: s.text, place: left[0] });
         } else if (s.kind === 'talk' || s.kind === 'deliver') out.push({ questId: q.id, label: s.text, npc: s.npc });
         else if (s.kind === 'gather') out.push({ questId: q.id, label: s.text, item: s.item });
+        else if (s.kind === 'kill') out.push({ questId: q.id, label: s.text, enemy: s.enemy });
     }
     return out;
 }

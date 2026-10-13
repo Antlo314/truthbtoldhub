@@ -25,6 +25,11 @@ export type WalkerState = {
     emoteAt: number;
     /** composing or just spoke — the body talks with its hands */
     talking: boolean;
+    /** the plain's fight and prayer (lib/world/combat.ts) */
+    action?: string | null;
+    actionAt?: number;
+    actionDur?: number;
+    combat?: boolean;
 };
 
 let pose: WalkerPose = { x: 0, y: 0, z: 0, yaw: Math.PI };

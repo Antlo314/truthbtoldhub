@@ -36,10 +36,16 @@ export type HousePeer = {
     sit?: 0 | 1;
     /** level on the Aether Plain — the badge on the nameplate */
     lv?: number;
+    /** the plain: current action (combat.ts ActionId) and the wall-clock ms it began */
+    act?: string | null;
+    actAt?: number;
+    /** the plain: weapon held, shield worn */
+    wp?: string;
+    shd?: 0 | 1;
 };
 
 /** The wardrobe + action fields, copied through verbatim when present. */
-const PEER_EXTRAS = ['hair', 'top', 'bottom', 'boots', 'hs', 'of', 'hd', 'bd', 'emote', 'emoteAt', 'sit', 'lv'] as const;
+const PEER_EXTRAS = ['hair', 'top', 'bottom', 'boots', 'hs', 'of', 'hd', 'bd', 'emote', 'emoteAt', 'sit', 'lv', 'act', 'actAt', 'wp', 'shd'] as const;
 
 export type HousePresenceApi = {
     channel: RealtimeChannel;

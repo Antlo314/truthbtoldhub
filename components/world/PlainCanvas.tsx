@@ -36,6 +36,12 @@ import Npcs, { type NpcMarker } from './Npcs';
 import LairExterior from './LairExterior';
 import { Fixtures, Pickups, preloadFixtures } from './PlainFixtures';
 import PlainController, { type PlainHotspot } from './PlainController';
+import Enemies, { preloadEnemies } from './Enemies';
+import PlainCombat from './PlainCombat';
+import PlainWeather from './PlainWeather';
+import Floaters from './Floaters';
+import type { VesselGear } from './gear';
+import type { WorldProgress } from '@/lib/world/quests';
 
 /** Sky dome, stars, sun and moon follow the camera; scaled up to fit the far plane */
 function SkyRig({ low }: { low: boolean }) {
@@ -128,7 +134,16 @@ export default function PlainCanvas({
     onMoveActivity,
     onTick,
     onReady,
+    world,
+    gear,
+    onPrayed,
+    onDenied,
 }: {
+    world: WorldProgress;
+    /** what your body carries */
+    gear?: VesselGear;
+    onPrayed: () => void;
+    onDenied: (why: string) => void;
     locked: boolean;
     mobile: boolean;
     peers: HousePeer[];
@@ -184,6 +199,7 @@ export default function PlainCanvas({
         preloadProps();
         preloadCreatures();
         preloadFixtures();
+        preloadEnemies();
     }, []);
 
     const grassRadius = tier === 'ultra' ? 140 : tier === 'high' ? 110 : tier === 'balanced' ? 80 : 46;
@@ -240,10 +256,14 @@ export default function PlainCanvas({
                 <Fixtures low={low} shadows={profile.shadows} />
                 <Pickups taken={taken} wanted={wanted} low={low} />
                 <Creatures low={low} shadows={profile.shadows} />
+                <Enemies low={low} shadows={profile.shadows} />
+                <PlainWeather low={low} />
+                <Floaters />
                 <Npcs markers={markers} rigged={profile.riggedVessels} shadows={profile.shadows} low={low} />
 
                 <RemotePlayers peers={peers} selfId={selfId} mobile={low} rigged={profile.riggedVessels} saidBy={saidBy} ground={groundAt} />
-                <LocalPlayerBody avatar={avatar} aura={aura} rigged={profile.riggedVessels} shadows={profile.shadows} />
+                <LocalPlayerBody avatar={avatar} aura={aura} rigged={profile.riggedVessels} shadows={profile.shadows} gear={gear} />
+                <PlainCombat locked={locked} world={world} onPrayed={onPrayed} onDenied={onDenied} />
                 <PlainController
                     locked={locked}
                     mobile={mobile}

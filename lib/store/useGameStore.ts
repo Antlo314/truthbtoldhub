@@ -155,12 +155,38 @@ function mergeWorld(a?: WorldProgress, b?: WorldProgress): WorldProgress {
             quests[id] = { step: Math.max(cur.step, q.step), done: cur.done || q.done, n };
         }
     }
+    // fields that only grow merge by max/union; the ones that go down (coin
+    // spent, bread eaten, a fast broken) come from whichever copy is newer
+    const newer = (x.at || 0) >= (y.at || 0) ? x : y;
+    const disc: Record<string, number> = { ...(x.disc || {}) };
+    for (const [k, v] of Object.entries(y.disc || {})) disc[k] = Math.max(disc[k] ?? 0, v ?? 0);
+    const kills: Record<string, number> = { ...(x.kills || {}) };
+    for (const [k, v] of Object.entries(y.kills || {})) kills[k] = Math.max(kills[k] ?? 0, v ?? 0);
     return {
         xp: Math.max(x.xp || 0, y.xp || 0),
         quests,
         found: Array.from(new Set([...(x.found || []), ...(y.found || [])])),
+        at: Math.max(x.at || 0, y.at || 0) || undefined,
+        bag: newer.bag,
+        coins: newer.coins,
+        heaven: Math.max(x.heaven || 0, y.heaven || 0),
+        disc,
+        skills: Array.from(new Set([...(x.skills || []), ...(y.skills || [])])),
+        equip: newer.equip,
+        belt: newer.belt,
+        fast: newer.fast,
+        playS: Math.max(x.playS || 0, y.playS || 0),
+        prayedWatch: newer.prayedWatch,
+        givenDay: newer.givenDay,
+        practiced: newer.practiced,
+        kills,
+        deaths: Math.max(x.deaths || 0, y.deaths || 0),
+        started: !!(x.started || y.started),
     };
 }
+
+/** The plain edits progress often (a pickup, a kill); its cloud writes wait for a quiet moment */
+let _worldSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface GameState {
     initiated: boolean;          // has the Awakening been completed?
@@ -210,6 +236,8 @@ interface GameState {
     worldSetQuest: (id: string, p: QuestProgress) => void;
     /** The plain: remember a place found (returns true the first time) */
     worldFound: (id: string) => boolean;
+    /** The plain: any edit to progress — stamped, saved a moment later */
+    worldUpdate: (fn: (w: WorldProgress) => WorldProgress) => WorldProgress;
 
     loadFromCloud: () => Promise<void>;
     saveToCloud: () => Promise<void>;
@@ -440,6 +468,17 @@ export const useGameStore = create<GameState>()(
                     return { character: { ...s.character, world: { ...w, quests: { ...w.quests, [id]: p } } } };
                 });
                 void get().saveToCloud();
+            },
+            worldUpdate: (fn) => {
+                const cur = get().character.world ?? EMPTY_WORLD;
+                const next = { ...fn(cur), at: Date.now() };
+                set((s) => ({ character: { ...s.character, world: next } }));
+                if (_worldSaveTimer) clearTimeout(_worldSaveTimer);
+                _worldSaveTimer = setTimeout(() => {
+                    _worldSaveTimer = null;
+                    void get().saveToCloud();
+                }, 2500);
+                return next;
             },
             worldFound: (id) => {
                 const w = get().character.world ?? EMPTY_WORLD;

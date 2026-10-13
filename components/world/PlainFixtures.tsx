@@ -159,8 +159,60 @@ export function Fixtures({ low = false, shadows = true }: { low?: boolean; shado
                             </Suspense>
                         </group>
                     );
+                if (f.kind === 'stall') return <Stall key={i} x={f.x} z={f.z} yaw={f.yaw} y={y} shadows={shadows} />;
+                if (f.kind === 'seat')
+                    return (
+                        <mesh key={i} position={[f.x, y + 0.2, f.z]} castShadow={shadows} receiveShadow={shadows}>
+                            <cylinderGeometry args={[0.32, 0.38, 0.44, 9]} />
+                            <meshStandardMaterial color="#6b6460" roughness={0.95} />
+                        </mesh>
+                    );
                 return null;
             })}
+        </group>
+    );
+}
+
+/** Lydia's stall: four poles, a purple awning, a table of goods */
+function Stall({ x, z, yaw, y, shadows }: { x: number; z: number; yaw: number; y: number; shadows: boolean }) {
+    const m = useHouseMaterials(false);
+    return (
+        <group position={[x, y, z]} rotation={[0, yaw, 0]}>
+            {[-1, 1].map((sx) =>
+                [-0.7, 0.7].map((sz) => (
+                    <mesh key={`${sx}${sz}`} position={[sx * 1.1, 1.15, sz]} castShadow={shadows}>
+                        <cylinderGeometry args={[0.04, 0.05, 2.3, 6]} />
+                        <primitive object={m.woodDark} attach="material" />
+                    </mesh>
+                )),
+            )}
+            <mesh position={[0, 2.32, 0]} rotation={[0.12, 0, 0]} castShadow={shadows}>
+                <boxGeometry args={[2.6, 0.05, 1.8]} />
+                <meshStandardMaterial color="#6d28d9" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, 0.78, 0]} castShadow={shadows} receiveShadow={shadows}>
+                <boxGeometry args={[2.1, 0.08, 1.0]} />
+                <primitive object={m.wood} attach="material" />
+            </mesh>
+            {/* loaves, a jar of oil, a fish, a staff leaning */}
+            {[[-0.6, '#c08a4a'], [-0.3, '#b97b3c'], [0.0, '#d9a35b']].map(([px, c]) => (
+                <mesh key={String(px)} position={[px as number, 0.88, 0.1]} scale={[1.3, 0.8, 1]} castShadow={shadows}>
+                    <sphereGeometry args={[0.11, 10, 8]} />
+                    <meshStandardMaterial color={c as string} roughness={0.9} />
+                </mesh>
+            ))}
+            <mesh position={[0.45, 0.94, -0.15]} castShadow={shadows}>
+                <cylinderGeometry args={[0.08, 0.1, 0.24, 10]} />
+                <meshStandardMaterial color="#a3a35a" roughness={0.6} />
+            </mesh>
+            <mesh position={[0.75, 0.87, 0.2]} rotation={[0, 0.4, Math.PI / 2]} castShadow={shadows}>
+                <capsuleGeometry args={[0.06, 0.28, 4, 8]} />
+                <meshStandardMaterial color="#9fb3c8" roughness={0.5} metalness={0.2} />
+            </mesh>
+            <mesh position={[1.2, 1.1, 0.75]} rotation={[0.25, 0, 0.15]} castShadow={shadows}>
+                <cylinderGeometry args={[0.025, 0.03, 2.0, 6]} />
+                <meshStandardMaterial color="#5b3a1e" roughness={0.85} />
+            </mesh>
         </group>
     );
 }

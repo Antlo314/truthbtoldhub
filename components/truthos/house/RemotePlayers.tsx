@@ -18,6 +18,8 @@ import Vessel, { type VesselMotion } from './Vessel';
 import { wearFromWire } from './vesselLook';
 import { groundAt } from './homeMap';
 import type { HousePeer } from '@/lib/truthos/housePresence';
+import { ACTIONS, type ActionId } from '@/lib/world/combat';
+import type { VesselGear } from '@/components/world/gear';
 
 function PeerMesh({
     peer,
@@ -41,6 +43,10 @@ function PeerMesh({
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [peer.build, peer.skin, peer.hair, peer.top, peer.bottom, peer.boots, peer.hs, peer.of, peer.hd, peer.bd, peer.aura],
     );
+    const gear = useMemo<VesselGear | undefined>(
+        () => (peer.wp ? { weapon: peer.wp, shield: peer.shd === 1 } : undefined),
+        [peer.wp, peer.shd],
+    );
     const group = useRef<THREE.Group>(null);
     const peerRef = useRef(peer);
     peerRef.current = peer;
@@ -53,7 +59,11 @@ function PeerMesh({
         const p = peerRef.current;
         // Emote time is wall-clock on the wire; the body wants this tab's clock
         const emoteAt = p.emoteAt ? performance.now() - (Date.now() - p.emoteAt) : 0;
+        const act = p.act && ACTIONS[p.act as ActionId] ? (p.act as ActionId) : null;
         return {
+            action: act,
+            actionAt: act && p.actAt ? performance.now() - (Date.now() - p.actAt) : 0,
+            actionDur: act ? ACTIONS[act].dur : undefined,
             speed: speed.current,
             // y is world height; the dais is floor too
             grounded: (p.y || 0) - ground(p.x, p.z) < 0.08,
@@ -106,6 +116,7 @@ function PeerMesh({
                 motion={motion}
                 shadows={!low}
                 rigged={rigged}
+                gear={gear}
                 fallback={
                     <Humanoid
                         look={{ skin: peer.skin, hair: peer.hair, cloth: peer.top, aura: peer.aura || '#a78bfa', build: peer.build }}

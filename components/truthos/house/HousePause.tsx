@@ -6,6 +6,7 @@ import { loadSettings, saveSettings } from '@/lib/game/settings';
 import { sacredUi } from '@/lib/game/sacredUiSfx';
 import { QUALITY_LABELS, type QualitySetting } from './renderQuality';
 import { EMOTES } from './Vessel';
+import NarrationSetting from '@/components/world/NarrationSetting';
 import { setAllSound, soundOn } from '@/components/sanctum/SoundToggle';
 
 const QUALITY_CHOICES: QualitySetting[] = ['auto', 'ultra', 'high', 'balanced', 'low'];
@@ -140,6 +141,7 @@ export default function HousePause({
                         </p>
                     </div>
 
+                    <NarrationSetting />
                     <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-white/10 text-sm text-white/80">
                         <span>Sound</span>
                         <input

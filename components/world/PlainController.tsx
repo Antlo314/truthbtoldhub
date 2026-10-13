@@ -34,6 +34,7 @@ import { hubAudio } from '@/lib/truthos/hubAudio';
 import { WATER_Y } from '@/lib/world/terrain';
 import { groundAt, moveOnPlain, walkableAt } from '@/lib/world/plain';
 import { loadPlainPose, PLAIN_SPAWN, savePlainPose } from '@/lib/world/plainPose';
+import { ACTIONS, actionAge, player, setAction } from '@/lib/world/combat';
 
 export type PlainHotspot = {
     id: string;
@@ -375,14 +376,26 @@ export default function PlainController({
                 wishZ += fz * jf + rz * jx * STRAFE_MULT;
                 hasInput = true;
             }
+            // the fight decides how much the legs may do
+            const act = player.action;
+            if (player.dead) hasInput = false;
+            // moving breaks a prayer
+            if (act === 'pray' && hasInput) setAction(null);
             if (!hasInput) {
                 wishX = 0;
                 wishZ = 0;
             }
-            let speed = PLAIN_SPEED;
-            sprinting = hasInput && (k.has('ShiftLeft') || k.has('ShiftRight') || houseInput.sprint);
+            // remember where you were heading — a roll goes that way (or back, standing still)
+            if (act !== 'roll') {
+                const l = Math.hypot(wishX, wishZ);
+                player.rollX = l > 1e-4 ? wishX / l : -fx;
+                player.rollZ = l > 1e-4 ? wishZ / l : -fz;
+            }
+            let speed = PLAIN_SPEED * (player.stats?.speedMul ?? 1);
+            sprinting = hasInput && !act && player.stamina > 4 && (k.has('ShiftLeft') || k.has('ShiftRight') || houseInput.sprint);
             if (sprinting) speed *= SPRINT_MULT;
             if (wading) speed *= 0.55;
+            if (act) speed *= ACTIONS[act].move;
             const wLen = Math.hypot(wishX, wishZ);
             let tx = 0;
             let tz = 0;
@@ -395,10 +408,16 @@ export default function PlainController({
                 tz = wishZ * inv * speed * m;
                 emit('move');
             }
-            const lambda = wLen > 1e-4 ? MOVE_ACCEL : MOVE_FRICTION;
+            let rolling = false;
+            if (act === 'roll' && actionAge() < 0.5) {
+                rolling = true;
+                tx = player.rollX * 8.6;
+                tz = player.rollZ * 8.6;
+            }
+            const lambda = rolling ? 40 : wLen > 1e-4 ? MOVE_ACCEL : MOVE_FRICTION;
             vel.current.x = damp(vel.current.x, tx, lambda, d);
             vel.current.z = damp(vel.current.z, tz, lambda, d);
-            if (!hasInput && Math.hypot(vel.current.x, vel.current.z) < 0.08) {
+            if (!hasInput && !rolling && Math.hypot(vel.current.x, vel.current.z) < 0.08) {
                 vel.current.x = 0;
                 vel.current.z = 0;
             }
@@ -409,7 +428,7 @@ export default function PlainController({
                 pos.current.x = next.x;
                 pos.current.z = next.z;
             }
-            if (houseInput.consumeJump() && grounded.current && !wading) {
+            if (houseInput.consumeJump() && grounded.current && !wading && !act) {
                 vy.current = JUMP_V;
                 grounded.current = false;
                 emit('jump');

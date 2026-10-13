@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { grassDensityAt, heightAt } from '@/lib/world/terrain';
 import { getWalkerPose } from '@/components/truthos/house/walkerPose';
 import { getSky } from '@/components/truthos/house/DayNightCycle';
+import { plainWind } from './PlainWeather';
 
 const CHUNK = 24;
 const PER_FRAME = 2;
@@ -18,6 +19,7 @@ const PER_FRAME = 2;
 const VERT = /* glsl */ `
 uniform float uTime;
 uniform vec3 uPlayer;
+uniform float uWind;
 attribute vec3 aOffset;
 attribute vec4 aSpin; // cos, sin, height, tint
 varying float vT;
@@ -41,9 +43,9 @@ void main() {
   vec3 r = vec3(p.x * aSpin.x - p.z * aSpin.y, p.y, p.x * aSpin.y + p.z * aSpin.x);
   // wind: a slow swell plus a fast flutter, strongest at the tip
   vec2 w = aOffset.xz;
-  float gust = noise(w * 0.035 + vec2(uTime * 0.22, uTime * 0.13)) * 2.0 - 1.0;
-  float flutter = sin(uTime * 2.4 + w.x * 0.9 + w.y * 0.6) * 0.5;
-  float sway = (gust * 0.9 + flutter * 0.25) * vT * vT * h;
+  float gust = noise(w * 0.035 + vec2(uTime * 0.22 * uWind, uTime * 0.13 * uWind)) * 2.0 - 1.0;
+  float flutter = sin(uTime * 2.4 * uWind + w.x * 0.9 + w.y * 0.6) * 0.5;
+  float sway = (gust * 0.9 * uWind + flutter * 0.25) * vT * vT * h;
   r.x += sway * 0.85;
   r.z += sway * 0.45;
   // trample: push out and down near the walker
@@ -181,6 +183,7 @@ export default function Grass({ low = false, radius = 96, perM2 = 5.5 }: { low?:
                         uTip: { value: new THREE.Color('#8fcf4a') },
                         uSun: { value: new THREE.Color('#ffe2bf') },
                         uDay: { value: 1 },
+                        uWind: { value: 1 },
                     },
                 ]),
                 side: THREE.DoubleSide,
@@ -208,6 +211,7 @@ export default function Grass({ low = false, radius = 96, perM2 = 5.5 }: { low?:
         if (!g) return;
         const p = getWalkerPose();
         material.uniforms.uTime.value = state.clock.elapsedTime;
+        material.uniforms.uWind.value = plainWind();
         material.uniforms.uPlayer.value.set(p.x, p.y, p.z);
         const sky = getSky();
         material.uniforms.uDay.value = sky.daylight;

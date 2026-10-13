@@ -11,6 +11,7 @@ import { QUALITY_LABELS, type QualitySetting } from '@/components/truthos/house/
 import { EMOTES } from '@/components/truthos/house/Vessel';
 import { levelProgress, QUESTS, titleFor, type WorldProgress } from '@/lib/world/quests';
 import { savePlainView } from './plainView';
+import NarrationSetting from './NarrationSetting';
 import { setAllSound, soundOn } from '@/components/sanctum/SoundToggle';
 import { useEffect, useState } from 'react';
 
@@ -132,6 +133,7 @@ export default function PlainPause({
                         </div>
                         <p className="mt-1.5 text-[11px] text-white/40">Higher draws more grass, farther, with clouds and sky light.</p>
                     </div>
+                    <NarrationSetting />
                     <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-white/80">
                         <span>Sound</span>
                         <input
@@ -164,7 +166,11 @@ export default function PlainPause({
                                     .map((e) => `${e.key} ${e.label}`)
                                     .join(' · ')}
                             </p>
-                            <p className="mt-1 text-white/40">E talks and takes · Shift runs · Space jumps · Enter speaks · M map</p>
+                            <p className="mt-1 text-white/40">Shift + 1–4 on the plain</p>
+                            <p className="mt-2 text-sm text-white/80">The fight</p>
+                            <p>F or click strike — again to chain three · G or right-click heavy · Q roll · C raise the shield · X the Light</p>
+                            <p className="mt-2 text-sm text-white/80">The rest</p>
+                            <p>E talk, trade, give · P pray · 1–4 quick belt · Tab journal · I bag · K skills · J quests · M map · Enter speak · V camera</p>
                         </div>
                     )}
                     <Btn

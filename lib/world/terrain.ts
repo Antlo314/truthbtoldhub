@@ -12,10 +12,36 @@
  * the rolling ground between them is noise.
  */
 
-export const ISLAND_C = { x: 0, z: 110 } as const;
-export const ISLAND_R = 400;
+/* ── the Lair's footprint ───────────────────────────────────── */
+
+/** The house, with a skirt of flat ground around it */
+export const LAIR_BOX = { x0: -30, z0: -26, x1: 30, z1: 66 } as const;
+export const LAIR_SKIRT = 10;
+
+/**
+ * The plain was drawn at 1.0 and walked too long between places. Every
+ * hand-placed point is pulled toward the Lair by WORLD_SCALE, measured from
+ * the Lair's walls (so nothing lands inside the house); radii shrink with it.
+ */
+export const WORLD_SCALE = 0.8;
+const clampN = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+export function sh(x: number, z: number): [number, number] {
+    const qx = clampN(x, LAIR_BOX.x0, LAIR_BOX.x1);
+    const qz = clampN(z, LAIR_BOX.z0, LAIR_BOX.z1);
+    return [qx + (x - qx) * WORLD_SCALE, qz + (z - qz) * WORLD_SCALE];
+}
+const P = (x: number, z: number) => {
+    const [a, b] = sh(x, z);
+    return { x: a, z: b };
+};
+
+/** The Old Pier: its land end on the Still Water shore, pointing into the lake (found by scratch shore search) */
+export const PIER = { x: -83.3, z: 150.9, yaw: -1.332, len: 15, w: 2.6, deckY: -1.6 + 0.63 } as const;
+
+export const ISLAND_C = { x: 0, z: 96 } as const;
+export const ISLAND_R = 330;
 /** Past this you cannot walk (the rim crumbles) */
-export const WALK_R = 378;
+export const WALK_R = 310;
 export const WATER_Y = -1.6;
 
 /* ── noise ──────────────────────────────────────────────────── */
@@ -67,27 +93,27 @@ export type Landmark = {
 };
 
 export const LANDMARKS: Landmark[] = [
-    { id: 'gate', name: 'The Lair Gate', x: 0, z: 68, r: 12, blurb: 'The door back into the house.' },
-    { id: 'crossroads', name: 'The Crossroads', x: 0, z: 160, r: 16, blurb: 'Every road on the plain meets here.' },
-    { id: 'lake', name: 'The Still Water', x: -170, z: 190, r: 95, blurb: 'A lake that does not ripple unless you do.' },
-    { id: 'pier', name: 'The Old Pier', x: -108, z: 175, r: 14, blurb: 'Boards over the still water.' },
-    { id: 'rise', name: 'The Rise', x: 150, z: 260, r: 80, blurb: 'The one hill. You can see the whole plain from it.' },
-    { id: 'summit', name: 'The Summit Shrine', x: 150, z: 260, r: 14, blurb: 'A ring of stones at the top of the Rise.' },
-    { id: 'cairns', name: 'The Four Cairns', x: 150, z: 260, r: 60, blurb: 'Four stone markers on the shoulders of the Rise.' },
-    { id: 'fields', name: 'The Wildflower Fields', x: 0, z: 300, r: 90, blurb: 'Colour to the horizon.' },
-    { id: 'circle', name: 'The Stone Circle', x: -200, z: 50, r: 40, blurb: 'Older than the Lair. Nobody remembers who raised it.' },
-    { id: 'hollow', name: 'Pine Hollow', x: 10, z: -120, r: 90, blurb: 'Dark trees north of the house. Things glow in there.' },
+    { id: 'gate', name: 'The Lair Gate', ...P(0, 68), r: 12, blurb: 'The door back into the house.' },
+    { id: 'crossroads', name: 'The Crossroads', ...P(0, 160), r: 15, blurb: 'Every road on the plain meets here.' },
+    { id: 'lake', name: 'The Still Water', ...P(-170, 190), r: 76, blurb: 'A lake that does not ripple unless you do.' },
+    { id: 'pier', name: 'The Old Pier', x: PIER.x + Math.sin(PIER.yaw) * 5, z: PIER.z + Math.cos(PIER.yaw) * 5, r: 13, blurb: 'Boards over the still water.' },
+    { id: 'rise', name: 'The Rise', ...P(150, 260), r: 64, blurb: 'The one hill. You can see the whole plain from it.' },
+    { id: 'summit', name: 'The Summit Shrine', ...P(150, 260), r: 13, blurb: 'A ring of stones at the top of the Rise.' },
+    { id: 'cairns', name: 'The Four Cairns', ...P(150, 260), r: 48, blurb: 'Four stone markers on the shoulders of the Rise.' },
+    { id: 'fields', name: 'The Wildflower Fields', ...P(0, 300), r: 72, blurb: 'Colour to the horizon.' },
+    { id: 'circle', name: 'The Stone Circle', ...P(-200, 50), r: 34, blurb: 'Older than the Lair. Nobody remembers who raised it.' },
+    { id: 'hollow', name: 'Pine Hollow', ...P(10, -120), r: 72, blurb: 'Dark trees north of the house. Things glow in there.' },
 ];
 
 export const landmark = (id: PlaceId) => LANDMARKS.find((l) => l.id === id)!;
 
 /** The lake: a basin around this point, water at WATER_Y */
-export const LAKE = { x: -170, z: 190, r: 72 } as const;
+export const LAKE = { ...P(-170, 190), r: 58 } as const;
 /** The Rise: a gaussian hill */
-export const RISE = { x: 150, z: 260, r: 95, h: 30 } as const;
+export const RISE = { ...P(150, 260), r: 78, h: 27 } as const;
 
 /** Roads — polylines; the ground is bare dirt within ROAD_W of them */
-export const ROADS: [number, number][][] = [
+const RAW_ROADS: [number, number][][] = [
     // gate → crossroads
     [[0, 66], [0, 110], [0, 160]],
     // crossroads → the pier on the lake
@@ -101,6 +127,7 @@ export const ROADS: [number, number][][] = [
     // stone circle spur from the lake road
     [[-96, 172], [-150, 120], [-190, 70], [-200, 50]],
 ];
+export const ROADS: [number, number][][] = RAW_ROADS.map((r) => r.map(([x, z]) => sh(x, z)));
 export const ROAD_W = 3.2;
 
 function segDist(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
@@ -124,12 +151,6 @@ export function roadDist(x: number, z: number): number {
     }
     return best;
 }
-
-/* ── the Lair's footprint ───────────────────────────────────── */
-
-/** The house, with a skirt of flat ground around it */
-export const LAIR_BOX = { x0: -30, z0: -26, x1: 30, z1: 66 } as const;
-export const LAIR_SKIRT = 10;
 
 export function inLairBox(x: number, z: number, pad = 0): boolean {
     return x > LAIR_BOX.x0 - pad && x < LAIR_BOX.x1 + pad && z > LAIR_BOX.z0 - pad && z < LAIR_BOX.z1 + pad;
@@ -160,7 +181,10 @@ export function heightAt(x: number, z: number): number {
     // a hand lower — never a trench (scaling the whole height cut 9 m into the Rise)
     const rd = roadDist(x, z);
     const onRoad = rd < ROAD_W + 2 ? 1 - Math.min(1, rd / (ROAD_W + 2)) : 0;
-    let h = fbm(x / 110, z / 110, 4) * 5.2 + fbm(x / 23, z / 23, 2) * 0.55 * (1 - onRoad);
+    let h = fbm(x / 110, z / 110, 4) * 5.2;
+    // dips stay shallow: only the lake basin goes below the water line
+    if (h < 0) h *= 0.22;
+    h += fbm(x / 23, z / 23, 2) * 0.55 * (1 - onRoad);
     // the Rise
     const dr = Math.hypot(x - RISE.x, z - RISE.z) / RISE.r;
     if (dr < 1.6) h += RISE.h * Math.exp(-dr * dr * 2.2);
@@ -208,13 +232,18 @@ export function isWater(x: number, z: number, margin = 0): boolean {
 
 export type Region = 'meadow' | 'hollow' | 'lake' | 'rise' | 'fields' | 'circle' | 'rim';
 
+const HOLLOW_Z = sh(0, -50)[1];
+const FIELDS_Z = sh(0, 240)[1];
+/** The stone circle's centre */
+export const CIRCLE_C = P(-200, 50);
+
 export function regionAt(x: number, z: number): Region {
     if (distToIsland(x, z) > ISLAND_R - 40) return 'rim';
     if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 30) return 'lake';
     if (Math.hypot(x - RISE.x, z - RISE.z) < RISE.r) return 'rise';
-    if (z < -50 && Math.abs(x - 10) < 130) return 'hollow';
-    if (z > 240 && Math.abs(x) < 110) return 'fields';
-    if (Math.hypot(x + 200, z - 50) < 45) return 'circle';
+    if (z < HOLLOW_Z && Math.abs(x - 10) < 104) return 'hollow';
+    if (z > FIELDS_Z && Math.abs(x) < 88) return 'fields';
+    if (Math.hypot(x - CIRCLE_C.x, z - CIRCLE_C.z) < 36) return 'circle';
     return 'meadow';
 }
 

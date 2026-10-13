@@ -41,6 +41,63 @@ type Manifest = { lines: Record<string, VoiceLine> };
 
 const MUTE_KEY = 'truth.voice.muted';
 const SPOKEN_KEY = 'truth.voice.spoken';
+const MODE_KEY = 'truth.voice.mode';
+const HEARD_KEY = 'truth.voice.heard';
+
+/**
+ * How much Truth says on his own.
+ *   full   every guide line, start to finish
+ *   brief  long guide lines end after their first sentence or two — always
+ *          once you have heard them before, and the longest ones the first
+ *          time too. Asked-for lore is never cut.
+ *   off    guide lines stay silent; asked-for lines still speak
+ */
+export type NarrationMode = 'full' | 'brief' | 'off';
+
+export function getNarration(): NarrationMode {
+    if (!isBrowser()) return 'brief';
+    try {
+        const m = localStorage.getItem(MODE_KEY);
+        return m === 'full' || m === 'off' ? m : 'brief';
+    } catch {
+        return 'brief';
+    }
+}
+
+export function setNarration(m: NarrationMode) {
+    try { localStorage.setItem(MODE_KEY, m); } catch { /* private mode */ }
+    if (m === 'off' && current && current.dataset.kind === 'system') stop();
+    emit();
+}
+
+function heardEver(id: string): boolean {
+    try { return (JSON.parse(localStorage.getItem(HEARD_KEY) || '[]') as string[]).includes(id); } catch { return false; }
+}
+function markHeard(id: string) {
+    try {
+        const list = JSON.parse(localStorage.getItem(HEARD_KEY) || '[]') as string[];
+        if (!list.includes(id)) localStorage.setItem(HEARD_KEY, JSON.stringify([...list, id].slice(-200)));
+    } catch { /* ignore */ }
+}
+
+/** The first sentence or two of a line — at least ~9 words, never mid-sentence */
+export function briefOf(text: string): string {
+    const parts = text.match(/[^.!?]+[.!?]+["”’)]*\s*/g);
+    if (!parts) return text;
+    let out = '';
+    for (const part of parts) {
+        out += part;
+        if (out.trim().split(/\s+/).length >= 9) break;
+    }
+    return out.trim();
+}
+
+/** What the caption should read for the line now playing (the brief text when it was cut) */
+let currentCaption: string | null = null;
+export function captionOf(id: string): string {
+    if (current && current.dataset.line === id && currentCaption) return currentCaption;
+    return textOf(id);
+}
 
 let manifest: Manifest | null = null;
 let manifestPromise: Promise<Manifest | null> | null = null;
@@ -209,11 +266,51 @@ export async function speak(id: string, opts: SpeakOpts = {}): Promise<boolean> 
     await loadManifest();
     const line = lineFor(id);
     markSpoken(id);
+    const mode = getNarration();
+    const guide = !opts.force && line?.kind !== 'lore';
+    if (guide && mode === 'off') {
+        opts.onEnd?.();
+        return false;
+    }
     stop();
+
+    // brief: long guide lines end at a sentence — always on a repeat, and the
+    // very long ones even the first time
+    const words = line?.text ? line.text.split(/\s+/).length : 0;
+    const cut = guide && mode === 'brief' && line?.text && words > 16 && (heardEver(id) || words > 26) ? briefOf(line.text) : null;
+    const cutRatio = cut && line?.text && cut.length < line.text.length - 8 ? cut.length / line.text.length : null;
+    markHeard(id);
+    currentCaption = cutRatio ? cut : null;
 
     if (line?.ready && line.file) {
         const a = new Audio(line.file);
         a.dataset.line = id;
+        a.dataset.kind = line.kind;
+        if (cutRatio) {
+            // fade out just after the sentence ends: speech is near enough
+            // even-paced that the text's proportion finds the pause
+            const arm = () => {
+                if (!isFinite(a.duration) || a.duration <= 0) return;
+                const at = a.duration * cutRatio + 0.18;
+                const start = Date.now();
+                const fadeFrom = a.volume;
+                const timer = window.setInterval(() => {
+                    if (current !== a) { window.clearInterval(timer); return; }
+                    const t = a.currentTime;
+                    if (t < at) return;
+                    const k = Math.max(0, 1 - (t - at) / 0.35);
+                    a.volume = fadeFrom * k;
+                    if (k <= 0 || Date.now() - start > 120000) {
+                        window.clearInterval(timer);
+                        try { a.pause(); } catch { /* */ }
+                        if (current === a) { current = null; currentCaption = null; emit(); }
+                        opts.onEnd?.();
+                    }
+                }, 40);
+            };
+            if (a.readyState >= 1) arm();
+            else a.addEventListener('loadedmetadata', arm, { once: true });
+        }
         a.volume = Math.min(1, Math.max(0, opts.volume ?? 0.9));
         a.preload = 'auto';
         current = a;
@@ -240,7 +337,7 @@ export async function speak(id: string, opts: SpeakOpts = {}): Promise<boolean> 
 
     // No mp3 for this id (not generated, or an id the manifest never had)
     if (line?.text) {
-        fallbackTTS(line.text, opts.onEnd);
+        fallbackTTS(cut ?? line.text, opts.onEnd);
         return true;
     }
     opts.onEnd?.();

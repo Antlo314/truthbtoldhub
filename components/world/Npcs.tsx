@@ -17,7 +17,7 @@ import { getWalkerPose } from '@/components/truthos/house/walkerPose';
 import { heightAt, isWater } from '@/lib/world/terrain';
 import { moveOnPlain, NPCS, rng, walkableAt, type Npc, type NpcId } from '@/lib/world/plain';
 
-export type NpcMarker = 'offer' | 'turnin' | null;
+export type NpcMarker = 'offer' | 'turnin' | 'shop' | 'alms' | null;
 
 /** Live NPC positions, readable by the hotspot finder without React */
 const npcPos = new Map<NpcId, { x: number; z: number }>();
@@ -30,6 +30,7 @@ const SLEEP_R = 140;
 function Soul({ npc, marker, rigged, shadows, low }: { npc: Npc; marker: NpcMarker; rigged: boolean; shadows: boolean; low: boolean }) {
     const group = useRef<THREE.Group>(null);
     const wear = useMemo(() => wearFromWire(npc.wear, npc.aura), [npc]);
+    const gear = useMemo(() => (npc.look?.locs ? { locs: true } : npc.id === 'eli' ? { weapon: 'staff_shepherd' } : undefined), [npc]);
     const pos = useRef({ x: npc.x, z: npc.z });
     const yaw = useRef(npc.yaw);
     const speed = useRef(0);
@@ -39,8 +40,8 @@ function Soul({ npc, marker, rigged, shadows, low }: { npc: Npc; marker: NpcMark
     const label = useRef<HTMLDivElement>(null);
 
     const motion = useCallback(
-        (): VesselMotion => ({ speed: speed.current, grounded: true, seated: false, emote: null, emoteAt: 0, talking: talkT.current > 0 }),
-        [],
+        (): VesselMotion => ({ speed: speed.current, grounded: true, seated: !!npc.seated, emote: null, emoteAt: 0, talking: talkT.current > 0 }),
+        [npc.seated],
     );
 
     useFrame((_, dtRaw) => {
@@ -125,6 +126,7 @@ function Soul({ npc, marker, rigged, shadows, low }: { npc: Npc; marker: NpcMark
                 motion={motion}
                 shadows={shadows}
                 rigged={rigged}
+                gear={gear}
                 fallback={
                     <Humanoid
                         look={{ skin: npc.wear.skin, hair: npc.wear.hair, cloth: npc.wear.top, aura: npc.aura, build: npc.wear.build }}
@@ -137,10 +139,10 @@ function Soul({ npc, marker, rigged, shadows, low }: { npc: Npc; marker: NpcMark
                 <div ref={label} className="flex flex-col items-center gap-0.5" style={{ display: 'none' }}>
                     {marker && (
                         <span
-                            className={`text-[18px] font-black leading-none drop-shadow-[0_0_8px_rgba(0,0,0,0.9)] ${marker === 'offer' ? 'text-amber-300' : 'text-emerald-300'}`}
-                            style={{ animation: 'tbth-bob 1.6s ease-in-out infinite' }}
+                            className={`text-[18px] font-black leading-none drop-shadow-[0_0_8px_rgba(0,0,0,0.9)] ${marker === 'offer' ? 'text-amber-300' : marker === 'turnin' ? 'text-emerald-300' : marker === 'shop' ? 'text-violet-300 text-[15px]' : 'text-rose-300 text-[15px]'}`}
+                            style={{ animation: marker === 'offer' || marker === 'turnin' ? 'tbth-bob 1.6s ease-in-out infinite' : undefined }}
                         >
-                            {marker === 'offer' ? '!' : '?'}
+                            {marker === 'offer' ? '!' : marker === 'turnin' ? '?' : marker === 'shop' ? '◆' : '♥'}
                         </span>
                     )}
                     <div className="px-2 py-0.5 rounded-full text-[9px] whitespace-nowrap font-medium border bg-black/70 border-white/20 text-white/95">

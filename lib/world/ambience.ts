@@ -16,6 +16,8 @@ type Ctx = {
     crickets: GainNode;
     noise: AudioBufferSourceNode;
     noise2: AudioBufferSourceNode;
+    rain: GainNode;
+    noise3: AudioBufferSourceNode;
 };
 
 let ctx: Ctx | null = null;
@@ -78,7 +80,20 @@ export function startAmbience() {
         crickets.gain.value = 0.5;
         crickets.connect(master);
 
-        ctx = { ac, master, wind, windFilter, water, birds, crickets, noise, noise2 };
+        // rain: bright noise, high-passed
+        const noise3 = ac.createBufferSource();
+        noise3.buffer = buf;
+        noise3.loop = true;
+        noise3.playbackRate.value = 1.6;
+        const rainFilter = ac.createBiquadFilter();
+        rainFilter.type = 'highpass';
+        rainFilter.frequency.value = 900;
+        const rain = ac.createGain();
+        rain.gain.value = 0;
+        noise3.connect(rainFilter).connect(rain).connect(master);
+        noise3.start();
+
+        ctx = { ac, master, wind, windFilter, water, birds, crickets, noise, noise2, rain, noise3 };
         if (ac.state === 'suspended') {
             const wake = () => {
                 void ac.resume();
@@ -106,6 +121,7 @@ export function stopAmbience() {
             try {
                 c.noise.stop();
                 c.noise2.stop();
+                c.noise3.stop();
                 void c.ac.close();
             } catch {
                 /* */
@@ -160,14 +176,15 @@ function cricket(c: Ctx, when: number) {
  * Called a few times a second. daylight 0..1, wind 0..1 (region exposure),
  * water 0..1 (lake nearness), moving = the walker is moving (wind in ears).
  */
-export function updateAmbience(dt: number, p: { daylight: number; exposure: number; water: number; hollow: boolean }) {
+export function updateAmbience(dt: number, p: { daylight: number; exposure: number; water: number; hollow: boolean; rain?: number; wind?: number }) {
     const c = ctx;
     if (!c) return;
     const muted = hubAudio.isMuted();
     const now = c.ac.currentTime;
     t += dt;
     const swell = 0.5 + 0.5 * Math.sin(t * 0.21) * Math.sin(t * 0.077 + 1.3);
-    const windLevel = muted ? 0 : (0.012 + 0.03 * swell) * (0.5 + p.exposure * 0.8);
+    const windLevel = muted ? 0 : (0.012 + 0.03 * swell) * (0.5 + p.exposure * 0.8) * (p.wind ?? 1);
+    c.rain.gain.setTargetAtTime(muted ? 0 : (p.rain ?? 0) * 0.06, now, 0.8);
     c.wind.gain.setTargetAtTime(windLevel, now, 0.6);
     c.windFilter.frequency.setTargetAtTime(300 + swell * 520, now, 0.8);
     c.water.gain.setTargetAtTime(muted ? 0 : p.water * 0.03, now, 0.8);
@@ -175,7 +192,7 @@ export function updateAmbience(dt: number, p: { daylight: number; exposure: numb
     birdT -= dt;
     if (birdT <= 0) {
         birdT = 0.6 + Math.random() * (p.hollow ? 5 : 2.6);
-        if (p.daylight > 0.35 && Math.random() < p.daylight) chirp(c, now + Math.random() * 0.2);
+        if (p.daylight > 0.35 && (p.rain ?? 0) < 0.3 && Math.random() < p.daylight) chirp(c, now + Math.random() * 0.2);
     }
     cricketT -= dt;
     if (cricketT <= 0) {

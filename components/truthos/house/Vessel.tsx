@@ -21,6 +21,7 @@ import { useAnimations, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { wearKey, type VesselWear } from './vesselLook';
+import { attachGear, gearKey, type VesselGear } from '@/components/world/gear';
 
 export const VESSEL_ANIMS_URL = '/models/vessels/vessel_anims.glb';
 export const vesselUrl = (build: 'masc' | 'fem') => `/models/vessels/vessel_${build}.glb`;
@@ -34,6 +35,30 @@ export type VesselMotion = {
     /** performance.now() when the emote began */
     emoteAt: number;
     talking: boolean;
+    /** a fight or a prayer: the plain's actions (lib/world/combat.ts ActionId) */
+    action?: string | null;
+    /** performance.now() it began */
+    actionAt?: number;
+    /** how long the action holds the body, so a one-shot clip is fitted to it */
+    actionDur?: number;
+    /** recently in a fight — stand ready instead of at ease */
+    combat?: boolean;
+};
+
+/** The plain's actions → the clip that performs them */
+const ACTION_CLIPS: Record<string, { clip: string; loop: boolean; fade: number }> = {
+    atk1: { clip: 'Sword_Regular_A', loop: false, fade: 0.08 },
+    atk2: { clip: 'Sword_Regular_B', loop: false, fade: 0.08 },
+    atk3: { clip: 'Sword_Regular_C', loop: false, fade: 0.08 },
+    heavy: { clip: 'Sword_Attack', loop: false, fade: 0.1 },
+    roll: { clip: 'Roll', loop: false, fade: 0.06 },
+    hurt: { clip: 'Hit_Chest', loop: false, fade: 0.06 },
+    knock: { clip: 'Hit_Knockback', loop: false, fade: 0.06 },
+    die: { clip: 'Death01', loop: false, fade: 0.12 },
+    pray: { clip: 'Fixing_Kneeling', loop: true, fade: 0.4 },
+    block: { clip: 'Idle_Shield_Loop', loop: true, fade: 0.12 },
+    light: { clip: 'Spell_Simple_Shoot', loop: false, fade: 0.1 },
+    eat: { clip: 'Consume', loop: false, fade: 0.15 },
 };
 
 export type EmoteDef = { clip: string; loop: boolean; seconds: number; label: string; key: string };
@@ -124,10 +149,12 @@ function RiggedVessel({
     wear,
     motion,
     shadows,
+    gear,
 }: {
     wear: VesselWear;
     motion: () => VesselMotion;
     shadows: boolean;
+    gear?: VesselGear;
 }) {
     const body = useGLTF(vesselUrl(wear.build));
     const anims = useGLTF(VESSEL_ANIMS_URL);
@@ -137,10 +164,11 @@ function RiggedVessel({
     const clone = useMemo(() => {
         const root = SkeletonUtils.clone(body.scene) as THREE.Group;
         applyWear(root, wear, shadows);
+        if (gear) attachGear(root, gear);
         return root;
-        // wear is fully described by its key
+        // wear and gear are fully described by their keys
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [body.scene, key, shadows]);
+    }, [body.scene, key, shadows, gearKey(gear)]);
 
     const clips = useMemo(() => clipsFor(wear.build, anims.animations), [wear.build, anims.animations]);
     const { actions, mixer } = useAnimations(clips, group);
@@ -153,6 +181,7 @@ function RiggedVessel({
     const wasAir = useRef(false);
     const landUntil = useRef(0);
     const lastSeated = useRef(false);
+    const lastActionAt = useRef(0);
 
     const play = (name: string, loop: boolean, fadeS = 0.22, timeScale = 1) => {
         const next = actions[name];
@@ -188,6 +217,24 @@ function RiggedVessel({
         const dt = Math.min(dtRaw, 0.05);
         const m = motion();
         const now = performance.now();
+
+        // a fight, a prayer, a fall — these outrank walking
+        if (m.action && ACTION_CLIPS[m.action]) {
+            const spec = ACTION_CLIPS[m.action];
+            const at = m.actionAt ?? 0;
+            const age = (now - at) / 1000;
+            const dur = m.actionDur ?? 1;
+            if (spec.loop || age < dur + 0.04 || m.action === 'die') {
+                if (at !== lastActionAt.current) {
+                    // the same clip again (a second combo) must restart, not continue
+                    lastActionAt.current = at;
+                    if (current.current === spec.clip) current.current = null;
+                }
+                const clipLen = actions[spec.clip]?.getClip().duration ?? dur;
+                play(spec.clip, spec.loop, spec.fade, spec.loop ? 1 : Math.max(0.5, Math.min(2.4, clipLen / dur)));
+                return;
+            }
+        }
 
         if (!m.grounded) {
             airT.current += dt;
@@ -231,6 +278,10 @@ function RiggedVessel({
             play(e.clip, e.loop, 0.2);
             return;
         }
+        if (m.combat && !m.talking) {
+            play('Sword_Idle', true, 0.3, 1);
+            return;
+        }
         play(m.talking ? 'Idle_Talking_Loop' : 'Idle_Loop', true, 0.3, m.talking ? 1 : idleRate);
     });
 
@@ -265,10 +316,13 @@ export default function Vessel({
     shadows = true,
     rigged = true,
     fallback,
+    gear,
 }: {
     wear: VesselWear;
     motion: () => VesselMotion;
     shadows?: boolean;
+    /** what the soul carries: weapon, shield, locs (components/world/gear.ts) */
+    gear?: VesselGear;
     /** false = procedural figure only (phones that opted out, or a soft fallback) */
     rigged?: boolean;
     /** What stands here while the body loads, or if it never does */
@@ -292,7 +346,7 @@ export default function Vessel({
             {rigged ? (
                 <VesselBoundary fallback={fallback}>
                     <Suspense fallback={fallback}>
-                        <RiggedVessel wear={wear} motion={motion} shadows={shadows} />
+                        <RiggedVessel wear={wear} motion={motion} shadows={shadows} gear={gear} />
                     </Suspense>
                 </VesselBoundary>
             ) : (

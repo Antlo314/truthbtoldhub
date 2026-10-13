@@ -153,7 +153,7 @@ export default function LairExterior({ low = false, shadows = true }: { low?: bo
                         {/* a skylight dome on each */}
                         <mesh position={[0, r.h + 0.7, 0]}>
                             <sphereGeometry args={[Math.min(w, d) * 0.18, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
-                            <primitive object={m.glassTint} attach="material" />
+                            <meshStandardMaterial color="#8fb3c9" metalness={0.5} roughness={0.18} />
                         </mesh>
                     </group>
                 );

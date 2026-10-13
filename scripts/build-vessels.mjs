@@ -85,6 +85,20 @@ const CLIPS = [
     'Idle_No_Loop',
     'Dance_Loop',
     'Consume',
+    // the Aether Plain: combat, prayer, the fall
+    'Sword_Idle',
+    'Sword_Regular_A',
+    'Sword_Regular_B',
+    'Sword_Regular_C',
+    'Sword_Attack',
+    'Sword_Block',
+    'Roll',
+    'Hit_Chest',
+    'Hit_Knockback',
+    'Death01',
+    'Fixing_Kneeling',
+    'Spell_Simple_Shoot',
+    'Idle_Shield_Loop',
 ];
 
 async function fetchAll() {
