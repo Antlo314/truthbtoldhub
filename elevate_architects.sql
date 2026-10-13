@@ -4,9 +4,7 @@
 UPDATE profiles
 SET tier = 'Architect'
 WHERE email IN (
-    'iamwhoiambook@gmail.com',
-    'admin@truthbtoldhub.com',
-    'info@lumenlabsatl.com'
+    'iamwhoiambook@gmail.com'
 );
 
 -- Note: The user must have signed up first for their email to exist in the profiles table!

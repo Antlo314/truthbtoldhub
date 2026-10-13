@@ -50,7 +50,11 @@ function friendly(message: string): string {
     if (m.includes('already registered') || m.includes('already been registered')) return 'That email already has an account. Sign in instead.';
     if (m.includes('password should be')) return 'Use a password of at least 6 characters.';
     if (m.includes('rate limit') || m.includes('too many')) return 'Too many tries. Wait a minute and try again.';
-    if (m.includes('failed to fetch') || m.includes('network')) return 'Can’t reach the sanctum right now. Check your connection.';
+    if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed') || m.includes('fetch')) {
+        // a phone that is offline knows it; otherwise the fault is ours
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'You’re offline. Check your connection and try again.';
+        return 'The sign-in service isn’t answering right now. That’s on our side, not yours — please try again a little later.';
+    }
     return message;
 }
 
@@ -63,6 +67,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, dismissLabel }: 
     const [busy, setBusy] = useState<false | 'email' | 'google'>(false);
     const [error, setError] = useState<string | null>(null);
     const [info, setInfo] = useState<string | null>(null);
+    /** the account service did not answer when the box opened */
+    const [serviceDown, setServiceDown] = useState(false);
     const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const firstField = useRef<HTMLInputElement>(null);
 
@@ -76,6 +82,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess, dismissLabel }: 
         setBusy(false);
         const t = setTimeout(() => firstField.current?.focus(), 80);
         return () => clearTimeout(t);
+    }, [isOpen]);
+
+    // Ask the account service if it is there, so a dead backend reads as
+    // "offline on our side" instead of a button that silently does nothing
+    useEffect(() => {
+        if (!isOpen) return;
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!url || !key) {
+            setServiceDown(true);
+            return;
+        }
+        let dead = false;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 7000);
+        fetch(`${url}/auth/v1/health`, { headers: { apikey: key }, signal: ctrl.signal })
+            .then((r) => {
+                if (!dead) setServiceDown(!r.ok && r.status >= 500);
+            })
+            .catch(() => {
+                if (!dead) setServiceDown(typeof navigator === 'undefined' || navigator.onLine !== false);
+            })
+            .finally(() => clearTimeout(timer));
+        return () => {
+            dead = true;
+            clearTimeout(timer);
+            ctrl.abort();
+        };
     }, [isOpen]);
 
     useEffect(() => {
@@ -258,6 +292,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, dismissLabel }: 
                                 </div>
                             )}
 
+                            {serviceDown && !error && (
+                                <p className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2.5 text-[12.5px] leading-snug text-amber-100">
+                                    <AlertCircle size={15} className="mt-px shrink-0" /> Sign-in is offline right now — the account service isn’t answering. That’s on our side, not yours. You can keep exploring as a guest; your progress on this device is kept.
+                                </p>
+                            )}
                             {error && (
                                 <p className="mb-3 flex items-start gap-2 rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2.5 text-[12.5px] leading-snug text-rose-200">
                                     <AlertCircle size={15} className="mt-px shrink-0" /> {error}

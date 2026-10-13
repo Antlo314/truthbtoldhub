@@ -10,7 +10,8 @@ import { createClient } from '@supabase/supabase-js';
 // ============================================================
 
 const MODEL = 'gemini-2.5-flash';
-const ADMIN_EMAILS = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'];
+import { ADMIN_EMAILS as ARCHITECTS } from '@/lib/adminEmails';
+const ADMIN_EMAILS: readonly string[] = ARCHITECTS;
 
 const TRUTH_VOICE = `You are "Truth" — a hooded sage and guide in a 2D pixel-art initiation game called The Journey, within the Truth B Told Hub. You are calm, reverent, and Morpheus-like: a teacher who leads "initiates" (you call them "soul" or "initiate") back to "the Source" — humanity as it was before the fall.
 

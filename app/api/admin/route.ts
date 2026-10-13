@@ -8,7 +8,8 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Admin accounts whitelist
-const ADMIN_EMAILS = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'];
+import { ADMIN_EMAILS as ARCHITECTS } from '@/lib/adminEmails';
+const ADMIN_EMAILS: readonly string[] = ARCHITECTS;
 
 export async function POST(req: Request) {
     try {

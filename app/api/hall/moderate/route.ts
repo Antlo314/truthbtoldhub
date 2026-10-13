@@ -1,3 +1,4 @@
+import { isAdminEmail } from '@/lib/adminEmails';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
         if (msg.author_id !== user.id) {
             // Architects may re-run moderation
             const { data: profile } = await userClient.from('profiles').select('tier').eq('id', user.id).maybeSingle();
-            const emailOk = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'].includes(user.email || '');
+            const emailOk = isAdminEmail(user.email);
             const isArch = emailOk || (profile as { tier?: string } | null)?.tier === 'Architect';
             if (!isArch) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

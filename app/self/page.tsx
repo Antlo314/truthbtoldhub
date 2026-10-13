@@ -1,5 +1,6 @@
 'use client';
 
+import { isAdminEmail } from '@/lib/adminEmails';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -201,7 +202,7 @@ export default function PowerSelf() {
             const currentSession = await supabase.auth.getSession();
             const email = currentSession.data.session?.user?.email;
             
-            if (email && (email === 'iamwhoiambook@gmail.com' || email === 'admin@truthbtoldhub.com')) {
+            if (isAdminEmail(email)) {
                 // Fetch admin-specific list
                 fetchAdminData();
 
@@ -279,7 +280,7 @@ export default function PowerSelf() {
     };
 
     const userEmail = user?.email || 'guest@obsidianvoid.net';
-    const isAdmin = user && (user.email === 'iamwhoiambook@gmail.com' || user.email === 'admin@truthbtoldhub.com');
+    const isAdmin = !!user && isAdminEmail(user.email);
     const displayName = profile?.display_name || profile?.username || 'Guest Soul';
     const currentTier = profile?.tier || 'Initiate';
     const currentPower = profile?.soul_power || 100;

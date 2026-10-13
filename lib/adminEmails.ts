@@ -1,10 +1,10 @@
-// The souls allowed to administer the Hub. This is the verified-email source of
-// truth used to SHOW admin UI client-side; server-side enforcement lives in RLS
-// (see library_schema.sql's is_library_admin(), which mirrors this list — keep
-// the two in sync). The auth email is signed by Supabase and cannot be spoofed.
-// Primary Architect: iamwhoiambook@gmail.com
+// The one soul who administers the Hub: the Architect, iamwhoiambook@gmail.com.
+// This is the verified-email source of truth for the app (UI and API routes);
+// server-side enforcement lives in RLS — architect_only.sql sets the database's
+// is_sanctum_admin / is_library_admin / is_hub_admin to the same email. Keep the
+// two in sync. The auth email is signed by Supabase and cannot be spoofed.
 
-export const ADMIN_EMAILS = ['iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com'] as const;
+export const ADMIN_EMAILS = ['iamwhoiambook@gmail.com'] as const;
 
 export function isAdminEmail(email?: string | null): boolean {
     return !!email && (ADMIN_EMAILS as readonly string[]).includes(email);

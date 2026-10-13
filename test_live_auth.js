@@ -6,8 +6,13 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function execute() {
-    const email = 'admin@truthbtoldhub.com';
-    const password = 'SanctumPassword2026!';
+    // credentials come from the environment, never from this file
+    const email = process.env.TBTH_TEST_EMAIL;
+    const password = process.env.TBTH_TEST_PASSWORD;
+    if (!email || !password) {
+        console.error('Set TBTH_TEST_EMAIL and TBTH_TEST_PASSWORD first.');
+        process.exit(1);
+    }
 
     console.log(`Testing auth connection to ${supabaseUrl}...`);
     const t0 = Date.now();

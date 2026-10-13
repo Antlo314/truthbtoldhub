@@ -22,7 +22,7 @@ create or replace function public.is_hub_admin()
 returns boolean
 language sql stable security definer set search_path = public
 as $$
-    select (auth.jwt() ->> 'email') in ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com');
+    select (auth.jwt() ->> 'email') = 'iamwhoiambook@gmail.com';
 $$;
 
 -- 1) The "dispatches" bucket: PUBLIC (read), generous size cap, all media types.

@@ -2,8 +2,13 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 
 async function execute() {
-    const email = 'admin@truthbtoldhub.com';
-    const password = 'SanctumPassword2026!';
+    // credentials come from the environment, never from this file
+    const email = process.env.TBTH_TEST_EMAIL;
+    const password = process.env.TBTH_TEST_PASSWORD;
+    if (!email || !password) {
+        console.error('Set TBTH_TEST_EMAIL and TBTH_TEST_PASSWORD first.');
+        process.exit(1);
+    }
     const basePath = 'C:\\Users\\aarons\\.gemini\\antigravity\\brain\\1ce8e065-610a-4eb4-a3b6-7b753fd53410\\browser';
 
     console.log('Launching browser...');

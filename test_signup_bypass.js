@@ -12,7 +12,12 @@ async function execute() {
     // If the user deleted the profile, the signup might have put it in a "waiting for confirmation" state
     // Let's use a dummy email that doesn't exist yet, or see if we can trick the system.
     const email = 'admin_test123@truthbtoldhub.com';
-    const password = 'SanctumPassword2026!';
+    // never a password in a file: it comes from the environment
+    const password = process.env.TBTH_TEST_PASSWORD;
+    if (!password) {
+        console.error('Set TBTH_TEST_PASSWORD first.');
+        process.exit(1);
+    }
 
     console.log(`Attempting to sign up fresh admin ${email}...`);
     let { data: signUpData, error: signUpError } = await supabase.auth.signUp({

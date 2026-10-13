@@ -34,7 +34,7 @@ CREATE OR REPLACE FUNCTION public.is_sanctum_admin()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-    SELECT (auth.jwt() ->> 'email') IN ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com');
+    SELECT (auth.jwt() ->> 'email') = 'iamwhoiambook@gmail.com';
 $$;
 
 -- Is the calling soul a supporter? (used for supporter-gated halls)
@@ -683,7 +683,7 @@ DECLARE
     aid UUID;
 BEGIN
     SELECT id INTO wid FROM public.archive_channels WHERE workspace_id = ws AND name = 'welcome' LIMIT 1;
-    SELECT id INTO aid FROM public.profiles WHERE email IN ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com') ORDER BY created_at LIMIT 1;
+    SELECT id INTO aid FROM public.profiles WHERE email = 'iamwhoiambook@gmail.com' ORDER BY created_at LIMIT 1;
     IF wid IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.archive_messages WHERE channel_id = wid) THEN
         INSERT INTO public.archive_messages (channel_id, author_id, content, pinned, pinned_by, pinned_at)
         VALUES (

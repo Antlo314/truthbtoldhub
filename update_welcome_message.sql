@@ -10,7 +10,7 @@ DECLARE
     aid UUID;
 BEGIN
     SELECT id INTO wid FROM public.archive_channels WHERE workspace_id = ws AND name = 'welcome' LIMIT 1;
-    SELECT id INTO aid FROM public.profiles WHERE email IN ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com') ORDER BY created_at LIMIT 1;
+    SELECT id INTO aid FROM public.profiles WHERE email = 'iamwhoiambook@gmail.com' ORDER BY created_at LIMIT 1;
     IF wid IS NOT NULL THEN
         DELETE FROM public.archive_messages WHERE channel_id = wid;
         INSERT INTO public.archive_messages (channel_id, author_id, content, pinned, pinned_by, pinned_at)

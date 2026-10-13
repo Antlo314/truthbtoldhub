@@ -23,7 +23,7 @@ CREATE OR REPLACE FUNCTION public.is_library_admin()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-    SELECT (auth.jwt() ->> 'email') IN ('iamwhoiambook@gmail.com', 'admin@truthbtoldhub.com');
+    SELECT (auth.jwt() ->> 'email') = 'iamwhoiambook@gmail.com';
 $$;
 
 -- 1. Document metadata
